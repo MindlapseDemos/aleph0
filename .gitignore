@@ -1,0 +1,10 @@
+*.swp
+*.o
+*.obj
+*.OBJ
+*.exe
+*.EXE
+*.lnk
+*.LNK
+*.log
+*.LOG

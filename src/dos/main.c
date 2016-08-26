@@ -28,7 +28,7 @@ int main(int argc, char **argv)
 		}
 		if(quit) goto break_evloop;
 
-		wait_vsync();
+		/*wait_vsync();*/
 		time_msec = get_msec();
 		demo_draw();
 	}

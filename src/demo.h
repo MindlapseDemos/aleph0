@@ -1,8 +1,8 @@
 #ifndef DEMO_H_
 #define DEMO_H_
 
-extern int fbwidth, fbheight, fbbpp;
-extern unsigned char *fbpixels;
+extern int fb_width, fb_height, fb_bpp;
+extern unsigned char *fb_pixels;
 extern unsigned long time_msec;
 
 int demo_init(int argc, char **argv);

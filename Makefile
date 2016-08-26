@@ -1,5 +1,5 @@
 baseobj = main.obj
-demoobj = demo.obj
+demoobj = demo.obj screen.obj tunnel.obj
 sysobj = gfx.obj vbe.obj dpmi.obj timer.obj keyb.obj logger.obj
 obj = $(baseobj) $(demoobj) $(sysobj)
 bin = demo.exe

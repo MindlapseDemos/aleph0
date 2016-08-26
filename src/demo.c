@@ -4,22 +4,30 @@
 #include <math.h>
 #include <errno.h>
 #include "demo.h"
+#include "screen.h"
 
-int fbwidth = 320;
-int fbheight = 240;
-int fbbpp = 8;
-unsigned char *fbpixels;
+int fb_width = 320;
+int fb_height = 240;
+int fb_bpp = 16;
+unsigned char *fb_pixels;
 unsigned long time_msec;
 
 static unsigned long nframes;
 
 int demo_init(int argc, char **argv)
 {
+	if(scr_init() == -1) {
+		return -1;
+	}
+	scr_change(scr_lookup("tunnel"), 4000);
+
 	return 0;
 }
 
 void demo_cleanup(void)
 {
+	scr_shutdown();
+
 	if(time_msec) {
 		float fps = (float)nframes / ((float)time_msec / 1000.0f);
 		printf("average framerate: %.1f\n", fps);
@@ -28,16 +36,8 @@ void demo_cleanup(void)
 
 void demo_draw(void)
 {
-	int i, j;
-	unsigned char *fbptr = fbpixels;
-
-	for(i=0; i<fbheight; i++) {
-		for(j=0; j<fbwidth; j++) {
-			int val = i^j;
-
-			*fbptr++ = val;
-		}
-	}
+	scr_update();
+	scr_draw();
 
 	++nframes;
 }

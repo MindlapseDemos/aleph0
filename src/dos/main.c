@@ -11,7 +11,7 @@ int main(int argc, char **argv)
 	init_timer(100);
 	kb_init(32);
 
-	if(!(fbpixels = set_video_mode(fbwidth, fbheight, fbbpp))) {
+	if(!(fb_pixels = set_video_mode(fb_width, fb_height, fb_bpp))) {
 		return 1;
 	}
 

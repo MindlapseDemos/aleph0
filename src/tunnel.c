@@ -64,7 +64,7 @@ static int init(void)
 	unsigned char *fog;
 	float aspect = (float)fb_width / (float)fb_height;
 
-	xsz = fb_width / 2;
+	xsz = fb_width;
 	ysz = fb_height;
 	vxsz = xsz * VSCALE;
 	vysz = ysz * VSCALE;
@@ -222,13 +222,15 @@ static void draw_tunnel_range(unsigned short *pix, int xoffs, int yoffs, int sta
 	unsigned int *pixels = (unsigned int*)pix + starty * (fb_width >> 1);
 
 	for(i=0; i<num_lines; i++) {
-		for(j=0; j<xsz; j++) {
+		for(j=0; j<(xsz>>1); j++) {
 			unsigned int col;
-			int r, g, b;
+			int r, g, b, idx = j << 1;
 
-			tunnel_color(&r, &g, &b, toffs, tmap[j], fog[j]);
+			tunnel_color(&r, &g, &b, toffs, tmap[idx], fog[idx]);
 			col = PACK_RGB16(r, g, b);
-			*pixels++ = (col << 16) | col;
+			tunnel_color(&r, &g, &b, toffs, tmap[idx + 1], fog[idx + 1]);
+			col |= PACK_RGB16(r, g, b) << 16;
+			*pixels++ = col;
 		}
 		tmap += vxsz;
 		fog += vxsz;

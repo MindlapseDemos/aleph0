@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <SDL/SDL.h>
 #include "demo.h"
 
@@ -9,19 +10,42 @@ static int quit;
 static long start_time;
 static SDL_Surface *fbsurf;
 
+static int fbscale = 2;
+static int xsz, ysz;
+
 int main(int argc, char **argv)
 {
+	int s, i, j;
+	char *env;
+	unsigned short *sptr, *dptr;
 	unsigned int sdl_flags = SDL_SWSURFACE;
 
-	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER);
-	if(!(fbsurf = SDL_SetVideoMode(fb_width, fb_height, fb_bpp, sdl_flags))) {
-		fprintf(stderr, "failed to set video mode %dx%d %dbpp\n", fb_width, fb_height, fb_bpp);
+	if((env = getenv("FBSCALE")) && (s = atoi(env))) {
+		fbscale = s;
+		printf("Framebuffer scaling x%d\n", fbscale);
+	}
+
+	xsz = fb_width * fbscale;
+	ysz = fb_height * fbscale;
+
+	if(!(fb_pixels = malloc(fb_width * fb_height * fb_bpp / CHAR_BIT))) {
+		fprintf(stderr, "failed to allocate virtual framebuffer\n");
 		return 1;
 	}
-	SDL_WM_SetCaption("dosdemo SDLemu", 0);
+
+	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER);
+	if(!(fbsurf = SDL_SetVideoMode(xsz, ysz, fb_bpp, sdl_flags))) {
+		fprintf(stderr, "failed to set video mode %dx%d %dbpp\n", fb_width, fb_height, fb_bpp);
+		free(fb_pixels);
+		SDL_Quit();
+		return 1;
+	}
+	SDL_WM_SetCaption("dosdemo/SDL", 0);
 
 	time_msec = 0;
 	if(demo_init(argc, argv) == -1) {
+		free(fb_pixels);
+		SDL_Quit();
 		return 1;
 	}
 	start_time = SDL_GetTicks();
@@ -34,12 +58,28 @@ int main(int argc, char **argv)
 		}
 
 		time_msec = SDL_GetTicks() - start_time;
+		demo_draw();
+
 		if(SDL_MUSTLOCK(fbsurf)) {
 			SDL_LockSurface(fbsurf);
 		}
-		fb_pixels = fbsurf->pixels;
 
-		demo_draw();
+		sptr = fb_pixels;
+		dptr = fbsurf->pixels;
+		for(i=0; i<fb_height; i++) {
+			for(j=0; j<fb_width; j++) {
+				int x, y;
+				unsigned short pixel = *sptr++;
+
+				for(y=0; y<fbscale; y++) {
+					for(x=0; x<fbscale; x++) {
+						dptr[y * xsz + x] = pixel;
+					}
+				}
+				dptr += fbscale;
+			}
+			dptr += xsz * (fbscale - 1);
+		}
 
 		if(SDL_MUSTLOCK(fbsurf)) {
 			SDL_UnlockSurface(fbsurf);

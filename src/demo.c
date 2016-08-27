@@ -9,7 +9,7 @@
 int fb_width = 320;
 int fb_height = 240;
 int fb_bpp = 16;
-unsigned char *fb_pixels;
+void *fb_pixels;
 unsigned long time_msec;
 
 static unsigned long nframes;

@@ -8,3 +8,8 @@
 *.LNK
 *.log
 *.LOG
+Debug
+Release
+*.suo
+*sdf
+demo

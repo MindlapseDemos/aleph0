@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <errno.h>
+#include <limits.h>
 #include "demo.h"
 #include "screen.h"
 
@@ -31,6 +32,8 @@ int demo_init(int argc, char **argv)
 		return -1;
 	}
 
+	/* clear the framebuffer at least once */
+	memset(fb_pixels, 0, fb_width * fb_height * fb_bpp / CHAR_BIT);
 	return 0;
 }
 

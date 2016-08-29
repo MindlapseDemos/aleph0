@@ -25,9 +25,10 @@ which will in turn start dosbox, which will execute the DOS binary! If the gods
 are slumbering in valhalla, just typing `dosbox demo.exe` should do the trick.
 
 
-SDL backend
------------
-Run make to build (assuming make on your system is GNU make).
+Building and running with the SDL backend
+-----------------------------------------
+Run make to build (assuming make on your system is GNU make), or use the visual
+studio 2013 project on Windows.
 
 The SDL backend will scale the framebuffer up, by the factor specified in the
 `FBSCALE` environment variable. So run the demo as: `FBSCALE=3 ./demo` for

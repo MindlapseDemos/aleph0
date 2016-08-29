@@ -4,6 +4,8 @@
 extern int fb_width, fb_height, fb_bpp;
 extern void *fb_pixels;
 extern unsigned long time_msec;
+extern int mouse_x, mouse_y;
+extern unsigned int mouse_bmask;
 
 int demo_init(int argc, char **argv);
 void demo_cleanup(void);

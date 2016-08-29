@@ -5,8 +5,9 @@
 #include "demo.h"
 
 struct screen *tunnel_screen(void);
+struct screen *fract_screen(void);
 
-#define NUM_SCR	1
+#define NUM_SCR	32
 static struct screen *scr[NUM_SCR];
 
 static struct screen *cur, *prev, *next;
@@ -14,14 +15,17 @@ static long trans_start, trans_dur;
 
 int scr_init(void)
 {
-	int i;
+	int i, idx = 0;
 
-	if(!(scr[0] = tunnel_screen())) {
+	if(!(scr[idx++] = tunnel_screen())) {
+		return -1;
+	}
+	if(!(scr[idx++] = fract_screen())) {
 		return -1;
 	}
 
 	for(i=0; i<NUM_SCR; i++) {
-		if(scr[i]->init() == -1) {
+		if(scr[i] && scr[i]->init() == -1) {
 			return -1;
 		}
 	}
@@ -32,6 +36,7 @@ void scr_shutdown(void)
 {
 	int i;
 	for(i=0; i<NUM_SCR; i++) {
+		if(!scr[i]) break;
 		scr[i]->shutdown();
 	}
 }
@@ -41,7 +46,9 @@ void scr_update(void)
 	if(prev) {	/* we're in the middle of a transition */
 		long interval = time_msec - trans_start;
 		if(interval >= trans_dur) {
-			next->start(trans_dur);
+			if(next->start) {
+				next->start(trans_dur);
+			}
 			prev = 0;
 			cur = next;
 			next = 0;
@@ -58,6 +65,7 @@ struct screen *scr_lookup(const char *name)
 {
 	int i;
 	for(i=0; i<NUM_SCR; i++) {
+		if(!scr[i]) break;
 		if(strcmp(scr[i]->name, name) == 0) {
 			return scr[i];
 		}
@@ -78,12 +86,16 @@ int scr_change(struct screen *s, long trans_time)
 	}
 
 	if(cur) {
-		cur->stop(trans_dur);
+		if(cur->stop) {
+			cur->stop(trans_dur);
+		}
 
 		prev = cur;
 		next = s;
 	} else {
-		s->start(trans_dur);
+		if(s->start) {
+			s->start(trans_dur);
+		}
 
 		cur = s;
 		prev = 0;

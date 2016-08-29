@@ -110,6 +110,21 @@ static void handle_event(SDL_Event *ev)
 		demo_keyboard(ev->key.keysym.sym, ev->key.state == SDL_PRESSED ? 1 : 0);
 		break;
 
+	case SDL_MOUSEMOTION:
+		mouse_x = ev->motion.x / fbscale;
+		mouse_y = ev->motion.y / fbscale;
+		break;
+
+	case SDL_MOUSEBUTTONDOWN:
+		mouse_bmask |= 1 << ev->button.button;
+		if(0) {
+	case SDL_MOUSEBUTTONUP:
+			mouse_bmask &= ~(1 << ev->button.button);
+		}
+		mouse_x = ev->button.x / fbscale;
+		mouse_y = ev->button.y / fbscale;
+		break;
+
 	default:
 		break;
 	}

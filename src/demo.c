@@ -11,15 +11,25 @@ int fb_height = 240;
 int fb_bpp = 16;
 void *fb_pixels;
 unsigned long time_msec;
+int mouse_x, mouse_y;
+unsigned int mouse_bmask;
 
 static unsigned long nframes;
+static const char *start_scr_name = "tunnel";
 
 int demo_init(int argc, char **argv)
 {
+	if(argv[1]) {
+		start_scr_name = argv[1];
+	}
+
 	if(scr_init() == -1) {
 		return -1;
 	}
-	scr_change(scr_lookup("tunnel"), 4000);
+	if(scr_change(scr_lookup(start_scr_name), 4000) == -1) {
+		fprintf(stderr, "screen %s not found\n", start_scr_name);
+		return -1;
+	}
 
 	return 0;
 }

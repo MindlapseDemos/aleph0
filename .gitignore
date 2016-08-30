@@ -13,3 +13,6 @@ Release
 *.suo
 *sdf
 demo
+*.zip
+data
+*.a

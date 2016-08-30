@@ -20,6 +20,8 @@ void scr_update(void);
 void scr_draw(void);
 
 struct screen *scr_lookup(const char *name);
+struct screen *scr_screen(int idx);
+int scr_num_screens(void);
 int scr_change(struct screen *s, long trans_time);
 
 #endif	/* SCREEN_H_ */

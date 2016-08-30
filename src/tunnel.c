@@ -181,7 +181,12 @@ static void draw(void)
 
 	for(i=0; i<NUM_WORK_ITEMS; i++) {
 		int starty = i * num_lines;
+		int resty = starty + draw_lines;
+		int rest_lines = num_lines - draw_lines;
 		draw_tunnel_range((unsigned short*)fb_pixels, xoffs, yoffs, starty, draw_lines, time_msec);
+		if(rest_lines) {
+			memset((unsigned short*)fb_pixels + resty * fb_width, 0, rest_lines * fb_width * 2);
+		}
 	}
 }
 

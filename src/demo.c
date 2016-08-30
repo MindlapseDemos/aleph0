@@ -16,10 +16,12 @@ int mouse_x, mouse_y;
 unsigned int mouse_bmask;
 
 static unsigned long nframes;
-static const char *start_scr_name = "tunnel";
+static const char *start_scr_name;
 
 int demo_init(int argc, char **argv)
 {
+	struct screen *scr;
+
 	if(argv[1]) {
 		start_scr_name = argv[1];
 	}
@@ -27,8 +29,14 @@ int demo_init(int argc, char **argv)
 	if(scr_init() == -1) {
 		return -1;
 	}
-	if(scr_change(scr_lookup(start_scr_name), 4000) == -1) {
-		fprintf(stderr, "screen %s not found\n", start_scr_name);
+	if(start_scr_name) {
+		scr = scr_lookup(start_scr_name);
+	} else {
+		scr = scr_screen(0);
+	}
+
+	if(!scr || scr_change(scr, 4000) == -1) {
+		fprintf(stderr, "screen %s not found\n", start_scr_name ? start_scr_name : "0");
 		return -1;
 	}
 
@@ -64,6 +72,11 @@ void demo_keyboard(int key, int state)
 			break;
 
 		default:
+			if(key >= '1' && key <= '1' + scr_num_screens()) {
+				int idx = key - '1';
+				printf("change screen %d\n", idx);
+				scr_change(scr_screen(idx), 4000);
+			}
 			break;
 		}
 	}

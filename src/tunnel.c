@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <assert.h>
-/*#include <imago2.h>*/
+#include "imago2.h"
 #include "demo.h"
 #include "screen.h"
 
@@ -102,16 +102,16 @@ static int init(void)
 		}
 	}
 
-	/*if(!(tex_pixels = img_load_pixels(TEX_FNAME, &tex_xsz, &tex_ysz, IMG_FMT_RGBA32))) {
+	if(!(tex_pixels = img_load_pixels(TEX_FNAME, &tex_xsz, &tex_ysz, IMG_FMT_RGBA32))) {
 		fprintf(stderr, "failed to load image " TEX_FNAME "\n");
 		return -1;
 	}
 	if((count_bits(tex_xsz) | count_bits(tex_ysz)) != 1) {
 		fprintf(stderr, "non-pow2 image (%dx%d)\n", tex_xsz, tex_ysz);
 		return -1;
-	}*/
+	}
 
-	tex_pixels = gen_test_image(&tex_xsz, &tex_ysz);
+	/*tex_pixels = gen_test_image(&tex_xsz, &tex_ysz);*/
 
 	n = count_zeros(tex_xsz);
 	for(i=0; i<n; i++) {
@@ -132,7 +132,7 @@ static void destroy(void)
 {
 	free(tunnel_map);
 	free(tunnel_fog);
-	free(tex_pixels);
+	img_free_pixels(tex_pixels);
 }
 
 static void start(long trans_time)

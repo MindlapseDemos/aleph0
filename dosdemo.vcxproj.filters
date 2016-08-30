@@ -22,12 +22,21 @@
     <ClCompile Include="src\sdl\main.c">
       <Filter>src\sdl</Filter>
     </ClCompile>
+    <ClCompile Include="src\fract.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gfxutil.c">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\demo.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\screen.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gfxutil.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>

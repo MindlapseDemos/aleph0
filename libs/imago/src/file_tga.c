@@ -126,7 +126,7 @@ static int iofgetc(struct img_io *io)
 static int read(struct img_pixmap *img, struct img_io *io)
 {
 	struct tga_header hdr;
-	unsigned long x, y;
+	int x, y;
 	int i, c;
 	uint32_t ppixel = 0;
 	int rle_mode = 0, rle_pix_left = 0;

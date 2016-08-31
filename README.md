@@ -35,4 +35,9 @@ The SDL backend will scale the framebuffer up, by the factor specified in the
 a 3x scale factor, or just export the `FBSCALE` env var in the shell you are
 going to use for running the demo. The default scale factor is 2x.
 
-test?
+Datafiles
+---------
+The demo datafiles are in their own subversion repo. To checkout the data files
+run the following in the demo root directory:
+
+  svn co svn://mutantstargoat.com/datadirs/dosdemo data

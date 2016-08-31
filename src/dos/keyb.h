@@ -62,6 +62,8 @@ void kb_wait(void);
  */
 int kb_getkey(void);
 
+void kb_putback(int key);
+
 #ifdef __cplusplus
 }
 #endif

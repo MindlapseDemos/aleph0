@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <string.h>
 #include "imago2.h"
-#include "ftype_module.h"
+#include "ftmodule.h"
 
 static int check(struct img_io *io);
 static int read(struct img_pixmap *img, struct img_io *io);

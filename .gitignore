@@ -6,6 +6,12 @@
 *.EXE
 *.lnk
 *.LNK
+*.lbc
+*.LBC
+*.lib
+*.LIB
+*.err
+*.ERR
 *.log
 *.LOG
 Debug

@@ -73,12 +73,12 @@
     <ClCompile Include="libpng\pngwtran.c" />
     <ClCompile Include="libpng\pngwutil.c" />
     <ClCompile Include="src\conv.c" />
-    <ClCompile Include="src\file_jpeg.c" />
-    <ClCompile Include="src\file_png.c" />
-    <ClCompile Include="src\file_ppm.c" />
-    <ClCompile Include="src\file_rgbe.c" />
-    <ClCompile Include="src\file_tga.c" />
-    <ClCompile Include="src\ftype_module.c" />
+    <ClCompile Include="src\filejpeg.c" />
+    <ClCompile Include="src\filepng.c" />
+    <ClCompile Include="src\fileppm.c" />
+    <ClCompile Include="src\filergbe.c" />
+    <ClCompile Include="src\filetga.c" />
+    <ClCompile Include="src\ftmodule.c" />
     <ClCompile Include="src\imago2.c" />
     <ClCompile Include="src\imago_gl.c" />
     <ClCompile Include="src\modules.c" />
@@ -110,7 +110,7 @@
     <ClInclude Include="jpeglib\jversion.h" />
     <ClInclude Include="libpng\png.h" />
     <ClInclude Include="libpng\pngconf.h" />
-    <ClInclude Include="src\ftype_module.h" />
+    <ClInclude Include="src\ftmodule.h" />
     <ClInclude Include="src\imago2.h" />
     <ClInclude Include="zlib\crc32.h" />
     <ClInclude Include="zlib\deflate.h" />

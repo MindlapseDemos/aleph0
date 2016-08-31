@@ -19,24 +19,6 @@
     <ClCompile Include="src\conv.c">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\file_jpeg.c">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\file_png.c">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\file_ppm.c">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\file_rgbe.c">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\file_tga.c">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\ftype_module.c">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="src\imago_gl.c">
       <Filter>src</Filter>
     </ClCompile>
@@ -265,11 +247,26 @@
     <ClCompile Include="libpng\pngwutil.c">
       <Filter>libpng</Filter>
     </ClCompile>
+    <ClCompile Include="src\filejpeg.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\filepng.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileppm.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\filergbe.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\filetga.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ftmodule.c">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\ftype_module.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="src\imago2.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -344,6 +341,9 @@
     </ClInclude>
     <ClInclude Include="libpng\pngconf.h">
       <Filter>libpng</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ftmodule.h">
+      <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

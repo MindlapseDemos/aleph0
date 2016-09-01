@@ -28,6 +28,9 @@
     <ClCompile Include="src\gfxutil.c">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\mike.c">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\demo.h">

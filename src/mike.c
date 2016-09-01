@@ -9,6 +9,9 @@
 
 #define BG_FILENAME "data/grise.png"
 
+#define MIN_SCROLL 32
+#define MAX_SCROLL (backgroundW - fb_width - MIN_SCROLL)
+
 static int init(void);
 static void destroy(void);
 static void start(long trans_time);
@@ -51,7 +54,7 @@ static int init(void)
 
 static void destroy(void)
 {
-	img_free_pixels(background);
+	//img_free_pixels(background);
 }
 
 static void start(long trans_time)
@@ -65,16 +68,17 @@ static void stop(long trans_time)
 
 static void draw(void)
 {	
-	unsigned short *pixels = fb_pixels;
+	int scroll = MIN_SCROLL + (MAX_SCROLL - MIN_SCROLL) * mouse_x / fb_width;
+	unsigned short *dst = fb_pixels;
+	unsigned short *src = background + 2 * scroll;
+	int scanline = 0;
+	
 
-	int j, i;
-	for (j = 0; j < fb_height; j++) {
-		for (i = 0; i < fb_width; i++) {
-			*pixels++ = 0x0000;
-		}
+	for (scanline = 0; scanline < fb_height; scanline++) {
+		memcpy(dst, src, fb_width * 2);
+		src += backgroundW;
+		dst += fb_width;
 	}
-
-	memcpy(fb_pixels, background, backgroundW * backgroundH * 2);
 }
 
 /* src and dst can be the same */

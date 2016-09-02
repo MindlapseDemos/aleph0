@@ -38,6 +38,8 @@ static unsigned int backgroundH = 0;
 static unsigned int lastFrameTime = 0;
 static float lastFrameDuration = 0.0f;
 
+static short *displacementMap;
+
 static float scrollSpeedTable[REFLECTION_HEIGHT];
 static float scrollTable[REFLECTION_HEIGHT];
 static int scrollTableRounded[REFLECTION_HEIGHT];
@@ -96,6 +98,8 @@ static void draw(void)
 	unsigned short *src = background + scroll;
 	int scanline = 0;
 	int i = 0;
+	short *disp;
+	int d;
 
 	lastFrameDuration = (time_msec - lastFrameTime) / 1000.0f;
 	lastFrameTime = time_msec;
@@ -108,12 +112,13 @@ static void draw(void)
 	
 	updateScrollTables(lastFrameDuration);
 
-	dst = fb_pixels;
-	dst += 100 * fb_width;
-	src = background + NORMALMAP_SCANLINE * backgroundW * 2;
+	dst = (unsigned short*) fb_pixels + HORIZON_HEIGHT * fb_width;
+	src = background + HORIZON_HEIGHT * backgroundW;
+	disp = displacementMap;
 	for (scanline = 0; scanline < REFLECTION_HEIGHT; scanline++) {
 		for (i = 0; i < fb_width; i++) {
-			*dst++ = src[(i + scrollTableRounded[scanline]) % scrollModTable[scanline]];
+			d = disp[(i + scrollTableRounded[scanline]) % scrollModTable[scanline]];
+			*dst++ = src[i + scroll + d];
 		}
 		src += backgroundW;
 	}
@@ -138,18 +143,43 @@ static void processNormal() {
 	unsigned int *normalmap = (unsigned int*)background;
 	normalmap += NORMALMAP_SCANLINE * backgroundW;
 	unsigned short *dst = normalmap;
+	displacementMap = (short*)dst;
+	short *dst2 = displacementMap;
 	float scale;
 	int i;
 	int x;
+	short maxDisplacement = 0;
+	short minDisplacement = 256;
 
 	for (scanline = 0; scanline < REFLECTION_HEIGHT; scanline++) {
 		scale = 2.0f - (float)scanline / ((float)REFLECTION_HEIGHT - 1);
 		scrollModTable[scanline] = (int) (backgroundW / scale + 0.5f);
 		for (i = 0; i < backgroundW; i++) {
 			x = (int)(i * scale + 0.5f);
-			*dst++ = x < backgroundW ? normalmap[x] & 0xFF : 0;
+			if (x < background) {
+				*dst = (unsigned short)normalmap[x] & 0xFF;
+				if ((short)*dst > maxDisplacement) maxDisplacement = (short)(*dst);
+				if ((short)*dst < minDisplacement) minDisplacement = (short)(*dst);
+			} else {
+				*dst = 0;
+			}
+			dst++;
 		}
 		normalmap += backgroundW;
+	}
+
+	if (maxDisplacement == minDisplacement) {
+		printf("Warning: grise normalmap fucked up\n");
+		return;
+	}
+
+	/* Second pass - subtract half maximum displacement to displace in both directions */
+	for (scanline = 0; scanline < REFLECTION_HEIGHT; scanline++) {
+		for (i = 0; i < backgroundW; i++) {
+			/* Remember that MIN_SCROLL is the padding around the screen, so ti's the maximum displacement we can get (positive & negative) */
+			*dst2 = 2 * MIN_SCROLL * (*dst2 - minDisplacement) / (maxDisplacement - minDisplacement) - MIN_SCROLL;
+			dst2++;
+		}
 	}
 }
 

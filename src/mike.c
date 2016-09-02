@@ -121,6 +121,7 @@ static void draw(void)
 			*dst++ = src[i + scroll + d];
 		}
 		src += backgroundW;
+		disp += backgroundW;
 	}
 }
 
@@ -156,7 +157,7 @@ static void processNormal() {
 		scrollModTable[scanline] = (int) (backgroundW / scale + 0.5f);
 		for (i = 0; i < backgroundW; i++) {
 			x = (int)(i * scale + 0.5f);
-			if (x < background) {
+			if (x < backgroundW) {
 				*dst = (unsigned short)normalmap[x] & 0xFF;
 				if ((short)*dst > maxDisplacement) maxDisplacement = (short)(*dst);
 				if ((short)*dst < minDisplacement) minDisplacement = (short)(*dst);

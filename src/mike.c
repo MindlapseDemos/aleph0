@@ -141,16 +141,18 @@ static void convert32To16(unsigned int *src32, unsigned short *dst16, unsigned i
 /* Scale normal with depth and unpack R component (horizontal component) */
 static void processNormal() {
 	int scanline;
-	unsigned int *normalmap = (unsigned int*)background;
-	normalmap += NORMALMAP_SCANLINE * backgroundW;
-	unsigned short *dst = normalmap;
-	displacementMap = (short*)dst;
-	short *dst2 = displacementMap;
 	float scale;
 	int i;
 	int x;
 	short maxDisplacement = 0;
 	short minDisplacement = 256;
+	unsigned short *dst;
+	short *dst2;
+	unsigned int *normalmap = (unsigned int*)background;
+	normalmap += NORMALMAP_SCANLINE * backgroundW;
+	dst = (unsigned short*)normalmap;
+	displacementMap = (short*)dst;
+	dst2 = displacementMap;
 
 	for (scanline = 0; scanline < REFLECTION_HEIGHT; scanline++) {
 		scale = 2.0f - (float)scanline / ((float)REFLECTION_HEIGHT - 1);

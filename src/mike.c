@@ -11,7 +11,12 @@
 
 #define BG_FILENAME "data/grise.png"
 
-#define MIN_SCROLL 32
+#define BB_SIZE 512	/* Let's use a power of 2. Maybe we'll zoom/rotate the effect */
+
+/* Every backBuffer scanline is guaranteed to have that many dummy pixels before and after */
+#define PIXEL_PADDING 32
+
+#define MIN_SCROLL PIXEL_PADDING
 #define MAX_SCROLL (backgroundW - fb_width - MIN_SCROLL)
 
 #define FAR_SCROLL_SPEED 50.0f
@@ -42,6 +47,8 @@ static float lastFrameDuration = 0.0f;
 
 static short *displacementMap;
 
+static unsigned short *backBuffer;
+
 static float scrollScaleTable[REFLECTION_HEIGHT];
 static float scrollTable[REFLECTION_HEIGHT];
 static int scrollTableRounded[REFLECTION_HEIGHT];
@@ -65,6 +72,9 @@ struct screen *mike_screen(void)
 
 static int init(void)
 {
+	/* Allocate back buffer */
+	backBuffer = (unsigned short*) malloc(BB_SIZE * BB_SIZE * sizeof(unsigned short));
+
 	if (!(background = img_load_pixels(BG_FILENAME, &backgroundW, &backgroundH, IMG_FMT_RGBA32))) {
 		fprintf(stderr, "failed to load image " BG_FILENAME "\n");
 		return -1;
@@ -82,7 +92,10 @@ static int init(void)
 
 static void destroy(void)
 {
-	//img_free_pixels(background);
+	free(backBuffer);
+	backBuffer = 0;
+
+	img_free_pixels(background);
 }
 
 static void start(long trans_time)
@@ -97,34 +110,47 @@ static void stop(long trans_time)
 static void draw(void)
 {	
 	int scroll = MIN_SCROLL + (MAX_SCROLL - MIN_SCROLL) * mouse_x / fb_width;
-	unsigned short *dst = fb_pixels;
+	unsigned short *dst = backBuffer + PIXEL_PADDING;
 	unsigned short *src = background + scroll;
 	int scanline = 0;
 	int i = 0;
-	short *disp;
+	short *dispScanline;
 	int d;
 
 	lastFrameDuration = (time_msec - lastFrameTime) / 1000.0f;
 	lastFrameTime = time_msec;
 
-	for (scanline = 0; scanline < fb_height; scanline++) {
+	/* First, render the horizon */
+	for (scanline = 0; scanline < HORIZON_HEIGHT; scanline++) {
 		memcpy(dst, src, fb_width * 2);
 		src += backgroundW;
-		dst += fb_width;
+		dst += BB_SIZE;
 	}
 	
+	/* Create scroll opffsets for all scanlines of the normalmap */
 	updateScrollTables(lastFrameDuration);
 
-	dst = (unsigned short*) fb_pixels + HORIZON_HEIGHT * fb_width;
+	/* Then, render the reflection under the horizon */
+	/* dst is already in place */
 	src = background + HORIZON_HEIGHT * backgroundW;
-	disp = displacementMap;
+	dispScanline = displacementMap;
 	for (scanline = 0; scanline < REFLECTION_HEIGHT; scanline++) {
 		for (i = 0; i < fb_width; i++) {
-			d = disp[(i + scrollTableRounded[scanline]) % scrollModTable[scanline]];
+			d = dispScanline[(i + scrollTableRounded[scanline]) % scrollModTable[scanline]];
 			*dst++ = src[i + scroll + d];
 		}
 		src += backgroundW;
-		disp += backgroundW;
+		dst += BB_SIZE - fb_width;
+		dispScanline += backgroundW;
+	}
+
+	/* Blit effect to framebuffer */
+	src = backBuffer + PIXEL_PADDING;
+	dst = fb_pixels;
+	for (scanline = 0; scanline < fb_height; scanline++) {
+		memcpy(dst, src, fb_width * 2);
+		src += BB_SIZE;
+		dst += fb_width;
 	}
 }
 

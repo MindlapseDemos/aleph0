@@ -7,6 +7,8 @@
 #include "demo.h"
 #include "screen.h"
 
+/* APPROX. 170 FPS Minimum */
+
 #define BG_FILENAME "data/grise.png"
 
 #define MIN_SCROLL 32
@@ -40,10 +42,11 @@ static float lastFrameDuration = 0.0f;
 
 static short *displacementMap;
 
-static float scrollSpeedTable[REFLECTION_HEIGHT];
+static float scrollScaleTable[REFLECTION_HEIGHT];
 static float scrollTable[REFLECTION_HEIGHT];
 static int scrollTableRounded[REFLECTION_HEIGHT];
 static int scrollModTable[REFLECTION_HEIGHT];
+static float nearScrollAmount = 0.0f;
 
 static struct screen scr = {
 	"mike",
@@ -70,9 +73,9 @@ static int init(void)
 	/* Convert to 16bpp */
 	convert32To16((unsigned int*)background, background, backgroundW * NORMALMAP_SCANLINE); /* Normalmap will keep its 32 bit color */
 
-	processNormal();
-
 	initScrollTables();
+
+	processNormal();
 
 	return 0;
 }
@@ -141,7 +144,6 @@ static void convert32To16(unsigned int *src32, unsigned short *dst16, unsigned i
 /* Scale normal with depth and unpack R component (horizontal component) */
 static void processNormal() {
 	int scanline;
-	float scale;
 	int i;
 	int x;
 	short maxDisplacement = 0;
@@ -155,12 +157,11 @@ static void processNormal() {
 	dst2 = displacementMap;
 
 	for (scanline = 0; scanline < REFLECTION_HEIGHT; scanline++) {
-		scale = 2.0f - (float)scanline / ((float)REFLECTION_HEIGHT - 1);
-		scrollModTable[scanline] = (int) (backgroundW / scale + 0.5f);
+		scrollModTable[scanline] = (int) (backgroundW / scrollScaleTable[scanline] + 0.5f);
 		for (i = 0; i < backgroundW; i++) {
-			x = (int)(i * scale + 0.5f);
+			x = (int)(i * scrollScaleTable[scanline] + 0.5f);
 			if (x < backgroundW) {
-				*dst = (unsigned short)normalmap[x] & 0xFF;
+				*dst = (unsigned short)(normalmap[x] >> 8) & 0xFF;
 				if ((short)*dst > maxDisplacement) maxDisplacement = (short)(*dst);
 				if ((short)*dst < minDisplacement) minDisplacement = (short)(*dst);
 			} else {
@@ -181,18 +182,23 @@ static void processNormal() {
 		for (i = 0; i < backgroundW; i++) {
 			/* Remember that MIN_SCROLL is the padding around the screen, so ti's the maximum displacement we can get (positive & negative) */
 			*dst2 = 2 * MIN_SCROLL * (*dst2 - minDisplacement) / (maxDisplacement - minDisplacement) - MIN_SCROLL;
+			*dst2 = (short)((float)*dst2 / scrollScaleTable[scanline] + 0.5f); /* Displacements must also scale with distance*/
 			dst2++;
 		}
 	}
 }
 
+static float distanceScale(int scanline) {
+	float farScale, t;
+	farScale = (float)NEAR_SCROLL_SPEED / (float)FAR_SCROLL_SPEED;
+	t = (float)scanline / ((float)REFLECTION_HEIGHT - 1);
+	return 1.0f / (1.0f / farScale + (1.0f - 1.0f / farScale) * t);
+}
+
 static void initScrollTables() {
 	int i = 0;
-	float scrollSpeed = FAR_SCROLL_SPEED;
-	float speedIncrement = (NEAR_SCROLL_SPEED - FAR_SCROLL_SPEED) / ((float) (REFLECTION_HEIGHT - 1));
 	for (i = 0; i < REFLECTION_HEIGHT; i++) {
-		scrollSpeedTable[i] = scrollSpeed;
-		scrollSpeed += speedIncrement;
+		scrollScaleTable[i] = distanceScale(i);
 		scrollTable[i] = 0.0f;
 		scrollTableRounded[i] = 0;
 	}
@@ -201,8 +207,12 @@ static void initScrollTables() {
 
 static void updateScrollTables(float dt) {
 	int i = 0;
+	
+	nearScrollAmount += dt * NEAR_SCROLL_SPEED;
+	nearScrollAmount = (float) fmod(nearScrollAmount, 512.0f);
+
 	for (i = 0; i < REFLECTION_HEIGHT; i++) {
-		scrollTable[i] += scrollSpeedTable[i] * dt;
+		scrollTable[i] = nearScrollAmount / scrollScaleTable[i];
 		scrollTableRounded[i] = (int)(scrollTable[i] + 0.5f) % scrollModTable[i];
 	}
 }

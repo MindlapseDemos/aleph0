@@ -87,7 +87,11 @@ static int init(void)
 
 	processNormal();
 
+#ifdef MIKE_PC
+	return 0xCAFE;
+#else
 	return 0;
+#endif
 }
 
 static void destroy(void)

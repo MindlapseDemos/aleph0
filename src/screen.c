@@ -34,8 +34,19 @@ int scr_init(void)
 	assert(num_screens <= NUM_SCR);
 
 	for(i=0; i<num_screens; i++) {
-		if(scr[i]->init() == -1) {
+		int r;
+		r = scr[i]->init();
+		if(r == -1) {
 			return -1;
+		}
+
+		/* Make the effect run first if it returns "CAFE" from ins init() */
+		if (r == 0xCAFE) {
+			struct screen *tmp;
+			tmp = scr[i];
+			scr[i] = scr[0];
+			scr[0] = tmp;
+			printf("*** Screen %s displayed out of order ***\n", scr[0]->name);
 		}
 	}
 	return 0;

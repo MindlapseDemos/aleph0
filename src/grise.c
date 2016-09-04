@@ -56,7 +56,7 @@ static int scrollModTable[REFLECTION_HEIGHT];
 static float nearScrollAmount = 0.0f;
 
 static struct screen scr = {
-	"mike",
+	"Galaxy rise",
 	init,
 	destroy,
 	start,
@@ -64,7 +64,7 @@ static struct screen scr = {
 	draw
 };
 
-struct screen *mike_screen(void)
+struct screen *grise_screen(void)
 {
 	return &scr;
 }

@@ -87,7 +87,7 @@
     <ClCompile Include="src\demo.c" />
     <ClCompile Include="src\fract.c" />
     <ClCompile Include="src\gfxutil.c" />
-    <ClCompile Include="src\mike.c" />
+    <ClCompile Include="src\grise.c" />
     <ClCompile Include="src\screen.c" />
     <ClCompile Include="src\sdl\main.c" />
     <ClCompile Include="src\tunnel.c" />

@@ -7,7 +7,7 @@
 
 struct screen *tunnel_screen(void);
 struct screen *fract_screen(void);
-struct screen *mike_screen(void);
+struct screen *grise_screen(void);
 
 #define NUM_SCR	32
 static struct screen *scr[NUM_SCR];
@@ -26,7 +26,7 @@ int scr_init(void)
 	if(!(scr[idx++] = fract_screen())) {
 		return -1;
 	}
-	if (!(scr[idx++] = mike_screen())) {
+	if (!(scr[idx++] = grise_screen())) {
 		return -1;
 	}
 	num_screens = idx;

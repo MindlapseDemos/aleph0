@@ -28,8 +28,7 @@ enum {
 /* 2nd arg to g3d_draw: which space are input verts in. skips parts of the pipeline */
 enum {
 	G3D_LOCAL_SPACE, /* this being 0 makes a nice default arg. */
-	G3D_WORLD_SPACE, /* ignore world matrix */
-	G3D_VIEW_SPACE,  /* ignore view matrix */
+	G3D_VIEW_SPACE,  /* ignore modelview matrix */
 	G3D_CLIP_SPACE,  /* ignore projection matrix */
 	G3D_SCREEN_SPACE,/* 2D verts, don't divide by w */
 	G3D_PIXEL_SPACE  /* in pixel units, ignore viewport */
@@ -37,8 +36,7 @@ enum {
 
 /* matrix stacks */
 enum {
-	G3D_WORLD,
-	G3D_VIEW,
+	G3D_MODELVIEW,
 	G3D_PROJECTION,
 
 	G3D_NUM_MATRICES
@@ -58,13 +56,13 @@ void g3d_mult_matrix(int which, const float *m);
 void g3d_push_matrix(int which);
 void g3d_pop_matrix(int which);
 
-void g3d_translate(float x, float y, float z);
-void g3d_rotate(float angle, float x, float y, float z);
-void g3d_scale(float x, float y, float z);
-void g3d_ortho(float left, float right, float bottom, float top, float znear, float zfar);
-void g3d_frustum(float left, float right, float bottom, float top, float znear, float zfar);
-void g3d_perspective(float vfov, float aspect, float znear, float zfar);
+void g3d_translate(int which, float x, float y, float z);
+void g3d_rotate(int which, float angle, float x, float y, float z);
+void g3d_scale(int which, float x, float y, float z);
+void g3d_ortho(int which, float left, float right, float bottom, float top, float znear, float zfar);
+void g3d_frustum(int which, float left, float right, float bottom, float top, float znear, float zfar);
+void g3d_perspective(int which, float vfov, float aspect, float znear, float zfar);
 
-void g3d_draw(int prim, int space, const struct g3d_vertex *varr, int num);
+void g3d_draw(int prim, int space, const struct g3d_vertex *varr, int varr_size);
 
 #endif	/* THREEDGFX_H_ */

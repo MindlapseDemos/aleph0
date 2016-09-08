@@ -6,6 +6,7 @@
 #include <limits.h>
 #include "demo.h"
 #include "screen.h"
+#include "3dgfx.h"
 
 int fb_width = 320;
 int fb_height = 240;
@@ -25,6 +26,11 @@ int demo_init(int argc, char **argv)
 	if(argv[1]) {
 		start_scr_name = argv[1];
 	}
+
+	if(g3d_init() == -1) {
+		return -1;
+	}
+	g3d_framebuffer(fb_width, fb_height, fb_pixels);
 
 	if(scr_init() == -1) {
 		return -1;
@@ -48,6 +54,7 @@ int demo_init(int argc, char **argv)
 void demo_cleanup(void)
 {
 	scr_shutdown();
+	g3d_destroy();
 
 	if(time_msec) {
 		float fps = (float)nframes / ((float)time_msec / 1000.0f);

@@ -59,7 +59,7 @@ static int scrollModTable[REFLECTION_HEIGHT];
 static float nearScrollAmount = 0.0f;
 
 static struct screen scr = {
-	"Galaxy rise",
+	"galaxyrise",
 	init,
 	destroy,
 	start,

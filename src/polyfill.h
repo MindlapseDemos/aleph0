@@ -20,5 +20,6 @@ struct pvertex {
 
 void polyfill(int mode, struct pvertex *verts, int nverts);
 void polyfill_wire(struct pvertex *verts, int nverts);
+void polyfill_flat(struct pvertex *verts, int nverts);
 
 #endif	/* POLYFILL_H_ */

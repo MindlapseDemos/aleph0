@@ -25,14 +25,8 @@ enum {
 	G3D_ALL = 0x7fffffff
 };
 
-/* 2nd arg to g3d_draw: which space are input verts in. skips parts of the pipeline */
-enum {
-	G3D_LOCAL_SPACE, /* this being 0 makes a nice default arg. */
-	G3D_VIEW_SPACE,  /* ignore modelview matrix */
-	G3D_CLIP_SPACE,  /* ignore projection matrix */
-	G3D_SCREEN_SPACE,/* 2D verts, don't divide by w */
-	G3D_PIXEL_SPACE  /* in pixel units, ignore viewport */
-};
+/* arg to g3d_front_face */
+enum { G3D_CCW, G3D_CW };
 
 /* matrix stacks */
 enum {
@@ -42,7 +36,8 @@ enum {
 	G3D_NUM_MATRICES
 };
 
-void g3d_init(void);
+int g3d_init(void);
+void g3d_destroy(void);
 
 void g3d_framebuffer(int width, int height, void *pixels);
 
@@ -51,18 +46,23 @@ void g3d_disable(unsigned int opt);
 void g3d_setopt(unsigned int opt, unsigned int mask);
 unsigned int g3d_getopt(unsigned int mask);
 
-void g3d_set_matrix(int which, const float *m); /* null ptr for identity */
-void g3d_mult_matrix(int which, const float *m);
-void g3d_push_matrix(int which);
-void g3d_pop_matrix(int which);
+void g3d_front_face(unsigned int order);
 
-void g3d_translate(int which, float x, float y, float z);
-void g3d_rotate(int which, float angle, float x, float y, float z);
-void g3d_scale(int which, float x, float y, float z);
-void g3d_ortho(int which, float left, float right, float bottom, float top, float znear, float zfar);
-void g3d_frustum(int which, float left, float right, float bottom, float top, float znear, float zfar);
-void g3d_perspective(int which, float vfov, float aspect, float znear, float zfar);
+void g3d_matrix_mode(int mmode);
 
-void g3d_draw(int prim, int space, const struct g3d_vertex *varr, int varr_size);
+void g3d_load_identity(void);
+void g3d_load_matrix(const float *m);
+void g3d_mult_matrix(const float *m);
+void g3d_push_matrix(void);
+void g3d_pop_matrix(void);
+
+void g3d_translate(float x, float y, float z);
+void g3d_rotate(float angle, float x, float y, float z);
+void g3d_scale(float x, float y, float z);
+void g3d_ortho(float left, float right, float bottom, float top, float znear, float zfar);
+void g3d_frustum(float left, float right, float bottom, float top, float znear, float zfar);
+void g3d_perspective(float vfov, float aspect, float znear, float zfar);
+
+void g3d_draw(int prim, const struct g3d_vertex *varr, int varr_size);
 
 #endif	/* THREEDGFX_H_ */

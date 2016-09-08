@@ -8,6 +8,7 @@
 struct screen *tunnel_screen(void);
 struct screen *fract_screen(void);
 struct screen *grise_screen(void);
+struct screen *polytest_screen(void);
 
 #define NUM_SCR	32
 static struct screen *scr[NUM_SCR];
@@ -27,6 +28,9 @@ int scr_init(void)
 		return -1;
 	}
 	if (!(scr[idx++] = grise_screen())) {
+		return -1;
+	}
+	if(!(scr[idx++] = polytest_screen())) {
 		return -1;
 	}
 	num_screens = idx;

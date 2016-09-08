@@ -31,6 +31,15 @@
     <ClCompile Include="src\grise.c">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\3dgfx.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\polyfill.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\polytest.c">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\demo.h">

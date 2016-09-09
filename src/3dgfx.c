@@ -251,16 +251,25 @@ void g3d_perspective(float vfov_deg, float aspect, float znear, float zfar)
 	g3d_mult_matrix(m);
 }
 
-#define CROSS(res, a, b) \
-	do { \
-		(res)[0] = (a)[1] * (b)[2] - (a)[2] * (b)[1]; \
-		(res)[1] = (a)[2] * (b)[0] - (a)[0] * (b)[2]; \
-		(res)[2] = (a)[0] * (b)[1] - (a)[1] * (b)[0]; \
-	} while(0)
+const float *g3d_get_matrix(int which, float *m)
+{
+	int top = st->mtop[which];
+
+	if(m) {
+		memcpy(m, st->mat[which][top], 16 * sizeof(float));
+	}
+	return st->mat[which][top];
+}
 
 void g3d_draw(int prim, const struct g3d_vertex *varr, int varr_size)
 {
-	int i;
+	g3d_draw_indexed(prim, varr, varr_size, 0, 0);
+}
+
+void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
+		const int16_t *iarr, int iarr_size)
+{
+	int i, j, nfaces;
 	struct pvertex pv[4];
 	struct g3d_vertex v[4];
 	int vnum = prim; /* primitive vertex counts correspond to enum values */
@@ -271,11 +280,12 @@ void g3d_draw(int prim, const struct g3d_vertex *varr, int varr_size)
 	memcpy(st->norm_mat, st->mat[G3D_MODELVIEW][mvtop], 16 * sizeof(float));
 	st->norm_mat[12] = st->norm_mat[13] = st->norm_mat[14] = 0.0f;
 
-	while(varr_size >= vnum) {
-		varr_size -= vnum;
+	nfaces = (iarr ? iarr_size : varr_size) / vnum;
+
+	for(j=0; j<nfaces; j++) {
 
 		for(i=0; i<vnum; i++) {
-			v[i] = *varr++;
+			v[i] = iarr ? varr[*iarr++] : *varr++;
 
 			xform4_vec3(st->mat[G3D_MODELVIEW][mvtop], &v[i].x);
 			xform3_vec3(st->norm_mat, &v[i].nx);

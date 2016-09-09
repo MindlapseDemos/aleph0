@@ -63,6 +63,10 @@ void g3d_ortho(float left, float right, float bottom, float top, float znear, fl
 void g3d_frustum(float left, float right, float bottom, float top, float znear, float zfar);
 void g3d_perspective(float vfov, float aspect, float znear, float zfar);
 
+const float *g3d_get_matrix(int which, float *m);
+
 void g3d_draw(int prim, const struct g3d_vertex *varr, int varr_size);
+void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
+		const int16_t *iarr, int iarr_size);
 
 #endif	/* THREEDGFX_H_ */

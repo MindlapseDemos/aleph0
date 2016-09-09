@@ -23,6 +23,7 @@ int demo_init(int argc, char **argv)
 {
 	struct screen *scr;
 
+	start_scr_name = getenv("START_SCR");
 	if(argv[1]) {
 		start_scr_name = argv[1];
 	}

@@ -20,7 +20,6 @@ static void draw(void);
 static void draw_mesh(struct mesh *mesh);
 static int gen_cube(struct mesh *mesh, float sz);
 static int gen_torus(struct mesh *mesh, float rad, float ringrad, int usub, int vsub);
-static int dump_obj(const char *fname, struct mesh *m);
 static void zsort(struct mesh *m);
 
 static struct screen scr = {
@@ -42,13 +41,14 @@ static int init(void)
 {
 	gen_cube(&cube, 1.0);
 	gen_torus(&torus, 1.0, 0.25, 24, 12);
-	dump_obj("torus.obj", &torus);
 	return 0;
 }
 
 static void destroy(void)
 {
 	free(cube.varr);
+	free(torus.varr);
+	free(torus.iarr);
 }
 
 static void start(long trans_time)
@@ -249,50 +249,6 @@ static int gen_torus(struct mesh *mesh, float rad, float ringrad, int usub, int 
 	return 0;
 }
 
-static int dump_obj(const char *fname, struct mesh *m)
-{
-	int i, j, nfaces;
-	FILE *fp;
-	struct g3d_vertex *vptr;
-	int16_t *iptr;
-
-	if(!(fp = fopen(fname, "wb"))) {
-		return -1;
-	}
-
-	nfaces = m->icount / m->prim;
-	printf("dumping obj: %s - %d vertices / %d faces (%d indices)\n", fname,
-			m->vcount, nfaces, m->icount);
-
-	vptr = m->varr;
-	for(i=0; i<m->vcount; i++) {
-		fprintf(fp, "v %f %f %f\n", vptr->x, vptr->y, vptr->z);
-		++vptr;
-	}
-	vptr = m->varr;
-	for(i=0; i<m->vcount; i++) {
-		fprintf(fp, "vn %f %f %f\n", vptr->nx, vptr->ny, vptr->nz);
-		++vptr;
-	}
-	vptr = m->varr;
-	for(i=0; i<m->vcount; i++) {
-		fprintf(fp, "vt %f %f\n", vptr->u, vptr->v);
-		++vptr;
-	}
-
-	iptr = m->iarr;
-	for(i=0; i<m->icount; i += m->prim) {
-		fputc('f', fp);
-		for(j=0; j<m->prim; j++) {
-			int idx = *iptr++ + 1;
-			fprintf(fp, " %d/%d/%d", idx, idx, idx);
-		}
-		fputc('\n', fp);
-	}
-
-	fclose(fp);
-	return 0;
-}
 
 static struct {
 	struct g3d_vertex *varr;

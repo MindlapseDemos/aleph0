@@ -10,6 +10,7 @@
 /* APPROX. 170 FPS Minimum */
 
 #define BG_FILENAME "data/grise.png"
+#define GROBJ_01_FILENAME "data/grobj_01.png"
 
 #define BB_SIZE 512	/* Let's use a power of 2. Maybe we'll zoom/rotate the effect */
 
@@ -37,6 +38,8 @@ static void convert32To16(unsigned int *src32, unsigned short *dst16, unsigned i
 static void processNormal();
 static void initScrollTables();
 static void updateScrollTables(float dt);
+
+static void rleEncode(unsigned char *pixels, unsigned int w, unsigned int h);
 
 static unsigned short *background = 0;
 static unsigned int backgroundW = 0;
@@ -72,9 +75,13 @@ struct screen *grise_screen(void)
 
 static int init(void)
 {
+	unsigned char *reflectedObject;
+	int reflectedObjectW, reflectedObjectH;
+
 	/* Allocate back buffer */
 	backBuffer = (unsigned short*) malloc(BB_SIZE * BB_SIZE * sizeof(unsigned short));
 
+	/* grise.png contains the background (horizon), baked reflection and normalmap for displacement */
 	if (!(background = img_load_pixels(BG_FILENAME, &backgroundW, &backgroundH, IMG_FMT_RGBA32))) {
 		fprintf(stderr, "failed to load image " BG_FILENAME "\n");
 		return -1;
@@ -82,6 +89,16 @@ static int init(void)
 
 	/* Convert to 16bpp */
 	convert32To16((unsigned int*)background, background, backgroundW * NORMALMAP_SCANLINE); /* Normalmap will keep its 32 bit color */
+
+	/* Load reflected objects */
+	if (!(reflectedObject = img_load_pixels(GROBJ_01_FILENAME, &reflectedObjectW, &reflectedObjectH, IMG_FMT_GREY8))) {
+		fprintf(stderr, "failed to load image " GROBJ_01_FILENAME "\n");
+		return -1;
+	}
+
+	rleEncode(reflectedObject, reflectedObjectW, reflectedObjectH);
+
+	img_free_pixels(reflectedObject);
 
 	initScrollTables();
 
@@ -244,5 +261,19 @@ static void updateScrollTables(float dt) {
 	for (i = 0; i < REFLECTION_HEIGHT; i++) {
 		scrollTable[i] = nearScrollAmount / scrollScaleTable[i];
 		scrollTableRounded[i] = (int)(scrollTable[i] + 0.5f) % scrollModTable[i];
+	}
+}
+
+static void rleEncode(unsigned char *pixels, unsigned int w, unsigned int h) {
+	int scanline;
+	int i;
+	int skipping = 1;
+
+	for (scanline = 0; scanline < h; scanline++) {
+		for (i = 0; i < w; i++) {
+			if (*pixels++) {
+				
+			}
+		}
 	}
 }

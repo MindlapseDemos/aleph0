@@ -148,17 +148,28 @@ static void draw(void)
 		dst += BB_SIZE;
 	}
 	
-	/* Create scroll opffsets for all scanlines of the normalmap */
+	/* Create scroll offsets for all scanlines of the normalmap */
 	updateScrollTables(lastFrameDuration);
 
-	/* Then, render the reflection under the horizon */
-	/* dst is already in place */
-	src = background + HORIZON_HEIGHT * backgroundW;
+	/* Render the baked reflection one scanline below its place, so that 
+	 * the displacement that follows will be done in a cache-friendly way
+	 */
+	src -= PIXEL_PADDING; /* We want to also fill the PADDING pixels here */
+	dst = backBuffer + (HORIZON_HEIGHT + 1) * BB_SIZE;
+	for (scanline = 0; scanline < REFLECTION_HEIGHT; scanline++) {
+		memcpy(dst, src, (fb_width + PIXEL_PADDING) * 2);
+		src += backgroundW;
+		dst += BB_SIZE;
+	}
+	
+	/* Perform displacement */
+	dst = backBuffer + HORIZON_HEIGHT * BB_SIZE + PIXEL_PADDING;
+	src = dst + BB_SIZE; /* The pixels to be displaced are 1 scanline below */
 	dispScanline = displacementMap;
 	for (scanline = 0; scanline < REFLECTION_HEIGHT; scanline++) {
 		for (i = 0; i < fb_width; i++) {
 			d = dispScanline[(i + scrollTableRounded[scanline]) % scrollModTable[scanline]];
-			*dst++ = src[i + scroll + d];
+			*dst++ = src[i + d];
 		}
 		src += backgroundW;
 		dst += BB_SIZE - fb_width;
@@ -267,13 +278,41 @@ static void updateScrollTables(float dt) {
 static void rleEncode(unsigned char *pixels, unsigned int w, unsigned int h) {
 	int scanline;
 	int i;
-	int skipping = 1;
+	int penActive = 0;
+	int counter = 0;
 
 	for (scanline = 0; scanline < h; scanline++) {
 		for (i = 0; i < w; i++) {
 			if (*pixels++) {
-				
+				if (penActive) {
+					if (counter >= PIXEL_PADDING) {
+						printf("W %d ", counter);
+						counter = 0;
+						printf("I %d ", counter);
+					}
+					counter++;
+				} else {
+					counter++;
+					printf("I %d ", counter);
+					counter = 1;
+					penActive = 1;
+				}
+			} else {
+				if (penActive) {
+					printf("W %d ", counter);
+					counter = 0;
+					penActive = 0;
+				} else {
+					counter++;
+				}
 			}
 		}
+
+		if (penActive) {
+			printf("W %d ", counter);
+		}
+		penActive = 0;
+		counter = 0;
+		printf(" CR\n");
 	}
 }

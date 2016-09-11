@@ -14,8 +14,15 @@ typedef struct {
 	unsigned char *scans;
 } RLEBitmap;
 
-static RLEBitmap createRLEBitmap(unsigned int w, unsigned int h);
-static destroyRLEBitmap(RLEBitmap b);
+static RLEBitmap rleCreate(unsigned int w, unsigned int h);
+static void rleDestroy(RLEBitmap b);
+static void rleBlit(unsigned short *dst, int dstW, int dstH, int dstStride, 
+	RLEBitmap bitmap, int blitX, int blitY);
+static void rleBlitScale(unsigned short *dst, int dstW, int dstH, int dstStride,
+	RLEBitmap bitmap, int blitX, int blitY, float scaleX, float scaleY);
+static void rleBlitScaleInv(unsigned short *dst, int dstW, int dstH, int dstStride,
+	RLEBitmap bitmap, int blitX, int blitY, float scaleX, float scaleY);
+static RLEBitmap rleEncode(unsigned char *pixels, unsigned int w, unsigned int h);
 
 #define BG_FILENAME "data/grise.png"
 #define GROBJ_01_FILENAME "data/grobj_01.png"
@@ -25,11 +32,14 @@ static destroyRLEBitmap(RLEBitmap b);
 /* Every backBuffer scanline is guaranteed to have that many dummy pixels before and after */
 #define PIXEL_PADDING 32
 
+/* Make sure this is less than PIXEL_PADDING*/
+#define MAX_DISPLACEMENT 16 
+
 #define MIN_SCROLL PIXEL_PADDING
 #define MAX_SCROLL (backgroundW - fb_width - MIN_SCROLL)
 
-#define FAR_SCROLL_SPEED 50.0f
-#define NEAR_SCROLL_SPEED 400.0f
+#define FAR_SCROLL_SPEED 15.0f
+#define NEAR_SCROLL_SPEED 120.0f
 
 #define HORIZON_HEIGHT 100
 #define REFLECTION_HEIGHT (240 - HORIZON_HEIGHT)
@@ -47,7 +57,7 @@ static void processNormal();
 static void initScrollTables();
 static void updateScrollTables(float dt);
 
-static RLEBitmap rleEncode(unsigned char *pixels, unsigned int w, unsigned int h);
+
 
 static unsigned short *background = 0;
 static unsigned int backgroundW = 0;
@@ -128,7 +138,7 @@ static void destroy(void)
 
 	img_free_pixels(background);
 
-	destroyRLEBitmap(grobj);
+	rleDestroy(grobj);
 }
 
 static void start(long trans_time)
@@ -173,7 +183,10 @@ static void draw(void)
 		src += backgroundW;
 		dst += BB_SIZE;
 	}
-	
+
+	/* Blit reflections first, to be  displaced */
+	for (i = 0; i < 5; i++) rleBlitScaleInv(backBuffer + PIXEL_PADDING, fb_width, fb_height, BB_SIZE, grobj, 134 + (i-3) * 60, 235, 1.0f, 1.8f);
+
 	/* Perform displacement */
 	dst = backBuffer + HORIZON_HEIGHT * BB_SIZE + PIXEL_PADDING;
 	src = dst + BB_SIZE; /* The pixels to be displaced are 1 scanline below */
@@ -188,14 +201,19 @@ static void draw(void)
 		dispScanline += backgroundW;
 	}
 
+	/* Then after displacement, blit the objects */
+	for (i = 0; i < 5; i++) rleBlit(backBuffer + PIXEL_PADDING, fb_width, fb_height, BB_SIZE, grobj, 134 + (i-3) * 60, 100);
+
 	/* Blit effect to framebuffer */
 	src = backBuffer + PIXEL_PADDING;
 	dst = fb_pixels;
 	for (scanline = 0; scanline < fb_height; scanline++) {
 		memcpy(dst, src, fb_width * 2);
-		src += BB_SIZE;
+		src += BB_SIZE; 
 		dst += fb_width;
 	}
+
+	
 }
 
 /* src and dst can be the same */
@@ -251,7 +269,7 @@ static void processNormal() {
 	for (scanline = 0; scanline < REFLECTION_HEIGHT; scanline++) {
 		for (i = 0; i < backgroundW; i++) {
 			/* Remember that MIN_SCROLL is the padding around the screen, so ti's the maximum displacement we can get (positive & negative) */
-			*dst2 = 2 * MIN_SCROLL * (*dst2 - minDisplacement) / (maxDisplacement - minDisplacement) - MIN_SCROLL;
+			*dst2 = 2 * MAX_DISPLACEMENT * (*dst2 - minDisplacement) / (maxDisplacement - minDisplacement) - MAX_DISPLACEMENT;
 			*dst2 = (short)((float)*dst2 / scrollScaleTable[scanline] + 0.5f); /* Displacements must also scale with distance*/
 			dst2++;
 		}
@@ -295,8 +313,10 @@ static void updateScrollTables(float dt) {
 #define RLE_STREAKS_PER_SCANLINE 4
 /* Every streak is encoded by 2 bytes: offset and count of black pixels in the streak */
 #define RLE_BYTES_PER_SCANLINE RLE_STREAKS_PER_SCANLINE * 2
+#define RLE_FILL_COLOR 0
+#define RLE_FILL_COLOR_32 ((RLE_FILL_COLOR << 16) | RLE_FILL_COLOR)
 
-static RLEBitmap createRLEBitmap(unsigned int w, unsigned int h) {
+static RLEBitmap rleCreate(unsigned int w, unsigned int h) {
 	RLEBitmap ret;
 	ret.w = w;
 	ret.h = h;
@@ -307,7 +327,7 @@ static RLEBitmap createRLEBitmap(unsigned int w, unsigned int h) {
 	return ret;
 }
 
-static destroyRLEBitmap(RLEBitmap b) {
+static void rleDestroy(RLEBitmap b) {
 	free(b.scans);
 }
 
@@ -321,7 +341,7 @@ static RLEBitmap rleEncode(unsigned char *pixels, unsigned int w, unsigned int h
 	unsigned char *output;
 
 	/* https://www.youtube.com/watch?v=RKMR02o1I88&feature=youtu.be&t=55 */
-	ret = createRLEBitmap(w, h);
+	ret = rleCreate(w, h);
 
 	for (scanline = 0; scanline < h; scanline++) {
 		output = ret.scans + scanline * RLE_BYTES_PER_SCANLINE;
@@ -363,4 +383,162 @@ static RLEBitmap rleEncode(unsigned char *pixels, unsigned int w, unsigned int h
 	}
 
 	return ret;
+}
+
+static void rleBlit(unsigned short *dst, int dstW, int dstH, int dstStride,
+	RLEBitmap bitmap, int blitX, int blitY) 
+{
+	int scanline = 0;
+	int streakPos = 0;
+	int streakLength = 0;
+	int streak = 0;
+	unsigned char *input = bitmap.scans;
+	unsigned short *output;
+	unsigned int *output32;
+
+	dst += blitX + blitY * dstStride;
+
+	for (scanline = blitY; scanline < blitY + bitmap.h; scanline++) {
+		if (scanline < 0 || scanline >= dstH) continue;
+		for (streak = 0; streak < RLE_STREAKS_PER_SCANLINE; streak++) {
+			streakPos = *input++;
+			streakLength = *input++;
+
+			if ((streakPos + blitX) <= 0) continue;
+
+			output = dst + streakPos;
+
+			/* Check if we need to write the first pixel as 16bit */
+			if (streakLength % 2) {
+				*output++ = RLE_FILL_COLOR;
+			}
+
+			/* Then, write 2 pixels at a time */
+			streakLength >>= 1;
+			output32 = (unsigned int*) output;
+			while (streakLength--) {
+				*output32++ = RLE_FILL_COLOR_32;
+			}
+		}
+
+		dst += dstStride;
+	}
+}
+
+static void interpolateScan(unsigned char *output, unsigned char *a, unsigned char *b, float t) {
+	static int div = 1 << 23;
+	int ti, i;
+
+	t += 1.0f;
+	ti = (*((unsigned int*)&t)) & 0x7FFFFF;
+	
+	for (i = 0; i < RLE_BYTES_PER_SCANLINE; i++) {
+		*output++ = ((*b++ * ti) + (*a++ * (div - ti))) >> 23;
+	}
+}
+
+static void rleBlitScale(unsigned short *dst, int dstW, int dstH, int dstStride,
+	RLEBitmap bitmap, int blitX, int blitY, float scaleX, float scaleY)
+{
+	int scanline = 0;
+	int streakPos = 0;
+	int streakLength = 0;
+	int streak = 0;
+	unsigned short *output;
+	unsigned int *output32;
+	unsigned char *input;
+	int scanlineCounter = 0;
+	static unsigned char scan[512];
+
+	int blitW = (int) (bitmap.w * scaleX + 0.5f);
+	int blitH = (int)(bitmap.h * scaleY + 0.5f);
+	
+	dst += blitX + blitY * dstStride;
+
+	for (scanline = blitY; scanline < blitY + blitH; scanline++) {
+		float normalScan = scanlineCounter / scaleY;
+		unsigned char *scan0 = bitmap.scans + RLE_BYTES_PER_SCANLINE * (int)normalScan;
+		unsigned char *scan1 = scan0 + RLE_BYTES_PER_SCANLINE;
+		normalScan -= (int)normalScan;
+		interpolateScan(scan, scan0, scan1, normalScan);
+		input = scan;
+		scanlineCounter++;
+
+		if (scanline < 0 || scanline >= dstH) continue;
+		for (streak = 0; streak < RLE_STREAKS_PER_SCANLINE; streak++) {
+			streakPos = (int) ((*input++) * scaleX + 0.5f);
+			streakLength = (int)((*input++) * scaleX + 0.5f);
+
+			if ((streakPos + blitX) <= 0) continue;
+
+			output = dst + streakPos;
+
+			/* Check if we need to write the first pixel as 16bit */
+			if (streakLength % 2) {
+				*output++ = RLE_FILL_COLOR;
+			}
+
+			/* Then, write 2 pixels at a time */
+			streakLength >>= 1;
+			output32 = (unsigned int*)output;
+			while (streakLength--) {
+				*output32++ = RLE_FILL_COLOR_32;
+			}
+		}
+
+		dst += dstStride;
+	}
+}
+
+static void rleBlitScaleInv(unsigned short *dst, int dstW, int dstH, int dstStride,
+	RLEBitmap bitmap, int blitX, int blitY, float scaleX, float scaleY)
+{
+	int scanline = 0;
+	int streakPos = 0;
+	int streakLength = 0;
+	int streak = 0;
+	unsigned short *output;
+	unsigned int *output32;
+	unsigned char *input;
+	int scanlineCounter = 0;
+	static unsigned char scan[512];
+
+	int blitW = (int)(bitmap.w * scaleX + 0.5f);
+	int blitH = (int)(bitmap.h * scaleY + 0.5f);
+
+	dst += blitX + blitY * dstStride;
+
+	for (scanline = blitY; scanline > blitY - blitH; scanline--) {
+		float normalScan = scanlineCounter / scaleY;
+		unsigned char *scan0 = bitmap.scans + RLE_BYTES_PER_SCANLINE * (int)normalScan;
+		unsigned char *scan1 = scan0 + RLE_BYTES_PER_SCANLINE;
+		normalScan -= (int)normalScan;
+		interpolateScan(scan, scan0, scan1, normalScan);
+		input = scan;
+		scanlineCounter++;
+
+		if (scanline < 0 || scanline >= dstH) continue;
+		for (streak = 0; streak < RLE_STREAKS_PER_SCANLINE; streak++) {
+			streakPos = (int)((*input++) * scaleX + 0.5f);
+			streakLength = (int)((*input++) * scaleX + 0.5f);
+
+			if ((streakPos + blitX) <= 0) continue;
+
+			output = dst + streakPos;
+
+			/* Check if we need to write the first pixel as 16bit */
+			if (streakLength % 2) {
+				*output++ = RLE_FILL_COLOR;
+			}
+
+			/* Then, write 2 pixels at a time */
+			streakLength >>= 1;
+			output32 = (unsigned int*)output;
+			while (streakLength--) {
+				*output32++ = RLE_FILL_COLOR_32;
+			}
+		}
+
+		dst -= dstStride;
+	}
 }

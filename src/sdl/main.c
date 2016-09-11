@@ -32,6 +32,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "failed to allocate virtual framebuffer\n");
 		return 1;
 	}
+	vmem_front = vmem_back = fb_pixels;
 
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER);
 	if(!(fbsurf = SDL_SetVideoMode(xsz, ysz, fb_bpp, sdl_flags))) {
@@ -96,6 +97,11 @@ break_evloop:
 void demo_quit(void)
 {
 	quit = 1;
+}
+
+void swap_buffers(void *pixels)
+{
+	/* do nothing, all pointers point to the same buffer */
 }
 
 static void handle_event(SDL_Event *ev)

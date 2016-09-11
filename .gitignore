@@ -22,5 +22,6 @@ demo
 *.zip
 data
 *.a
-
-/SDL.dll
+*.dll
+*.occ
+*.OCC

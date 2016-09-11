@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "screen.h"
 #include "demo.h"
 #include "3dgfx.h"
@@ -8,7 +9,7 @@
 struct mesh {
 	int prim;
 	struct g3d_vertex *varr;
-	unsigned int *iarr;
+	int16_t *iarr;
 	int vcount, icount;
 };
 
@@ -18,6 +19,8 @@ static void start(long trans_time);
 static void draw(void);
 static void draw_mesh(struct mesh *mesh);
 static int gen_cube(struct mesh *mesh, float sz);
+static int gen_torus(struct mesh *mesh, float rad, float ringrad, int usub, int vsub);
+static void zsort(struct mesh *m);
 
 static struct screen scr = {
 	"polytest",
@@ -27,7 +30,7 @@ static struct screen scr = {
 	draw
 };
 
-static struct mesh cube;
+static struct mesh cube, torus;
 
 struct screen *polytest_screen(void)
 {
@@ -37,12 +40,15 @@ struct screen *polytest_screen(void)
 static int init(void)
 {
 	gen_cube(&cube, 1.0);
+	gen_torus(&torus, 1.0, 0.25, 24, 12);
 	return 0;
 }
 
 static void destroy(void)
 {
 	free(cube.varr);
+	free(torus.varr);
+	free(torus.iarr);
 }
 
 static void start(long trans_time)
@@ -82,13 +88,16 @@ static void draw(void)
 	g3d_rotate(phi, 1, 0, 0);
 	g3d_rotate(theta, 0, 1, 0);
 
-	draw_mesh(&cube);
+	zsort(&torus);
+	draw_mesh(&torus);
+
+	swap_buffers(fb_pixels);
 }
 
 static void draw_mesh(struct mesh *mesh)
 {
 	if(mesh->iarr) {
-		/*g3d_draw_indexed(mesh->prim, mesh->iarr, mesh->icount, mesh->varr);*/
+		g3d_draw_indexed(mesh->prim, mesh->varr, mesh->vcount, mesh->iarr, mesh->icount);
 	} else {
 		g3d_draw(mesh->prim, mesh->varr, mesh->vcount);
 	}
@@ -162,4 +171,120 @@ static int gen_cube(struct mesh *mesh, float sz)
 	VERTEX(vptr, -hsz, hsz, hsz);
 
 	return 0;
+}
+
+static void torusvec(float *res, float theta, float phi, float mr, float rr)
+{
+	float rx, ry, rz;
+	theta = -theta;
+
+	rx = -cos(phi) * rr + mr;
+	ry = sin(phi) * rr;
+	rz = 0.0f;
+
+	res[0] = rx * sin(theta) + rz * cos(theta);
+	res[1] = ry;
+	res[2] = -rx * cos(theta) + rz * sin(theta);
+}
+
+static int gen_torus(struct mesh *mesh, float rad, float ringrad, int usub, int vsub)
+{
+	int i, j;
+	int nfaces, uverts, vverts;
+	struct g3d_vertex *vptr;
+	int16_t *iptr;
+
+	mesh->prim = G3D_QUADS;
+
+	if(usub < 4) usub = 4;
+	if(vsub < 2) vsub = 2;
+
+	uverts = usub + 1;
+	vverts = vsub + 1;
+
+	mesh->vcount = uverts * vverts;
+	nfaces = usub * vsub;
+	mesh->icount = nfaces * 4;
+
+	if(!(mesh->varr = malloc(mesh->vcount * sizeof *mesh->varr))) {
+		return -1;
+	}
+	if(!(mesh->iarr = malloc(mesh->icount * sizeof *mesh->iarr))) {
+		return -1;
+	}
+	vptr = mesh->varr;
+	iptr = mesh->iarr;
+
+	for(i=0; i<uverts; i++) {
+		float u = (float)i / (float)(uverts - 1);
+		float theta = u * 2.0 * M_PI;
+		float rcent[3];
+
+		torusvec(rcent, theta, 0, rad, 0);
+
+		for(j=0; j<vverts; j++) {
+			float v = (float)j / (float)(vverts - 1);
+			float phi = v * 2.0 * M_PI;
+			int chess = (i & 1) == (j & 1);
+
+			torusvec(&vptr->x, theta, phi, rad, ringrad);
+
+			vptr->nx = (vptr->x - rcent[0]) / ringrad;
+			vptr->ny = (vptr->y - rcent[1]) / ringrad;
+			vptr->nz = (vptr->z - rcent[2]) / ringrad;
+			vptr->u = u;
+			vptr->v = v;
+			vptr->r = chess ? 255 : 64;
+			vptr->g = 128;
+			vptr->b = chess ? 64 : 255;
+			++vptr;
+
+			if(i < usub && j < vsub) {
+				int idx = i * vverts + j;
+				*iptr++ = idx;
+				*iptr++ = idx + 1;
+				*iptr++ = idx + vverts + 1;
+				*iptr++ = idx + vverts;
+			}
+		}
+	}
+	return 0;
+}
+
+
+static struct {
+	struct g3d_vertex *varr;
+	const float *xform;
+} zsort_cls;
+
+static int zsort_cmp(const void *aptr, const void *bptr)
+{
+	const int16_t *a = (const int16_t*)aptr;
+	const int16_t *b = (const int16_t*)bptr;
+
+	const float *m = zsort_cls.xform;
+
+	const struct g3d_vertex *va = zsort_cls.varr + a[0];
+	const struct g3d_vertex *vb = zsort_cls.varr + b[0];
+
+	float za = m[2] * va->x + m[6] * va->y + m[10] * va->z + m[14];
+	float zb = m[2] * vb->x + m[6] * vb->y + m[10] * vb->z + m[14];
+
+	va = zsort_cls.varr + a[2];
+	vb = zsort_cls.varr + b[2];
+
+	za += m[2] * va->x + m[6] * va->y + m[10] * va->z + m[14];
+	zb += m[2] * vb->x + m[6] * vb->y + m[10] * vb->z + m[14];
+
+	return za - zb;
+}
+
+static void zsort(struct mesh *m)
+{
+	int nfaces = m->icount / m->prim;
+
+	zsort_cls.varr = m->varr;
+	zsort_cls.xform = g3d_get_matrix(G3D_MODELVIEW, 0);
+
+	qsort(m->iarr, nfaces, m->prim * sizeof *m->iarr, zsort_cmp);
 }

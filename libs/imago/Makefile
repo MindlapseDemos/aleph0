@@ -25,15 +25,20 @@ def = -DPNG_NO_SNPRINTF
 CC = wcc386
 CFLAGS = $(dbg) $(opt) $(def) -zq -bt=dos -Ilibpng -Izlib -Ijpeglib
 
-$(alib): $(obj)
+$(alib): cflags.occ $(obj)
 	%write objects.lbc $(obj)
 	wlib -b -n $@ @objects
 
 .c: src;libpng;jpeglib;zlib
 
+cflags.occ: Makefile
+	%write $@ $(CFLAGS)
+
 .c.obj: .autodepend
-	$(CC) -fo=$@ $(CFLAGS) $[*
+	$(CC) -fo=$@ @cflags.occ $[*
 
 clean: .symbolic
 	del *.obj
+	del *.occ
+	del *.lbc
 	del $(alib)

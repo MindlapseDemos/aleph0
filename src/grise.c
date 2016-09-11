@@ -213,7 +213,7 @@ static void draw(void)
 		dst += fb_width;
 	}
 
-	
+	swap_buffers(fb_pixels);
 }
 
 /* src and dst can be the same */

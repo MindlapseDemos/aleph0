@@ -10,11 +10,11 @@
 
 static int quit;
 static int use_mouse;
+static long fbsize;
 
 int main(int argc, char **argv)
 {
-	void *vmem;
-	long fbsize = fb_width * fb_height * fb_bpp / CHAR_BIT;
+	fbsize = fb_width * fb_height * fb_bpp / CHAR_BIT;
 
 	init_timer(100);
 	kb_init(32);
@@ -29,9 +29,11 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if(!(vmem = set_video_mode(fb_width, fb_height, fb_bpp))) {
+	if(!(vmem_front = set_video_mode(fb_width, fb_height, fb_bpp))) {
 		return 1;
 	}
+	/* TODO implement multiple video memory pages for flipping */
+	vmem_back = vmem_front;
 
 	if(demo_init(argc, argv) == -1) {
 		set_text_mode();
@@ -52,9 +54,6 @@ int main(int argc, char **argv)
 
 		time_msec = get_msec();
 		demo_draw();
-
-		/*wait_vsync();*/
-		memcpy(vmem, fb_pixels, fbsize);
 	}
 
 break_evloop:
@@ -67,4 +66,13 @@ break_evloop:
 void demo_quit(void)
 {
 	quit = 1;
+}
+
+void swap_buffers(void *pixels)
+{
+	/* TODO implement page flipping */
+	if(pixels) {
+		/*wait_vsync();*/
+		memcpy(vmem_front, pixels, fbsize);
+	}
 }

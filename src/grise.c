@@ -31,7 +31,7 @@
 static int init(void);
 static void destroy(void);
 static void start(long trans_time);
-static void stop(long trans_time);
+/*static void stop(long trans_time);*/
 static void draw(void);
 
 static void convert32To16(unsigned int *src32, unsigned short *dst16, unsigned int pixelCount);
@@ -63,7 +63,7 @@ static struct screen scr = {
 	init,
 	destroy,
 	start,
-	stop,
+	0,
 	draw
 };
 
@@ -124,12 +124,17 @@ static void start(long trans_time)
 	lastFrameTime = time_msec;
 }
 
+/* XXX add the stop function when you have an out-transition, otherwise
+ * it just delays the change to the next effect.
+ */
+/*
 static void stop(long trans_time)
 {
 }
+*/
 
 static void draw(void)
-{	
+{
 	int scroll = MIN_SCROLL + (MAX_SCROLL - MIN_SCROLL) * mouse_x / fb_width;
 	unsigned short *dst = backBuffer + PIXEL_PADDING;
 	unsigned short *src = background + scroll;
@@ -147,7 +152,7 @@ static void draw(void)
 		src += backgroundW;
 		dst += BB_SIZE;
 	}
-	
+
 	/* Create scroll opffsets for all scanlines of the normalmap */
 	updateScrollTables(lastFrameDuration);
 
@@ -254,7 +259,7 @@ static void initScrollTables() {
 
 static void updateScrollTables(float dt) {
 	int i = 0;
-	
+
 	nearScrollAmount += dt * NEAR_SCROLL_SPEED;
 	nearScrollAmount = (float) fmod(nearScrollAmount, 512.0f);
 
@@ -272,7 +277,7 @@ static void rleEncode(unsigned char *pixels, unsigned int w, unsigned int h) {
 	for (scanline = 0; scanline < h; scanline++) {
 		for (i = 0; i < w; i++) {
 			if (*pixels++) {
-				
+
 			}
 		}
 	}

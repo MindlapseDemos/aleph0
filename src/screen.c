@@ -117,11 +117,8 @@ int scr_change(struct screen *s, long trans_time)
 		trans_dur = 0;
 	}
 
-	if(cur) {
-		if(cur->stop) {
-			cur->stop(trans_dur);
-		}
-
+	if(cur && cur->stop) {
+		cur->stop(trans_dur);
 		prev = cur;
 		next = s;
 	} else {

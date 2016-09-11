@@ -11,7 +11,7 @@
 int fb_width = 320;
 int fb_height = 240;
 int fb_bpp = 16;
-void *fb_pixels;
+uint16_t *fb_pixels, *vmem_back, *vmem_front;
 unsigned long time_msec;
 int mouse_x, mouse_y;
 unsigned int mouse_bmask;

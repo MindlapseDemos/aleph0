@@ -27,8 +27,6 @@ static void draw_tunnel_range(unsigned short *pixels, int xoffs, int yoffs, int 
 static int count_bits(unsigned int x);
 static int count_zeros(unsigned int x);
 
-static unsigned int *gen_test_image(int *wptr, int *hptr);
-
 static struct screen scr = {
 	"tunnel",
 	init,
@@ -184,11 +182,13 @@ static void draw(void)
 		int starty = i * num_lines;
 		int resty = starty + draw_lines;
 		int rest_lines = num_lines - draw_lines;
-		draw_tunnel_range((unsigned short*)fb_pixels, xoffs, yoffs, starty, draw_lines, time_msec);
+		draw_tunnel_range(vmem_back, xoffs, yoffs, starty, draw_lines, time_msec);
 		if(rest_lines) {
-			memset((unsigned short*)fb_pixels + resty * fb_width, 0, rest_lines * fb_width * 2);
+			memset(vmem_back + resty * fb_width, 0, rest_lines * fb_width * 2);
 		}
 	}
+
+	swap_buffers(0);
 }
 
 static void tunnel_color(int *rp, int *gp, int *bp, long toffs, unsigned int tpacked, int fog)
@@ -264,6 +264,7 @@ static int count_zeros(unsigned int x)
 	return num;
 }
 
+/*
 static unsigned int *gen_test_image(int *wptr, int *hptr)
 {
 	int i, j;
@@ -287,3 +288,4 @@ static unsigned int *gen_test_image(int *wptr, int *hptr)
 	*hptr = ysz;
 	return pixels;
 }
+*/

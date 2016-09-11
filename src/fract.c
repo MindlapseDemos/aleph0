@@ -22,7 +22,7 @@ static struct screen scr = {
 	draw
 };
 
-static long aspect_24x8 = (long)(1.3333333 * 256.0);
+/*static long aspect_24x8 = (long)(1.3333333 * 256.0);*/
 static long xscale_24x8 = (long)(1.3333333 * 1.2 * 256.0);
 static long yscale_24x8 = (long)(1.2 * 256.0);
 static int cx, cy;
@@ -84,6 +84,8 @@ static void draw(void)
 	}
 
 	pixels[mouse_y * fb_width + mouse_x] = 0xffe;
+
+	swap_buffers(fb_pixels);
 }
 
 static long normalize_coord(long x, long range)

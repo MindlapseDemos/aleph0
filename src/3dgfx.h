@@ -1,6 +1,8 @@
 #ifndef THREEDGFX_H_
 #define THREEDGFX_H_
 
+#include "inttypes.h"
+
 struct g3d_vertex {
 	float x, y, z, w;
 	float nx, ny, nz;

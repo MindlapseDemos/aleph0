@@ -90,6 +90,8 @@ static void draw(void)
 
 	zsort(&torus);
 	draw_mesh(&torus);
+
+	swap_buffers(fb_pixels);
 }
 
 static void draw_mesh(struct mesh *mesh)

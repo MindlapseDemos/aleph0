@@ -42,8 +42,8 @@ static void updateScrollTables(float dt);
 static void rleEncode(unsigned char *pixels, unsigned int w, unsigned int h);
 
 static unsigned short *background = 0;
-static unsigned int backgroundW = 0;
-static unsigned int backgroundH = 0;
+static int backgroundW = 0;
+static int backgroundH = 0;
 
 static unsigned int lastFrameTime = 0;
 static float lastFrameDuration = 0.0f;
@@ -178,6 +178,8 @@ static void draw(void)
 		src += BB_SIZE;
 		dst += fb_width;
 	}
+
+	swap_buffers(fb_pixels);
 }
 
 /* src and dst can be the same */

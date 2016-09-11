@@ -9,6 +9,14 @@
 
 /* APPROX. 170 FPS Minimum */
 
+typedef struct {
+	unsigned int w, h;
+	unsigned char *scans;
+} RLEBitmap;
+
+static RLEBitmap createRLEBitmap(unsigned int w, unsigned int h);
+static destroyRLEBitmap(RLEBitmap b);
+
 #define BG_FILENAME "data/grise.png"
 #define GROBJ_01_FILENAME "data/grobj_01.png"
 
@@ -39,7 +47,7 @@ static void processNormal();
 static void initScrollTables();
 static void updateScrollTables(float dt);
 
-static void rleEncode(unsigned char *pixels, unsigned int w, unsigned int h);
+static RLEBitmap rleEncode(unsigned char *pixels, unsigned int w, unsigned int h);
 
 static unsigned short *background = 0;
 static unsigned int backgroundW = 0;
@@ -58,6 +66,8 @@ static int scrollTableRounded[REFLECTION_HEIGHT];
 static int scrollModTable[REFLECTION_HEIGHT];
 static float nearScrollAmount = 0.0f;
 
+static RLEBitmap grobj;
+
 static struct screen scr = {
 	"galaxyrise",
 	init,
@@ -75,8 +85,8 @@ struct screen *grise_screen(void)
 
 static int init(void)
 {
-	unsigned char *reflectedObject;
-	int reflectedObjectW, reflectedObjectH;
+	unsigned char *tmpBitmap;
+	int tmpBitmapW, tmpBitmapH;
 
 	/* Allocate back buffer */
 	backBuffer = (unsigned short*) malloc(BB_SIZE * BB_SIZE * sizeof(unsigned short));
@@ -91,14 +101,14 @@ static int init(void)
 	convert32To16((unsigned int*)background, background, backgroundW * NORMALMAP_SCANLINE); /* Normalmap will keep its 32 bit color */
 
 	/* Load reflected objects */
-	if (!(reflectedObject = img_load_pixels(GROBJ_01_FILENAME, &reflectedObjectW, &reflectedObjectH, IMG_FMT_GREY8))) {
+	if (!(tmpBitmap = img_load_pixels(GROBJ_01_FILENAME, &tmpBitmapW, &tmpBitmapH, IMG_FMT_GREY8))) {
 		fprintf(stderr, "failed to load image " GROBJ_01_FILENAME "\n");
 		return -1;
 	}
 
-	rleEncode(reflectedObject, reflectedObjectW, reflectedObjectH);
+	grobj = rleEncode(tmpBitmap, tmpBitmapW, tmpBitmapH);
 
-	img_free_pixels(reflectedObject);
+	img_free_pixels(tmpBitmap);
 
 	initScrollTables();
 
@@ -117,6 +127,8 @@ static void destroy(void)
 	backBuffer = 0;
 
 	img_free_pixels(background);
+
+	destroyRLEBitmap(grobj);
 }
 
 static void start(long trans_time)
@@ -275,44 +287,80 @@ static void updateScrollTables(float dt) {
 	}
 }
 
-static void rleEncode(unsigned char *pixels, unsigned int w, unsigned int h) {
+/* -------------------------------------------------------------------------------------------------
+ *                                   RLE STUFF                                                                           
+ * -------------------------------------------------------------------------------------------------
+ */
+/* Limit streak count per scanline so we can directly jump to specific scanline */
+#define RLE_STREAKS_PER_SCANLINE 4
+/* Every streak is encoded by 2 bytes: offset and count of black pixels in the streak */
+#define RLE_BYTES_PER_SCANLINE RLE_STREAKS_PER_SCANLINE * 2
+
+static RLEBitmap createRLEBitmap(unsigned int w, unsigned int h) {
+	RLEBitmap ret;
+	ret.w = w;
+	ret.h = h;
+
+	/* Add some padding at the end of the buffer, with the worst case for a scanline (w/2 streaks) */
+	ret.scans = (unsigned char*) calloc(h * RLE_BYTES_PER_SCANLINE + w, 1);
+
+	return ret;
+}
+
+static destroyRLEBitmap(RLEBitmap b) {
+	free(b.scans);
+}
+
+static RLEBitmap rleEncode(unsigned char *pixels, unsigned int w, unsigned int h) {
 	int scanline;
 	int i;
 	int penActive = 0;
 	int counter = 0;
+	int accum = 0;
+	RLEBitmap ret;
+	unsigned char *output;
+
+	/* https://www.youtube.com/watch?v=RKMR02o1I88&feature=youtu.be&t=55 */
+	ret = createRLEBitmap(w, h);
 
 	for (scanline = 0; scanline < h; scanline++) {
+		output = ret.scans + scanline * RLE_BYTES_PER_SCANLINE;
+		accum = 0;
 		for (i = 0; i < w; i++) {
 			if (*pixels++) {
 				if (penActive) {
 					if (counter >= PIXEL_PADDING) {
-						printf("W %d ", counter);
+						*output++ = (unsigned char) counter;
 						counter = 0;
-						printf("I %d ", counter);
+						*output++ = (unsigned char)accum;
 					}
 					counter++;
+					accum++;
 				} else {
-					counter++;
-					printf("I %d ", counter);
+					*output++ = (unsigned char)accum;
 					counter = 1;
+					accum++;
 					penActive = 1;
 				}
 			} else {
 				if (penActive) {
-					printf("W %d ", counter);
-					counter = 0;
+					*output++ = (unsigned char)counter;
+					counter = 1;
+					accum++;
 					penActive = 0;
 				} else {
 					counter++;
+					accum++;
 				}
 			}
 		}
 
 		if (penActive) {
-			printf("W %d ", counter);
+			*output++ = (unsigned char)counter;
 		}
 		penActive = 0;
 		counter = 0;
-		printf(" CR\n");
 	}
+
+	return ret;
 }

@@ -99,7 +99,7 @@ static int init(void)
 	int tmpBitmapW, tmpBitmapH;
 
 	/* Allocate back buffer */
-	backBuffer = (unsigned short*) malloc(BB_SIZE * BB_SIZE * sizeof(unsigned short));
+	backBuffer = (unsigned short*) calloc(BB_SIZE * BB_SIZE, sizeof(unsigned short));
 
 	/* grise.png contains the background (horizon), baked reflection and normalmap for displacement */
 	if (!(background = img_load_pixels(BG_FILENAME, &backgroundW, &backgroundH, IMG_FMT_RGBA32))) {
@@ -206,14 +206,14 @@ static void draw(void)
 
 	/* Blit effect to framebuffer */
 	src = backBuffer + PIXEL_PADDING;
-	dst = fb_pixels;
+	dst = vmem_back;
 	for (scanline = 0; scanline < fb_height; scanline++) {
 		memcpy(dst, src, fb_width * 2);
 		src += BB_SIZE; 
 		dst += fb_width;
 	}
 
-	swap_buffers(fb_pixels);
+	swap_buffers(0);
 }
 
 /* src and dst can be the same */

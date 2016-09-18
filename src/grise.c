@@ -33,7 +33,7 @@ static RLEBitmap rleEncode(unsigned char *pixels, unsigned int w, unsigned int h
 #define PIXEL_PADDING 32
 
 /* Make sure this is less than PIXEL_PADDING*/
-#define MAX_DISPLACEMENT 16 
+#define MAX_DISPLACEMENT 16
 
 #define MIN_SCROLL PIXEL_PADDING
 #define MAX_SCROLL (backgroundW - fb_width - MIN_SCROLL)
@@ -202,7 +202,8 @@ static void draw(void)
 	}
 
 	/* Then after displacement, blit the objects */
-	for (i = 0; i < 5; i++) rleBlit(backBuffer + PIXEL_PADDING, fb_width, fb_height, BB_SIZE, grobj, 134 + (i-3) * 60, 100);
+	//for (i = 0; i < 5; i++) rleBlit(backBuffer + PIXEL_PADDING, fb_width, fb_height, BB_SIZE, grobj, 134 + (i-3) * 60, 100);
+	for (i = 0; i < 5; i++) rleBlitScale(backBuffer + PIXEL_PADDING, fb_width, fb_height, BB_SIZE, grobj, 134 + (i - 3) * 120, 0, 1.8f, 1.8f);
 
 	/* Blit effect to framebuffer */
 	src = backBuffer + PIXEL_PADDING;
@@ -313,8 +314,10 @@ static void updateScrollTables(float dt) {
 #define RLE_STREAKS_PER_SCANLINE 4
 /* Every streak is encoded by 2 bytes: offset and count of black pixels in the streak */
 #define RLE_BYTES_PER_SCANLINE RLE_STREAKS_PER_SCANLINE * 2
-#define RLE_FILL_COLOR 0
+#define RLE_FILL_COLOR 0xFF00 
 #define RLE_FILL_COLOR_32 ((RLE_FILL_COLOR << 16) | RLE_FILL_COLOR)
+
+#define RLE_FIXED_BITS 16
 
 static RLEBitmap rleCreate(unsigned int w, unsigned int h) {
 	RLEBitmap ret;
@@ -433,7 +436,17 @@ static void interpolateScan(unsigned char *output, unsigned char *a, unsigned ch
 	ti = (*((unsigned int*)&t)) & 0x7FFFFF;
 	
 	for (i = 0; i < RLE_BYTES_PER_SCANLINE; i++) {
-		*output++ = ((*b++ * ti) + (*a++ * (div - ti))) >> 23;
+		if (*a == 0) {
+			*output++ = *b++;
+			a++;
+		} else {
+			if (*b == 0) {
+				*output++ = *a++;
+				b++;
+			} else {
+				*output++ = ((*b++ * ti) + (*a++ * (div - ti))) >> 23;
+			}
+		}
 	}
 }
 
@@ -452,11 +465,16 @@ static void rleBlitScale(unsigned short *dst, int dstW, int dstH, int dstStride,
 
 	int blitW = (int) (bitmap.w * scaleX + 0.5f);
 	int blitH = (int)(bitmap.h * scaleY + 0.5f);
+
+	/* From this point on, scaleY will be inverted */
+	scaleY = 1.0f / scaleY;
+
+	int scaleXFixed = (int)(scaleX * (float)(1 << RLE_FIXED_BITS) + 0.5f);
 	
 	dst += blitX + blitY * dstStride;
 
 	for (scanline = blitY; scanline < blitY + blitH; scanline++) {
-		float normalScan = scanlineCounter / scaleY;
+		float normalScan = scanlineCounter * scaleY; /* ScaleY  is inverted */
 		unsigned char *scan0 = bitmap.scans + RLE_BYTES_PER_SCANLINE * (int)normalScan;
 		unsigned char *scan1 = scan0 + RLE_BYTES_PER_SCANLINE;
 		normalScan -= (int)normalScan;
@@ -466,8 +484,8 @@ static void rleBlitScale(unsigned short *dst, int dstW, int dstH, int dstStride,
 
 		if (scanline < 0 || scanline >= dstH) continue;
 		for (streak = 0; streak < RLE_STREAKS_PER_SCANLINE; streak++) {
-			streakPos = (int) ((*input++) * scaleX + 0.5f);
-			streakLength = (int)((*input++) * scaleX + 0.5f);
+			streakPos = (*input++ * scaleXFixed) >> RLE_FIXED_BITS;
+			streakLength = (*input++ * scaleXFixed) >> RLE_FIXED_BITS;
 
 			if ((streakPos + blitX) <= 0) continue;
 
@@ -490,6 +508,8 @@ static void rleBlitScale(unsigned short *dst, int dstW, int dstH, int dstStride,
 	}
 }
 
+
+
 static void rleBlitScaleInv(unsigned short *dst, int dstW, int dstH, int dstStride,
 	RLEBitmap bitmap, int blitX, int blitY, float scaleX, float scaleY)
 {
@@ -506,10 +526,15 @@ static void rleBlitScaleInv(unsigned short *dst, int dstW, int dstH, int dstStri
 	int blitW = (int)(bitmap.w * scaleX + 0.5f);
 	int blitH = (int)(bitmap.h * scaleY + 0.5f);
 
+	/* From this point on, scaleY will be inverted */
+	scaleY = 1.0f / scaleY;
+
+	int scaleXFixed = (int)(scaleX * (float)(1 << RLE_FIXED_BITS) + 0.5f);
+
 	dst += blitX + blitY * dstStride;
 
 	for (scanline = blitY; scanline > blitY - blitH; scanline--) {
-		float normalScan = scanlineCounter / scaleY;
+		float normalScan = scanlineCounter * scaleY; /* ScaleY is inverted */
 		unsigned char *scan0 = bitmap.scans + RLE_BYTES_PER_SCANLINE * (int)normalScan;
 		unsigned char *scan1 = scan0 + RLE_BYTES_PER_SCANLINE;
 		normalScan -= (int)normalScan;
@@ -519,8 +544,8 @@ static void rleBlitScaleInv(unsigned short *dst, int dstW, int dstH, int dstStri
 
 		if (scanline < 0 || scanline >= dstH) continue;
 		for (streak = 0; streak < RLE_STREAKS_PER_SCANLINE; streak++) {
-			streakPos = (int)((*input++) * scaleX + 0.5f);
-			streakLength = (int)((*input++) * scaleX + 0.5f);
+			streakPos = (*input++ * scaleXFixed) >> RLE_FIXED_BITS;
+			streakLength = (*input++ * scaleXFixed) >> RLE_FIXED_BITS;
 
 			if ((streakPos + blitX) <= 0) continue;
 

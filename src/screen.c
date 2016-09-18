@@ -9,8 +9,9 @@ struct screen *tunnel_screen(void);
 struct screen *fract_screen(void);
 struct screen *grise_screen(void);
 struct screen *polytest_screen(void);
+struct screen *plasma_screen(void);
 
-#define NUM_SCR	32
+#define NUM_SCR 32
 static struct screen *scr[NUM_SCR];
 static int num_screens;
 
@@ -31,6 +32,9 @@ int scr_init(void)
 		return -1;
 	}
 	if(!(scr[idx++] = polytest_screen())) {
+		return -1;
+	}
+	if (!(scr[idx++] = plasma_screen())) {
 		return -1;
 	}
 	num_screens = idx;
@@ -66,7 +70,7 @@ void scr_shutdown(void)
 
 void scr_update(void)
 {
-	if(prev) {	/* we're in the middle of a transition */
+	if(prev) {  /* we're in the middle of a transition */
 		long interval = time_msec - trans_start;
 		if(interval >= trans_dur) {
 			if(next->start) {
@@ -111,7 +115,7 @@ int scr_change(struct screen *s, long trans_time)
 	if(s == cur) return 0;
 
 	if(trans_time) {
-		trans_dur = trans_time / 2;	/* half for each part transition out then in */
+		trans_dur = trans_time / 2; /* half for each part transition out then in */
 		trans_start = time_msec;
 	} else {
 		trans_dur = 0;

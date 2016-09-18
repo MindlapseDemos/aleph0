@@ -40,6 +40,12 @@
     <ClCompile Include="src\polytest.c">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\plasma.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tinyfps.c">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\demo.h">
@@ -49,6 +55,9 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\gfxutil.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tinyfps.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>

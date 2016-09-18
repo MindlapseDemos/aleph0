@@ -68,8 +68,8 @@ static int init(void)
 		plasmaPal[i] = (r<<11) | (g<<5) | b;
 	}
 
-	return 0xCAFE;
-	//return 0;
+	//return 0xCAFE;
+	return 0;
 }
 
 static void destroy(void)

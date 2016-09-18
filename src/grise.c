@@ -14,15 +14,17 @@ typedef struct {
 	unsigned char *scans;
 } RLEBitmap;
 
-static RLEBitmap rleCreate(unsigned int w, unsigned int h);
-static void rleDestroy(RLEBitmap b);
+static RLEBitmap *rleCreate(unsigned int w, unsigned int h);
+static void rleDestroy(RLEBitmap *b);
 static void rleBlit(unsigned short *dst, int dstW, int dstH, int dstStride, 
-	RLEBitmap bitmap, int blitX, int blitY);
+	RLEBitmap *bitmap, int blitX, int blitY);
 static void rleBlitScale(unsigned short *dst, int dstW, int dstH, int dstStride,
-	RLEBitmap bitmap, int blitX, int blitY, float scaleX, float scaleY);
+	RLEBitmap *bitmap, int blitX, int blitY, float scaleX, float scaleY);
 static void rleBlitScaleInv(unsigned short *dst, int dstW, int dstH, int dstStride,
-	RLEBitmap bitmap, int blitX, int blitY, float scaleX, float scaleY);
-static RLEBitmap rleEncode(unsigned char *pixels, unsigned int w, unsigned int h);
+	RLEBitmap *bitmap, int blitX, int blitY, float scaleX, float scaleY);
+static RLEBitmap *rleEncode(RLEBitmap *b, unsigned char *pixels, unsigned int w, unsigned int h);
+
+static void updatePropeller(float t);
 
 #define BG_FILENAME "data/grise.png"
 #define GROBJ_01_FILENAME "data/grobj_01.png"
@@ -76,7 +78,9 @@ static int scrollTableRounded[REFLECTION_HEIGHT];
 static int scrollModTable[REFLECTION_HEIGHT];
 static float nearScrollAmount = 0.0f;
 
-static RLEBitmap grobj;
+static char miniFXBuffer[1024];
+
+static RLEBitmap *grobj = 0;
 
 static struct screen scr = {
 	"galaxyrise",
@@ -116,7 +120,7 @@ static int init(void)
 		return -1;
 	}
 
-	grobj = rleEncode(tmpBitmap, tmpBitmapW, tmpBitmapH);
+	grobj = rleEncode(0, tmpBitmap, tmpBitmapW, tmpBitmapH);
 
 	img_free_pixels(tmpBitmap);
 
@@ -151,71 +155,7 @@ static void stop(long trans_time)
 }
 
 
-struct {
-	int circleX[3];
-	int circleY[3];
-} wheelState;
 
-static void updateWheel(float t) {
-	float x = 0.0f;
-	float y = 18.0f;
-	float nx, ny;
-	float cost, sint;
-	static float sin120 = 0.86602540378f;
-	static float cos120 = -0.5f;
-
-	/* Rotate */
-	sint = sin(t);
-	cost = cos(t);
-	nx = x * cost - y * sint;
-	ny = y * cost + x * sint;
-	x = nx;
-	y = ny;
-	wheelState.circleX[0] = (int)(x + 0.5f) + 16;
-	wheelState.circleY[0] = (int)(y + 0.5f) + 16;
-
-	/* Rotate by 120 degrees, for the second circle */
-	nx = x * cos120 - y * sin120;
-	ny = y * cos120 + x * sin120;
-	x = nx;
-	y = ny;
-	wheelState.circleX[1] = (int)(x + 0.5f) + 16;
-	wheelState.circleY[1] = (int)(y + 0.5f) + 16;
-
-	/* 3rd circle */
-	nx = x * cos120 - y * sin120;
-	ny = y * cos120 + x * sin120;
-	x = nx;
-	y = ny;
-	wheelState.circleX[2] = (int)(x + 0.5f) + 16;
-	wheelState.circleY[2] = (int)(y + 0.5f) + 16;
-}
-
-#define WHEEL_CIRCLE_RADIUS 18
-#define WHEEL_CIRCLE_RADIUS_SQ (WHEEL_CIRCLE_RADIUS * WHEEL_CIRCLE_RADIUS)
-
-static unsigned short wheel(int x, int y) {
-	int cx, cy, count=0;
-
-	/* First circle */
-	cx = wheelState.circleX[0] - x;
-	cy = wheelState.circleY[0] - y;
-	if (cx*cx + cy*cy < WHEEL_CIRCLE_RADIUS_SQ) count++;
-
-	/* 2nd circle */
-	cx = wheelState.circleX[1] - x;
-	cy = wheelState.circleY[1] - y;
-	if (cx*cx + cy*cy < WHEEL_CIRCLE_RADIUS_SQ) count++;
-
-	/* 3rd circle */
-	cx = wheelState.circleX[2] - x;
-	cy = wheelState.circleY[2] - y;
-	if (cx*cx + cy*cy < WHEEL_CIRCLE_RADIUS_SQ) count++;
-
-	if (count >= 2) return 0xFFFF;
-
-	return 0x000F;
-}
 
 static void draw(void)
 {	
@@ -231,7 +171,7 @@ static void draw(void)
 	lastFrameTime = time_msec;
 
 	/* Update mini-effects here */
-	updateWheel(time_msec / 1000.0f);
+	updatePropeller(time_msec / 1000.0f);
 
 	/* First, render the horizon */
 	for (scanline = 0; scanline < HORIZON_HEIGHT; scanline++) {
@@ -276,7 +216,7 @@ static void draw(void)
 
 	for (scanline = 0; scanline < 32; scanline++) {
 		for (i = 0; i < 32; i++) {
-			backBuffer[PIXEL_PADDING + scanline * BB_SIZE + i] = wheel(i, scanline);
+			backBuffer[PIXEL_PADDING + scanline * BB_SIZE + i] = miniFXBuffer[i + 32 * scanline] ? 0xFFFF : 0x0000;
 		}
 	}
 
@@ -394,35 +334,36 @@ static void updateScrollTables(float dt) {
 
 #define RLE_FIXED_BITS 16
 
-static RLEBitmap rleCreate(unsigned int w, unsigned int h) {
-	RLEBitmap ret;
-	ret.w = w;
-	ret.h = h;
+static RLEBitmap *rleCreate(unsigned int w, unsigned int h) {
+	RLEBitmap *ret = (RLEBitmap*)malloc(sizeof(RLEBitmap));
+	ret->w = w;
+	ret->h = h;
 
 	/* Add some padding at the end of the buffer, with the worst case for a scanline (w/2 streaks) */
-	ret.scans = (unsigned char*) calloc(h * RLE_BYTES_PER_SCANLINE + w, 1);
+	ret->scans = (unsigned char*) calloc(h * RLE_BYTES_PER_SCANLINE + w, 1);
 
 	return ret;
 }
 
-static void rleDestroy(RLEBitmap b) {
-	free(b.scans);
+static void rleDestroy(RLEBitmap *b) {
+	if (!b) return;
+	free(b->scans);
+	free(b);
 }
 
-static RLEBitmap rleEncode(unsigned char *pixels, unsigned int w, unsigned int h) {
+static RLEBitmap *rleEncode(RLEBitmap *b, unsigned char *pixels, unsigned int w, unsigned int h) {
 	int scanline;
 	int i;
 	int penActive = 0;
 	int counter = 0;
 	int accum = 0;
-	RLEBitmap ret;
 	unsigned char *output;
 
 	/* https://www.youtube.com/watch?v=RKMR02o1I88&feature=youtu.be&t=55 */
-	ret = rleCreate(w, h);
+	if (!b) b = rleCreate(w, h);
 
 	for (scanline = 0; scanline < h; scanline++) {
-		output = ret.scans + scanline * RLE_BYTES_PER_SCANLINE;
+		output = b->scans + scanline * RLE_BYTES_PER_SCANLINE;
 		accum = 0;
 		for (i = 0; i < w; i++) {
 			if (*pixels++) {
@@ -460,23 +401,23 @@ static RLEBitmap rleEncode(unsigned char *pixels, unsigned int w, unsigned int h
 		counter = 0;
 	}
 
-	return ret;
+	return b;
 }
 
 static void rleBlit(unsigned short *dst, int dstW, int dstH, int dstStride,
-	RLEBitmap bitmap, int blitX, int blitY) 
+	RLEBitmap *bitmap, int blitX, int blitY) 
 {
 	int scanline = 0;
 	int streakPos = 0;
 	int streakLength = 0;
 	int streak = 0;
-	unsigned char *input = bitmap.scans;
+	unsigned char *input = bitmap->scans;
 	unsigned short *output;
 	unsigned int *output32;
 
 	dst += blitX + blitY * dstStride;
 
-	for (scanline = blitY; scanline < blitY + bitmap.h; scanline++) {
+	for (scanline = blitY; scanline < blitY + bitmap->h; scanline++) {
 		if (scanline < 0 || scanline >= dstH) continue;
 		for (streak = 0; streak < RLE_STREAKS_PER_SCANLINE; streak++) {
 			streakPos = *input++;
@@ -526,7 +467,7 @@ static void interpolateScan(unsigned char *output, unsigned char *a, unsigned ch
 }
 
 static void rleBlitScale(unsigned short *dst, int dstW, int dstH, int dstStride,
-	RLEBitmap bitmap, int blitX, int blitY, float scaleX, float scaleY)
+	RLEBitmap *bitmap, int blitX, int blitY, float scaleX, float scaleY)
 {
 	int scanline = 0;
 	int streakPos = 0;
@@ -538,8 +479,8 @@ static void rleBlitScale(unsigned short *dst, int dstW, int dstH, int dstStride,
 	int scanlineCounter = 0;
 	static unsigned char scan[512];
 
-	int blitW = (int) (bitmap.w * scaleX + 0.5f);
-	int blitH = (int)(bitmap.h * scaleY + 0.5f);
+	int blitW = (int)(bitmap->w * scaleX + 0.5f);
+	int blitH = (int)(bitmap->h * scaleY + 0.5f);
 
 	/* From this point on, scaleY will be inverted */
 	scaleY = 1.0f / scaleY;
@@ -550,7 +491,7 @@ static void rleBlitScale(unsigned short *dst, int dstW, int dstH, int dstStride,
 
 	for (scanline = blitY; scanline < blitY + blitH; scanline++) {
 		float normalScan = scanlineCounter * scaleY; /* ScaleY  is inverted */
-		unsigned char *scan0 = bitmap.scans + RLE_BYTES_PER_SCANLINE * (int)normalScan;
+		unsigned char *scan0 = bitmap->scans + RLE_BYTES_PER_SCANLINE * (int)normalScan;
 		unsigned char *scan1 = scan0 + RLE_BYTES_PER_SCANLINE;
 		normalScan -= (int)normalScan;
 		interpolateScan(scan, scan0, scan1, normalScan);
@@ -586,7 +527,7 @@ static void rleBlitScale(unsigned short *dst, int dstW, int dstH, int dstStride,
 
 
 static void rleBlitScaleInv(unsigned short *dst, int dstW, int dstH, int dstStride,
-	RLEBitmap bitmap, int blitX, int blitY, float scaleX, float scaleY)
+	RLEBitmap *bitmap, int blitX, int blitY, float scaleX, float scaleY)
 {
 	int scanline = 0;
 	int streakPos = 0;
@@ -598,8 +539,8 @@ static void rleBlitScaleInv(unsigned short *dst, int dstW, int dstH, int dstStri
 	int scanlineCounter = 0;
 	static unsigned char scan[512];
 
-	int blitW = (int)(bitmap.w * scaleX + 0.5f);
-	int blitH = (int)(bitmap.h * scaleY + 0.5f);
+	int blitW = (int)(bitmap->w * scaleX + 0.5f);
+	int blitH = (int)(bitmap->h * scaleY + 0.5f);
 
 	/* From this point on, scaleY will be inverted */
 	scaleY = 1.0f / scaleY;
@@ -610,7 +551,7 @@ static void rleBlitScaleInv(unsigned short *dst, int dstW, int dstH, int dstStri
 
 	for (scanline = blitY; scanline > blitY - blitH; scanline--) {
 		float normalScan = scanlineCounter * scaleY; /* ScaleY is inverted */
-		unsigned char *scan0 = bitmap.scans + RLE_BYTES_PER_SCANLINE * (int)normalScan;
+		unsigned char *scan0 = bitmap->scans + RLE_BYTES_PER_SCANLINE * (int)normalScan;
 		unsigned char *scan1 = scan0 + RLE_BYTES_PER_SCANLINE;
 		normalScan -= (int)normalScan;
 		interpolateScan(scan, scan0, scan1, normalScan);
@@ -640,5 +581,81 @@ static void rleBlitScaleInv(unsigned short *dst, int dstW, int dstH, int dstStri
 		}
 
 		dst -= dstStride;
+	}
+}
+
+/* -------------------------------------------------------------------------------------------------
+*                                   PROPELLER STUFF
+* -------------------------------------------------------------------------------------------------
+*/
+
+#define PROPELLER_CIRCLE_RADIUS 18
+#define PROPELLER_CIRCLE_RADIUS_SQ (PROPELLER_CIRCLE_RADIUS * PROPELLER_CIRCLE_RADIUS)
+
+static struct {
+	int circleX[3];
+	int circleY[3];
+} propellerState;
+
+static void updatePropeller(float t) {
+	int i, j;
+	int cx, cy, count = 0;
+	char *dst;
+	float x = 0.0f;
+	float y = 18.0f;
+	float nx, ny;
+	float cost, sint;
+	static float sin120 = 0.86602540378f;
+	static float cos120 = -0.5f;
+
+	/* Rotate */
+	sint = sin(t);
+	cost = cos(t);
+	nx = x * cost - y * sint;
+	ny = y * cost + x * sint;
+	x = nx;
+	y = ny;
+	propellerState.circleX[0] = (int)(x + 0.5f) + 16;
+	propellerState.circleY[0] = (int)(y + 0.5f) + 16;
+
+	/* Rotate by 120 degrees, for the second circle */
+	nx = x * cos120 - y * sin120;
+	ny = y * cos120 + x * sin120;
+	x = nx;
+	y = ny;
+	propellerState.circleX[1] = (int)(x + 0.5f) + 16;
+	propellerState.circleY[1] = (int)(y + 0.5f) + 16;
+
+	/* 3rd circle */
+	nx = x * cos120 - y * sin120;
+	ny = y * cos120 + x * sin120;
+	x = nx;
+	y = ny;
+	propellerState.circleX[2] = (int)(x + 0.5f) + 16;
+	propellerState.circleY[2] = (int)(y + 0.5f) + 16;
+
+	/* Write effect to the mini fx buffer*/
+	dst = miniFXBuffer;
+	for (j = 0; j < 32; j++) {
+		for (i = 0; i < 32; i++) {
+			count = 0;
+
+			/* First circle */
+			cx = propellerState.circleX[0] - i;
+			cy = propellerState.circleY[0] - j;
+			if (cx*cx + cy*cy < PROPELLER_CIRCLE_RADIUS_SQ) count++;
+
+			/* 2nd circle */
+			cx = propellerState.circleX[1] - i;
+			cy = propellerState.circleY[1] - j;
+			if (cx*cx + cy*cy < PROPELLER_CIRCLE_RADIUS_SQ) count++;
+
+			/* 3rd circle */
+			cx = propellerState.circleX[2] - i;
+			cy = propellerState.circleY[2] - j;
+			if (cx*cx + cy*cy < PROPELLER_CIRCLE_RADIUS_SQ) count++;
+
+			*dst++ = count >= 2;
+		}
 	}
 }

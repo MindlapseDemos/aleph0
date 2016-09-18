@@ -81,6 +81,7 @@ static float nearScrollAmount = 0.0f;
 static char miniFXBuffer[1024];
 
 static RLEBitmap *grobj = 0;
+static RLEBitmap *rlePropeller = 0;
 
 static struct screen scr = {
 	"galaxyrise",
@@ -171,7 +172,7 @@ static void draw(void)
 	lastFrameTime = time_msec;
 
 	/* Update mini-effects here */
-	updatePropeller(time_msec / 1000.0f);
+	updatePropeller(4.0f * time_msec / 1000.0f);
 
 	/* First, render the horizon */
 	for (scanline = 0; scanline < HORIZON_HEIGHT; scanline++) {
@@ -195,7 +196,7 @@ static void draw(void)
 	}
 
 	/* Blit reflections first, to be  displaced */
-	for (i = 0; i < 5; i++) rleBlitScaleInv(backBuffer + PIXEL_PADDING, fb_width, fb_height, BB_SIZE, grobj, 134 + (i-3) * 60, 235, 1.0f, 1.8f);
+	for (i = 0; i < 5; i++) rleBlitScaleInv(backBuffer + PIXEL_PADDING, fb_width, fb_height, BB_SIZE, rlePropeller, 134 + (i-3) * 60, 200, 1.0f, 1.8f);
 
 	/* Perform displacement */
 	dst = backBuffer + HORIZON_HEIGHT * BB_SIZE + PIXEL_PADDING;
@@ -212,14 +213,8 @@ static void draw(void)
 	}
 
 	/* Then after displacement, blit the objects */
-	for (i = 0; i < 5; i++) rleBlit(backBuffer + PIXEL_PADDING, fb_width, fb_height, BB_SIZE, grobj, 134 + (i-3) * 60, 100);
-
-	for (scanline = 0; scanline < 32; scanline++) {
-		for (i = 0; i < 32; i++) {
-			backBuffer[PIXEL_PADDING + scanline * BB_SIZE + i] = miniFXBuffer[i + 32 * scanline] ? 0xFFFF : 0x0000;
-		}
-	}
-
+	for (i = 0; i < 5; i++) rleBlit(backBuffer + PIXEL_PADDING, fb_width, fb_height, BB_SIZE, rlePropeller, 134 + (i-3) * 60, 100);
+	
 	/* Blit effect to framebuffer */
 	src = backBuffer + PIXEL_PADDING;
 	dst = vmem_back;
@@ -334,13 +329,17 @@ static void updateScrollTables(float dt) {
 
 #define RLE_FIXED_BITS 16
 
+static int rleByteCount(int w, int h) {
+	return h * RLE_BYTES_PER_SCANLINE + w;
+}
+
 static RLEBitmap *rleCreate(unsigned int w, unsigned int h) {
 	RLEBitmap *ret = (RLEBitmap*)malloc(sizeof(RLEBitmap));
 	ret->w = w;
 	ret->h = h;
 
 	/* Add some padding at the end of the buffer, with the worst case for a scanline (w/2 streaks) */
-	ret->scans = (unsigned char*) calloc(h * RLE_BYTES_PER_SCANLINE + w, 1);
+	ret->scans = (unsigned char*) calloc(rleByteCount(w, h), 1);
 
 	return ret;
 }
@@ -361,6 +360,7 @@ static RLEBitmap *rleEncode(RLEBitmap *b, unsigned char *pixels, unsigned int w,
 
 	/* https://www.youtube.com/watch?v=RKMR02o1I88&feature=youtu.be&t=55 */
 	if (!b) b = rleCreate(w, h);
+	else memset(b->scans, 0, rleByteCount(b->w, b->h)); /* The following code assumes cleared array */
 
 	for (scanline = 0; scanline < h; scanline++) {
 		output = b->scans + scanline * RLE_BYTES_PER_SCANLINE;
@@ -402,6 +402,25 @@ static RLEBitmap *rleEncode(RLEBitmap *b, unsigned char *pixels, unsigned int w,
 	}
 
 	return b;
+}
+
+static void rleDistributeStreaks(RLEBitmap *bitmap) {
+	int scanline, halfW = bitmap->w >> 1;
+	unsigned char *ptr, tmp;
+	
+	ptr = bitmap->scans;
+	for (scanline = 0; scanline < bitmap->h; scanline++) {
+		if (ptr[0] >= halfW) {
+			tmp = ptr[0];
+			ptr[0] = ptr[6];
+			ptr[6] = tmp;
+			tmp = ptr[1];
+			ptr[1] = ptr[7];
+			ptr[7] = tmp;
+		}
+
+		ptr += 8;
+	}
 }
 
 static void rleBlit(unsigned short *dst, int dstW, int dstH, int dstStride,
@@ -658,4 +677,10 @@ static void updatePropeller(float t) {
 			*dst++ = count >= 2;
 		}
 	}
+
+	/* Then, encode to rle */
+	rlePropeller = rleEncode(rlePropeller, miniFXBuffer, 32, 32);
+
+	/* Distribute the produced streaks so that they don't produce garbage when interpolated */
+	rleDistributeStreaks(rlePropeller);
 }

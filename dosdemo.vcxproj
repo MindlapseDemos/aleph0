@@ -89,16 +89,19 @@
     <ClCompile Include="src\fract.c" />
     <ClCompile Include="src\gfxutil.c" />
     <ClCompile Include="src\grise.c" />
+    <ClCompile Include="src\plasma.c" />
     <ClCompile Include="src\polyfill.c" />
     <ClCompile Include="src\polytest.c" />
     <ClCompile Include="src\screen.c" />
     <ClCompile Include="src\sdl\main.c" />
+    <ClCompile Include="src\tinyfps.c" />
     <ClCompile Include="src\tunnel.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\demo.h" />
     <ClInclude Include="src\gfxutil.h" />
     <ClInclude Include="src\screen.h" />
+    <ClInclude Include="src\tinyfps.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

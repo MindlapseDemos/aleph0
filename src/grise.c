@@ -150,6 +150,73 @@ static void stop(long trans_time)
 {
 }
 
+
+struct {
+	int circleX[3];
+	int circleY[3];
+} wheelState;
+
+static void updateWheel(float t) {
+	float x = 0.0f;
+	float y = 18.0f;
+	float nx, ny;
+	float cost, sint;
+	static float sin120 = 0.86602540378f;
+	static float cos120 = -0.5f;
+
+	/* Rotate */
+	sint = sin(t);
+	cost = cos(t);
+	nx = x * cost - y * sint;
+	ny = y * cost + x * sint;
+	x = nx;
+	y = ny;
+	wheelState.circleX[0] = (int)(x + 0.5f) + 16;
+	wheelState.circleY[0] = (int)(y + 0.5f) + 16;
+
+	/* Rotate by 120 degrees, for the second circle */
+	nx = x * cos120 - y * sin120;
+	ny = y * cos120 + x * sin120;
+	x = nx;
+	y = ny;
+	wheelState.circleX[1] = (int)(x + 0.5f) + 16;
+	wheelState.circleY[1] = (int)(y + 0.5f) + 16;
+
+	/* 3rd circle */
+	nx = x * cos120 - y * sin120;
+	ny = y * cos120 + x * sin120;
+	x = nx;
+	y = ny;
+	wheelState.circleX[2] = (int)(x + 0.5f) + 16;
+	wheelState.circleY[2] = (int)(y + 0.5f) + 16;
+}
+
+#define WHEEL_CIRCLE_RADIUS 18
+#define WHEEL_CIRCLE_RADIUS_SQ (WHEEL_CIRCLE_RADIUS * WHEEL_CIRCLE_RADIUS)
+
+static unsigned short wheel(int x, int y) {
+	int cx, cy, count=0;
+
+	/* First circle */
+	cx = wheelState.circleX[0] - x;
+	cy = wheelState.circleY[0] - y;
+	if (cx*cx + cy*cy < WHEEL_CIRCLE_RADIUS_SQ) count++;
+
+	/* 2nd circle */
+	cx = wheelState.circleX[1] - x;
+	cy = wheelState.circleY[1] - y;
+	if (cx*cx + cy*cy < WHEEL_CIRCLE_RADIUS_SQ) count++;
+
+	/* 3rd circle */
+	cx = wheelState.circleX[2] - x;
+	cy = wheelState.circleY[2] - y;
+	if (cx*cx + cy*cy < WHEEL_CIRCLE_RADIUS_SQ) count++;
+
+	if (count >= 2) return 0xFFFF;
+
+	return 0x000F;
+}
+
 static void draw(void)
 {	
 	int scroll = MIN_SCROLL + (MAX_SCROLL - MIN_SCROLL) * mouse_x / fb_width;
@@ -162,6 +229,9 @@ static void draw(void)
 
 	lastFrameDuration = (time_msec - lastFrameTime) / 1000.0f;
 	lastFrameTime = time_msec;
+
+	/* Update mini-effects here */
+	updateWheel(time_msec / 1000.0f);
 
 	/* First, render the horizon */
 	for (scanline = 0; scanline < HORIZON_HEIGHT; scanline++) {
@@ -202,8 +272,13 @@ static void draw(void)
 	}
 
 	/* Then after displacement, blit the objects */
-	//for (i = 0; i < 5; i++) rleBlit(backBuffer + PIXEL_PADDING, fb_width, fb_height, BB_SIZE, grobj, 134 + (i-3) * 60, 100);
-	for (i = 0; i < 5; i++) rleBlitScale(backBuffer + PIXEL_PADDING, fb_width, fb_height, BB_SIZE, grobj, 134 + (i - 3) * 120, 0, 1.8f, 1.8f);
+	for (i = 0; i < 5; i++) rleBlit(backBuffer + PIXEL_PADDING, fb_width, fb_height, BB_SIZE, grobj, 134 + (i-3) * 60, 100);
+
+	for (scanline = 0; scanline < 32; scanline++) {
+		for (i = 0; i < 32; i++) {
+			backBuffer[PIXEL_PADDING + scanline * BB_SIZE + i] = wheel(i, scanline);
+		}
+	}
 
 	/* Blit effect to framebuffer */
 	src = backBuffer + PIXEL_PADDING;
@@ -314,7 +389,7 @@ static void updateScrollTables(float dt) {
 #define RLE_STREAKS_PER_SCANLINE 4
 /* Every streak is encoded by 2 bytes: offset and count of black pixels in the streak */
 #define RLE_BYTES_PER_SCANLINE RLE_STREAKS_PER_SCANLINE * 2
-#define RLE_FILL_COLOR 0xFF00 
+#define RLE_FILL_COLOR 0
 #define RLE_FILL_COLOR_32 ((RLE_FILL_COLOR << 16) | RLE_FILL_COLOR)
 
 #define RLE_FIXED_BITS 16

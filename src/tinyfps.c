@@ -47,6 +47,7 @@ void initFpsFonts()
 			}
 		}
 
+		i = 0;
 		for (n = 0; n < FPS_FONTS_NUM; n++)
 		{
 			for (y = 0; y < FPS_FONT_HEIGHT; y++)

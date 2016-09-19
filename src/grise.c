@@ -496,6 +496,7 @@ static void rleBlitScale(unsigned short *dst, int dstW, int dstH, int dstStride,
 	unsigned int *output32;
 	unsigned char *input;
 	int scanlineCounter = 0;
+	int scaleXFixed;
 	static unsigned char scan[512];
 
 	int blitW = (int)(bitmap->w * scaleX + 0.5f);
@@ -504,8 +505,8 @@ static void rleBlitScale(unsigned short *dst, int dstW, int dstH, int dstStride,
 	/* From this point on, scaleY will be inverted */
 	scaleY = 1.0f / scaleY;
 
-	int scaleXFixed = (int)(scaleX * (float)(1 << RLE_FIXED_BITS) + 0.5f);
-	
+	scaleXFixed = (int)(scaleX * (float)(1 << RLE_FIXED_BITS) + 0.5f);
+
 	dst += blitX + blitY * dstStride;
 
 	for (scanline = blitY; scanline < blitY + blitH; scanline++) {
@@ -556,6 +557,7 @@ static void rleBlitScaleInv(unsigned short *dst, int dstW, int dstH, int dstStri
 	unsigned int *output32;
 	unsigned char *input;
 	int scanlineCounter = 0;
+	int scaleXFixed;
 	static unsigned char scan[512];
 
 	int blitW = (int)(bitmap->w * scaleX + 0.5f);
@@ -564,7 +566,7 @@ static void rleBlitScaleInv(unsigned short *dst, int dstW, int dstH, int dstStri
 	/* From this point on, scaleY will be inverted */
 	scaleY = 1.0f / scaleY;
 
-	int scaleXFixed = (int)(scaleX * (float)(1 << RLE_FIXED_BITS) + 0.5f);
+	scaleXFixed = (int)(scaleX * (float)(1 << RLE_FIXED_BITS) + 0.5f);
 
 	dst += blitX + blitY * dstStride;
 

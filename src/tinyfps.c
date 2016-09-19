@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "tinyfps.h"
@@ -15,29 +16,30 @@
 1110 0010 1110 1110 0010 1110 1110 0010 1110 1110
 */
 
-const unsigned char miniDecimalData[] = { 0xE2, 0xEE, 0xAE, 0xEE, 0xEE,
+static const unsigned char miniDecimalData[] = { 0xE2, 0xEE, 0xAE, 0xEE, 0xEE,
 0xA2, 0x22, 0xA8, 0x82, 0xAA,
 0xA2, 0xE6, 0xEE, 0xE2, 0xEE,
 0xA2, 0x82, 0x22, 0xA2, 0xA2,
 0xE2, 0xEE, 0x2E, 0xE2, 0xEE };
 
-unsigned short miniDecimalFonts[FPS_FONT_NUM_PIXELS];
+static unsigned short miniDecimalFonts[FPS_FONT_NUM_PIXELS];
 
-unsigned long startingFpsTime = 0;
-int fpsFontsInit = 0;
-int nFrames = 0;
+static unsigned long startingFpsTime = 0;
+static int fpsFontsInit = 0;
+static int nFrames = 0;
 
 void initFpsFonts()
 {
 	if (fpsFontsInit == 0)
 	{
 		unsigned char miniDecimalPixels[FPS_FONT_NUM_PIXELS];
+		int i, j, k = 0;
+		int x, y, n;
 
-		int k = 0;
-		for (int i = 0; i < FPS_FONT_NUM_PIXELS / 8; i++)
+		for (i = 0; i < FPS_FONT_NUM_PIXELS / 8; i++)
 		{
 			unsigned char d = miniDecimalData[i];
-			for (int j = 0; j < 8; j++)
+			for (j = 0; j < 8; j++)
 			{
 				unsigned char c = (d & 0x80) >> 7;
 				miniDecimalPixels[k++] = c;
@@ -45,12 +47,11 @@ void initFpsFonts()
 			}
 		}
 
-		int i = 0;
-		for (int n = 0; n < FPS_FONTS_NUM; n++)
+		for (n = 0; n < FPS_FONTS_NUM; n++)
 		{
-			for (int y = 0; y < FPS_FONT_HEIGHT; y++)
+			for (y = 0; y < FPS_FONT_HEIGHT; y++)
 			{
-				for (int x = 0; x < FPS_FONT_WIDTH; x++)
+				for (x = 0; x < FPS_FONT_WIDTH; x++)
 				{
 					miniDecimalFonts[i++] = miniDecimalPixels[n * FPS_FONT_WIDTH + x + y * FPS_FONT_WIDTH * FPS_FONTS_NUM] * 0xFFFF;
 				}
@@ -61,7 +62,7 @@ void initFpsFonts()
 	}
 }
 
-void drawFont(unsigned char decimal, int posX, int posY, unsigned char zoom, unsigned short *vram)
+static void drawFont(unsigned char decimal, int posX, int posY, unsigned char zoom, unsigned short *vram)
 {
 	int x, y, j, k;
 	unsigned short c;
@@ -95,12 +96,12 @@ void drawFont(unsigned char decimal, int posX, int posY, unsigned char zoom, uns
     }
 }
 
-void drawDecimal(unsigned int number, int posX, int posY, unsigned char zoom, unsigned short *vram)
+static void drawDecimal(unsigned int number, int posX, int posY, unsigned char zoom, unsigned short *vram)
 {
 	int i = 0;
     char buffer[8];
 
-    itoa(number, buffer, 10);
+	sprintf(buffer, "%d", number);
 
 	while(i < 8 && buffer[i] != 0)
     {

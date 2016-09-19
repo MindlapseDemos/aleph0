@@ -1,7 +1,7 @@
 baseobj = main.obj
 demoobj = demo.obj screen.obj gfxutil.obj 3dgfx.obj polyfill.obj
-scrobj = tunnel.obj fract.obj grise.obj polytest.obj
-sysobj = gfx.obj vbe.obj dpmi.obj timer.obj keyb.obj mouse.obj logger.obj
+scrobj = tunnel.obj fract.obj grise.obj polytest.obj plasma.obj
+sysobj = gfx.obj vbe.obj dpmi.obj timer.obj keyb.obj mouse.obj logger.obj tinyfps.obj
 obj = $(baseobj) $(demoobj) $(sysobj) $(scrobj)
 bin = demo.exe
 

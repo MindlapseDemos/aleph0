@@ -35,7 +35,6 @@ int demo_init(int argc, char **argv)
 	g3d_framebuffer(fb_width, fb_height, fb_pixels);
 
 	if(music_open("data/test.mod") == -1) {
-		fprintf(stderr, "failed to open music: data/test.mod\n");
 		return -1;
 	}
 

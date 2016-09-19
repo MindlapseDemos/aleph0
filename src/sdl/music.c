@@ -41,6 +41,7 @@ void music_close(void)
 	if(mod) {
 		music_stop();
 		Player_Free(mod);
+		mod = 0;
 	}
 }
 

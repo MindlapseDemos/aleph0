@@ -1,22 +1,22 @@
 baseobj = main.obj
-demoobj = demo.obj screen.obj gfxutil.obj 3dgfx.obj polyfill.obj
+demoobj = demo.obj screen.obj music.obj gfxutil.obj 3dgfx.obj polyfill.obj
 scrobj = tunnel.obj fract.obj grise.obj polytest.obj plasma.obj
 sysobj = gfx.obj vbe.obj dpmi.obj timer.obj keyb.obj mouse.obj logger.obj tinyfps.obj
 obj = $(baseobj) $(demoobj) $(sysobj) $(scrobj)
 bin = demo.exe
 
-libs = imago.lib
+libs = imago.lib mikmod.lib
 
 def = -dM_PI=3.141592653589793
 opt = -5 -fp5 -otexan -oh -oi -ei
 dbg = -d1
 
 !ifdef __UNIX__
-incpath = -Isrc -Isrc/dos -Ilibs/imago/src
-libpath = libs/imago
+incpath = -Isrc -Isrc/dos -Ilibs/imago/src -Ilibs/oldmik/src
+libpath = libpath libs/imago libpath libs/oldmik
 !else
-incpath = -Isrc -Isrc\dos -Ilibs\imago\src
-libpath = libs\imago
+incpath = -Isrc -Isrc\dos -Ilibs\imago\src -Ilibs\oldmik\src
+libpath = libpath libs\imago libpath libs\oldmik
 !endif
 
 AS = nasm
@@ -25,12 +25,13 @@ CXX = wpp386
 ASFLAGS = -fobj
 CFLAGS = $(dbg) $(opt) $(def) -zq -bt=dos $(incpath)
 CXXFLAGS = $(CFLAGS)
-LDFLAGS = libpath $(libpath) library { $(libs) }
+LDFLAGS = $(libpath) library { $(libs) }
 LD = wlink
 
 $(bin): cflags.occ $(obj) libs/imago/imago.lib
 	%write objects.lnk $(obj)
-	$(LD) debug all name $@ system dos4g file { @objects } $(LDFLAGS)
+	%write ldflags.lnk $(LDFLAGS)
+	$(LD) debug all name $@ system dos4g file { @objects } @ldflags
 
 .c: src;src/dos
 .cc: src;src/dos

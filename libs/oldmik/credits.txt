@@ -1,0 +1,26 @@
+MikMod 2.10
+===========
+
+
+Main programmer:
+
+        Jean-Paul Mikkers (MikMak)
+
+
+Additional programming:                 what:
+
+        Paul Fisher (Rao)               everything
+        Jake Stine (Air Richter)        everything
+        Peter Breitling                 DJGPP porting
+        Kodiak                          interfacing
+        Sylvain Marchand                GNU-C portability, portable loaders
+        Vince Vu (Judge Dredd)          helped with AWE driver
+        Mike Leibow                     GUS driver
+        Jean Phillippe Ajirent          EMS routines
+        Frank Becker                    Sun audio driver
+        Roine Gustafsson                Dec Alpha AF audio driver
+        Tom Stokes                      Os/2 porting
+
+If you feel you deserve a place here, please remind mikmak@via.nl.
+Sometimes email & code gets lost, ya know ! :)
+

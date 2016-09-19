@@ -7,6 +7,7 @@
 #include "demo.h"
 #include "screen.h"
 #include "3dgfx.h"
+#include "music.h"
 
 int fb_width = 320;
 int fb_height = 240;
@@ -33,6 +34,11 @@ int demo_init(int argc, char **argv)
 	}
 	g3d_framebuffer(fb_width, fb_height, fb_pixels);
 
+	if(music_open("data/test.mod") == -1) {
+		fprintf(stderr, "failed to open music: data/test.mod\n");
+		return -1;
+	}
+
 	if(scr_init() == -1) {
 		return -1;
 	}
@@ -49,11 +55,14 @@ int demo_init(int argc, char **argv)
 
 	/* clear the framebuffer at least once */
 	memset(fb_pixels, 0, fb_width * fb_height * fb_bpp / CHAR_BIT);
+
+	music_play();
 	return 0;
 }
 
 void demo_cleanup(void)
 {
+	music_close();
 	scr_shutdown();
 	g3d_destroy();
 
@@ -65,6 +74,7 @@ void demo_cleanup(void)
 
 void demo_draw(void)
 {
+	music_update();
 	scr_update();
 	scr_draw();
 

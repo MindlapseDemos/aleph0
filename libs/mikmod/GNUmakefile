@@ -1,7 +1,7 @@
 src = $(wildcard drivers/*.c) \
 	  $(wildcard loaders/*.c) \
 	  $(wildcard mmio/*.c) \
-	  $(wildcard deackers/*.c) \
+	  $(wildcard depackers/*.c) \
 	  $(wildcard posix/*.c) \
 	  $(wildcard playercode/*.c)
 obj = $(src:.c=.o)

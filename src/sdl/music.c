@@ -10,7 +10,7 @@ static int init(void)
 	MikMod_RegisterAllDrivers();
 	MikMod_RegisterAllLoaders();
 
-	md_mode |= DMODE_SOFT_MUSIC;
+	md_mode |= DMODE_SOFT_MUSIC | DMODE_16BITS | DMODE_STEREO | DMODE_INTERP;
 	if(MikMod_Init("") != 0) {
 		fprintf(stderr, "mikmod init failed: %s\n",
 				MikMod_strerror(MikMod_errno));

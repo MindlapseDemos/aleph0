@@ -25,3 +25,5 @@ data
 *.dll
 *.occ
 *.OCC
+*.map
+*.MAP

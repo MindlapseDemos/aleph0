@@ -25,7 +25,7 @@ CXX = wpp386
 ASFLAGS = -fobj
 CFLAGS = $(dbg) $(opt) $(def) -zq -bt=dos $(incpath)
 CXXFLAGS = $(CFLAGS)
-LDFLAGS = $(libpath) library { $(libs) }
+LDFLAGS = option stack=16k option map $(libpath) library { $(libs) }
 LD = wlink
 
 $(bin): cflags.occ $(obj) libs/imago/imago.lib

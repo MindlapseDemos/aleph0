@@ -29,7 +29,7 @@ typedef int             BOOL;           /* doesn't matter.. 0=FALSE, <>0 true */
 
 #else
 
-typedef signed char     SBYTE;          /* has to be 1 byte signed */
+typedef char            SBYTE;          /* has to be 1 byte signed */
 typedef unsigned char   UBYTE;          /* has to be 1 byte unsigned */
 typedef short           SWORD;          /* has to be 2 bytes signed */
 typedef unsigned short  UWORD;          /* has to be 2 bytes unsigned */

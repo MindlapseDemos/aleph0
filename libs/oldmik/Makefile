@@ -7,13 +7,12 @@ $(oloader) $(odriver)
 
 alib = mikmod.lib
 
-opt = -5 -fp5 -otexan
-dbg = -d1
-def =
+opt = -5 -oxl+
+#dbg = -d1
 
 CC = wcc386
 AS = wasm
-CFLAGS = $(dbg) $(opt) $(def) -zq -zu -bt=dos -Isrc
+CFLAGS = $(dbg) $(opt) -zq -zu -j -s -bt=dos -Isrc
 ASFLAGS = -zq -5pr
 
 $(alib): cflags.occ $(obj)

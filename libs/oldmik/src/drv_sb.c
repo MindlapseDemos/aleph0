@@ -205,7 +205,7 @@ static UWORD SB_GetDSPVersion(void)
 ***************************************************************************/
 
 static DMAMEM *SB_DMAMEM;
-static signed char *SB_DMABUF;
+static char *SB_DMABUF;
 
 static UBYTE SB_TIMECONSTANT;
 

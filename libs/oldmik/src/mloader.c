@@ -179,7 +179,7 @@ char *DupStr(char *s,UWORD len)
 	/* Scan for first printing char in buffer [includes high ascii up to 254] */
 
 	while(len){
-		if(!(s[len-1]>=0 && s[len-1]<=0x20)) break;
+                if(!(s[len-1]>=0 && s[len-1]<=0x20)) break;
 		len--;
 	}
 
@@ -190,9 +190,7 @@ char *DupStr(char *s,UWORD len)
 		   for any control-chars */
 
 		if((d=(char *)malloc(len+1))!=NULL){
-			for(t=0;t<len;t++) {
-				d[t]=(s[t]>=0 && s[t]<32) ? ' ': s[t];
-			}
+                        for(t=0;t<len;t++) d[t]=(s[t]>=0 && s[t]<32) ? ' ': s[t];
 			d[t]=0;
 		}
 	}

@@ -78,4 +78,6 @@ void music_update(void)
 
 static void update_callback(void)
 {
+	MP_HandleTick();
+	MD_SetBPM(mp_bpm);
 }

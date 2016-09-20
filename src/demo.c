@@ -8,6 +8,7 @@
 #include "screen.h"
 #include "3dgfx.h"
 #include "music.h"
+#include "cfgopt.h"
 
 int fb_width = 320;
 int fb_height = 240;
@@ -18,15 +19,20 @@ int mouse_x, mouse_y;
 unsigned int mouse_bmask;
 
 static unsigned long nframes;
-static const char *start_scr_name;
 
 int demo_init(int argc, char **argv)
 {
 	struct screen *scr;
+	char *env;
 
-	start_scr_name = getenv("START_SCR");
-	if(argv[1]) {
-		start_scr_name = argv[1];
+	if(load_config("demo.cfg") == -1) {
+		return -1;
+	}
+	if((env = getenv("START_SCR"))) {
+		opt.start_scr = env;
+	}
+	if(parse_args(argc, argv) == -1) {
+		return -1;
 	}
 
 	if(g3d_init() == -1) {
@@ -34,34 +40,40 @@ int demo_init(int argc, char **argv)
 	}
 	g3d_framebuffer(fb_width, fb_height, fb_pixels);
 
-	if(music_open("data/test.mod") == -1) {
-		return -1;
+	if(opt.music) {
+		if(music_open("data/test.mod") == -1) {
+			return -1;
+		}
 	}
 
 	if(scr_init() == -1) {
 		return -1;
 	}
-	if(start_scr_name) {
-		scr = scr_lookup(start_scr_name);
+	if(opt.start_scr) {
+		scr = scr_lookup(opt.start_scr);
 	} else {
 		scr = scr_screen(0);
 	}
 
 	if(!scr || scr_change(scr, 4000) == -1) {
-		fprintf(stderr, "screen %s not found\n", start_scr_name ? start_scr_name : "0");
+		fprintf(stderr, "screen %s not found\n", opt.start_scr ? opt.start_scr : "0");
 		return -1;
 	}
 
 	/* clear the framebuffer at least once */
 	memset(fb_pixels, 0, fb_width * fb_height * fb_bpp / CHAR_BIT);
 
-	music_play();
+	if(opt.music) {
+		music_play();
+	}
 	return 0;
 }
 
 void demo_cleanup(void)
 {
-	music_close();
+	if(opt.music) {
+		music_close();
+	}
 	scr_shutdown();
 	g3d_destroy();
 
@@ -73,7 +85,9 @@ void demo_cleanup(void)
 
 void demo_draw(void)
 {
-	music_update();
+	if(opt.music) {
+		music_update();
+	}
 	scr_update();
 	scr_draw();
 

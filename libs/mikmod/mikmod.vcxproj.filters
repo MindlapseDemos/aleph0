@@ -1,0 +1,137 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="drivers">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="loaders">
+      <UniqueIdentifier>{017243a1-5836-429c-b07f-1c41ae84dab3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="depackers">
+      <UniqueIdentifier>{9502d697-4f36-483a-9cd4-9a622b9f972f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{811f40e2-6099-4a33-8010-f8c7ded742c2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="mmio">
+      <UniqueIdentifier>{8d8d8423-0563-415b-be3f-132de39d20ab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="playercode">
+      <UniqueIdentifier>{6c502424-758a-4ba5-ad0f-16fe1d8b78b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="posix">
+      <UniqueIdentifier>{282937aa-35d1-403d-85ab-ae64b1eb0d5b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="drivers\drv_nos.c">
+      <Filter>drivers</Filter>
+    </ClCompile>
+    <ClCompile Include="drivers\drv_oss.c">
+      <Filter>drivers</Filter>
+    </ClCompile>
+    <ClCompile Include="drivers\drv_sb.c">
+      <Filter>drivers</Filter>
+    </ClCompile>
+    <ClCompile Include="drivers\drv_sdl.c">
+      <Filter>drivers</Filter>
+    </ClCompile>
+    <ClCompile Include="drivers\drv_ultra.c">
+      <Filter>drivers</Filter>
+    </ClCompile>
+    <ClCompile Include="drivers\drv_wss.c">
+      <Filter>drivers</Filter>
+    </ClCompile>
+    <ClCompile Include="loaders\load_it.c">
+      <Filter>loaders</Filter>
+    </ClCompile>
+    <ClCompile Include="loaders\load_mod.c">
+      <Filter>loaders</Filter>
+    </ClCompile>
+    <ClCompile Include="loaders\load_s3m.c">
+      <Filter>loaders</Filter>
+    </ClCompile>
+    <ClCompile Include="loaders\load_xm.c">
+      <Filter>loaders</Filter>
+    </ClCompile>
+    <ClCompile Include="depackers\mmcmp.c">
+      <Filter>depackers</Filter>
+    </ClCompile>
+    <ClCompile Include="depackers\pp20.c">
+      <Filter>depackers</Filter>
+    </ClCompile>
+    <ClCompile Include="depackers\s404.c">
+      <Filter>depackers</Filter>
+    </ClCompile>
+    <ClCompile Include="depackers\xpk.c">
+      <Filter>depackers</Filter>
+    </ClCompile>
+    <ClCompile Include="mmio\mmalloc.c">
+      <Filter>mmio</Filter>
+    </ClCompile>
+    <ClCompile Include="mmio\mmerror.c">
+      <Filter>mmio</Filter>
+    </ClCompile>
+    <ClCompile Include="mmio\mmio.c">
+      <Filter>mmio</Filter>
+    </ClCompile>
+    <ClCompile Include="posix\strcasecmp.c">
+      <Filter>posix</Filter>
+    </ClCompile>
+    <ClCompile Include="playercode\mdreg.c">
+      <Filter>playercode</Filter>
+    </ClCompile>
+    <ClCompile Include="playercode\mdriver.c">
+      <Filter>playercode</Filter>
+    </ClCompile>
+    <ClCompile Include="playercode\mdulaw.c">
+      <Filter>playercode</Filter>
+    </ClCompile>
+    <ClCompile Include="playercode\mloader.c">
+      <Filter>playercode</Filter>
+    </ClCompile>
+    <ClCompile Include="playercode\mlreg.c">
+      <Filter>playercode</Filter>
+    </ClCompile>
+    <ClCompile Include="playercode\mlutil.c">
+      <Filter>playercode</Filter>
+    </ClCompile>
+    <ClCompile Include="playercode\mplayer.c">
+      <Filter>playercode</Filter>
+    </ClCompile>
+    <ClCompile Include="playercode\munitrk.c">
+      <Filter>playercode</Filter>
+    </ClCompile>
+    <ClCompile Include="playercode\mwav.c">
+      <Filter>playercode</Filter>
+    </ClCompile>
+    <ClCompile Include="playercode\npertab.c">
+      <Filter>playercode</Filter>
+    </ClCompile>
+    <ClCompile Include="playercode\sloader.c">
+      <Filter>playercode</Filter>
+    </ClCompile>
+    <ClCompile Include="playercode\virtch.c">
+      <Filter>playercode</Filter>
+    </ClCompile>
+    <ClCompile Include="playercode\virtch_common.c">
+      <Filter>playercode</Filter>
+    </ClCompile>
+    <ClCompile Include="playercode\virtch2.c">
+      <Filter>playercode</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\mikmod.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\mikmod_ctype.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\mikmod_internals.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="config.h" />
+  </ItemGroup>
+</Project>

@@ -1,9 +1,7 @@
-/* config.h.in.  Generated from configure.ac by autoheader.  */
-
 #define HAVE_LIMITS_H 1
 #define HAVE_MEMCMP 1
 #define HAVE_STDLIB_H 1
-#define HAVE_STRINGS_H 1
+#define HAVE_STRING_H 1
 #define HAVE_STRSTR 1
 
 #ifdef DOS
@@ -39,8 +37,12 @@
 
 
 #if defined(WIN32)
+#define DRV_SDL 1
+
 #define HAVE_WINDOWS_H 1
 #define HAVE_MALLOC_H 1
+
+#define NO_SDL_CONFIG 1
 #endif
 
 #undef MIKMOD_DEBUG
@@ -80,6 +82,6 @@
 
 /* Define to `__inline__' or `__inline' if that's what the C compiler
    calls it, or to nothing if 'inline' is not supported under any name.  */
-#ifndef __cplusplus
-#undef inline
+#if !defined(__cplusplus) && defined(_MSC_VER)
+#define inline __inline
 #endif

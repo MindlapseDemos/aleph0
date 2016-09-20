@@ -94,18 +94,18 @@ int speed_to_finetune(ULONG speed,int sample)
     int ctmp=0,tmp,note=1,ft=0;
 
     speed>>=1;
-    while((tmp=getfrequency(of.flags,getlinearperiod(note<<1,0)))<speed) {
+    while((tmp=(int)getfrequency(of.flags,getlinearperiod(note<<1,0)))<speed) {
         ctmp=tmp;
         note++;
     }
 
     if(tmp!=speed) {
         if((tmp-speed)<(speed-ctmp))
-            while(tmp>speed)
+            while(tmp>(int)speed)
                 tmp=getfrequency(of.flags,getlinearperiod(note<<1,--ft));
         else {
             note--;
-            while(ctmp<speed)
+            while(ctmp<(int)speed)
                 ctmp=getfrequency(of.flags,getlinearperiod(note<<1,++ft));
         }
     }

@@ -348,7 +348,7 @@ static BOOL ML_LoadPatterns(void)
 		/* Generic module pattern */
 		for (t = 0; t < of.numpat; t++) {
 			/* Load the pattern into the temp buffer and convert it */
-			for (s = 0; s < (64U * of.numchn); s++) {
+			for (s = 0; s < (int)(64U * of.numchn); s++) {
 				patbuf[s].a = _mm_read_UBYTE(modreader);
 				patbuf[s].b = _mm_read_UBYTE(modreader);
 				patbuf[s].c = _mm_read_UBYTE(modreader);

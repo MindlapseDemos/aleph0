@@ -34,6 +34,10 @@
 extern "C" {
 #endif
 
+#ifndef MIKMOD_STATIC
+#define MIKMOD_STATIC
+#endif
+
 /*
  * ========== Compiler magic for shared libraries
  *

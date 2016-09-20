@@ -46,6 +46,9 @@
     <ClCompile Include="src\tinyfps.c">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\sdl\music.c">
+      <Filter>src\sdl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\demo.h">

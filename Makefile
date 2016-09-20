@@ -1,5 +1,5 @@
-baseobj = main.obj
-demoobj = demo.obj screen.obj music.obj gfxutil.obj 3dgfx.obj polyfill.obj
+demoobj = main.obj demo.obj screen.obj cfgopt.obj music.obj gfxutil.obj 3dgfx.obj &
+polyfill.obj
 scrobj = tunnel.obj fract.obj grise.obj polytest.obj plasma.obj
 sysobj = gfx.obj vbe.obj dpmi.obj timer.obj keyb.obj mouse.obj logger.obj tinyfps.obj
 obj = $(baseobj) $(demoobj) $(sysobj) $(scrobj)

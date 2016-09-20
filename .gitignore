@@ -27,3 +27,5 @@ data
 *.OCC
 *.map
 *.MAP
+*.CFG
+*.cfg

@@ -12,7 +12,7 @@ static int init(void)
 {
 	md_mixfreq = 44100;
 	md_dmabufsize = 20000;
-	md_mode = DMODE_STEREO | DMODE_16BITS;/* | DMODE_INTERP;*/
+	md_mode = DMODE_STEREO | DMODE_16BITS | DMODE_INTERP;
 	md_device = 0;
 
 	ML_RegisterLoader(&load_m15);

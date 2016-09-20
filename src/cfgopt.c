@@ -32,7 +32,9 @@ int parse_args(int argc, char **argv)
 		}
 	}
 
-	opt.start_scr = scrname;
+	if(scrname) {
+		opt.start_scr = scrname;
+	}
 	return 0;
 }
 

@@ -5,6 +5,7 @@
 #include "demo.h"
 
 static void handle_event(SDL_Event *ev);
+static void toggle_fullscreen(void);
 
 static int quit;
 static long start_time;
@@ -12,13 +13,13 @@ static SDL_Surface *fbsurf;
 
 static int fbscale = 2;
 static int xsz, ysz;
+static unsigned int sdl_flags = SDL_SWSURFACE;
 
 int main(int argc, char **argv)
 {
 	int s, i, j;
 	char *env;
 	unsigned short *sptr, *dptr;
-	unsigned int sdl_flags = SDL_SWSURFACE;
 
 	if((env = getenv("FBSCALE")) && (s = atoi(env))) {
 		fbscale = s;
@@ -66,7 +67,7 @@ int main(int argc, char **argv)
 		}
 
 		sptr = fb_pixels;
-		dptr = fbsurf->pixels;
+		dptr = (unsigned short*)fbsurf->pixels + (fbsurf->w - xsz) / 2;
 		for(i=0; i<fb_height; i++) {
 			for(j=0; j<fb_width; j++) {
 				int x, y;
@@ -74,12 +75,12 @@ int main(int argc, char **argv)
 
 				for(y=0; y<fbscale; y++) {
 					for(x=0; x<fbscale; x++) {
-						dptr[y * xsz + x] = pixel;
+						dptr[y * fbsurf->w + x] = pixel;
 					}
 				}
 				dptr += fbscale;
 			}
-			dptr += xsz * (fbscale - 1);
+			dptr += (fbsurf->w - fb_width) * fbscale;
 		}
 
 		if(SDL_MUSTLOCK(fbsurf)) {
@@ -113,6 +114,12 @@ static void handle_event(SDL_Event *ev)
 
 	case SDL_KEYDOWN:
 	case SDL_KEYUP:
+		if(ev->key.keysym.sym == 'f') {
+			if(ev->key.state == SDL_PRESSED) {
+				toggle_fullscreen();
+			}
+			break;
+		}
 		demo_keyboard(ev->key.keysym.sym, ev->key.state == SDL_PRESSED ? 1 : 0);
 		break;
 
@@ -134,4 +141,18 @@ static void handle_event(SDL_Event *ev)
 	default:
 		break;
 	}
+}
+
+static void toggle_fullscreen(void)
+{
+	SDL_Surface *newsurf;
+	unsigned int newflags = sdl_flags ^ SDL_FULLSCREEN;
+
+	if(!(newsurf = SDL_SetVideoMode(xsz, ysz, fb_bpp, newflags))) {
+		fprintf(stderr, "failed to go %s\n", newflags & SDL_FULLSCREEN ? "fullscreen" : "windowed");
+		return;
+	}
+
+	fbsurf = newsurf;
+	sdl_flags = newflags;
 }

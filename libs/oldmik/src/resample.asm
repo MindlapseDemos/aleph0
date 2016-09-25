@@ -13,6 +13,8 @@ _TEXT   SEGMENT DWORD PUBLIC USE32 'CODE'
 
         PUBLIC  AsmStereoNormal_
         PUBLIC  AsmMonoNormal_
+        PUBLIC  _AsmStereoNormal_
+        PUBLIC  _AsmMonoNormal_
         
 SS2     MACRO index
         even
@@ -38,6 +40,7 @@ SM2     MACRO index
 
 
 AsmStereoNormal_ proc USES ebp fs es
+_AsmStereoNormal_:
         mov    ax,_lvolsel
         mov    es,ax                       ; voltab selector naar fs
         mov    ax,_rvolsel
@@ -83,6 +86,7 @@ AsmStereoNormal_ endp
 
 
 AsmMonoNormal_ proc USES ebp es
+_AsmMonoNormal_:
         mov    ax,_lvolsel
         mov    es,ax                       ; voltab selector naar fs
         xor    eax,eax

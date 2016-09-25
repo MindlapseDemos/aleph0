@@ -10,10 +10,16 @@ alib = mikmod.lib
 opt = -5 -oxl+
 #dbg = -d1
 
+!ifdef __UNIX__
+RM = rm -f
+!else
+RM = del
+!endif
+
 CC = wcc386
 AS = wasm
 CFLAGS = $(dbg) $(opt) -zq -zu -j -s -bt=dos -Isrc
-ASFLAGS = -zq -5pr
+ASFLAGS = -zq -5pr -bt=dos
 
 $(alib): cflags.occ $(obj)
 	%write objects.lbc $(obj)
@@ -32,7 +38,7 @@ cflags.occ: Makefile
 	$(AS) -fo=$@ $(ASFLAGS) $[*
 
 clean: .symbolic
-	del *.obj
-	del *.occ
-	del *.lbc
-	del $(alib)
+	$(RM) *.obj
+	$(RM) *.occ
+	$(RM) *.lbc
+	$(RM) $(alib)

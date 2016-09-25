@@ -73,6 +73,11 @@ extern "C" {
 
 UWORD lvolsel,rvolsel;
 
+#if __WATCOMC__ >= 1200 /* OpenWatcom 1.0+ */
+#define AsmStereoNormal _AsmStereoNormal
+#define AsmMonoNormal _AsmMonoNormal
+#endif
+
 void AsmStereoNormal(SBYTE *srce,SLONG *dest,SLONG index,SLONG increment,ULONG todo);
 #pragma aux AsmStereoNormal	\
 		parm [esi] [edi] [ebx] [ecx] [edx] \

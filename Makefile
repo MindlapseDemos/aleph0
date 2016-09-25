@@ -14,9 +14,11 @@ dbg = -d1
 !ifdef __UNIX__
 incpath = -Isrc -Isrc/dos -Ilibs/imago/src -Ilibs/oldmik/src
 libpath = libpath libs/imago libpath libs/oldmik
+RM = rm -f
 !else
 incpath = -Isrc -Isrc\dos -Ilibs\imago\src -Ilibs\oldmik\src
 libpath = libpath libs\imago libpath libs\oldmik
+RM = del
 !endif
 
 AS = nasm
@@ -53,7 +55,7 @@ cxxflags.occ: Makefile
 	$(AS) $(ASFLAGS) -o $@ $[*.asm
 
 clean: .symbolic
-	del *.obj
-	del *.occ
-	del *.lnk
-	del $(bin)
+	$(RM) *.obj
+	$(RM) *.occ
+	$(RM) *.lnk
+	$(RM) $(bin)

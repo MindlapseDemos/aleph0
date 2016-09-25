@@ -45,6 +45,9 @@ cflags.occ: Makefile
 cxxflags.occ: Makefile
 	%write $@ $(CXXFLAGS)
 
+music.obj: music.c
+	$(CC) -fo=$@ @cflags.occ -zu $[*
+
 .c.obj: .autodepend
 	$(CC) -fo=$@ @cflags.occ $[*
 

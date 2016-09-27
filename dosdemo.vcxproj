@@ -85,6 +85,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\3dgfx.c" />
+    <ClCompile Include="src\bump.c" />
     <ClCompile Include="src\cfgopt.c" />
     <ClCompile Include="src\demo.c" />
     <ClCompile Include="src\fract.c" />

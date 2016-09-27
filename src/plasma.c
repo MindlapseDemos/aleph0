@@ -22,15 +22,15 @@ static struct screen scr = {
 	draw
 };
 
-unsigned long startingTime;
+static unsigned long startingTime;
 
 #define PSIN_SIZE 4096
 #define PPAL_SIZE 256
 
-unsigned char *psin1, *psin2, *psin3;
-unsigned short *plasmaPal;
+static unsigned char *psin1, *psin2, *psin3;
+static unsigned short *plasmaPal;
 
-unsigned short myBuffer[320*240];
+static unsigned short myBuffer[320 * 240];
 
 
 struct screen *plasma_screen(void)
@@ -116,7 +116,7 @@ static void draw(void)
 		}
 	}
 
-	drawFps((unsigned short*)fb_pixels);
+	drawFps((unsigned short*)vmem_back);
 
 	swap_buffers(0);
 }

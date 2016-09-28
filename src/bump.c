@@ -159,31 +159,66 @@ static void stop(long trans_time)
 {
 }
 
-
-static void renderLight(struct point *p, unsigned short *light)
+static void eraseArea(struct point *p, int width, int height)
 {
-	// Check for boundaries is missing atm, will add soon
 	int x, y;
-	unsigned short *dst = (unsigned short*)lightmap + p->y * fb_width + p->x;
-	for (y = 0; y < LIGHT_HEIGHT; y++)
+	unsigned short *dst;
+
+	int x0 = p->x;
+	int y0 = p->y;
+	int x1 = p->x + width;
+	int y1 = p->y + height;
+
+	int dx, dy;
+
+	if (x0 < 0) x0 = 0;
+	if (y0 < 0) y0 = 0;
+	if (x1 > fb_width) x1 = fb_width;
+	if (y1 > fb_height) y1 = fb_height;
+
+	dx = x1 - x0;
+	//dy = y1 - y0;
+
+	dst = (unsigned short*)lightmap + y0 * fb_width + x0;
+
+	for (y = y0; y < y1; y++)
 	{
-		for (x = 0; x < LIGHT_WIDTH; x++)
+		for (x = x0; x < x1; x++)
 		{
-			*dst++ |= *light++;
+			*dst++ = 0;
 		}
-		dst += fb_width - LIGHT_WIDTH;
+		dst += fb_width - dx;
 	}
 }
 
 
+static void renderLight(struct point *p, int width, int height, unsigned short *light)
+{
+	// Check for boundaries is missing atm, will add soon
+	int x, y;
+	unsigned short *dst = (unsigned short*)lightmap + p->y * fb_width + p->x;
+	for (y = 0; y < height; y++)
+	{
+		for (x = 0; x < width; x++)
+		{
+			*dst++ |= *light++;
+		}
+		dst += fb_width - width;
+	}
+}
+
+static void eraseLights()
+{
+	eraseArea(&pointR, LIGHT_WIDTH, LIGHT_HEIGHT);
+	eraseArea(&pointG, LIGHT_WIDTH, LIGHT_HEIGHT);
+	eraseArea(&pointB, LIGHT_WIDTH, LIGHT_HEIGHT);
+}
+
 static void renderLights()
 {
-	memset(lightmap, 0, fb_width * fb_height * sizeof(*lightmap));
-	// I will later delete only the regions of lights to speed up
-
-	renderLight(&pointR, lightR);
-	renderLight(&pointG, lightG);
-	renderLight(&pointB, lightB);
+	renderLight(&pointR, LIGHT_WIDTH, LIGHT_HEIGHT, lightR);
+	renderLight(&pointG, LIGHT_WIDTH, LIGHT_HEIGHT, lightG);
+	renderLight(&pointB, LIGHT_WIDTH, LIGHT_HEIGHT, lightB);
 }
 
 static void animateLights()
@@ -194,7 +229,11 @@ static void animateLights()
 	center.x = (fb_width >> 1) - (LIGHT_WIDTH / 2);
 	center.y = (fb_height >> 1) - (LIGHT_HEIGHT / 2);
 
-	pointR.x = center.x + sin(1.2f * dt) * 64.0f;
+	// This test condition will crash because I also need to add boundaries to renderLight (tomorrow)
+	//pointR.x = center.x + sin(1.2f * dt) * 144.0f;
+	//pointR.y = center.y + sin(0.8f * dt) * 148.0f;
+
+	pointR.x = center.x + sin(1.2f * dt) * 96.0f;
 	pointR.y = center.y + sin(0.8f * dt) * 48.0f;
 
 	pointG.x = center.x + sin(1.5f * dt) * 56.0f;
@@ -216,6 +255,7 @@ static void renderBump(unsigned short *vram)
 
 static void draw(void)
 {
+	eraseLights();
 	animateLights();
 	renderLights();
 	renderBump((unsigned short*)vmem_back);

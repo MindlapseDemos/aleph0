@@ -123,5 +123,7 @@ void drawFps(unsigned short *vram)
 		startingFpsTime = time_msec;
 		nFrames = 0;
 	}
-	drawDecimal(fps, 4, 4, 2, vram);
+	//drawDecimal(fps, 4, 4, 2, vram);
+	// Moving this on the lower left side of screen for now, since the lack of double buffering generates flickering for this atm
+	drawDecimal(fps, 4, fb_height - 12, 2, vram);
 }

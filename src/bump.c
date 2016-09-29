@@ -28,8 +28,9 @@ static struct point {
 	int x, y;
 };
 
-#define LIGHT_WIDTH 128
-#define LIGHT_HEIGHT LIGHT_WIDTH
+#define NUM_BIG_LIGHTS 3
+#define BIG_LIGHT_WIDTH 256
+#define BIG_LIGHT_HEIGHT BIG_LIGHT_WIDTH
 
 static unsigned long startingTime;
 
@@ -37,13 +38,8 @@ static unsigned char *heightmap;
 static unsigned short *lightmap;
 static int *bumpOffset;
 
-static unsigned short *lightR;
-static unsigned short *lightG;
-static unsigned short *lightB;
-static struct point pointR, pointG, pointB;
-
-//#define FUNKY_COLORS
-
+static unsigned short *bigLight[NUM_BIG_LIGHTS];
+static struct point bigLightPoint[NUM_BIG_LIGHTS];
 
 struct screen *bump_screen(void)
 {
@@ -55,33 +51,24 @@ static int init(void)
 	int i, j, x, y, c, r, g, b;
 
 	const int numBlurs = 3;
-	const int lightRadius = LIGHT_WIDTH / 2;
+	const int lightRadius = BIG_LIGHT_WIDTH / 2;
 
-	const int lightSize = LIGHT_WIDTH * LIGHT_HEIGHT;
+	const int bigLightSize = BIG_LIGHT_WIDTH * BIG_LIGHT_HEIGHT;
 	const int fb_size = fb_width * fb_height;
 
 	// Just some parameters to temporary test the colors of 3 lights
-	#ifdef FUNKY_COLORS
-		// I see some artifacts if I mix channels, not sure if ORing is fine
-		const float r0 = 1.0f, g0 = 0.6f, b0 = 0.0f;
-		const float r1 = 0.5f, g1 = 1.0f, b1 = 0.2f;
-		const float r2 = 0.6f, g2 = 0.4f, b2 = 1.0f;
-	#else
-		// if every light uses it's own channel bits, it's better
-		const float r0 = 1.0f, g0 = 0.0f, b0 = 0.0f;
-		const float r1 = 0.0f, g1 = 1.0f, b1 = 0.0f;
-		const float r2 = 0.0f, g2 = 0.0f, b2 = 1.0f;
-	#endif
-
+	// if every light uses it's own channel bits, it's better
+	const float rgbMul[9] = { 1.0f, 0.0f, 0.0f, 
+								  0.0f, 1.0f, 0.0f,
+								  0.0f, 0.0f, 1.0f};
 	initFpsFonts();
 
 	heightmap = malloc(sizeof(*heightmap) * fb_size);
 	lightmap = malloc(sizeof(*lightmap) * fb_size);
 	bumpOffset = malloc(sizeof(*bumpOffset) * fb_size);
 
-	lightR = malloc(sizeof(*lightR) * lightSize);
-	lightG = malloc(sizeof(*lightG) * lightSize);
-	lightB = malloc(sizeof(*lightB) * lightSize);
+	for (i = 0; i < NUM_BIG_LIGHTS; i++)
+		bigLight[i] = malloc(sizeof(*bigLight[i]) * bigLightSize);
 
 	memset(lightmap, 0, sizeof(*lightmap) * fb_size);
 	memset(bumpOffset, 0, sizeof(*bumpOffset) * fb_size);
@@ -121,12 +108,12 @@ static int init(void)
 
 	// Generate three lights
 	i = 0;
-	for (y = 0; y < LIGHT_HEIGHT; y++)
+	for (y = 0; y < BIG_LIGHT_HEIGHT; y++)
 	{
-		int yc = y - (LIGHT_HEIGHT / 2);
-		for (x = 0; x < LIGHT_WIDTH; x++)
+		int yc = y - (BIG_LIGHT_HEIGHT / 2);
+		for (x = 0; x < BIG_LIGHT_WIDTH; x++)
 		{
-			int xc = x - (LIGHT_WIDTH / 2);
+			int xc = x - (BIG_LIGHT_WIDTH / 2);
 			float d = (float)sqrt(xc * xc + yc * yc);
 			float invDist = ((float)lightRadius - (float)sqrt(xc * xc + yc * yc)) / (float)lightRadius;
 			if (invDist < 0.0f) invDist = 0.0f;
@@ -136,9 +123,10 @@ static int init(void)
 			g = c;
 			b = c >> 1;
 
-			lightR[i] = ((int)(r * r0) << 11) | ((int)(g * g0) << 5) | (int)(b * b0);
-			lightG[i] = ((int)(r * r1) << 11) | ((int)(g * g1) << 5) | (int)(b * b1);
-			lightB[i] = ((int)(r * r2) << 11) | ((int)(g * g2) << 5) | (int)(b * b2);
+			for (j = 0; j < NUM_BIG_LIGHTS; j++)
+			{
+				bigLight[j][i] = ((int)(r * rgbMul[j * 3]) << 11) | ((int)(g * rgbMul[j * 3 + 1]) << 5) | (int)(b * rgbMul[j * 3 + 2]);
+			}
 			i++;
 		}
 	}
@@ -161,7 +149,7 @@ static void stop(long trans_time)
 
 static void eraseArea(struct point *p, int width, int height)
 {
-	int x, y;
+	int x, y, dx;
 	unsigned short *dst;
 
 	int x0 = p->x;
@@ -169,17 +157,14 @@ static void eraseArea(struct point *p, int width, int height)
 	int x1 = p->x + width;
 	int y1 = p->y + height;
 
-	int dx, dy;
-
 	if (x0 < 0) x0 = 0;
 	if (y0 < 0) y0 = 0;
 	if (x1 > fb_width) x1 = fb_width;
 	if (y1 > fb_height) y1 = fb_height;
 
 	dx = x1 - x0;
-	//dy = y1 - y0;
 
-	dst = (unsigned short*)lightmap + y0 * fb_width + x0;
+	dst = lightmap + y0 * fb_width + x0;
 
 	for (y = y0; y < y1; y++)
 	{
@@ -194,31 +179,60 @@ static void eraseArea(struct point *p, int width, int height)
 
 static void renderLight(struct point *p, int width, int height, unsigned short *light)
 {
-	// Check for boundaries is missing atm, will add soon
-	int x, y;
-	unsigned short *dst = (unsigned short*)lightmap + p->y * fb_width + p->x;
-	for (y = 0; y < height; y++)
+	int x, y, dx;
+	unsigned short *src, *dst;
+
+	int x0 = p->x;
+	int y0 = p->y;
+	int x1 = p->x + width;
+	int y1 = p->y + height;
+
+	int xl = 0;
+	int yl = 0;
+
+	if (x0 < 0)
 	{
-		for (x = 0; x < width; x++)
+		xl = -x0;
+		x0 = 0;
+	}
+
+	if (y0 < 0)
+	{
+		yl = -y0;
+		y0 = 0;
+	}
+
+	if (x1 > fb_width) x1 = fb_width;
+	if (y1 > fb_height) y1 = fb_height;
+
+	dx = x1 - x0;
+
+	dst = lightmap + y0 * fb_width + x0;
+	src = light + yl * width + xl;
+
+	for (y = y0; y < y1; y++)
+	{
+		for (x = x0; x < x1; x++)
 		{
-			*dst++ |= *light++;
+			*dst++ |= *src++;
 		}
-		dst += fb_width - width;
+		dst += fb_width - dx;
+		src += width - dx;
 	}
 }
 
 static void eraseLights()
 {
-	eraseArea(&pointR, LIGHT_WIDTH, LIGHT_HEIGHT);
-	eraseArea(&pointG, LIGHT_WIDTH, LIGHT_HEIGHT);
-	eraseArea(&pointB, LIGHT_WIDTH, LIGHT_HEIGHT);
+	int i;
+	for (i = 0; i < NUM_BIG_LIGHTS; i++)
+		eraseArea(&bigLightPoint[i], BIG_LIGHT_WIDTH, BIG_LIGHT_HEIGHT);
 }
 
 static void renderLights()
 {
-	renderLight(&pointR, LIGHT_WIDTH, LIGHT_HEIGHT, lightR);
-	renderLight(&pointG, LIGHT_WIDTH, LIGHT_HEIGHT, lightG);
-	renderLight(&pointB, LIGHT_WIDTH, LIGHT_HEIGHT, lightB);
+	int i;
+	for (i = 0; i < NUM_BIG_LIGHTS; i++)
+		renderLight(&bigLightPoint[i], BIG_LIGHT_WIDTH, BIG_LIGHT_HEIGHT, bigLight[i]);
 }
 
 static void animateLights()
@@ -226,21 +240,17 @@ static void animateLights()
 	struct point center;
 	float dt = (float)(time_msec - startingTime) / 1000.0f;
 
-	center.x = (fb_width >> 1) - (LIGHT_WIDTH / 2);
-	center.y = (fb_height >> 1) - (LIGHT_HEIGHT / 2);
+	center.x = (fb_width >> 1) - (BIG_LIGHT_WIDTH / 2);
+	center.y = (fb_height >> 1) - (BIG_LIGHT_HEIGHT / 2);
 
-	// This test condition will crash because I also need to add boundaries to renderLight (tomorrow)
-	//pointR.x = center.x + sin(1.2f * dt) * 144.0f;
-	//pointR.y = center.y + sin(0.8f * dt) * 148.0f;
+	bigLightPoint[0].x = center.x + sin(1.2f * dt) * 144.0f;
+	bigLightPoint[0].y = center.y + sin(0.8f * dt) * 148.0f;
 
-	pointR.x = center.x + sin(1.2f * dt) * 96.0f;
-	pointR.y = center.y + sin(0.8f * dt) * 48.0f;
+	bigLightPoint[1].x = center.x + sin(1.5f * dt) * 156.0f;
+	bigLightPoint[1].y = center.y + sin(1.1f * dt) * 92.0f;
 
-	pointG.x = center.x + sin(1.5f * dt) * 56.0f;
-	pointG.y = center.y + sin(1.1f * dt) * 42.0f;
-
-	pointB.x = center.x + sin(2.0f * dt) * 80.0f;
-	pointB.y = center.y + sin(1.3f * dt) * 46.0f;
+	bigLightPoint[2].x = center.x + sin(2.0f * dt) * 112.0f;
+	bigLightPoint[2].y = center.y + sin(1.3f * dt) * 136.0f;
 }
 
 static void renderBump(unsigned short *vram)

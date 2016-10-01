@@ -46,7 +46,7 @@ void polyfill_wire(struct pvertex *verts, int nverts)
 	}
 }
 
-#define NEXTIDX(x) ((x) ? (x) - 1 : nverts - 1)
+#define NEXTIDX(x) (((x) - 1 + nverts) % nverts)
 #define PREVIDX(x) (((x) + 1) % nverts)
 
 #define CALC_EDGE(which) \
@@ -116,7 +116,7 @@ void polyfill_flat(struct pvertex *pv, int nverts)
 
 		pixptr = (uint16_t*)fb_pixels + sline * fb_width + x;
 		for(i=0; i<slen; i++) {
-			*pixptr++ = color;
+			*pixptr++ += 10;
 		}
 
 		++sline;

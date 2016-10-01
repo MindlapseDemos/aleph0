@@ -84,12 +84,12 @@ static void draw(void)
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
-	g3d_translate(0, 0, -5);
+	g3d_translate(0, 0, -3);
 	g3d_rotate(phi, 1, 0, 0);
 	g3d_rotate(theta, 0, 1, 0);
 
-	zsort(&torus);
-	draw_mesh(&torus);
+	/*zsort(&torus);*/
+	draw_mesh(&cube);
 
 	swap_buffers(fb_pixels);
 }

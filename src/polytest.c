@@ -5,6 +5,7 @@
 #include "screen.h"
 #include "demo.h"
 #include "3dgfx.h"
+#include "gfxutil.h"
 
 struct mesh {
 	int prim;
@@ -21,6 +22,7 @@ static void draw_mesh(struct mesh *mesh);
 static int gen_cube(struct mesh *mesh, float sz);
 static int gen_torus(struct mesh *mesh, float rad, float ringrad, int usub, int vsub);
 static void zsort(struct mesh *m);
+static void draw_lowres_raster(void);
 
 static struct screen scr = {
 	"polytest",
@@ -30,7 +32,12 @@ static struct screen scr = {
 	draw
 };
 
+static float theta, phi = 25;
 static struct mesh cube, torus;
+
+#define LOWRES_SCALE	16
+static uint16_t *lowres_pixels;
+static int lowres_width, lowres_height;
 
 struct screen *polytest_screen(void)
 {
@@ -41,11 +48,17 @@ static int init(void)
 {
 	gen_cube(&cube, 1.0);
 	gen_torus(&torus, 1.0, 0.25, 24, 12);
+
+	lowres_width = fb_width / LOWRES_SCALE;
+	lowres_height = fb_height / LOWRES_SCALE;
+	lowres_pixels = malloc(lowres_width * lowres_height * 2);
+
 	return 0;
 }
 
 static void destroy(void)
 {
+	free(lowres_pixels);
 	free(cube.varr);
 	free(torus.varr);
 	free(torus.iarr);
@@ -60,27 +73,35 @@ static void start(long trans_time)
 	g3d_enable(G3D_CULL_FACE);
 }
 
-static void draw(void)
+static void update(void)
 {
 	static int prev_mx, prev_my;
-	static float theta, phi = 25;
+	static unsigned int prev_bmask;
 
-	int dx = mouse_x - prev_mx;
-	int dy = mouse_y - prev_my;
+	if(mouse_bmask) {
+		if(mouse_bmask ^ prev_bmask == 0) {
+			int dx = mouse_x - prev_mx;
+			int dy = mouse_y - prev_my;
+
+			if(dx || dy) {
+				theta += dx * 2.0;
+				phi += dy * 2.0;
+
+				if(phi < -90) phi = -90;
+				if(phi > 90) phi = 90;
+			}
+		}
+	}
 	prev_mx = mouse_x;
 	prev_my = mouse_y;
+	prev_bmask = mouse_bmask;
+}
 
-	if(dx || dy) {
-		theta += dx * 2.0;
-		phi += dy * 2.0;
+static void draw(void)
+{
+	update();
 
-		if(phi < -90) phi = -90;
-		if(phi > 90) phi = 90;
-	}
-
-	/*float angle = (float)time_msec / 50.0;*/
-
-	memset(fb_pixels, 0, fb_width * fb_height * 2);
+	memset(lowres_pixels, 0, lowres_width * lowres_height * 2);
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
@@ -88,8 +109,18 @@ static void draw(void)
 	g3d_rotate(phi, 1, 0, 0);
 	g3d_rotate(theta, 0, 1, 0);
 
+	g3d_framebuffer(lowres_width, lowres_height, lowres_pixels);
 	/*zsort(&torus);*/
 	draw_mesh(&cube);
+
+	draw_lowres_raster();
+
+
+	g3d_framebuffer(fb_width, fb_height, fb_pixels);
+
+	g3d_polygon_mode(G3D_WIRE);
+	draw_mesh(&cube);
+	g3d_polygon_mode(G3D_FLAT);
 
 	swap_buffers(fb_pixels);
 }
@@ -287,4 +318,32 @@ static void zsort(struct mesh *m)
 	zsort_cls.xform = g3d_get_matrix(G3D_MODELVIEW, 0);
 
 	qsort(m->iarr, nfaces, m->prim * sizeof *m->iarr, zsort_cmp);
+}
+
+static void draw_huge_pixel(uint16_t *dest, int dest_width, uint16_t color)
+{
+	int i, j;
+	uint16_t grid_color = PACK_RGB16(127, 127, 127);
+
+	for(i=0; i<LOWRES_SCALE; i++) {
+		for(j=0; j<LOWRES_SCALE; j++) {
+			dest[j] = i == 0 || j == 0 ? grid_color : color;
+		}
+		dest += dest_width;
+	}
+}
+
+static void draw_lowres_raster(void)
+{
+	int i, j;
+	uint16_t *sptr = lowres_pixels;
+	uint16_t *dptr = fb_pixels;
+
+	for(i=0; i<lowres_height; i++) {
+		for(j=0; j<lowres_width; j++) {
+			draw_huge_pixel(dptr, fb_width, *sptr++);
+			dptr += LOWRES_SCALE;
+		}
+		dptr += fb_width * LOWRES_SCALE - fb_width;
+	}
 }

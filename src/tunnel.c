@@ -6,6 +6,7 @@
 #include "imago2.h"
 #include "demo.h"
 #include "screen.h"
+#include "gfxutil.h"
 
 #ifndef M_PI
 #define M_PI	3.1415926535
@@ -212,11 +213,6 @@ static void tunnel_color(int *rp, int *gp, int *bp, long toffs, unsigned int tpa
 	*gp = (g * fog) >> 8;
 	*bp = (b * fog) >> 8;
 }
-
-#define PACK_RGB16(r, g, b) \
-	(((((r) >> 3) & 0x1f) << 11) | ((((g) >> 2) & 0x3f) << 5) | (((b) >> 3) & 0x1f))
-#define PACK_RGB32(r, g, b) \
-	((((r) & 0xff) << 16) | (((g) & 0xff) << 8) | ((b) & 0xff))
 
 static void draw_tunnel_range(unsigned short *pix, int xoffs, int yoffs, int starty, int num_lines, long tm)
 {

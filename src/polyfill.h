@@ -18,6 +18,14 @@ struct pvertex {
 	unsigned char r, g, b;
 };
 
+struct pimage {
+	uint16_t *pixels;
+	int width, height;
+};
+
+extern struct pimage pimg_fb;
+extern struct pimage pimg_texture;
+
 void polyfill(int mode, struct pvertex *verts, int nverts);
 void polyfill_wire(struct pvertex *verts, int nverts);
 void polyfill_flat(struct pvertex *verts, int nverts);

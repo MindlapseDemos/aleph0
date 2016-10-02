@@ -30,6 +30,12 @@ enum {
 /* arg to g3d_front_face */
 enum { G3D_CCW, G3D_CW };
 
+/* arg to g3d_polygon_mode */
+enum {
+	G3D_WIRE,
+	G3D_FLAT
+};
+
 /* matrix stacks */
 enum {
 	G3D_MODELVIEW,
@@ -49,6 +55,7 @@ void g3d_setopt(unsigned int opt, unsigned int mask);
 unsigned int g3d_getopt(unsigned int mask);
 
 void g3d_front_face(unsigned int order);
+void g3d_polygon_mode(int pmode);
 
 void g3d_matrix_mode(int mmode);
 

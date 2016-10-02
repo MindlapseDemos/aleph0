@@ -15,6 +15,7 @@ typedef float g3d_matrix[16];
 struct g3d_state {
 	unsigned int opt;
 	int frontface;
+	int fill_mode;
 
 	g3d_matrix mat[G3D_NUM_MATRICES][STACK_SIZE];
 	int mtop[G3D_NUM_MATRICES];
@@ -46,6 +47,7 @@ int g3d_init(void)
 		fprintf(stderr, "failed to allocate G3D context\n");
 		return -1;
 	}
+	st->fill_mode = POLYFILL_FLAT;
 
 	for(i=0; i<G3D_NUM_MATRICES; i++) {
 		g3d_matrix_mode(i);
@@ -64,6 +66,10 @@ void g3d_framebuffer(int width, int height, void *pixels)
 	st->width = width;
 	st->height = height;
 	st->pixels = pixels;
+
+	pimg_fb.pixels = pixels;
+	pimg_fb.width = width;
+	pimg_fb.height = height;
 }
 
 void g3d_enable(unsigned int opt)
@@ -89,6 +95,11 @@ unsigned int g3d_getopt(unsigned int mask)
 void g3d_front_face(unsigned int order)
 {
 	st->frontface = order;
+}
+
+void g3d_polygon_mode(int pmode)
+{
+	st->fill_mode = pmode;
 }
 
 void g3d_matrix_mode(int mmode)
@@ -335,7 +346,7 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 			}
 		}
 
-		polyfill_flat(pv, vnum);
+		polyfill(st->fill_mode, pv, vnum);
 	}
 }
 

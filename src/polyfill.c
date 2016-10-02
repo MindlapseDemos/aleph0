@@ -10,6 +10,8 @@ void (*fillfunc[])(struct pvertex*, int) = {
 	0, 0, 0
 };
 
+struct pimage pimg_fb, pimg_texture;
+
 void polyfill(int mode, struct pvertex *verts, int nverts)
 {
 #ifndef NDEBUG
@@ -35,13 +37,13 @@ void polyfill_wire(struct pvertex *verts, int nverts)
 		++v;
 		x1 = v->x >> 8;
 		y1 = v->y >> 8;
-		if(clip_line(&x0, &y0, &x1, &y1, 0, 0, fb_width, fb_height)) {
+		if(clip_line(&x0, &y0, &x1, &y1, 0, 0, pimg_fb.width, pimg_fb.height)) {
 			draw_line(x0, y0, x1, y1, color);
 		}
 	}
 	x0 = verts[0].x >> 8;
 	y0 = verts[0].y >> 8;
-	if(clip_line(&x1, &y1, &x0, &y0, 0, 0, fb_width, fb_height)) {
+	if(clip_line(&x1, &y1, &x0, &y0, 0, 0, pimg_fb.width, pimg_fb.height)) {
 		draw_line(x1, y1, x0, y0, color);
 	}
 }
@@ -114,9 +116,9 @@ void polyfill_flat(struct pvertex *pv, int nverts)
 		x = left_x >> 8;
 		slen = (right_x >> 8) - (left_x >> 8);
 
-		pixptr = (uint16_t*)fb_pixels + sline * fb_width + x;
+		pixptr = pimg_fb.pixels + sline * pimg_fb.width + x;
 		for(i=0; i<slen; i++) {
-			*pixptr++ += 10;
+			*pixptr++ += 15;
 		}
 
 		++sline;

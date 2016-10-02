@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+#include <alloca.h>
 #include "polyfill.h"
 #include "gfxutil.h"
 #include "demo.h"
@@ -48,82 +51,84 @@ void polyfill_wire(struct pvertex *verts, int nverts)
 	}
 }
 
+static void scan_edge(struct pvertex *v0, struct pvertex *v1, struct pvertex *edge);
+
 #define NEXTIDX(x) (((x) - 1 + nverts) % nverts)
 #define PREVIDX(x) (((x) + 1) % nverts)
 
-#define CALC_EDGE(which) \
-	do { \
-		which##_x = pv[which##_beg].x; \
-		which##_dx = pv[which##_end].x - pv[which##_beg].x; \
-		which##_slope = (which##_dx << 8) / which##_dy; \
-	} while(0)
-
 void polyfill_flat(struct pvertex *pv, int nverts)
 {
-	int i, sline, x, slen, top = 0;
-	int left_beg, left_end, right_beg, right_end;
-	int32_t left_dy, left_dx, right_dy, right_dx;
-	int32_t left_slope, right_slope;
-	int32_t left_x, right_x, y;
-	uint16_t color = ((pv->r << 8) & 0xf800) | ((pv->g << 3) & 0x7e0) |
-		((pv->b >> 3) & 0x1f);
-	uint16_t *pixptr;
+	int i;
+	int32_t y;
+	int topidx = 0, botidx = 0, sline;
+	struct pvertex *left, *right;
+	/*uint16_t color = PACK_RGB16(pv[0].r, pv[0].g, pv[0].b);*/
 
-	/* find topmost */
 	for(i=1; i<nverts; i++) {
-		if(pv[i].y < pv[top].y) {
-			top = i;
-		}
-	}
-	left_beg = right_beg = top;
-	left_end = PREVIDX(left_beg);
-	right_end = NEXTIDX(right_beg);
-
-	if((left_dy = pv[left_end].y - pv[left_beg].y)) {
-		CALC_EDGE(left);
+		if(pv[i].y < pv[topidx].y) topidx = i;
+		if(pv[i].y > pv[botidx].y) botidx = i;
 	}
 
-	if((right_dy = pv[right_end].y - pv[right_beg].y)) {
-		CALC_EDGE(right);
-	}
+	left = (struct pvertex*)alloca(pimg_fb.height * sizeof *left);
+	right = (struct pvertex*)alloca(pimg_fb.height * sizeof *right);
+	memset(left, 0, pimg_fb.height * sizeof *left);
+	memset(right, 0, pimg_fb.height * sizeof *right);
 
-	y = pv[top].y;
-	sline = pv[top].y >> 8;
+	for(i=0; i<nverts; i++) {
+		int next = NEXTIDX(i);
+		int32_t y0 = pv[i].y;
+		int32_t y1 = pv[next].y;
 
-	for(;;) {
-		if(y >= pv[left_end].y) {
-			while(y >= pv[left_end].y) {
-				left_beg = left_end;
-				if(left_beg == right_beg) return;
-				left_end = PREVIDX(left_end);
+		if((y0 >> 8) == (y1 >> 8)) {
+			if(y0 > y1) {
+				int idx = y0 >> 8;
+				left[idx].x = pv[i].x < pv[next].x ? pv[i].x : pv[next].x;
+				right[idx].x = pv[i].x < pv[next].x ? pv[next].x : pv[i].x;
 			}
-
-			left_dy = pv[left_end].y - pv[left_beg].y;
-			CALC_EDGE(left);
+		} else {
+			scan_edge(pv + i, pv + next, y0 > y1 ? left : right);
 		}
+	}
 
-		if(y >= pv[right_end].y) {
-			while(y >= pv[right_end].y) {
-				right_beg = right_end;
-				if(left_beg == right_beg) return;
-				right_end = NEXTIDX(right_end);
-			}
+	y = pv[topidx].y;
+	while(y < pv[botidx].y) {
+		int32_t x;
+		uint16_t *pixptr;
 
-			right_dy = pv[right_end].y - pv[right_beg].y;
-			CALC_EDGE(right);
-		}
+		sline = y >> 8;
+		x = left[sline].x;
 
-		x = left_x >> 8;
-		slen = (right_x >> 8) - (left_x >> 8);
+		pixptr = pimg_fb.pixels + sline * pimg_fb.width + (x >> 8);
 
-		pixptr = pimg_fb.pixels + sline * pimg_fb.width + x;
-		for(i=0; i<slen; i++) {
+		while(x <= right[sline].x) {
 			*pixptr++ += 15;
+			x += 256;
 		}
-
-		++sline;
 		y += 256;
-		left_x += left_slope;
-		right_x += right_slope;
+	}
+}
+
+static void scan_edge(struct pvertex *v0, struct pvertex *v1, struct pvertex *edge)
+{
+	int32_t x, y, dx, dy, slope;
+	int idx;
+
+	if(v0->y > v1->y) {
+		struct pvertex *tmp = v0;
+		v0 = v1;
+		v1 = tmp;
+	}
+
+	dy = v1->y - v0->y;
+	dx = v1->x - v0->x;
+	slope = (dx << 8) / dy;
+	idx = v0->y >> 8;
+
+	x = v0->x;
+	y = v0->y;
+	while(y <= v1->y) {
+		edge[idx++].x = x;
+		x += slope;
+		y += 256;
 	}
 }

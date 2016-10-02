@@ -35,7 +35,7 @@ static struct screen scr = {
 static float theta, phi = 25;
 static struct mesh cube, torus;
 
-#define LOWRES_SCALE	16
+#define LOWRES_SCALE	10
 static uint16_t *lowres_pixels;
 static int lowres_width, lowres_height;
 

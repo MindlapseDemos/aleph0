@@ -91,8 +91,8 @@ static int init(void)
 			const float offsetPower = 2.0f;
 			int dx, dy, xp, yp;
 
-			dx = (int)((heightmap[i] - heightmap[i + 1]) * offsetPower);
-			dy = (int)((heightmap[i] - heightmap[i + fb_width]) * offsetPower);
+			dx = i < fb_size - 1 ? (int)((heightmap[i] - heightmap[i + 1]) * offsetPower) : 0;
+			dy = i < fb_size - fb_width ? (int)((heightmap[i] - heightmap[i + fb_width]) * offsetPower) : 0;
 
 			xp = x + dx;
 			if (xp < 0) xp = 0;

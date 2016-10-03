@@ -1,5 +1,6 @@
 src = $(wildcard src/*.c) $(wildcard src/sdl/*.c)
 obj = $(src:.c=.o)
+dep = $(obj:.o=.d)
 bin = demo
 
 inc = -Isrc -Isrc/sdl -Ilibs/imago/src -Ilibs/mikmod/include
@@ -9,6 +10,11 @@ LDFLAGS = -Llibs/imago -Llibs/mikmod -limago -lmikmod `sdl-config --libs` -lm
 
 $(bin): $(obj) imago mikmod
 	$(CC) -o $@ $(obj) $(LDFLAGS)
+
+-include $(dep)
+
+%.d: %.c
+	@$(CPP) $(CFLAGS) $< -MM -MT $(@:.d=.o) >$@
 
 .PHONY: imago
 imago:
@@ -21,3 +27,7 @@ mikmod:
 .PHONY: clean
 clean:
 	rm -f $(obj) $(bin)
+
+.PHONY: cleandep
+cleandep:
+	rm -f $(dep)

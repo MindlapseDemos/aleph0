@@ -49,9 +49,12 @@ static int init(void)
 	gen_cube(&cube, 1.0);
 	gen_torus(&torus, 1.0, 0.25, 24, 12);
 
+#ifdef DEBUG_POLYFILL
 	lowres_width = fb_width / LOWRES_SCALE;
 	lowres_height = fb_height / LOWRES_SCALE;
 	lowres_pixels = malloc(lowres_width * lowres_height * 2);
+	scr.draw = draw_debug;
+#endif
 
 	return 0;
 }
@@ -79,7 +82,7 @@ static void update(void)
 	static unsigned int prev_bmask;
 
 	if(mouse_bmask) {
-		if(mouse_bmask ^ prev_bmask == 0) {
+		if((mouse_bmask ^ prev_bmask) == 0) {
 			int dx = mouse_x - prev_mx;
 			int dy = mouse_y - prev_my;
 
@@ -97,7 +100,27 @@ static void update(void)
 	prev_bmask = mouse_bmask;
 }
 
+
 static void draw(void)
+{
+	update();
+
+	memset(fb_pixels, 0, fb_width * fb_height * 2);
+
+	g3d_matrix_mode(G3D_MODELVIEW);
+	g3d_load_identity();
+	g3d_translate(0, 0, -3);
+	g3d_rotate(phi, 1, 0, 0);
+	g3d_rotate(theta, 0, 1, 0);
+
+	zsort(&torus);
+	draw_mesh(&torus);
+
+	/*draw_mesh(&cube);*/
+	swap_buffers(fb_pixels);
+}
+
+static void draw_debug(void)
 {
 	update();
 

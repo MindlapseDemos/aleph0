@@ -51,7 +51,7 @@ void polyfill_wire(struct pvertex *verts, int nverts)
 	}
 }
 
-static void scan_edge(struct pvertex *v0, struct pvertex *v1, struct pvertex *edge);
+static uint32_t scan_edge(struct pvertex *v0, struct pvertex *v1, struct pvertex *edge);
 
 #define NEXTIDX(x) (((x) - 1 + nverts) % nverts)
 #define PREVIDX(x) (((x) + 1) % nverts)
@@ -59,10 +59,9 @@ static void scan_edge(struct pvertex *v0, struct pvertex *v1, struct pvertex *ed
 void polyfill_flat(struct pvertex *pv, int nverts)
 {
 	int i;
-	int32_t y;
-	int topidx = 0, botidx = 0, sline;
+	int topidx = 0, botidx = 0, sltop = pimg_fb.height, slbot = 0;
 	struct pvertex *left, *right;
-	/*uint16_t color = PACK_RGB16(pv[0].r, pv[0].g, pv[0].b);*/
+	uint16_t color = PACK_RGB16(pv[0].r, pv[0].g, pv[0].b);
 
 	for(i=1; i<nverts; i++) {
 		if(pv[i].y < pv[topidx].y) topidx = i;
@@ -86,32 +85,39 @@ void polyfill_flat(struct pvertex *pv, int nverts)
 				right[idx].x = pv[i].x < pv[next].x ? pv[next].x : pv[i].x;
 			}
 		} else {
-			scan_edge(pv + i, pv + next, y0 > y1 ? left : right);
+			struct pvertex *edge = y0 > y1 ? left : right;
+			uint32_t res = scan_edge(pv + i, pv + next, edge);
+			uint32_t tmp = (res >> 16) & 0xffff;
+			if(tmp > slbot) slbot = tmp;
+			if((tmp = res & 0xffff) < sltop) {
+				sltop = tmp;
+			}
 		}
 	}
 
-	y = pv[topidx].y;
-	while(y < pv[botidx].y) {
+	for(i=sltop; i<=slbot; i++) {
 		int32_t x;
 		uint16_t *pixptr;
 
-		sline = y >> 8;
-		x = left[sline].x;
+		x = left[i].x;
+		pixptr = pimg_fb.pixels + i * pimg_fb.width + (x >> 8);
 
-		pixptr = pimg_fb.pixels + sline * pimg_fb.width + (x >> 8);
-
-		while(x <= right[sline].x) {
+		while(x <= right[i].x) {
+#ifdef DEBUG_POLYFILL
 			*pixptr++ += 15;
+#else
+			*pixptr++ = color;
+#endif
 			x += 256;
 		}
-		y += 256;
 	}
 }
 
-static void scan_edge(struct pvertex *v0, struct pvertex *v1, struct pvertex *edge)
+static uint32_t scan_edge(struct pvertex *v0, struct pvertex *v1, struct pvertex *edge)
 {
-	int32_t x, y, dx, dy, slope;
-	int idx;
+	int i;
+	int32_t x, dx, dy, slope;
+	int32_t start_idx, end_idx;
 
 	if(v0->y > v1->y) {
 		struct pvertex *tmp = v0;
@@ -122,13 +128,15 @@ static void scan_edge(struct pvertex *v0, struct pvertex *v1, struct pvertex *ed
 	dy = v1->y - v0->y;
 	dx = v1->x - v0->x;
 	slope = (dx << 8) / dy;
-	idx = v0->y >> 8;
+
+	start_idx = v0->y >> 8;
+	end_idx = v1->y >> 8;
 
 	x = v0->x;
-	y = v0->y;
-	while(y <= v1->y) {
-		edge[idx++].x = x;
+	for(i=start_idx; i<end_idx; i++) {
+		edge[i].x = x;
 		x += slope;
-		y += 256;
 	}
+
+	return (uint32_t)start_idx | ((uint32_t)(end_idx - 1) << 16);
 }

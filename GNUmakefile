@@ -3,7 +3,7 @@ obj = $(src:.c=.o)
 dep = $(obj:.o=.d)
 bin = demo
 
-inc = -Isrc -Isrc/sdl -Ilibs/imago/src -Ilibs/mikmod/include
+inc = -I/usr/local/include -Isrc -Isrc/sdl -Ilibs/imago/src -Ilibs/mikmod/include
 
 CFLAGS = -pedantic -Wall -g $(inc) `sdl-config --cflags`
 LDFLAGS = -Llibs/imago -Llibs/mikmod -limago -lmikmod `sdl-config --libs` -lm

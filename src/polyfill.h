@@ -15,7 +15,7 @@ enum {
 struct pvertex {
 	int32_t x, y; /* 24.8 fixed point */
 	int32_t u, v; /* 16.16 fixed point */
-	unsigned char r, g, b;
+	int32_t r, g, b;  /* int 0-255 */
 };
 
 struct pimage {
@@ -29,5 +29,8 @@ extern struct pimage pimg_texture;
 void polyfill(int mode, struct pvertex *verts, int nverts);
 void polyfill_wire(struct pvertex *verts, int nverts);
 void polyfill_flat(struct pvertex *verts, int nverts);
+void polyfill_gouraud(struct pvertex *verts, int nverts);
+void polyfill_tex(struct pvertex *verts, int nverts);
+void polyfill_tex_gouraud(struct pvertex *verts, int nverts);
 
 #endif	/* POLYFILL_H_ */

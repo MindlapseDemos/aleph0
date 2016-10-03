@@ -2,7 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#if defined(__WATCOMC__) || defined(_MSC_VER)
+#include <malloc.h>
+#else
 #include <alloca.h>
+#endif
 #include "polyfill.h"
 #include "gfxutil.h"
 #include "demo.h"

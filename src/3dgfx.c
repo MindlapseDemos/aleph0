@@ -6,6 +6,7 @@
 #include "3dgfx.h"
 #include "polyfill.h"
 #include "inttypes.h"
+#include "util.h"
 
 #define STACK_SIZE	8
 typedef float g3d_matrix[16];
@@ -388,11 +389,11 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 			v[i].y = (0.5f - v[i].y * 0.5f) * (float)st->height;
 
 			/* convert pos to 24.8 fixed point */
-			pv[i].x = (int32_t)(v[i].x * 256.0f);
-			pv[i].y = (int32_t)(v[i].y * 256.0f);
+			pv[i].x = cround64(v[i].x * 256.0f);
+			pv[i].y = cround64(v[i].y * 256.0f);
 			/* convert tex coords to 16.16 fixed point */
-			pv[i].u = (int32_t)(v[i].u * 65536.0f);
-			pv[i].v = (int32_t)(v[i].v * 65536.0f);
+			pv[i].u = cround64(v[i].u * 65536.0f);
+			pv[i].v = cround64(v[i].v * 65536.0f);
 			/* pass the color through as is */
 			pv[i].r = v[i].r;
 			pv[i].g = v[i].g;
@@ -483,9 +484,9 @@ static void shade(struct g3d_vertex *v)
 		color[2] += st->mtl.kd[2] * st->lt[i].b * ndotl;
 	}
 
-	r = color[0] * 255.0;
-	g = color[1] * 255.0;
-	b = color[2] * 255.0;
+	r = cround64(color[0] * 255.0);
+	g = cround64(color[1] * 255.0);
+	b = cround64(color[2] * 255.0);
 
 	v->r = r > 255 ? 255 : r;
 	v->g = g > 255 ? 255 : g;

@@ -22,7 +22,11 @@ enum {
 	G3D_CULL_FACE = 1,
 	G3D_DEPTH_TEST = 2,	/* XXX not implemented */
 	G3D_LIGHTING = 4,
-	G3D_TEXTURE = 8,
+	G3D_LIGHT0 = 8,
+	G3D_LIGHT1 = 16,
+	G3D_LIGHT2 = 32,
+	G3D_LIGHT3 = 64,
+	G3D_TEXTURE = 128,
 
 	G3D_ALL = 0x7fffffff
 };
@@ -73,6 +77,15 @@ void g3d_frustum(float left, float right, float bottom, float top, float znear, 
 void g3d_perspective(float vfov, float aspect, float znear, float zfar);
 
 const float *g3d_get_matrix(int which, float *m);
+
+void g3d_light_pos(int idx, float x, float y, float z);
+void g3d_light_color(int idx, float r, float g, float b);
+
+void g3d_light_ambient(float r, float g, float b);
+
+void g3d_mtl_diffuse(float r, float g, float b);
+void g3d_mtl_specular(float r, float g, float b);
+void g3d_mtl_shininess(float shin);
 
 void g3d_draw(int prim, const struct g3d_vertex *varr, int varr_size);
 void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,

@@ -11,6 +11,18 @@
 typedef float g3d_matrix[16];
 
 #define MAX_VBUF_SIZE	256
+#define MAX_LIGHTS		4
+
+struct light {
+	float x, y, z;
+	float r, g, b;
+};
+
+struct material {
+	float kd[3];
+	float ks[3];
+	float shin;
+};
 
 struct g3d_state {
 	unsigned int opt;
@@ -22,6 +34,10 @@ struct g3d_state {
 	int mmode;
 
 	g3d_matrix norm_mat;
+
+	float ambient[3];
+	struct light lt[MAX_LIGHTS];
+	struct material mtl;
 
 	int width, height;
 	void *pixels;
@@ -53,6 +69,13 @@ int g3d_init(void)
 		g3d_matrix_mode(i);
 		g3d_load_identity();
 	}
+
+	for(i=0; i<MAX_LIGHTS; i++) {
+		g3d_light_color(i, 1, 1, 1);
+	}
+	g3d_light_ambient(0.1, 0.1, 0.1);
+
+	g3d_mtl_diffuse(1, 1, 1);
 	return 0;
 }
 
@@ -272,6 +295,50 @@ const float *g3d_get_matrix(int which, float *m)
 	return st->mat[which][top];
 }
 
+void g3d_light_pos(int idx, float x, float y, float z)
+{
+	int mvtop = st->mtop[G3D_MODELVIEW];
+
+	st->lt[idx].x = x;
+	st->lt[idx].y = y;
+	st->lt[idx].z = z;
+
+	xform4_vec3(st->mat[G3D_MODELVIEW][mvtop], &st->lt[idx].x);
+}
+
+void g3d_light_color(int idx, float r, float g, float b)
+{
+	st->lt[idx].r = r;
+	st->lt[idx].g = g;
+	st->lt[idx].b = b;
+}
+
+void g3d_light_ambient(float r, float g, float b)
+{
+	st->ambient[0] = r;
+	st->ambient[1] = g;
+	st->ambient[2] = b;
+}
+
+void g3d_mtl_diffuse(float r, float g, float b)
+{
+	st->mtl.kd[0] = r;
+	st->mtl.kd[1] = g;
+	st->mtl.kd[2] = b;
+}
+
+void g3d_mtl_specular(float r, float g, float b)
+{
+	st->mtl.ks[0] = r;
+	st->mtl.ks[1] = g;
+	st->mtl.ks[2] = b;
+}
+
+void g3d_mtl_shininess(float shin)
+{
+	st->mtl.shin = shin;
+}
+
 void g3d_draw(int prim, const struct g3d_vertex *varr, int varr_size)
 {
 	g3d_draw_indexed(prim, varr, varr_size, 0, 0);
@@ -374,7 +441,53 @@ static void xform3_vec3(const float *mat, float *vec)
 	vec[2] = z;
 }
 
+#define NORMALIZE(v) \
+	do { \
+		float len = sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]); \
+		if(len != 0.0) { \
+			float s = 1.0 / len; \
+			v[0] *= s; \
+			v[1] *= s; \
+			v[2] *= s; \
+		} \
+	} while(0)
+
 static void shade(struct g3d_vertex *v)
 {
-	v->r = v->g = v->b = 255;
+	int i, r, g, b;
+	float color[3];
+
+	color[0] = st->ambient[0] * st->mtl.kd[0];
+	color[1] = st->ambient[1] * st->mtl.kd[1];
+	color[2] = st->ambient[2] * st->mtl.kd[2];
+
+	for(i=0; i<MAX_LIGHTS; i++) {
+		float ldir[3];
+		float ndotl;
+
+		if(!(st->opt & (G3D_LIGHT0 << i))) {
+			continue;
+		}
+
+		ldir[0] = st->lt[i].x - v->x;
+		ldir[1] = st->lt[i].y - v->y;
+		ldir[2] = st->lt[i].z - v->z;
+		NORMALIZE(ldir);
+
+		if((ndotl = v->nx * ldir[0] + v->ny * ldir[1] + v->nz * ldir[2]) < 0.0f) {
+			ndotl = 0.0f;
+		}
+
+		color[0] += st->mtl.kd[0] * st->lt[i].r * ndotl;
+		color[1] += st->mtl.kd[1] * st->lt[i].g * ndotl;
+		color[2] += st->mtl.kd[2] * st->lt[i].b * ndotl;
+	}
+
+	r = color[0] * 255.0;
+	g = color[1] * 255.0;
+	b = color[2] * 255.0;
+
+	v->r = r > 255 ? 255 : r;
+	v->g = g > 255 ? 255 : g;
+	v->b = b > 255 ? 255 : b;
 }

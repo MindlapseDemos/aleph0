@@ -74,6 +74,8 @@ static void start(long trans_time)
 	g3d_perspective(50.0, 1.3333333, 0.5, 100.0);
 
 	g3d_enable(G3D_CULL_FACE);
+	g3d_enable(G3D_LIGHTING);
+	g3d_enable(G3D_LIGHT0);
 }
 
 static void update(void)
@@ -113,7 +115,11 @@ static void draw(void)
 	g3d_rotate(phi, 1, 0, 0);
 	g3d_rotate(theta, 0, 1, 0);
 
+	g3d_light_pos(0, -10, 10, 20);
+
 	zsort(&torus);
+
+	g3d_mtl_diffuse(0.3, 0.6, 1.0);
 	draw_mesh(&torus);
 
 	/*draw_mesh(&cube);*/

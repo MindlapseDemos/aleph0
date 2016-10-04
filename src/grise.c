@@ -26,6 +26,8 @@ static RLEBitmap *rleEncode(RLEBitmap *b, unsigned char *pixels, unsigned int w,
 
 static void updatePropeller(float t);
 
+extern void drawFps(unsigned short *vram);
+
 #define BG_FILENAME "data/grise.png"
 #define GROBJ_01_FILENAME "data/grobj_01.png"
 
@@ -97,7 +99,6 @@ struct screen *grise_screen(void)
 	return &scr;
 }
 
-
 static int init(void)
 {
 	unsigned char *tmpBitmap;
@@ -167,6 +168,9 @@ static void draw(void)
 	int i = 0;
 	short *dispScanline;
 	int d;
+	int accum = 0;
+	int md, sc;
+	int scrolledIndex;
 
 	lastFrameDuration = (time_msec - lastFrameTime) / 1000.0f;
 	lastFrameTime = time_msec;
@@ -203,8 +207,19 @@ static void draw(void)
 	src = dst + BB_SIZE; /* The pixels to be displaced are 1 scanline below */
 	dispScanline = displacementMap;
 	for (scanline = 0; scanline < REFLECTION_HEIGHT; scanline++) {
+
+		md = scrollModTable[scanline];
+		sc = scrollTableRounded[scanline];
+		accum = 0;
+
 		for (i = 0; i < fb_width; i++) {
-			d = dispScanline[(i + scrollTableRounded[scanline]) % scrollModTable[scanline]];
+			/* Try to immitate modulo without the division */
+			if (i == md) accum += md;
+			scrolledIndex = i - accum + sc;
+			if (scrolledIndex >= md) scrolledIndex -= md;
+
+			/* Displace */
+			d = dispScanline[scrolledIndex];
 			*dst++ = src[i + d];
 		}
 		src += backgroundW;
@@ -223,6 +238,8 @@ static void draw(void)
 		src += BB_SIZE; 
 		dst += fb_width;
 	}
+
+	drawFps(vmem_back);
 
 	swap_buffers(0);
 }

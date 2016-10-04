@@ -8,7 +8,7 @@
 int init_logger(const char *fname)
 {
 	int fd;
-	if((fd = open(fname, O_WRONLY)) == -1) {
+	if((fd = open(fname, O_CREAT | O_WRONLY | O_TRUNC, 0644)) == -1) {
 		fprintf(stderr, "init_logger: failed to open %s: %s\n", fname, strerror(errno));
 		return -1;
 	}

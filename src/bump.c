@@ -12,7 +12,6 @@
 static int init(void);
 static void destroy(void);
 static void start(long trans_time);
-static void stop(long trans_time);
 static void draw(void);
 
 static struct screen scr = {
@@ -20,11 +19,11 @@ static struct screen scr = {
 	init,
 	destroy,
 	start,
-	stop,
+	0,
 	draw
 };
 
-static struct point {
+struct point {
 	int x, y;
 };
 
@@ -141,10 +140,6 @@ static void destroy(void)
 static void start(long trans_time)
 {
 	startingTime = time_msec;
-}
-
-static void stop(long trans_time)
-{
 }
 
 static void eraseArea(struct point *p, int width, int height)

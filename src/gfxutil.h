@@ -4,6 +4,10 @@
 #define PACK_RGB16(r, g, b) \
 	(((((r) >> 3) & 0x1f) << 11) | ((((g) >> 2) & 0x3f) << 5) | (((b) >> 3) & 0x1f))
 
+#define UNPACK_R16(c)	(((c) >> 8) & 0x7c)
+#define UNPACK_G16(c)	(((c) >> 3) & 0xfc)
+#define UNPACK_B16(c)	(((c) << 3) & 0x7c)
+
 #define PACK_RGB32(r, g, b) \
 	((((r) & 0xff) << 16) | (((g) & 0xff) << 8) | ((b) & 0xff))
 

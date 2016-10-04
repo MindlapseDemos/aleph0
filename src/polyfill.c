@@ -19,7 +19,7 @@ void (*fillfunc[])(struct pvertex*, int) = {
 	polyfill_tex_gouraud
 };
 
-struct pimage pimg_fb, pimg_texture;
+struct pimage pfill_fb, pfill_tex;
 
 void polyfill(int mode, struct pvertex *verts, int nverts)
 {
@@ -46,13 +46,13 @@ void polyfill_wire(struct pvertex *verts, int nverts)
 		++v;
 		x1 = v->x >> 8;
 		y1 = v->y >> 8;
-		if(clip_line(&x0, &y0, &x1, &y1, 0, 0, pimg_fb.width, pimg_fb.height)) {
+		if(clip_line(&x0, &y0, &x1, &y1, 0, 0, pfill_fb.width, pfill_fb.height)) {
 			draw_line(x0, y0, x1, y1, color);
 		}
 	}
 	x0 = verts[0].x >> 8;
 	y0 = verts[0].y >> 8;
-	if(clip_line(&x1, &y1, &x0, &y0, 0, 0, pimg_fb.width, pimg_fb.height)) {
+	if(clip_line(&x1, &y1, &x0, &y0, 0, 0, pfill_fb.width, pfill_fb.height)) {
 		draw_line(x1, y1, x0, y0, color);
 	}
 }

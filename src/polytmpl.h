@@ -70,13 +70,13 @@ static uint32_t SCANEDGE(struct pvertex *v0, struct pvertex *v1, struct pvertex 
 void POLYFILL(struct pvertex *pv, int nverts)
 {
 	int i;
-	int topidx = 0, botidx = 0, sltop = pimg_fb.height, slbot = 0;
+	int topidx = 0, botidx = 0, sltop = pfill_fb.height, slbot = 0;
 	struct pvertex *left, *right;
 	uint16_t color;
 	/* the following variables are used for interpolating horizontally accros scanlines */
 #if defined(GOURAUD) || defined(TEXMAP)
-	int mid;
-	int32_t dx, tmp;
+	/*int mid;*/
+	int32_t dx/*, tmp*/;
 #else
 	/* flat version, just pack the color now */
 	color = PACK_RGB16(pv[0].r, pv[0].g, pv[0].b);
@@ -93,8 +93,8 @@ void POLYFILL(struct pvertex *pv, int nverts)
 		if(pv[i].y > pv[botidx].y) botidx = i;
 	}
 
-	left = alloca(pimg_fb.height * sizeof *left);
-	right = alloca(pimg_fb.height * sizeof *right);
+	left = alloca(pfill_fb.height * sizeof *left);
+	right = alloca(pfill_fb.height * sizeof *right);
 
 	for(i=0; i<nverts; i++) {
 		int next = NEXTIDX(i);
@@ -156,7 +156,7 @@ void POLYFILL(struct pvertex *pv, int nverts)
 		int32_t x;
 
 		x = left[i].x;
-		pixptr = pimg_fb.pixels + i * pimg_fb.width + (x >> 8);
+		pixptr = pfill_fb.pixels + i * pfill_fb.width + (x >> 8);
 
 #if defined(GOURAUD) || defined(TEXMAP)
 		if(!(dx = right[i].x - left[i].x)) dx = 256;	/* 1 */
@@ -182,20 +182,39 @@ void POLYFILL(struct pvertex *pv, int nverts)
 #endif
 
 		while(x <= right[i].x) {
+#if defined(GOURAUD) || defined(TEXMAP)
+			int cr, cg, cb;
+#endif
 #ifdef GOURAUD
 			/* drop the extra 8 bits when packing */
-			int cr = r >> 8;
-			int cg = g >> 8;
-			int cb = b >> 8;
-			color = PACK_RGB16(cr, cg, cb);
+			cr = r >> 8;
+			cg = g >> 8;
+			cb = b >> 8;
 			r += rslope;
 			g += gslope;
 			b += bslope;
 #endif
 #ifdef TEXMAP
-			/* TODO */
+			{
+				int tx = (u >> (16 - pfill_tex.xshift)) & pfill_tex.xmask;
+				int ty = (v >> (16 - pfill_tex.yshift)) & pfill_tex.ymask;
+				uint16_t texel = pfill_tex.pixels[(ty << pfill_tex.xshift) + tx];
+#ifdef GOURAUD
+				/* XXX this is not correct, should be /255, but it might not make a huge difference */
+				cr = (cr * UNPACK_R16(texel)) >> 8;
+				cg = (cg * UNPACK_G16(texel)) >> 8;
+				cb = (cb * UNPACK_B16(texel)) >> 8;
+#else
+				cr = UNPACK_R16(texel);
+				cg = UNPACK_G16(texel);
+				cb = UNPACK_B16(texel);
+#endif
+			}
 			u += uslope;
 			v += vslope;
+#endif
+#if defined(GOURAUD) || defined(TEXMAP)
+			color = PACK_RGB16(cr, cg, cb);
 #endif
 
 #ifdef DEBUG_OVERDRAW

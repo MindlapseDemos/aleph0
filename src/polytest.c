@@ -6,6 +6,7 @@
 #include "demo.h"
 #include "3dgfx.h"
 #include "gfxutil.h"
+#include "polyfill.h"	/* just for struct pimage */
 
 struct mesh {
 	int prim;
@@ -23,6 +24,7 @@ static int gen_cube(struct mesh *mesh, float sz);
 static int gen_torus(struct mesh *mesh, float rad, float ringrad, int usub, int vsub);
 static void zsort(struct mesh *m);
 static void draw_lowres_raster(void);
+static int gen_texture(struct pimage *img, int xsz, int ysz);
 
 static struct screen scr = {
 	"polytest",
@@ -35,6 +37,8 @@ static struct screen scr = {
 static float theta, phi = 25;
 static struct mesh cube, torus;
 
+static struct pimage tex;
+
 #define LOWRES_SCALE	10
 static uint16_t *lowres_pixels;
 static int lowres_width, lowres_height;
@@ -46,8 +50,17 @@ struct screen *polytest_screen(void)
 
 static int init(void)
 {
+	int i;
+
 	gen_cube(&cube, 1.0);
 	gen_torus(&torus, 1.0, 0.25, 24, 12);
+	/* scale texcoords */
+	for(i=0; i<torus.vcount; i++) {
+		torus.varr[i].u *= 4.0;
+		torus.varr[i].v *= 2.0;
+	}
+
+	gen_texture(&tex, 128, 128);
 
 #ifdef DEBUG_POLYFILL
 	lowres_width = fb_width / LOWRES_SCALE;
@@ -77,7 +90,7 @@ static void start(long trans_time)
 	g3d_enable(G3D_LIGHTING);
 	g3d_enable(G3D_LIGHT0);
 
-	g3d_polygon_mode(G3D_GOURAUD);
+	g3d_polygon_mode(G3D_TEX_GOURAUD);
 }
 
 static void update(void)
@@ -121,7 +134,9 @@ static void draw(void)
 
 	zsort(&torus);
 
-	g3d_mtl_diffuse(0.3, 0.6, 1.0);
+	g3d_mtl_diffuse(0.4, 0.7, 1.0);
+	g3d_set_texture(tex.width, tex.height, tex.pixels);
+
 	draw_mesh(&torus);
 
 	/*draw_mesh(&cube);*/
@@ -377,4 +392,27 @@ static void draw_lowres_raster(void)
 		}
 		dptr += fb_width * LOWRES_SCALE - fb_width;
 	}
+}
+
+static int gen_texture(struct pimage *img, int xsz, int ysz)
+{
+	int i, j;
+	uint16_t *pix;
+
+	if(!(img->pixels = malloc(xsz * ysz * sizeof *pix))) {
+		return -1;
+	}
+	pix = img->pixels;
+
+	for(i=0; i<ysz; i++) {
+		for(j=0; j<xsz; j++) {
+			int val = i ^ j;
+
+			*pix++ = PACK_RGB16(val, val, val);
+		}
+	}
+
+	img->width = xsz;
+	img->height = ysz;
+	return 0;
 }

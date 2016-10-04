@@ -39,6 +39,8 @@ enum {
 	G3D_WIRE,
 	G3D_FLAT,
 	G3D_GOURAUD,
+	G3D_TEX,
+	G3D_TEX_GOURAUD
 };
 
 /* matrix stacks */
@@ -87,6 +89,8 @@ void g3d_light_ambient(float r, float g, float b);
 void g3d_mtl_diffuse(float r, float g, float b);
 void g3d_mtl_specular(float r, float g, float b);
 void g3d_mtl_shininess(float shin);
+
+void g3d_set_texture(int xsz, int ysz, void *pixels);
 
 void g3d_draw(int prim, const struct g3d_vertex *varr, int varr_size);
 void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,

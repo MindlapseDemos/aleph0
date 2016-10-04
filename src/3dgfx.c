@@ -91,9 +91,9 @@ void g3d_framebuffer(int width, int height, void *pixels)
 	st->height = height;
 	st->pixels = pixels;
 
-	pimg_fb.pixels = pixels;
-	pimg_fb.width = width;
-	pimg_fb.height = height;
+	pfill_fb.pixels = pixels;
+	pfill_fb.width = width;
+	pfill_fb.height = height;
 }
 
 void g3d_enable(unsigned int opt)
@@ -338,6 +338,33 @@ void g3d_mtl_specular(float r, float g, float b)
 void g3d_mtl_shininess(float shin)
 {
 	st->mtl.shin = shin;
+}
+
+static INLINE int calc_shift(unsigned int x)
+{
+	int res = -1;
+	while(x) {
+		x >>= 1;
+		++res;
+	}
+	return res;
+}
+
+static INLINE int calc_mask(unsigned int x)
+{
+	return x - 1;
+}
+
+void g3d_set_texture(int xsz, int ysz, void *pixels)
+{
+	pfill_tex.pixels = pixels;
+	pfill_tex.width = xsz;
+	pfill_tex.height = ysz;
+
+	pfill_tex.xshift = calc_shift(xsz);
+	pfill_tex.yshift = calc_shift(ysz);
+	pfill_tex.xmask = calc_mask(xsz);
+	pfill_tex.ymask = calc_mask(ysz);
 }
 
 void g3d_draw(int prim, const struct g3d_vertex *varr, int varr_size)

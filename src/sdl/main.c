@@ -129,10 +129,10 @@ static void handle_event(SDL_Event *ev)
 		break;
 
 	case SDL_MOUSEBUTTONDOWN:
-		mouse_bmask |= 1 << ev->button.button;
+		mouse_bmask |= 1 << (ev->button.button - SDL_BUTTON_LEFT);
 		if(0) {
 	case SDL_MOUSEBUTTONUP:
-			mouse_bmask &= ~(1 << ev->button.button);
+			mouse_bmask &= ~(1 << (ev->button.button - SDL_BUTTON_LEFT));
 		}
 		mouse_x = ev->button.x / fbscale;
 		mouse_y = ev->button.y / fbscale;

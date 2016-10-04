@@ -220,7 +220,7 @@ static void draw_tunnel_range(unsigned short *pix, int xoffs, int yoffs, int sta
 	unsigned int *tmap = tunnel_map + (starty + yoffs) * vxsz + xoffs;
 	unsigned char *fog = tunnel_fog + (starty + yoffs) * vxsz + xoffs;
 
-	long toffs = tm / 4;
+	long toffs = tm / 8;
 	unsigned int *pixels = (unsigned int*)pix + starty * (fb_width >> 1);
 
 	for(i=0; i<num_lines; i++) {

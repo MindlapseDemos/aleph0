@@ -60,6 +60,21 @@ void polyfill_wire(struct pvertex *verts, int nverts)
 #define NEXTIDX(x) (((x) - 1 + nverts) % nverts)
 #define PREVIDX(x) (((x) + 1) % nverts)
 
+/* XXX
+ * When HIGH_QUALITY is defined, the rasterizer calculates slopes for attribute
+ * interpolation on each scanline separately; otherwise the slope for each
+ * attribute would be calculated once for the whole polygon, which is faster,
+ * but produces some slight quantization artifacts, due to the limited precision
+ * of fixed-point calculations.
+ */
+#undef HIGH_QUALITY
+
+/* extra bits of precision to use when interpolating colors.
+ * try tweaking this if you notice strange quantization artifacts.
+ */
+#define COLOR_SHIFT	12
+
+
 #define POLYFILL polyfill_flat
 #define SCANEDGE scanedge_flat
 #undef GOURAUD

@@ -104,8 +104,8 @@ static void update(void)
 			int dy = mouse_y - prev_my;
 
 			if(dx || dy) {
-				theta += dx * 2.0;
-				phi += dy * 2.0;
+				theta += dx * 1.0;
+				phi += dy * 1.0;
 
 				if(phi < -90) phi = -90;
 				if(phi > 90) phi = 90;
@@ -282,6 +282,8 @@ static int gen_torus(struct mesh *mesh, float rad, float ringrad, int usub, int 
 	mesh->vcount = uverts * vverts;
 	nfaces = usub * vsub;
 	mesh->icount = nfaces * 4;
+
+	printf("generating torus with %d faces (%d vertices)\n", nfaces, mesh->vcount);
 
 	if(!(mesh->varr = malloc(mesh->vcount * sizeof *mesh->varr))) {
 		return -1;

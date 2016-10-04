@@ -22,12 +22,12 @@ static uint32_t SCANEDGE(struct pvertex *v0, struct pvertex *v1, struct pvertex 
 	dx = v1->x - v0->x;
 	slope = (dx << 8) / dy;
 #ifdef GOURAUD
-	r = (v0->r << 8);
-	g = (v0->g << 8);
-	b = (v0->b << 8);
-	dr = (v1->r << 8) - r;
-	dg = (v1->g << 8) - g;
-	db = (v1->b << 8) - b;
+	r = (v0->r << COLOR_SHIFT);
+	g = (v0->g << COLOR_SHIFT);
+	b = (v0->b << COLOR_SHIFT);
+	dr = (v1->r << COLOR_SHIFT) - r;
+	dg = (v1->g << COLOR_SHIFT) - g;
+	db = (v1->b << COLOR_SHIFT) - b;
 	rslope = (dr << 8) / dy;
 	gslope = (dg << 8) / dy;
 	bslope = (db << 8) / dy;
@@ -48,7 +48,7 @@ static uint32_t SCANEDGE(struct pvertex *v0, struct pvertex *v1, struct pvertex 
 		edge[i].x = x;
 		x += slope;
 #ifdef GOURAUD
-		/* we'll store the color in the edge tables with 8 extra bits of precision */
+		/* we'll store the color in the edge tables with COLOR_SHIFT extra bits of precision */
 		edge[i].r = r;
 		edge[i].g = g;
 		edge[i].b = b;
@@ -75,8 +75,8 @@ void POLYFILL(struct pvertex *pv, int nverts)
 	uint16_t color;
 	/* the following variables are used for interpolating horizontally accros scanlines */
 #if defined(GOURAUD) || defined(TEXMAP)
-	/*int mid;*/
-	int32_t dx/*, tmp*/;
+	int mid;
+	int32_t dx, tmp;
 #else
 	/* flat version, just pack the color now */
 	color = PACK_RGB16(pv[0].r, pv[0].g, pv[0].b);
@@ -118,8 +118,10 @@ void POLYFILL(struct pvertex *pv, int nverts)
 		}
 	}
 
-	/* find the mid-point and calculate slopes for all attributes */
-#if 0
+	/* calculate the slopes of all attributes across the largest span out
+	 * of the three: middle, top, or bottom.
+	 */
+#ifndef HIGH_QUALITY
 #if defined(GOURAUD) || defined(TEXMAP)
 	mid = (sltop + slbot) >> 1;
 	dx = right[mid].x - left[mid].x;
@@ -131,9 +133,7 @@ void POLYFILL(struct pvertex *pv, int nverts)
 		dx = tmp;
 		mid = slbot;
 	}
-	if(!dx) {
-		dx = 256;	/* 1 */
-	}
+	if(!dx) dx = 256;	/* avoid division by zero */
 #endif
 #ifdef GOURAUD
 	dr = right[mid].r - left[mid].r;
@@ -149,8 +149,9 @@ void POLYFILL(struct pvertex *pv, int nverts)
 	uslope = (du << 8) / dx;
 	vslope = (dv << 8) / dx;
 #endif
-#endif	/* 0 */
+#endif	/* !defined(HIGH_QUALITY) */
 
+	/* for each scanline ... */
 	for(i=sltop; i<=slbot; i++) {
 		uint16_t *pixptr;
 		int32_t x;
@@ -158,13 +159,20 @@ void POLYFILL(struct pvertex *pv, int nverts)
 		x = left[i].x;
 		pixptr = pfill_fb.pixels + i * pfill_fb.width + (x >> 8);
 
-#if defined(GOURAUD) || defined(TEXMAP)
-		if(!(dx = right[i].x - left[i].x)) dx = 256;	/* 1 */
-#endif
 #ifdef GOURAUD
 		r = left[i].r;
 		g = left[i].g;
 		b = left[i].b;
+#endif
+#ifdef TEXMAP
+		u = left[i].u;
+		v = left[i].v;
+#endif
+
+#if defined(HIGH_QUALITY) && (defined(GOURAUD) || defined(TEXMAP))
+		if(!(dx = right[i].x - left[i].x)) dx = 256;
+
+#ifdef GOURAUD
 		dr = right[i].r - left[i].r;
 		dg = right[i].g - left[i].g;
 		db = right[i].b - left[i].b;
@@ -173,23 +181,28 @@ void POLYFILL(struct pvertex *pv, int nverts)
 		bslope = (db << 8) / dx;
 #endif
 #ifdef TEXMAP
-		u = left[i].u;
-		v = left[i].v;
 		du = right[i].u - left[i].u;
 		dv = right[i].v - left[i].v;
 		uslope = (du << 8) / dx;
 		vslope = (dv << 8) / dx;
 #endif
+#endif	/* HIGH_QUALITY */
 
+		/* go across the scanline interpolating if necessary */
 		while(x <= right[i].x) {
 #if defined(GOURAUD) || defined(TEXMAP)
 			int cr, cg, cb;
 #endif
 #ifdef GOURAUD
-			/* drop the extra 8 bits when packing */
-			cr = r >> 8;
-			cg = g >> 8;
-			cb = b >> 8;
+			/* we upped the color precision to while interpolating the
+			 * edges, now drop the extra bits before packing
+			 */
+			cr = r < 0 ? 0 : (r >> COLOR_SHIFT);
+			cg = g < 0 ? 0 : (g >> COLOR_SHIFT);
+			cb = b < 0 ? 0 : (b >> COLOR_SHIFT);
+			if(cr > 255) cr = 255;
+			if(cg > 255) cg = 255;
+			if(cb > 255) cb = 255;
 			r += rslope;
 			g += gslope;
 			b += bslope;
@@ -200,7 +213,9 @@ void POLYFILL(struct pvertex *pv, int nverts)
 				int ty = (v >> (16 - pfill_tex.yshift)) & pfill_tex.ymask;
 				uint16_t texel = pfill_tex.pixels[(ty << pfill_tex.xshift) + tx];
 #ifdef GOURAUD
-				/* XXX this is not correct, should be /255, but it might not make a huge difference */
+				/* This is not correct, should be /255, but it's much faster
+				 * to shift by 8 (/256), and won't make a huge difference
+				 */
 				cr = (cr * UNPACK_R16(texel)) >> 8;
 				cg = (cg * UNPACK_G16(texel)) >> 8;
 				cb = (cb * UNPACK_B16(texel)) >> 8;

@@ -34,7 +34,8 @@ static struct screen scr = {
 	draw
 };
 
-static float theta, phi = 25;
+static float cam_theta, cam_phi = 25;
+static float cam_dist = 3;
 static struct mesh cube, torus;
 
 static struct pimage tex;
@@ -104,11 +105,18 @@ static void update(void)
 			int dy = mouse_y - prev_my;
 
 			if(dx || dy) {
-				theta += dx * 1.0;
-				phi += dy * 1.0;
+				if(mouse_bmask & 1) {
+					cam_theta += dx * 1.0;
+					cam_phi += dy * 1.0;
 
-				if(phi < -90) phi = -90;
-				if(phi > 90) phi = 90;
+					if(cam_phi < -90) cam_phi = -90;
+					if(cam_phi > 90) cam_phi = 90;
+				}
+				if(mouse_bmask & 4) {
+					cam_dist += dy * 0.5;
+
+					if(cam_dist < 0) cam_dist = 0;
+				}
 			}
 		}
 	}
@@ -126,9 +134,9 @@ static void draw(void)
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
-	g3d_translate(0, 0, -3);
-	g3d_rotate(phi, 1, 0, 0);
-	g3d_rotate(theta, 0, 1, 0);
+	g3d_translate(0, 0, -cam_dist);
+	g3d_rotate(cam_phi, 1, 0, 0);
+	g3d_rotate(cam_theta, 0, 1, 0);
 
 	g3d_light_pos(0, -10, 10, 20);
 
@@ -151,9 +159,9 @@ static void draw_debug(void)
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
-	g3d_translate(0, 0, -3);
-	g3d_rotate(phi, 1, 0, 0);
-	g3d_rotate(theta, 0, 1, 0);
+	g3d_translate(0, 0, -cam_dist);
+	g3d_rotate(cam_phi, 1, 0, 0);
+	g3d_rotate(cam_theta, 0, 1, 0);
 
 	g3d_framebuffer(lowres_width, lowres_height, lowres_pixels);
 	/*zsort(&torus);*/

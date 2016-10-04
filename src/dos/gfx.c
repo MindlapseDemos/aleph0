@@ -7,7 +7,6 @@
 #include <limits.h>
 #include "vbe.h"
 #include "dpmi.h"
-#include "logger.h"
 
 #define REALPTR(s, o)	(void*)(((uint32_t)(s) << 4) + (uint32_t)(o))
 #define VBEPTR(x)		REALPTR(((x) & 0xffff0000) >> 16, (x) & 0xffff)
@@ -36,15 +35,15 @@ void *set_video_mode(int xsz, int ysz, int bpp)
 			return 0;
 		}
 
-		printlog("VBE Version: %x.%x\n", vbe_info->version >> 8, vbe_info->version & 0xff);
+		printf("VBE Version: %x.%x\n", vbe_info->version >> 8, vbe_info->version & 0xff);
 		if(vbe_info->version < 0x200) {
 			fprintf(stderr, "This program requires VBE 2.0 or greater. Try running UniVBE\n");
 			return 0;
 		}
 
-		printlog("Graphics adapter: %s, %s (%s)\n", VBEPTR(vbe_info->oem_vendor_name_ptr),
+		printf("Graphics adapter: %s, %s (%s)\n", VBEPTR(vbe_info->oem_vendor_name_ptr),
 				VBEPTR(vbe_info->oem_product_name_ptr), VBEPTR(vbe_info->oem_product_rev_ptr));
-		printlog("Video memory: %dkb\n", vbe_info->total_mem << 6);
+		printf("Video memory: %dkb\n", vbe_info->total_mem << 6);
 
 		modes = VBEPTR(vbe_info->vid_mode_ptr);
 	}
@@ -78,7 +77,7 @@ void *set_video_mode(int xsz, int ysz, int bpp)
 	/* attempt to set 8 bits of color per component in palettized modes */
 	/*if(bpp <= 8) {
 		pal_bits = vbe_set_palette_bits(8);
-		printlog("palette bits per color primary: %d\n", pal_bits);
+		printf("palette bits per color primary: %d\n", pal_bits);
 	}
 	*/
 

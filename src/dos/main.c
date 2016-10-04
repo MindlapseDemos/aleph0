@@ -7,6 +7,7 @@
 #include "mouse.h"
 #include "timer.h"
 #include "gfx.h"
+#include "logger.h"
 
 static int quit;
 static int use_mouse;
@@ -15,6 +16,8 @@ static long fbsize;
 int main(int argc, char **argv)
 {
 	fbsize = fb_width * fb_height * fb_bpp / CHAR_BIT;
+
+	init_logger("demo.log");
 
 	init_timer(100);
 	kb_init(32);

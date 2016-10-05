@@ -16,7 +16,7 @@ typedef struct {
 
 static RLEBitmap *rleCreate(unsigned int w, unsigned int h);
 static void rleDestroy(RLEBitmap *b);
-static void rleBlit(unsigned short *dst, int dstW, int dstH, int dstStride, 
+static void rleBlit(unsigned short *dst, int dstW, int dstH, int dstStride,
 	RLEBitmap *bitmap, int blitX, int blitY);
 static void rleBlitScale(unsigned short *dst, int dstW, int dstH, int dstStride,
 	RLEBitmap *bitmap, int blitX, int blitY, float scaleX, float scaleY);
@@ -25,8 +25,6 @@ static void rleBlitScaleInv(unsigned short *dst, int dstW, int dstH, int dstStri
 static RLEBitmap *rleEncode(RLEBitmap *b, unsigned char *pixels, unsigned int w, unsigned int h);
 
 static void updatePropeller(float t);
-
-extern void drawFps(unsigned short *vram);
 
 #define BG_FILENAME "data/grise.png"
 #define GROBJ_01_FILENAME "data/grobj_01.png"
@@ -64,8 +62,8 @@ static void updateScrollTables(float dt);
 
 
 static unsigned short *background = 0;
-static unsigned int backgroundW = 0;
-static unsigned int backgroundH = 0;
+static int backgroundW = 0;
+static int backgroundH = 0;
 
 static unsigned int lastFrameTime = 0;
 static float lastFrameDuration = 0.0f;
@@ -80,7 +78,7 @@ static int scrollTableRounded[REFLECTION_HEIGHT];
 static int scrollModTable[REFLECTION_HEIGHT];
 static float nearScrollAmount = 0.0f;
 
-static char miniFXBuffer[1024];
+static unsigned char miniFXBuffer[1024];
 
 static RLEBitmap *grobj = 0;
 static RLEBitmap *rlePropeller = 0;
@@ -130,11 +128,7 @@ static int init(void)
 
 	processNormal();
 
-#ifdef MIKE_PC
-	return 0xCAFE;
-#else
 	return 0;
-#endif
 }
 
 static void destroy(void)
@@ -160,7 +154,7 @@ static void stop(long trans_time)
 
 
 static void draw(void)
-{	
+{
 	int scroll = MIN_SCROLL + (MAX_SCROLL - MIN_SCROLL) * mouse_x / fb_width;
 	unsigned short *dst = backBuffer + PIXEL_PADDING;
 	unsigned short *src = background + scroll;
@@ -184,11 +178,11 @@ static void draw(void)
 		src += backgroundW;
 		dst += BB_SIZE;
 	}
-	
+
 	/* Create scroll offsets for all scanlines of the normalmap */
 	updateScrollTables(lastFrameDuration);
 
-	/* Render the baked reflection one scanline below its place, so that 
+	/* Render the baked reflection one scanline below its place, so that
 	 * the displacement that follows will be done in a cache-friendly way
 	 */
 	src -= PIXEL_PADDING; /* We want to also fill the PADDING pixels here */
@@ -229,17 +223,15 @@ static void draw(void)
 
 	/* Then after displacement, blit the objects */
 	for (i = 0; i < 5; i++) rleBlit(backBuffer + PIXEL_PADDING, fb_width, fb_height, BB_SIZE, rlePropeller, 134 + (i-3) * 60, 100);
-	
+
 	/* Blit effect to framebuffer */
 	src = backBuffer + PIXEL_PADDING;
 	dst = vmem_back;
 	for (scanline = 0; scanline < fb_height; scanline++) {
 		memcpy(dst, src, fb_width * 2);
-		src += BB_SIZE; 
+		src += BB_SIZE;
 		dst += fb_width;
 	}
-
-	drawFps(vmem_back);
 
 	swap_buffers(0);
 }
@@ -323,7 +315,7 @@ static void initScrollTables() {
 
 static void updateScrollTables(float dt) {
 	int i = 0;
-	
+
 	nearScrollAmount += dt * NEAR_SCROLL_SPEED;
 	nearScrollAmount = (float) fmod(nearScrollAmount, 512.0f);
 
@@ -334,7 +326,7 @@ static void updateScrollTables(float dt) {
 }
 
 /* -------------------------------------------------------------------------------------------------
- *                                   RLE STUFF                                                                           
+ *                                   RLE STUFF
  * -------------------------------------------------------------------------------------------------
  */
 /* Limit streak count per scanline so we can directly jump to specific scanline */
@@ -424,7 +416,7 @@ static RLEBitmap *rleEncode(RLEBitmap *b, unsigned char *pixels, unsigned int w,
 static void rleDistributeStreaks(RLEBitmap *bitmap) {
 	int scanline, halfW = bitmap->w >> 1;
 	unsigned char *ptr, tmp;
-	
+
 	ptr = bitmap->scans;
 	for (scanline = 0; scanline < bitmap->h; scanline++) {
 		if (ptr[0] >= halfW) {
@@ -441,7 +433,7 @@ static void rleDistributeStreaks(RLEBitmap *bitmap) {
 }
 
 static void rleBlit(unsigned short *dst, int dstW, int dstH, int dstStride,
-	RLEBitmap *bitmap, int blitX, int blitY) 
+	RLEBitmap *bitmap, int blitX, int blitY)
 {
 	int scanline = 0;
 	int streakPos = 0;
@@ -486,7 +478,7 @@ static void interpolateScan(unsigned char *output, unsigned char *a, unsigned ch
 
 	t += 1.0f;
 	ti = (*((unsigned int*)&t)) & 0x7FFFFF;
-	
+
 	for (i = 0; i < RLE_BYTES_PER_SCANLINE; i++) {
 		if (*a == 0) {
 			*output++ = *b++;
@@ -516,7 +508,7 @@ static void rleBlitScale(unsigned short *dst, int dstW, int dstH, int dstStride,
 	int scaleXFixed;
 	static unsigned char scan[512];
 
-	int blitW = (int)(bitmap->w * scaleX + 0.5f);
+	/*int blitW = (int)(bitmap->w * scaleX + 0.5f);*/
 	int blitH = (int)(bitmap->h * scaleY + 0.5f);
 
 	/* From this point on, scaleY will be inverted */
@@ -577,7 +569,7 @@ static void rleBlitScaleInv(unsigned short *dst, int dstW, int dstH, int dstStri
 	int scaleXFixed;
 	static unsigned char scan[512];
 
-	int blitW = (int)(bitmap->w * scaleX + 0.5f);
+	/*int blitW = (int)(bitmap->w * scaleX + 0.5f);*/
 	int blitH = (int)(bitmap->h * scaleY + 0.5f);
 
 	/* From this point on, scaleY will be inverted */
@@ -638,7 +630,7 @@ static struct {
 static void updatePropeller(float t) {
 	int i, j;
 	int cx, cy, count = 0;
-	char *dst;
+	unsigned char *dst;
 	float x = 0.0f;
 	float y = 18.0f;
 	float nx, ny;

@@ -9,6 +9,7 @@
 #include "3dgfx.h"
 #include "music.h"
 #include "cfgopt.h"
+#include "tinyfps.h"
 
 int fb_width = 320;
 int fb_height = 240;
@@ -34,6 +35,8 @@ int demo_init(int argc, char **argv)
 	if(parse_args(argc, argv) == -1) {
 		return -1;
 	}
+
+	initFpsFonts();
 
 	if(g3d_init() == -1) {
 		return -1;

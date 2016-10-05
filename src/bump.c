@@ -7,7 +7,6 @@
 
 #include "demo.h"
 #include "screen.h"
-#include "tinyfps.h"
 
 static int init(void);
 static void destroy(void);
@@ -60,7 +59,6 @@ static int init(void)
 	const float rgbMul[9] = { 1.0f, 0.0f, 0.0f, 
 								  0.0f, 1.0f, 0.0f,
 								  0.0f, 0.0f, 1.0f};
-	initFpsFonts();
 
 	heightmap = malloc(sizeof(*heightmap) * fb_size);
 	lightmap = malloc(sizeof(*lightmap) * fb_size);
@@ -264,8 +262,6 @@ static void draw(void)
 	animateLights();
 	renderLights();
 	renderBump((unsigned short*)vmem_back);
-
-	drawFps((unsigned short*)vmem_back);
 
 	swap_buffers(0);
 }

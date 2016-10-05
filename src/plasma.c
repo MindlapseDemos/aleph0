@@ -5,7 +5,6 @@
 
 #include "demo.h"
 #include "screen.h"
-#include "tinyfps.h"
 
 static int init(void);
 static void destroy(void);
@@ -41,8 +40,6 @@ static int init(void)
 {
 	int i;
 
-	initFpsFonts();
-
 	psin1 = (unsigned char*)malloc(sizeof(unsigned char) * PSIN_SIZE);
 	psin2 = (unsigned char*)malloc(sizeof(unsigned char) * PSIN_SIZE);
 	psin3 = (unsigned char*)malloc(sizeof(unsigned char) * PSIN_SIZE);
@@ -67,7 +64,6 @@ static int init(void)
 		plasmaPal[i] = (r<<11) | (g<<5) | b;
 	}
 
-	//return 0xCAFE;
 	return 0;
 }
 
@@ -110,8 +106,6 @@ static void draw(void)
 			*vram32++ = (p1 << 16) | p0;
 		}
 	}
-
-	drawFps((unsigned short*)vmem_back);
 
 	swap_buffers(0);
 }

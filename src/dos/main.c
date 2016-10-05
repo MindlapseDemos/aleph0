@@ -76,6 +76,9 @@ void swap_buffers(void *pixels)
 	/* TODO implement page flipping */
 	if(pixels) {
 		/*wait_vsync();*/
+		drawFps(pixels);
 		memcpy(vmem_front, pixels, fbsize);
+	} else {
+		drawFps(vmem_back);
 	}
 }

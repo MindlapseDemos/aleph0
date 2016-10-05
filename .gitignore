@@ -31,3 +31,5 @@ data
 *.CFG
 *.cfg
 *.$$$
+
+/dosdemo.vcxproj.user

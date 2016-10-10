@@ -30,6 +30,11 @@ struct point {
 #define BIG_LIGHT_WIDTH 256
 #define BIG_LIGHT_HEIGHT BIG_LIGHT_WIDTH
 
+#define NUM_PARTICLES 64
+#define PARTICLE_LIGHT_WIDTH 32
+#define PARTICLE_LIGHT_HEIGHT 32
+
+
 static unsigned long startingTime;
 
 static unsigned char *heightmap;
@@ -38,6 +43,9 @@ static int *bumpOffset;
 
 static unsigned short *bigLight[NUM_BIG_LIGHTS];
 static struct point bigLightPoint[NUM_BIG_LIGHTS];
+
+static unsigned short *particleLight;
+static struct point particlePoint[NUM_PARTICLES];
 
 struct screen *bump_screen(void)
 {
@@ -50,8 +58,10 @@ static int init(void)
 
 	const int numBlurs = 3;
 	const int lightRadius = BIG_LIGHT_WIDTH / 2;
+	const int particleRadius = PARTICLE_LIGHT_WIDTH / 2;
 
 	const int bigLightSize = BIG_LIGHT_WIDTH * BIG_LIGHT_HEIGHT;
+	const int particleLightSize = PARTICLE_LIGHT_WIDTH * PARTICLE_LIGHT_HEIGHT;
 	const int fb_size = fb_width * fb_height;
 
 	// Just some parameters to temporary test the colors of 3 lights
@@ -67,8 +77,11 @@ static int init(void)
 	for (i = 0; i < NUM_BIG_LIGHTS; i++)
 		bigLight[i] = malloc(sizeof(*bigLight[i]) * bigLightSize);
 
+	particleLight = malloc(sizeof(*particleLight) * particleLightSize);
+
 	memset(lightmap, 0, sizeof(*lightmap) * fb_size);
 	memset(bumpOffset, 0, sizeof(*bumpOffset) * fb_size);
+	memset(particlePoint, 0, sizeof(*particlePoint) * NUM_PARTICLES);
 
 	// Create random junk
 	for (i = 0; i < fb_size; i++)
@@ -85,7 +98,7 @@ static int init(void)
 	{
 		for (x = 0; x < fb_width; x++)
 		{
-			const float offsetPower = 2.0f;
+			const float offsetPower = 0.5f;
 			int dx, dy, xp, yp;
 
 			dx = i < fb_size - 1 ? (int)((heightmap[i] - heightmap[i + 1]) * offsetPower) : 0;
@@ -125,6 +138,22 @@ static int init(void)
 				bigLight[j][i] = ((int)(r * rgbMul[j * 3]) << 11) | ((int)(g * rgbMul[j * 3 + 1]) << 5) | (int)(b * rgbMul[j * 3 + 2]);
 			}
 			i++;
+		}
+	}
+
+	i = 0;
+	for (y = 0; y < PARTICLE_LIGHT_HEIGHT; y++)
+	{
+		int yc = y - (PARTICLE_LIGHT_HEIGHT / 2);
+		for (x = 0; x < PARTICLE_LIGHT_WIDTH; x++)
+		{
+			int xc = x - (PARTICLE_LIGHT_WIDTH / 2);
+
+			float invDist = ((float)particleRadius - (float)sqrt(xc * xc + yc * yc)) / (float)particleRadius;
+			if (invDist < 0.0f) invDist = 0.0f;
+
+			c = (int)(invDist * 63);
+			particleLight[i++] = ((c >> 1) << 11) | (c << 5) | (c >> 1);
 		}
 	}
 
@@ -228,6 +257,13 @@ static void renderLights()
 		renderLight(&bigLightPoint[i], BIG_LIGHT_WIDTH, BIG_LIGHT_HEIGHT, bigLight[i]);
 }
 
+static void renderParticles()
+{
+	int i;
+	for (i = 0; i < NUM_PARTICLES; i++)
+		renderLight(&particlePoint[i], PARTICLE_LIGHT_WIDTH, PARTICLE_LIGHT_HEIGHT, particleLight);
+}
+
 static void animateLights()
 {
 	struct point center;
@@ -256,11 +292,33 @@ static void renderBump(unsigned short *vram)
 	}
 }
 
+static void animateParticles()
+{
+	int i;
+	struct point center;
+	float dt = (float)(time_msec - startingTime) / 1000.0f;
+
+	center.x = (fb_width >> 1) - (PARTICLE_LIGHT_WIDTH / 2);
+	center.y = (fb_height >> 1) - (PARTICLE_LIGHT_HEIGHT / 2);
+
+	for (i = 0; i < NUM_PARTICLES; i++)
+	{
+		particlePoint[i].x = center.x + sin(1.2f * (i*i*i + dt)) * 74.0f + sin(0.6f * (i + dt)) * 144.0f;
+		particlePoint[i].y = center.y + sin(1.8f * (i + dt)) * 68.0f + sin(0.5f * (i*i + dt)) * 132.0f;
+	}
+}
+
 static void draw(void)
 {
-	eraseLights();
+	memset(lightmap, 0, fb_width * fb_height * sizeof(*lightmap));
+
+	//eraseLights();
 	animateLights();
 	renderLights();
+
+	animateParticles();
+	renderParticles();
+
 	renderBump((unsigned short*)vmem_back);
 
 	swap_buffers(0);

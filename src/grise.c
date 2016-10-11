@@ -88,7 +88,7 @@ static struct screen scr = {
 	init,
 	destroy,
 	start,
-	stop,
+	0,
 	draw
 };
 
@@ -145,12 +145,6 @@ static void start(long trans_time)
 {
 	lastFrameTime = time_msec;
 }
-
-static void stop(long trans_time)
-{
-}
-
-
 
 
 static void draw(void)

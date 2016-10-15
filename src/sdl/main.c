@@ -3,6 +3,7 @@
 #include <limits.h>
 #include <SDL/SDL.h>
 #include "demo.h"
+#include "tinyfps.h"
 
 static void handle_event(SDL_Event *ev);
 static void toggle_fullscreen(void);
@@ -61,6 +62,7 @@ int main(int argc, char **argv)
 
 		time_msec = SDL_GetTicks() - start_time;
 		demo_draw();
+		drawFps(fb_pixels);
 
 		if(SDL_MUSTLOCK(fbsurf)) {
 			SDL_LockSurface(fbsurf);

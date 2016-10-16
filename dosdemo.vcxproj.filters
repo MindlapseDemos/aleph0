@@ -55,7 +55,7 @@
     <ClCompile Include="src\bump.c">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="thunder.c">
+    <ClCompile Include="src\thunder.c">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

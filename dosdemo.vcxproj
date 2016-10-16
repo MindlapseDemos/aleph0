@@ -97,9 +97,9 @@
     <ClCompile Include="src\screen.c" />
     <ClCompile Include="src\sdl\main.c" />
     <ClCompile Include="src\sdl\music.c" />
+    <ClCompile Include="src\thunder.c" />
     <ClCompile Include="src\tinyfps.c" />
     <ClCompile Include="src\tunnel.c" />
-    <ClCompile Include="thunder.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\cfgopt.h" />

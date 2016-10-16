@@ -16,18 +16,39 @@
 #define BLUR_BUFFER_SIZE (BLUR_BUFFER_WIDTH * BLUR_BUFFER_HEIGHT)
 static unsigned char *blurBuffer, *blurBuffer2;
 
-#define THUNDER_RECT_SIZE 4
-#define THUNDER_RANDOMNESS 80
+#define BLUR_DARKEN 4
+
+#define THUNDER_RECT_SIZE 2
+#define THUNDER_RANDOMNESS 16
 #define THUNDER_SECONDS 0.1f
+
+#define VERTEX_COUNT 12
+#define PERSPECTIVE_NEUTRAL_DEPTH 0.5f
+#define NEAR_PLANE 0.01f
+#define ROTATION_SPEED 1.5f
+
+#define PI 3.14159f
 
 /* TODO: Load palette from file */
 static unsigned short palette[256];
 
+typedef struct {
+	float x,y,z;
+} MyVertex ;
+
+MyVertex vertexBuffer[VERTEX_COUNT];
+MyVertex vertexBufferAnimated[VERTEX_COUNT];
+MyVertex vertexBufferProjected[VERTEX_COUNT];
+
 void clearBlurBuffer();
-void drawPatternOnBlurBuffer(int seed);
 void applyBlur();
 void blitEffect();
 void thunder(int x0, int y0, int x1, int y1, int seed, int randomness, int depth);
+
+void initMesh();
+void projectMesh();
+void animateMesh();
+void renderMesh(int seed);
 
 static int init(void);
 static void destroy(void);
@@ -62,8 +83,10 @@ static int init(void)
 
 	/* For now, map to blue */
 	for (i = 0; i < 256; i++) {
-		palette[i] = i >> 3;
+		palette[i] = (i * i) >> 11;
 	}
+
+	initMesh();
 
 	return 0;
 }
@@ -97,11 +120,15 @@ static void draw(void)
 		remainingThunderDuration = THUNDER_SECONDS;
 	}
 	
+	animateMesh();
+	projectMesh();
+	renderMesh(thunderPattern);
 	
 	
-	drawPatternOnBlurBuffer(thunderPattern);
 	applyBlur();
 	blitEffect();
+
+	
 
 	swap_buffers(0);
 }
@@ -112,9 +139,6 @@ void clearBlurBuffer() {
 	memset(blurBuffer2, 0, BLUR_BUFFER_SIZE);
 }
 
-void drawPatternOnBlurBuffer(int seed) {
-	thunder(20, 20, 140, 100, seed, THUNDER_RANDOMNESS, 6);
-}
 
 void applyBlur() {
 	int i, j;
@@ -125,8 +149,10 @@ void applyBlur() {
 	for (j = 0; j < 120; j++) {
 		for (i = 0; i < 160; i++) {
 			*dst = (*(src - 1) + *(src + 1) + *(src - BLUR_BUFFER_WIDTH) + *(src + BLUR_BUFFER_WIDTH)) >> 2;
-			if (*dst > 4) *dst -= 4;
+			
+			if (*dst > BLUR_DARKEN) *dst -= BLUR_DARKEN;
 			else *dst = 0;
+
 			dst++;
 			src++;
 		}
@@ -177,12 +203,16 @@ void blitEffect() {
 }
 
 void thunder(int x0, int y0, int x1, int y1, int seed, int randomness, int depth) {
-	int mx = ((x0 + x1) >> 1) + rand() % randomness - randomness / 2;
-	int my = ((y0 + y1) >> 1) + rand() % randomness - randomness / 2;
-	int i, j;
-	unsigned char *dst = blurBuffer + BLUR_BUFFER_WIDTH + 1 + mx + my * BLUR_BUFFER_WIDTH;
+	int mx, my, i, j;
+	unsigned char *dst;
+
+	if (randomness <= 0) randomness = 1;
+	mx = ((x0 + x1) >> 1) + rand() % randomness - randomness / 2;
+	my = ((y0 + y1) >> 1) + rand() % randomness - randomness / 2;
+	dst = blurBuffer + BLUR_BUFFER_WIDTH + 1 + mx + my * BLUR_BUFFER_WIDTH;
 
 	if (depth <= 0) return;
+	if (mx < THUNDER_RECT_SIZE || mx >= 160 - THUNDER_RECT_SIZE || my < THUNDER_RECT_SIZE || my >= 120 - THUNDER_RECT_SIZE) return;
 
 	srand(seed);
 
@@ -195,5 +225,96 @@ void thunder(int x0, int y0, int x1, int y1, int seed, int randomness, int depth
 	thunder(mx, my, x1, y1, rand(), randomness >> 1, depth - 1);
 }
 
+MyVertex randomVertex() {
+	MyVertex ret;
+	float l;
 
+	ret.x = rand() % 200 - 100; if (ret.x == 0) ret.x = 1;
+	ret.y = rand() % 200 - 100; if (ret.y == 0) ret.y = 1;
+	ret.z = rand() % 200 - 100; if (ret.z == 0) ret.z = 1;
+	
+	// Normalize
+	l = sqrt(ret.x * ret.x + ret.y * ret.y + ret.z * ret.z);
+	ret.x /= l;
+	ret.y /= l;
+	ret.z /= l;
 
+	return ret;
+}
+
+void initMesh() {
+	int i;
+
+	for (i = 0; i < VERTEX_COUNT; i++) {
+		vertexBuffer[i] = randomVertex();
+	}
+}
+
+void animateMesh() {
+	int i = 0;
+	MyVertex bx, by, bz;
+	float yRot;
+
+	yRot = ROTATION_SPEED * time_msec / 1000.0f;
+
+	/* Create rotated basis */
+	bx.x = cos(yRot);
+	bx.y = 0.0f;
+	bx.z = sin(yRot);
+
+	by.x = 0.0f;
+	by.y = 1.0f;
+	by.z = 0.0f;
+
+	bz.x = cos(yRot + PI/2.0f);
+	bz.y = 0.0f;
+	bz.z = sin(yRot + PI/2.0f);
+
+	for (i = 0; i < VERTEX_COUNT; i++) {
+		MyVertex v1, v2;
+		v1 = vertexBuffer[i];
+
+		/* O re panaia mou */
+		v2.x = v1.x * bx.x + v1.y * by.x + v1.z * bz.x;
+		v2.y = v1.x * bx.y + v1.y * by.y + v1.z * bz.y;
+		v2.z = v1.x * bx.z + v1.y * by.z + v1.z * bz.z;
+		
+
+		v2.z += 1.00f;
+
+		vertexBufferAnimated[i] = v2;
+	}
+}
+
+void projectMesh() {
+	int i = 0;
+
+	for (i = 0; i < VERTEX_COUNT; i++) {
+
+		if (vertexBufferAnimated[i].z <= NEAR_PLANE) {
+			vertexBufferProjected[i].x = vertexBufferProjected[i].y = 1000.0f;
+			vertexBufferProjected[i].z = -1.0f;
+			continue;
+		}
+
+		vertexBufferProjected[i].x = vertexBufferAnimated[i].x * PERSPECTIVE_NEUTRAL_DEPTH / vertexBufferAnimated[i].z;
+		vertexBufferProjected[i].y = vertexBufferAnimated[i].y * PERSPECTIVE_NEUTRAL_DEPTH / vertexBufferAnimated[i].z;
+	}
+}
+
+void renderMesh(int seed) {
+	int vertex, j;
+	int sx, sy;
+	unsigned char *dst;
+
+	srand(seed);
+
+	for (vertex = 0; vertex < VERTEX_COUNT; vertex++) {
+		sx = (int)(vertexBufferProjected[vertex].x * 80) + 80;
+		sy = (int)(vertexBufferProjected[vertex].y * 60) + 60;
+
+		/*if (sx < THUNDER_RECT_SIZE || sx >= 160 - THUNDER_RECT_SIZE || sy < THUNDER_RECT_SIZE || sy >= 120 - THUNDER_RECT_SIZE) return;*/
+
+		thunder(80, 60, sx, sy, rand(), THUNDER_RANDOMNESS, 5);		
+	}
+}

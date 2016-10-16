@@ -27,10 +27,25 @@ static unsigned char *blurBuffer, *blurBuffer2;
 #define NEAR_PLANE 0.01f
 #define ROTATION_SPEED 1.5f
 
+#define MESH_RANDOM_SEED 173
+
+#define MIN_FOGGED 40
+
+#define CAMERA_DISTANCE 1.1f
+
 #define PI 3.14159f
 
 /* TODO: Load palette from file */
 static unsigned short palette[256];
+
+typedef unsigned int PointSprite;
+#define MAX_POINT_SPRITES 1024
+static PointSprite pointSprites[MAX_POINT_SPRITES];
+int pointSpriteCount = 0;
+#define PACK_POINT_SPRITE(x, y, col) ((col << 16) | (x << 8) | y)
+#define UNPACK_COLOR(ps) (ps >> 16)
+#define UNPACK_X(ps) ((ps >> 8) & 0xFF)
+#define UNPACK_Y(ps) (ps & 0xFF)
 
 typedef struct {
 	float x,y,z;
@@ -43,12 +58,15 @@ MyVertex vertexBufferProjected[VERTEX_COUNT];
 void clearBlurBuffer();
 void applyBlur();
 void blitEffect();
-void thunder(int x0, int y0, int x1, int y1, int seed, int randomness, int depth);
+void thunder(int x0, int y0, int x1, int y1, unsigned char c0, unsigned char c1, int seed, int randomness, int depth);
 
 void initMesh();
 void projectMesh();
 void animateMesh();
-void renderMesh(int seed);
+void renderMeshToPointSprites(int seed);
+void renderPointSprites();
+unsigned char fog(float z);
+void sortPointSprites();
 
 static int init(void);
 static void destroy(void);
@@ -122,7 +140,9 @@ static void draw(void)
 	
 	animateMesh();
 	projectMesh();
-	renderMesh(thunderPattern);
+	renderMeshToPointSprites(thunderPattern);
+	sortPointSprites();
+	renderPointSprites();
 	
 	
 	applyBlur();
@@ -202,27 +222,29 @@ void blitEffect() {
 
 }
 
-void thunder(int x0, int y0, int x1, int y1, int seed, int randomness, int depth) {
+void thunder(int x0, int y0, int x1, int y1, unsigned char c0, unsigned char c1, int seed, int randomness, int depth) {
 	int mx, my, i, j;
 	unsigned char *dst;
+	unsigned char mc;
 
 	if (randomness <= 0) randomness = 1;
 	mx = ((x0 + x1) >> 1) + rand() % randomness - randomness / 2;
 	my = ((y0 + y1) >> 1) + rand() % randomness - randomness / 2;
-	dst = blurBuffer + BLUR_BUFFER_WIDTH + 1 + mx + my * BLUR_BUFFER_WIDTH;
+	mc = (c0 + c1) >> 1;
 
 	if (depth <= 0) return;
-	if (mx < THUNDER_RECT_SIZE || mx >= 160 - THUNDER_RECT_SIZE || my < THUNDER_RECT_SIZE || my >= 120 - THUNDER_RECT_SIZE) return;
+
+	/* Insert a new sprite */
+	if (pointSpriteCount >= MAX_POINT_SPRITES) {
+		printf("PROBLEM");
+		return;
+	}
+	pointSprites[pointSpriteCount++] = PACK_POINT_SPRITE(mx, my, mc);
 
 	srand(seed);
 
-	for (j = 0; j < THUNDER_RECT_SIZE; j++) {
-		memset(dst, 255, THUNDER_RECT_SIZE);
-		dst += BLUR_BUFFER_WIDTH;
-	}
-
-	thunder(x0, y0, mx, my, rand(), randomness >> 1, depth-1);
-	thunder(mx, my, x1, y1, rand(), randomness >> 1, depth - 1);
+	thunder(x0, y0, mx, my, c0, mc, rand(), randomness >> 1, depth-1);
+	thunder(mx, my, x1, y1, mc, c1, rand(), randomness >> 1, depth - 1);
 }
 
 MyVertex randomVertex() {
@@ -244,6 +266,8 @@ MyVertex randomVertex() {
 
 void initMesh() {
 	int i;
+
+	srand(MESH_RANDOM_SEED);
 
 	for (i = 0; i < VERTEX_COUNT; i++) {
 		vertexBuffer[i] = randomVertex();
@@ -275,12 +299,12 @@ void animateMesh() {
 		v1 = vertexBuffer[i];
 
 		/* O re panaia mou */
+
 		v2.x = v1.x * bx.x + v1.y * by.x + v1.z * bz.x;
 		v2.y = v1.x * bx.y + v1.y * by.y + v1.z * bz.y;
 		v2.z = v1.x * bx.z + v1.y * by.z + v1.z * bz.z;
 		
-
-		v2.z += 1.00f;
+		v2.z += CAMERA_DISTANCE;
 
 		vertexBufferAnimated[i] = v2;
 	}
@@ -302,19 +326,116 @@ void projectMesh() {
 	}
 }
 
-void renderMesh(int seed) {
+void renderMeshToPointSprites(int seed) {
 	int vertex, j;
 	int sx, sy;
+	unsigned char color;
 	unsigned char *dst;
+	unsigned char fogAtOrigin;
 
+	fogAtOrigin = fog(CAMERA_DISTANCE);
+
+	pointSpriteCount = 0;
 	srand(seed);
 
 	for (vertex = 0; vertex < VERTEX_COUNT; vertex++) {
 		sx = (int)(vertexBufferProjected[vertex].x * 80) + 80;
 		sy = (int)(vertexBufferProjected[vertex].y * 60) + 60;
 
-		/*if (sx < THUNDER_RECT_SIZE || sx >= 160 - THUNDER_RECT_SIZE || sy < THUNDER_RECT_SIZE || sy >= 120 - THUNDER_RECT_SIZE) return;*/
-
-		thunder(80, 60, sx, sy, rand(), THUNDER_RANDOMNESS, 5);		
+		thunder(80, 60, sx, sy, fogAtOrigin, fog(vertexBufferAnimated[vertex].z), rand(), THUNDER_RANDOMNESS, 5);
 	}
 }
+
+void renderPointSprites() {
+	int i,j;
+	PointSprite sprite;
+	unsigned char *dst;
+	int sx, sy;
+	unsigned char color;
+
+	for (i = 0; i < pointSpriteCount; i++) {
+		sprite = pointSprites[i];
+
+		sx = UNPACK_X(sprite);
+		sy = UNPACK_Y(sprite);
+
+		if (sx < THUNDER_RECT_SIZE || sx >= 160 - THUNDER_RECT_SIZE || sy < THUNDER_RECT_SIZE || sy >= 120 - THUNDER_RECT_SIZE) continue;
+
+		dst = blurBuffer + BLUR_BUFFER_WIDTH + 1 + sx + sy * BLUR_BUFFER_WIDTH;
+
+		color = UNPACK_COLOR(sprite);
+
+		for (j = 0; j < THUNDER_RECT_SIZE; j++) {
+			memset(dst, color, THUNDER_RECT_SIZE);
+			dst += BLUR_BUFFER_WIDTH;
+		}
+	}
+}
+
+unsigned char fog(float z) {
+	unsigned int ret = (unsigned int) (((-(z - CAMERA_DISTANCE)) * 0.5f + 0.5f) * (255.0f - MIN_FOGGED)) + MIN_FOGGED;
+	if (ret > 255) ret = 255;
+	return (unsigned char)ret;
+}
+
+void sort(PointSprite *begin, PointSprite *end) {
+	PointSprite pivotValue;
+	size_t sz;
+	PointSprite *left, *right;
+	int leftCond, rightCond;
+	PointSprite tmp;
+
+	sz = end - begin;
+
+	if (sz < 2) return; /* already sorted */
+	if (sz == 2) {
+		/* trivial case */
+		if (begin[1] < begin[0]) {
+			tmp = begin[0];
+			begin[0] = begin[1];
+			begin[1] = tmp;
+			return;
+		}
+	}
+
+	/* minimum 3 elements from now on */
+
+	/* choose a pivot near the middle, since we frequently sort already sorted arrays */
+	pivotValue = begin[sz / 2];
+
+	left = begin;
+	right = end - 1;
+
+	while (right > left) {
+		/* check if left and right elements meet the conditions */
+		leftCond = pivotValue >= *left;
+		rightCond = pivotValue < *right;
+
+		if (!leftCond && !rightCond) {
+			tmp = *left;
+			*left = *right;
+			*right = tmp;
+			left++;
+			right--;
+		}
+		else if (leftCond && rightCond) {
+			left++;
+			right--;
+		}
+		else if (leftCond) {
+			left++;
+		}
+		else {
+			right--;
+		}
+	}
+
+	/* recursion */
+	sort(begin, left);
+	sort(left, end);
+}
+
+void sortPointSprites() {
+	sort(pointSprites, pointSprites + pointSpriteCount);
+}
+

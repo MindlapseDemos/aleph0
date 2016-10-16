@@ -16,13 +16,18 @@
 #define BLUR_BUFFER_SIZE (BLUR_BUFFER_WIDTH * BLUR_BUFFER_HEIGHT)
 static unsigned char *blurBuffer, *blurBuffer2;
 
+#define THUNDER_RECT_SIZE 4
+#define THUNDER_RANDOMNESS 80
+#define THUNDER_SECONDS 0.1f
+
 /* TODO: Load palette from file */
 static unsigned short palette[256];
 
 void clearBlurBuffer();
-void drawPatternOnBlurBuffer();
+void drawPatternOnBlurBuffer(int seed);
 void applyBlur();
 void blitEffect();
+void thunder(int x0, int y0, int x1, int y1, int seed, int randomness, int depth);
 
 static int init(void);
 static void destroy(void);
@@ -78,13 +83,23 @@ static void start(long trans_time)
 }
 
 
+static float remainingThunderDuration = THUNDER_SECONDS;
+static int thunderPattern = 0;
+
 static void draw(void)
 {
-
 	lastFrameDuration = (time_msec - lastFrameTime) / 1000.0f;
 	lastFrameTime = time_msec;
+
+	remainingThunderDuration -= lastFrameDuration;
+	if (remainingThunderDuration <= 0) {
+		thunderPattern++;
+		remainingThunderDuration = THUNDER_SECONDS;
+	}
 	
-	drawPatternOnBlurBuffer();
+	
+	
+	drawPatternOnBlurBuffer(thunderPattern);
 	applyBlur();
 	blitEffect();
 
@@ -97,23 +112,8 @@ void clearBlurBuffer() {
 	memset(blurBuffer2, 0, BLUR_BUFFER_SIZE);
 }
 
-void drawPatternOnBlurBuffer() {
-	int i, j;
-	unsigned char *dst = blurBuffer + BLUR_BUFFER_WIDTH + 1;
-	int starty, stopy, startx, stopx;
-
-	starty = rand() % 60;
-	stopy = starty + rand() % 60;
-	startx = rand() % 80;
-	stopx = startx + rand() % 80;
-
-	if (rand() % 2) return;
-
-	for (j = starty; j < stopy; j++) {
-		for (i = startx; i < stopx; i++) {
-			dst[i + j * BLUR_BUFFER_WIDTH] = 255;
-		}
-	}
+void drawPatternOnBlurBuffer(int seed) {
+	thunder(20, 20, 140, 100, seed, THUNDER_RANDOMNESS, 6);
 }
 
 void applyBlur() {
@@ -125,6 +125,8 @@ void applyBlur() {
 	for (j = 0; j < 120; j++) {
 		for (i = 0; i < 160; i++) {
 			*dst = (*(src - 1) + *(src + 1) + *(src - BLUR_BUFFER_WIDTH) + *(src + BLUR_BUFFER_WIDTH)) >> 2;
+			if (*dst > 4) *dst -= 4;
+			else *dst = 0;
 			dst++;
 			src++;
 		}
@@ -174,7 +176,24 @@ void blitEffect() {
 
 }
 
+void thunder(int x0, int y0, int x1, int y1, int seed, int randomness, int depth) {
+	int mx = ((x0 + x1) >> 1) + rand() % randomness - randomness / 2;
+	int my = ((y0 + y1) >> 1) + rand() % randomness - randomness / 2;
+	int i, j;
+	unsigned char *dst = blurBuffer + BLUR_BUFFER_WIDTH + 1 + mx + my * BLUR_BUFFER_WIDTH;
 
+	if (depth <= 0) return;
+
+	srand(seed);
+
+	for (j = 0; j < THUNDER_RECT_SIZE; j++) {
+		memset(dst, 255, THUNDER_RECT_SIZE);
+		dst += BLUR_BUFFER_WIDTH;
+	}
+
+	thunder(x0, y0, mx, my, rand(), randomness >> 1, depth-1);
+	thunder(mx, my, x1, y1, rand(), randomness >> 1, depth - 1);
+}
 
 
 

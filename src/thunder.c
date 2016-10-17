@@ -20,7 +20,7 @@ static unsigned char *blurBuffer, *blurBuffer2;
 
 #define THUNDER_RECT_SIZE 2
 #define THUNDER_RANDOMNESS 16
-#define THUNDER_SECONDS 0.1f
+#define THUNDER_SECONDS 0.075f
 
 #define VERTEX_COUNT 12
 #define PERSPECTIVE_NEUTRAL_DEPTH 0.5f
@@ -298,12 +298,14 @@ void animateMesh() {
 		MyVertex v1, v2;
 		v1 = vertexBuffer[i];
 
-		/* O re panaia mou */
 
+		v1.y *= sin(time_msec / 1000.0f + v1.x + v1.z);
+
+		/* O re panaia mou */
 		v2.x = v1.x * bx.x + v1.y * by.x + v1.z * bz.x;
 		v2.y = v1.x * bx.y + v1.y * by.y + v1.z * bz.y;
 		v2.z = v1.x * bx.z + v1.y * by.z + v1.z * bz.z;
-		
+
 		v2.z += CAMERA_DISTANCE;
 
 		vertexBufferAnimated[i] = v2;

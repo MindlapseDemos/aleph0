@@ -88,10 +88,14 @@
     <ClCompile Include="src\bump.c" />
     <ClCompile Include="src\cfgopt.c" />
     <ClCompile Include="src\demo.c" />
+    <ClCompile Include="src\dynarr.c" />
     <ClCompile Include="src\fract.c" />
     <ClCompile Include="src\gfxutil.c" />
     <ClCompile Include="src\grise.c" />
+    <ClCompile Include="src\metaball.c" />
+    <ClCompile Include="src\metasurf.c" />
     <ClCompile Include="src\plasma.c" />
+    <ClCompile Include="src\polyclip.c" />
     <ClCompile Include="src\polyfill.c" />
     <ClCompile Include="src\polytest.c" />
     <ClCompile Include="src\screen.c" />
@@ -102,11 +106,22 @@
     <ClCompile Include="src\tunnel.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\3dgfx.h" />
     <ClInclude Include="src\cfgopt.h" />
     <ClInclude Include="src\demo.h" />
+    <ClInclude Include="src\dynarr.h" />
     <ClInclude Include="src\gfxutil.h" />
+    <ClInclude Include="src\mcubes.h" />
+    <ClInclude Include="src\metasurf.h" />
+    <ClInclude Include="src\music.h" />
+    <ClInclude Include="src\polyclip.h" />
+    <ClInclude Include="src\polyfill.h" />
+    <ClInclude Include="src\polytmpl.h" />
+    <ClInclude Include="src\sball.h" />
     <ClInclude Include="src\screen.h" />
     <ClInclude Include="src\tinyfps.h" />
+    <ClInclude Include="src\util.h" />
+    <ClInclude Include="src\vmath.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -22,13 +22,7 @@
     <ClCompile Include="src\sdl\main.c">
       <Filter>src\sdl</Filter>
     </ClCompile>
-    <ClCompile Include="src\fract.c">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="src\gfxutil.c">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\grise.c">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\3dgfx.c">
@@ -52,10 +46,28 @@
     <ClCompile Include="src\cfgopt.c">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\thunder.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dynarr.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\metaball.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\metasurf.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\polyclip.c">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="src\bump.c">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\thunder.c">
+    <ClCompile Include="src\fract.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\grise.c">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
@@ -73,6 +85,39 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\cfgopt.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3dgfx.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\dynarr.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mcubes.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\metasurf.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\music.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\polyclip.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\polyfill.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\polytmpl.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\sball.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vmath.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>

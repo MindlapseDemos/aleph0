@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <string.h>
 #include <limits.h>
 #include "demo.h"
@@ -7,11 +8,21 @@
 #include "mouse.h"
 #include "timer.h"
 #include "gfx.h"
+#include "vmath.h"
+#include "sball.h"
+#include "cfgopt.h"
 #include "logger.h"
+
+static int handle_sball_event(sball_event *ev);
+static void recalc_sball_matrix(float *xform);
 
 static int quit;
 static int use_mouse;
 static long fbsize;
+
+static int use_sball;
+static vec3_t pos = {0, 0, 0};
+static quat_t rot = {0, 0, 0, 1};
 
 int main(int argc, char **argv)
 {
@@ -42,6 +53,11 @@ int main(int argc, char **argv)
 		set_text_mode();
 		return 1;
 	}
+
+	if(opt.sball && sball_init() == 0) {
+		use_sball = 1;
+	}
+
 	reset_timer();
 
 	while(!quit) {
@@ -54,6 +70,14 @@ int main(int argc, char **argv)
 		if(use_mouse) {
 			mouse_bmask = read_mouse(&mouse_x, &mouse_y);
 		}
+		if(use_sball && sball_pending()) {
+			sball_event ev;
+			printf("got sball event\n");
+			while(sball_getevent(&ev)) {
+				handle_sball_event(&ev);
+			}
+			recalc_sball_matrix(sball_matrix);
+		}
 
 		time_msec = get_msec();
 		demo_draw();
@@ -63,6 +87,9 @@ break_evloop:
 	set_text_mode();
 	demo_cleanup();
 	kb_shutdown();
+	if(use_sball) {
+		sball_shutdown();
+	}
 	return 0;
 }
 
@@ -81,4 +108,51 @@ void swap_buffers(void *pixels)
 	} else {
 		drawFps(vmem_back);
 	}
+}
+
+
+#define TX(ev)	((ev)->motion.motion[0])
+#define TY(ev)	((ev)->motion.motion[1])
+#define TZ(ev)	((ev)->motion.motion[2])
+#define RX(ev)	((ev)->motion.motion[3])
+#define RY(ev)	((ev)->motion.motion[4])
+#define RZ(ev)	((ev)->motion.motion[5])
+
+static int handle_sball_event(sball_event *ev)
+{
+	switch(ev->type) {
+	case SBALL_EV_MOTION:
+		if(RX(ev) | RY(ev) | RZ(ev)) {
+			float rx = (float)RX(ev);
+			float ry = (float)RY(ev);
+			float rz = (float)RZ(ev);
+			float axis_len = sqrt(rx * rx + ry * ry + rz * rz);
+			if(axis_len > 0.0) {
+				rot = quat_rotate(rot, axis_len * 0.001, -rx / axis_len,
+						-ry / axis_len, -rz / axis_len);
+			}
+		}
+
+		pos.x += TX(ev) * 0.001;
+		pos.y += TY(ev) * 0.001;
+		pos.z += TZ(ev) * 0.001;
+		break;
+
+	case SBALL_EV_BUTTON:
+		if(ev->button.pressed) {
+			pos = v3_cons(0, 0, 0);
+			rot = quat_cons(1, 0, 0, 0);
+		}
+		break;
+	}
+
+	return 0;
+}
+
+void recalc_sball_matrix(float *xform)
+{
+	quat_to_mat(xform, rot);
+	xform[12] = pos.x;
+	xform[13] = pos.y;
+	xform[14] = pos.z;
 }

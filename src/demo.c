@@ -19,6 +19,8 @@ unsigned long time_msec;
 int mouse_x, mouse_y;
 unsigned int mouse_bmask;
 
+float sball_matrix[] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+
 static unsigned long nframes;
 
 int demo_init(int argc, char **argv)

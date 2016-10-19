@@ -13,6 +13,8 @@ extern unsigned long time_msec;
 extern int mouse_x, mouse_y;
 extern unsigned int mouse_bmask;
 
+extern float sball_matrix[16];
+
 int demo_init(int argc, char **argv);
 void demo_cleanup(void);
 

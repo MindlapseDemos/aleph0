@@ -7,6 +7,7 @@
 #include "3dgfx.h"
 #include "gfxutil.h"
 #include "polyfill.h"	/* just for struct pimage */
+#include "cfgopt.h"
 
 struct mesh {
 	int prim;
@@ -135,8 +136,12 @@ static void draw(void)
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
 	g3d_translate(0, 0, -cam_dist);
-	g3d_rotate(cam_phi, 1, 0, 0);
-	g3d_rotate(cam_theta, 0, 1, 0);
+	if(opt.sball) {
+		g3d_mult_matrix(sball_matrix);
+	} else {
+		g3d_rotate(cam_phi, 1, 0, 0);
+		g3d_rotate(cam_theta, 0, 1, 0);
+	}
 
 	g3d_light_pos(0, -10, 10, 20);
 

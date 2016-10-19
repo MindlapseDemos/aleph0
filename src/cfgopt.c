@@ -19,6 +19,8 @@ int parse_args(int argc, char **argv)
 				opt.music = 0;
 			} else if(strcmp(argv[i], "-scr") == 0 || strcmp(argv[i], "-screen") == 0) {
 				scrname = argv[++i];
+			} else if(strcmp(argv[i], "-sball") == 0) {
+				opt.sball = !opt.sball;
 			} else {
 				fprintf(stderr, "invalid option: %s\n", argv[i]);
 				return -1;
@@ -101,6 +103,8 @@ int load_config(const char *fname)
 			opt.music = bool_value(value);
 		} else if(strcmp(line, "screen") == 0) {
 			opt.start_scr = strdup(value);
+		} else if(strcmp(line, "sball") == 0) {
+			opt.sball = bool_value(value);
 		} else {
 			fprintf(stderr, "%s:%d invalid option: %s\n", fname, nline, line);
 			return -1;

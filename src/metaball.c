@@ -43,13 +43,14 @@ static struct screen scr = {
 };
 
 static float cam_theta, cam_phi = 25;
-static float cam_dist = 3;
+static float cam_dist = 10;
 static struct mesh mmesh;
 
 static struct metasurface *msurf;
 
 #define VOL_SZ	32
 #define VOL_SCALE	10.0f
+#define VOX_DIST	(VOL_SCALE / VOL_SZ)
 #define VOL_HALF_SCALE	(VOL_SCALE * 0.5f)
 static float *volume;
 #define VOXEL(x, y, z)	(volume[(z) * VOL_SZ * VOL_SZ + (y) * VOL_SZ + (x)])
@@ -57,6 +58,7 @@ static float *volume;
 #define NUM_MBALLS	3
 static struct metaball mball[NUM_MBALLS];
 
+static int dbg;
 
 struct screen *metaballs_screen(void)
 {
@@ -81,7 +83,7 @@ static int init(void)
 	msurf_set_resolution(msurf, VOL_SZ, VOL_SZ, VOL_SZ);
 	msurf_set_bounds(msurf, 0, 0, 0, VOL_SCALE, VOL_SCALE, VOL_SCALE);
 	msurf_eval_func(msurf, eval);
-	msurf_set_threshold(msurf, 0.5);
+	msurf_set_threshold(msurf, 1.7);
 	msurf_set_inside(msurf, MSURF_GREATER);
 	msurf_vertex_func(msurf, emit_vertex);
 
@@ -108,7 +110,7 @@ static void start(long trans_time)
 	g3d_enable(G3D_LIGHTING);
 	g3d_enable(G3D_LIGHT0);
 
-	g3d_polygon_mode(G3D_WIRE);
+	g3d_polygon_mode(G3D_GOURAUD);
 }
 
 static void update(void)
@@ -162,6 +164,7 @@ static void update(void)
 	calc_voxel_field();
 
 	dynarr_free(mmesh.varr);
+	mmesh.vcount = 0;
 	mmesh.varr = dynarr_alloc(0, sizeof *mmesh.varr);
 	msurf_polygonize(msurf);
 }
@@ -178,11 +181,11 @@ static void draw(void)
 	g3d_rotate(cam_phi, 1, 0, 0);
 	g3d_rotate(cam_theta, 0, 1, 0);
 
-	/*g3d_light_pos(0, -10, 10, 20);*/
+	g3d_light_pos(0, -10, 10, 20);
 
-	/*zsort(&metamesh);*/
+	zsort(&mmesh);
 
-	/*g3d_mtl_diffuse(0.6, 0.6, 0.6);*/
+	g3d_mtl_diffuse(0.6, 0.6, 0.6);
 
 	draw_mesh(&mmesh);
 
@@ -264,13 +267,14 @@ static void calc_voxel_field(void)
 			}
 		}
 	}
+	++dbg;
 }
 
 static float eval(struct metasurface *ms, float x, float y, float z)
 {
-	int xidx = cround64(x);
-	int yidx = cround64(y);
-	int zidx = cround64(z);
+	int xidx = cround64(VOL_SZ * x / VOL_SCALE);
+	int yidx = cround64(VOL_SZ * y / VOL_SCALE);
+	int zidx = cround64(VOL_SZ * z / VOL_SCALE);
 
 	assert(xidx >= 0 && xidx < VOL_SZ);
 	assert(yidx >= 0 && yidx < VOL_SZ);
@@ -282,6 +286,7 @@ static float eval(struct metasurface *ms, float x, float y, float z)
 static void emit_vertex(struct metasurface *ms, float x, float y, float z)
 {
 	struct g3d_vertex v;
+	float val, len;
 
 	v.x = x - VOL_HALF_SCALE;
 	v.y = y - VOL_HALF_SCALE;
@@ -290,7 +295,20 @@ static void emit_vertex(struct metasurface *ms, float x, float y, float z)
 	v.g = cround64(255.0 * y / VOL_SCALE);
 	v.b = cround64(255.0 * z / VOL_SCALE);
 
+	val = eval(ms, x, y, z);
+	v.nx = eval(ms, x + VOX_DIST, y, z) - val;
+	v.ny = eval(ms, x, y + VOX_DIST, z) - val;
+	v.nz = eval(ms, x, y, z - VOX_DIST) - val;
+
+	if((len = sqrt(v.nx * v.nx + v.ny * v.ny + v.nz * v.nz)) != 0.0f) {
+		v.nx /= len;
+		v.ny /= len;
+		v.nz /= len;
+	}
+
 	mmesh.varr = dynarr_push(mmesh.varr, &v);
 	assert(mmesh.varr);
 	++mmesh.vcount;
 }
+
+

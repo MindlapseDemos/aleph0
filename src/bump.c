@@ -98,7 +98,7 @@ static int init(void)
 	{
 		for (x = 0; x < fb_width; x++)
 		{
-			const float offsetPower = 0.5f;
+			const float offsetPower = 0.75f;
 			int dx, dy, xp, yp;
 
 			dx = i < fb_size - 1 ? (int)((heightmap[i] - heightmap[i + 1]) * offsetPower) : 0;
@@ -152,7 +152,7 @@ static int init(void)
 			float invDist = ((float)particleRadius - (float)sqrt(xc * xc + yc * yc)) / (float)particleRadius;
 			if (invDist < 0.0f) invDist = 0.0f;
 
-			c = (int)(invDist * 63);
+			c = (int)(pow(invDist, 0.75f) * 63);
 			particleLight[i++] = ((c >> 1) << 11) | (c << 5) | (c >> 1);
 		}
 	}
@@ -268,18 +268,20 @@ static void animateLights()
 {
 	struct point center;
 	float dt = (float)(time_msec - startingTime) / 1000.0f;
+	float tt = 1.0f - sin(dt);
+	float disperse = tt * 64.0f;
 
 	center.x = (fb_width >> 1) - (BIG_LIGHT_WIDTH / 2);
 	center.y = (fb_height >> 1) - (BIG_LIGHT_HEIGHT / 2);
 
-	bigLightPoint[0].x = center.x + sin(1.2f * dt) * 144.0f;
-	bigLightPoint[0].y = center.y + sin(0.8f * dt) * 148.0f;
+	bigLightPoint[0].x = center.x + sin(1.2f * dt) * (144.0f + disperse);
+	bigLightPoint[0].y = center.y + sin(0.8f * dt) * (148.0f + disperse);
 
-	bigLightPoint[1].x = center.x + sin(1.5f * dt) * 156.0f;
-	bigLightPoint[1].y = center.y + sin(1.1f * dt) * 92.0f;
+	bigLightPoint[1].x = center.x + sin(1.5f * dt) * (156.0f + disperse);
+	bigLightPoint[1].y = center.y + sin(1.1f * dt) * (92.0f + disperse);
 
-	bigLightPoint[2].x = center.x + sin(2.0f * dt) * 112.0f;
-	bigLightPoint[2].y = center.y + sin(1.3f * dt) * 136.0f;
+	bigLightPoint[2].x = center.x + sin(2.0f * dt) * (112.0f + disperse);
+	bigLightPoint[2].y = center.y + sin(1.3f * dt) * (136.0f + disperse);
 }
 
 static void renderBump(unsigned short *vram)
@@ -296,15 +298,16 @@ static void animateParticles()
 {
 	int i;
 	struct point center;
-	float dt = (float)(time_msec - startingTime) / 1000.0f;
+	float dt = (float)(time_msec - startingTime) / 2000.0f;
+	float tt = sin(dt);
 
 	center.x = (fb_width >> 1) - (PARTICLE_LIGHT_WIDTH / 2);
 	center.y = (fb_height >> 1) - (PARTICLE_LIGHT_HEIGHT / 2);
 
 	for (i = 0; i < NUM_PARTICLES; i++)
 	{
-		particlePoint[i].x = center.x + sin(1.2f * (i*i*i + dt)) * 74.0f + sin(0.6f * (i + dt)) * 144.0f;
-		particlePoint[i].y = center.y + sin(1.8f * (i + dt)) * 68.0f + sin(0.5f * (i*i + dt)) * 132.0f;
+		particlePoint[i].x = center.x + (sin(1.2f * (i*i*i + dt)) * 74.0f + sin(0.6f * (i + dt)) * 144.0f) * tt;
+		particlePoint[i].y = center.y + (sin(1.8f * (i + dt)) * 68.0f + sin(0.5f * (i*i + dt)) * 132.0f) * tt;
 	}
 }
 

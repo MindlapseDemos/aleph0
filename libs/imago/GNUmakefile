@@ -12,4 +12,4 @@ $(alib): $(obj)
 
 .PHONY: clean
 clean:
-	rm -f $(obj) $(bin)
+	rm -f $(obj) $(alib)

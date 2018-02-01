@@ -1,32 +1,15 @@
-/*
-metasurf - a library for implicit surface polygonization
-Copyright (C) 2011-2015  John Tsiombikas <nuclear@member.fsf.org>
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
 #ifndef METASURF_H_
 #define METASURF_H_
+
+#include "3dgfx.h"
 
 #define MSURF_GREATER	1
 #define MSURF_LESS		0
 
-struct metasurface;
+#define MSURF_FLIP			1
+#define MSURF_NORMALIZE		2
 
-typedef float (*msurf_eval_func_t)(struct metasurface *ms, float, float, float);
-typedef void (*msurf_vertex_func_t)(struct metasurface *ms, float, float, float);
-typedef void (*msurf_normal_func_t)(struct metasurface *ms, float, float, float);
+struct metasurface;
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,21 +18,13 @@ extern "C" {
 struct metasurface *msurf_create(void);
 void msurf_free(struct metasurface *ms);
 
-void msurf_set_user_data(struct metasurface *ms, void *udata);
-void *msurf_get_user_data(struct metasurface *ms);
+void msurf_enable(struct metasurface *ms, unsigned int opt);
+void msurf_disable(struct metasurface *ms, unsigned int opt);
+int msurf_is_enabled(struct metasurface *ms, unsigned int opt);
 
 /* which is inside above or below the threshold */
 void msurf_set_inside(struct metasurface *ms, int inside);
 int msurf_get_inside(struct metasurface *ms);
-
-/* set a scalar field evaluator function */
-void msurf_eval_func(struct metasurface *ms, msurf_eval_func_t func);
-
-/* set a generated vertex callback function */
-void msurf_vertex_func(struct metasurface *ms, msurf_vertex_func_t func);
-
-/* set a generated surface normal callback function (unused yet) */
-void msurf_normal_func(struct metasurface *ms, msurf_normal_func_t func);
 
 /* set the bounding box (default: -1, -1, -1, 1, 1, 1)
  * keep this as tight as possible to avoid wasting grid resolution
@@ -67,10 +42,15 @@ void msurf_get_resolution(struct metasurface *ms, int *xres, int *yres, int *zre
 void msurf_set_threshold(struct metasurface *ms, float thres);
 float msurf_get_threshold(struct metasurface *ms);
 
+/* get pointer to the scalar field */
+float *msurf_voxels(struct metasurface *ms);
+float *msurf_slice(struct metasurface *ms, int idx);
 
 /* finally call this to perform the polygonization */
 int msurf_polygonize(struct metasurface *ms);
 
+int msurf_vertex_count(struct metasurface *ms);
+struct g3d_vertex *msurf_vertices(struct metasurface *ms);
 
 #ifdef __cplusplus
 }

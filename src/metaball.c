@@ -9,7 +9,6 @@
 #include "gfxutil.h"
 #include "util.h"
 #include "metasurf.h"
-#include "dynarr.h"
 
 struct mesh {
 	int prim;
@@ -31,8 +30,6 @@ static void draw_mesh(struct mesh *mesh);
 static void zsort(struct mesh *m);
 
 static void calc_voxel_field(void);
-static float eval(struct metasurface *ms, float x, float y, float z);
-static void emit_vertex(struct metasurface *ms, float x, float y, float z);
 
 static struct screen scr = {
 	"metaballs",
@@ -52,8 +49,6 @@ static struct metasurface *msurf;
 #define VOL_SCALE	10.0f
 #define VOX_DIST	(VOL_SCALE / VOL_SZ)
 #define VOL_HALF_SCALE	(VOL_SCALE * 0.5f)
-static float *volume;
-#define VOXEL(x, y, z)	(volume[(z) * VOL_SZ * VOL_SZ + (y) * VOL_SZ + (x)])
 
 #define NUM_MBALLS	3
 static struct metaball mball[NUM_MBALLS];
@@ -67,11 +62,6 @@ struct screen *metaballs_screen(void)
 
 static int init(void)
 {
-	if(!(volume = malloc(VOL_SZ * VOL_SZ * VOL_SZ * sizeof *volume))) {
-		fprintf(stderr, "failed to allocate %dx%dx%d voxel field\n", VOL_SZ, VOL_SZ, VOL_SZ);
-		return -1;
-	}
-
 	mball[0].energy = 1.2;
 	mball[1].energy = 0.8;
 	mball[2].energy = 1.0;
@@ -81,11 +71,10 @@ static int init(void)
 		return -1;
 	}
 	msurf_set_resolution(msurf, VOL_SZ, VOL_SZ, VOL_SZ);
-	msurf_set_bounds(msurf, 0, 0, 0, VOL_SCALE, VOL_SCALE, VOL_SCALE);
-	msurf_eval_func(msurf, eval);
+	msurf_set_bounds(msurf, -VOL_HALF_SCALE, -VOL_HALF_SCALE, -VOL_HALF_SCALE,
+			VOL_HALF_SCALE, VOL_HALF_SCALE, VOL_HALF_SCALE);
 	msurf_set_threshold(msurf, 1.7);
 	msurf_set_inside(msurf, MSURF_GREATER);
-	msurf_vertex_func(msurf, emit_vertex);
 
 	mmesh.prim = G3D_TRIANGLES;
 	mmesh.varr = 0;
@@ -97,7 +86,7 @@ static int init(void)
 
 static void destroy(void)
 {
-	dynarr_free(mmesh.varr);
+	msurf_free(msurf);
 }
 
 static void start(long trans_time)
@@ -162,11 +151,10 @@ static void update(void)
 	}
 
 	calc_voxel_field();
-
-	dynarr_free(mmesh.varr);
-	mmesh.vcount = 0;
-	mmesh.varr = dynarr_alloc(0, sizeof *mmesh.varr);
 	msurf_polygonize(msurf);
+
+	mmesh.vcount = msurf_vertex_count(msurf);
+	mmesh.varr = msurf_vertices(msurf);
 }
 
 static void draw(void)
@@ -208,19 +196,16 @@ static struct {
 
 static int zsort_cmp(const void *aptr, const void *bptr)
 {
-	const int16_t *a = (const int16_t*)aptr;
-	const int16_t *b = (const int16_t*)bptr;
-
 	const float *m = zsort_cls.xform;
 
-	const struct g3d_vertex *va = zsort_cls.varr + a[0];
-	const struct g3d_vertex *vb = zsort_cls.varr + b[0];
+	const struct g3d_vertex *va = (const struct g3d_vertex*)aptr;
+	const struct g3d_vertex *vb = (const struct g3d_vertex*)bptr;
 
 	float za = m[2] * va->x + m[6] * va->y + m[10] * va->z + m[14];
 	float zb = m[2] * vb->x + m[6] * vb->y + m[10] * vb->z + m[14];
 
-	va = zsort_cls.varr + a[2];
-	vb = zsort_cls.varr + b[2];
+	++va;
+	++vb;
 
 	za += m[2] * va->x + m[6] * va->y + m[10] * va->z + m[14];
 	zb += m[2] * vb->x + m[6] * vb->y + m[10] * vb->z + m[14];
@@ -230,27 +215,32 @@ static int zsort_cmp(const void *aptr, const void *bptr)
 
 static void zsort(struct mesh *m)
 {
-	int nfaces = m->icount / m->prim;
+	int nfaces = m->vcount / m->prim;
 
 	zsort_cls.varr = m->varr;
 	zsort_cls.xform = g3d_get_matrix(G3D_MODELVIEW, 0);
 
-	qsort(m->iarr, nfaces, m->prim * sizeof *m->iarr, zsort_cmp);
+	qsort(m->varr, nfaces, m->prim * sizeof *m->varr, zsort_cmp);
 }
 
 static void calc_voxel_field(void)
 {
 	int i, j, k, b;
-	float *voxptr = volume;
+	float *voxptr;
+
+	if(!(voxptr = msurf_voxels(msurf))) {
+		fprintf(stderr, "failed to allocate voxel field\n");
+		abort();
+	}
 
 	for(i=0; i<VOL_SZ; i++) {
-		float z = VOL_SCALE * ((float)i / (float)VOL_SZ - 0.5);
+		float z = -VOL_HALF_SCALE + i * VOX_DIST;
 
 		for(j=0; j<VOL_SZ; j++) {
-			float y = VOL_SCALE * ((float)j / (float)VOL_SZ - 0.5);
+			float y = -VOL_HALF_SCALE + j * VOX_DIST;
 
 			for(k=0; k<VOL_SZ; k++) {
-				float x = VOL_SCALE * ((float)k / (float)VOL_SZ - 0.5);
+				float x = -VOL_HALF_SCALE + k * VOX_DIST;
 
 				float val = 0.0f;
 				for(b=0; b<NUM_MBALLS; b++) {
@@ -269,46 +259,3 @@ static void calc_voxel_field(void)
 	}
 	++dbg;
 }
-
-static float eval(struct metasurface *ms, float x, float y, float z)
-{
-	int xidx = cround64(VOL_SZ * x / VOL_SCALE);
-	int yidx = cround64(VOL_SZ * y / VOL_SCALE);
-	int zidx = cround64(VOL_SZ * z / VOL_SCALE);
-
-	assert(xidx >= 0 && xidx < VOL_SZ);
-	assert(yidx >= 0 && yidx < VOL_SZ);
-	assert(zidx >= 0 && zidx < VOL_SZ);
-
-	return VOXEL(xidx, yidx, zidx);
-}
-
-static void emit_vertex(struct metasurface *ms, float x, float y, float z)
-{
-	struct g3d_vertex v;
-	float val, len;
-
-	v.x = x - VOL_HALF_SCALE;
-	v.y = y - VOL_HALF_SCALE;
-	v.z = z - VOL_HALF_SCALE;
-	v.r = cround64(255.0 * x / VOL_SCALE);
-	v.g = cround64(255.0 * y / VOL_SCALE);
-	v.b = cround64(255.0 * z / VOL_SCALE);
-
-	val = eval(ms, x, y, z);
-	v.nx = eval(ms, x + VOX_DIST, y, z) - val;
-	v.ny = eval(ms, x, y + VOX_DIST, z) - val;
-	v.nz = eval(ms, x, y, z - VOX_DIST) - val;
-
-	if((len = sqrt(v.nx * v.nx + v.ny * v.ny + v.nz * v.nz)) != 0.0f) {
-		v.nx /= len;
-		v.ny /= len;
-		v.nz /= len;
-	}
-
-	mmesh.varr = dynarr_push(mmesh.varr, &v);
-	assert(mmesh.varr);
-	++mmesh.vcount;
-}
-
-

@@ -55,6 +55,7 @@ int g3d_init(void);
 void g3d_destroy(void);
 
 void g3d_framebuffer(int width, int height, void *pixels);
+void g3d_viewport(int x, int y, int w, int h);
 
 void g3d_enable(unsigned int opt);
 void g3d_disable(unsigned int opt);

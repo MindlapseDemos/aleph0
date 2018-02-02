@@ -134,7 +134,7 @@ static void update(void)
 
 	{
 		int i, j;
-		float tsec = time_msec / 1000.0f;
+		float tsec = 0;//time_msec / 1000.0f;
 		static float phase[] = {0.0, M_PI / 3.0, M_PI * 0.8};
 		static float speed[] = {0.8, 1.4, 1.0};
 		static float scale[][3] = {{1, 2, 0.8}, {0.5, 1.6, 0.6}, {1.5, 0.7, 0.5}};
@@ -159,9 +159,18 @@ static void update(void)
 
 static void draw(void)
 {
+	int i, j;
+
 	update();
 
 	memset(fb_pixels, 0, fb_width * fb_height * 2);
+
+	for(i=0; i<120; i++) {
+		for(j=0; j<160; j++) {
+			fb_pixels[(i + 60) * 320 + (j + 80)] = 0x1e7;
+		}
+	}
+	g3d_viewport(80, 60, 160, 120);
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();

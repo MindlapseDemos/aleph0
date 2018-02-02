@@ -102,11 +102,35 @@ void POLYFILL(struct pvertex *pv, int nverts)
 		int32_t y1 = pv[next].y;
 
 		if((y0 >> 8) == (y1 >> 8)) {
-			if(y0 > y1) {
+			/*if(y0 > y1) {*/
+				int i0, i1;
 				int idx = y0 >> 8;
-				left[idx].x = pv[i].x < pv[next].x ? pv[i].x : pv[next].x;
-				right[idx].x = pv[i].x < pv[next].x ? pv[next].x : pv[i].x;
-			}
+				if(pv[i].x < pv[next].x) {
+					i0 = i;
+					i1 = next;
+				} else {
+					i0 = next;
+					i1 = i;
+				}
+				left[idx].x = pv[i0].x;
+				right[idx].x = pv[i1].x;
+#ifdef GOURAUD
+				left[idx].r = pv[i0].r << COLOR_SHIFT;
+				left[idx].g = pv[i0].g << COLOR_SHIFT;
+				left[idx].b = pv[i0].b << COLOR_SHIFT;
+				right[idx].r = pv[i1].r << COLOR_SHIFT;
+				right[idx].g = pv[i1].g << COLOR_SHIFT;
+				right[idx].b = pv[i1].b << COLOR_SHIFT;
+#endif
+#ifdef TEXMAP
+				left[idx].u = pv[i0].u;
+				left[idx].v = pv[i0].v;
+				right[idx].u = pv[i1].u;
+				right[idx].v = pv[i1].v;
+#endif
+				if(idx > slbot) slbot = idx;
+				if(idx < sltop) sltop = idx;
+			/*}*/
 		} else {
 			struct pvertex *edge = y0 > y1 ? left : right;
 			uint32_t res = SCANEDGE(pv + i, pv + next, edge);

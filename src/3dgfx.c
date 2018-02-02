@@ -5,6 +5,7 @@
 #include <assert.h>
 #include "3dgfx.h"
 #include "polyfill.h"
+#include "polyclip.h"
 #include "inttypes.h"
 #include "util.h"
 
@@ -42,6 +43,8 @@ struct g3d_state {
 
 	int width, height;
 	void *pixels;
+
+	int vport[4];
 };
 
 static void xform4_vec3(const float *mat, float *vec);
@@ -94,6 +97,18 @@ void g3d_framebuffer(int width, int height, void *pixels)
 	pfill_fb.pixels = pixels;
 	pfill_fb.width = width;
 	pfill_fb.height = height;
+
+	st->vport[0] = st->vport[1] = 0;
+	st->vport[2] = width;
+	st->vport[3] = height;
+}
+
+void g3d_viewport(int x, int y, int w, int h)
+{
+	st->vport[0] = x;
+	st->vport[1] = y;
+	st->vport[2] = w;
+	st->vport[3] = h;
 }
 
 void g3d_enable(unsigned int opt)
@@ -376,8 +391,8 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 		const int16_t *iarr, int iarr_size)
 {
 	int i, j, nfaces;
-	struct pvertex pv[4];
-	struct g3d_vertex v[4];
+	struct pvertex pv[16];
+	struct g3d_vertex v[16];
 	int vnum = prim; /* primitive vertex counts correspond to enum values */
 	int mvtop = st->mtop[G3D_MODELVIEW];
 	int ptop = st->mtop[G3D_PROJECTION];
@@ -402,7 +417,16 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 			xform4_vec3(st->mat[G3D_PROJECTION][ptop], &v[i].x);
 		}
 
-		/* TODO clipping */
+		/* clipping */
+		for(i=0; i<6; i++) {
+			struct g3d_vertex orig[16];
+			memcpy(orig, v, vnum * sizeof *v);
+
+			if(clip_frustum(v, &vnum, orig, vnum, i) < 0) {
+				/* polygon completely outside of view volume. discard */
+				return;
+			}
+		}
 
 		for(i=0; i<vnum; i++) {
 			if(v[i].w != 0.0f) {
@@ -412,8 +436,8 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 			}
 
 			/* viewport transformation */
-			v[i].x = (v[i].x * 0.5f + 0.5f) * (float)st->width;
-			v[i].y = (0.5f - v[i].y * 0.5f) * (float)st->height;
+			v[i].x = (v[i].x * 0.5f + 0.5f) * (float)st->vport[2] + st->vport[0];
+			v[i].y = (0.5f - v[i].y * 0.5f) * (float)st->vport[3] + st->vport[1];
 
 			/* convert pos to 24.8 fixed point */
 			pv[i].x = cround64(v[i].x * 256.0f);

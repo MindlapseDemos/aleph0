@@ -10,6 +10,8 @@ struct ray {
 static int clip_edge(struct g3d_vertex *poly, int *vnumptr,
 		const struct g3d_vertex *v0, const struct g3d_vertex *v1,
 		const struct cplane *plane);
+static int clip_edge_frustum(struct g3d_vertex *poly, int *vnumptr,
+		const struct g3d_vertex *v0, const struct g3d_vertex *v1, int fplane);
 static float distance_signed(float *pos, const struct cplane *plane);
 static int intersect(const struct ray *ray, const struct cplane *plane, float *t);
 
@@ -24,7 +26,31 @@ int clip_poly(struct g3d_vertex *vout, int *voutnum,
 	for(i=0; i<vnum; i++) {
 		int res = clip_edge(vout, &out_vnum, vin + i, vin + (i + 1) % vnum, plane);
 		if(res == 0) {
-			edges_clipped++;
+			++edges_clipped;
+		}
+	}
+
+	if(out_vnum <= 0) {
+		assert(edges_clipped == 0);
+		return -1;
+	}
+
+	*voutnum = out_vnum;
+	return edges_clipped > 0 ? 0 : 1;
+}
+
+
+int clip_frustum(struct g3d_vertex *vout, int *voutnum,
+		const struct g3d_vertex *vin, int vnum, int fplane)
+{
+	int i;
+	int edges_clipped = 0;
+	int out_vnum = 0;
+
+	for(i=0; i<vnum; i++) {
+		int res = clip_edge_frustum(vout, &out_vnum, vin + i, vin + (i + 1) % vnum, fplane);
+		if(res == 0) {
+			++edges_clipped;
 		}
 	}
 
@@ -151,4 +177,106 @@ static int intersect(const struct ray *ray, const struct cplane *plane, float *t
 
 	*t = (plane->nx * orig_pt_dir[0] + plane->ny * orig_pt_dir[1] + plane->nz * orig_pt_dir[2]) / ndotdir;
 	return 1;
+}
+
+/* homogeneous frustum clipper helpers */
+
+static int inside_frustum_plane(const struct g3d_vertex *v, int fplane)
+{
+	switch(fplane) {
+	case CLIP_LEFT:
+		return v->x >= -v->w;
+	case CLIP_RIGHT:
+		return v->x <= v->w;
+	case CLIP_BOTTOM:
+		return v->y >= -v->w;
+	case CLIP_TOP:
+		return v->y <= v->w;
+	case CLIP_NEAR:
+		return v->z >= -v->w;
+	case CLIP_FAR:
+		return v->z <= v->w;
+	}
+	assert(0);
+	return 0;
+}
+
+static float intersect_frustum(const struct g3d_vertex *a, const struct g3d_vertex *b, int fplane)
+{
+	switch(fplane) {
+	case CLIP_LEFT:
+		return (-a->w - a->x) / (b->x - a->x + b->w - a->w);
+	case CLIP_RIGHT:
+		return (a->w - a->x) / (b->x - a->x - b->w + a->w);
+	case CLIP_BOTTOM:
+		return (-a->w - a->y) / (b->y - a->y + b->w - a->w);
+	case CLIP_TOP:
+		return (a->w - a->y) / (b->y - a->y - b->w + a->w);
+	case CLIP_NEAR:
+		return (-a->w - a->z) / (b->z - a->z + b->w - a->w);
+	case CLIP_FAR:
+		return (a->w - a->z) / (b->z - a->z - b->w + a->w);
+	}
+
+	assert(0);
+	return 0;
+}
+
+static int clip_edge_frustum(struct g3d_vertex *poly, int *vnumptr,
+		const struct g3d_vertex *v0, const struct g3d_vertex *v1, int fplane)
+{
+	int vnum = *vnumptr;
+	int in0, in1;
+	float t;
+
+	in0 = inside_frustum_plane(v0, fplane);
+	in1 = inside_frustum_plane(v1, fplane);
+
+	if(in0) {
+		/* start inside */
+		if(in1) {
+			/* all inside */
+			poly[vnum++] = *v1;	/* append v1 */
+			*vnumptr = vnum;
+			return 1;
+		} else {
+			/* going out */
+			struct g3d_vertex *vptr = poly + vnum;
+
+			t = intersect_frustum(v0, v1, fplane);
+
+			vptr->x = v0->x + (v1->x - v0->x) * t;
+			vptr->y = v0->y + (v1->y - v0->y) * t;
+			vptr->z = v0->z + (v1->z - v0->z) * t;
+			vptr->w = v0->w + (v1->w - v0->w) * t;
+
+			LERP_VATTR(vptr, v0, v1, t);
+			++vnum;	/* append new vertex on the intersection point */
+		}
+	} else {
+		/* start outside */
+		if(in1) {
+			/* going in */
+			struct g3d_vertex *vptr = poly + vnum;
+
+			t = intersect_frustum(v0, v1, fplane);
+
+			vptr->x = v0->x + (v1->x - v0->x) * t;
+			vptr->y = v0->y + (v1->y - v0->y) * t;
+			vptr->z = v0->z + (v1->z - v0->z) * t;
+			vptr->w = v0->w + (v1->w - v0->w) * t;
+
+			LERP_VATTR(vptr, v0, v1, t);
+			++vnum;	/* append new vertex on the intersection point */
+
+			/* then append v1 ... */
+			poly[vnum++] = *v1;
+		} else {
+			/* all outside */
+			return -1;
+		}
+	}
+
+	*vnumptr = vnum;
+	return 0;
 }

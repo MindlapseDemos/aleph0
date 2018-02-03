@@ -98,9 +98,7 @@ void g3d_framebuffer(int width, int height, void *pixels)
 	pfill_fb.width = width;
 	pfill_fb.height = height;
 
-	st->vport[0] = st->vport[1] = 0;
-	st->vport[2] = width;
-	st->vport[3] = height;
+	g3d_viewport(0, 0, width, height);
 }
 
 void g3d_viewport(int x, int y, int w, int h)
@@ -404,6 +402,7 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 	nfaces = (iarr ? iarr_size : varr_size) / vnum;
 
 	for(j=0; j<nfaces; j++) {
+		vnum = prim;	/* reset vnum for each iteration */
 
 		for(i=0; i<vnum; i++) {
 			v[i] = iarr ? varr[*iarr++] : *varr++;
@@ -419,14 +418,17 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 
 		/* clipping */
 		for(i=0; i<6; i++) {
-			struct g3d_vertex orig[16];
-			memcpy(orig, v, vnum * sizeof *v);
+			struct g3d_vertex tmpv[16];
+			memcpy(tmpv, v, vnum * sizeof *v);
 
-			if(clip_frustum(v, &vnum, orig, vnum, i) < 0) {
+			if(clip_frustum(v, &vnum, tmpv, vnum, i) < 0) {
 				/* polygon completely outside of view volume. discard */
-				return;
+				vnum = 0;
+				break;
 			}
 		}
+
+		if(!vnum) continue;
 
 		for(i=0; i<vnum; i++) {
 			if(v[i].w != 0.0f) {

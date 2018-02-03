@@ -134,7 +134,7 @@ static void update(void)
 
 	{
 		int i, j;
-		float tsec = 0;//time_msec / 1000.0f;
+		float tsec = time_msec / 1000.0f;
 		static float phase[] = {0.0, M_PI / 3.0, M_PI * 0.8};
 		static float speed[] = {0.8, 1.4, 1.0};
 		static float scale[][3] = {{1, 2, 0.8}, {0.5, 1.6, 0.6}, {1.5, 0.7, 0.5}};
@@ -185,6 +185,8 @@ static void draw(void)
 	g3d_mtl_diffuse(0.6, 0.6, 0.6);
 
 	draw_mesh(&mmesh);
+
+	g3d_viewport(0, 0, fb_width, fb_height);
 
 	swap_buffers(fb_pixels);
 }

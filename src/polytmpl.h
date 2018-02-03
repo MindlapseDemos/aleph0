@@ -93,8 +93,9 @@ void POLYFILL(struct pvertex *pv, int nverts)
 		if(pv[i].y > pv[botidx].y) botidx = i;
 	}
 
-	left = alloca(pfill_fb.height * sizeof *left);
-	right = alloca(pfill_fb.height * sizeof *right);
+	/* +1 to avoid crashing due to off-by-one rounding errors in the rasterization */
+	left = alloca((pfill_fb.height + 1) * sizeof *left);
+	right = alloca((pfill_fb.height + 1) * sizeof *right);
 
 	for(i=0; i<nverts; i++) {
 		int next = NEXTIDX(i);

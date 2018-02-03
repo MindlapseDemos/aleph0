@@ -30,7 +30,8 @@ int main(int argc, char **argv)
 	xsz = fb_width * fbscale;
 	ysz = fb_height * fbscale;
 
-	if(!(fb_pixels = malloc(fb_width * fb_height * fb_bpp / CHAR_BIT))) {
+	/* allocate 1 extra row as a guard band, until we fucking fix the rasterizer */
+	if(!(fb_pixels = malloc(fb_width * (fb_height + 1) * fb_bpp / CHAR_BIT))) {
 		fprintf(stderr, "failed to allocate virtual framebuffer\n");
 		return 1;
 	}

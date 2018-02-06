@@ -154,43 +154,6 @@ void set_palette(int idx, int r, int g, int b)
 	vbe_set_palette(idx, col, 1, pal_bits);
 }
 
-#ifdef __WATCOMC__
-void wait_vsync_asm(void);
-#pragma aux wait_vsync_asm = \
-	"mov dx, 0x3da" \
-	"l1:" \
-	"in al, dx" \
-	"and al, 0x8" \
-	"jnz l1" \
-	"l2:" \
-	"in al, dx" \
-	"and al, 0x8" \
-	"jz l2" \
-	modify[al dx];
-
-void wait_vsync(void)
-{
-	wait_vsync_asm();
-}
-#endif
-
-#ifdef __DJGPP__
-void wait_vsync(void)
-{
-	asm volatile (
-		"mov $0x3da, %%dx\n\t"
-		"0:\n\t"
-		"in %%dx, %%al\n\t"
-		"and $8, %%al\n\t"
-		"jnz 0b\n\t"
-		"0:\n\t"
-		"in %%dx, %%al\n\t"
-		"and $8, %%al\n\t"
-		"jz 0b\n\t"
-		:::"%eax","%edx");
-}
-#endif
-
 static unsigned int make_mask(int sz, int pos)
 {
 	unsigned int i, mask = 0;

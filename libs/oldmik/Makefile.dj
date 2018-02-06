@@ -15,7 +15,7 @@ endif
 
 CC = $(TOOLPREFIX)gcc
 AR = $(TOOLPREFIX)ar
-CFLAGS = $(opt) $(dbg) -Isrc
+CFLAGS = -march=pentium $(opt) $(dbg) -Isrc
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

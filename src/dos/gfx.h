@@ -15,7 +15,35 @@ int get_color_mask(unsigned int *rmask, unsigned int *gmask, unsigned int *bmask
 
 void set_palette(int idx, int r, int g, int b);
 
+#ifdef __WATCOMC__
 void wait_vsync(void);
+#pragma aux wait_vsync = \
+	"mov dx, 0x3da" \
+	"l1:" \
+	"in al, dx" \
+	"and al, 0x8" \
+	"jnz l1" \
+	"l2:" \
+	"in al, dx" \
+	"and al, 0x8" \
+	"jz l2" \
+	modify[al dx];
+#endif
+
+#ifdef __DJGPP__
+#define wait_vsync()  asm volatile ( \
+	"mov $0x3da, %%dx\n\t" \
+	"0:\n\t" \
+	"in %%dx, %%al\n\t" \
+	"and $8, %%al\n\t" \
+	"jnz 0b\n\t" \
+	"0:\n\t" \
+	"in %%dx, %%al\n\t" \
+	"and $8, %%al\n\t" \
+	"jz 0b\n\t" \
+	:::"%eax","%edx")
+#endif
+
 
 #ifdef __cplusplus
 }

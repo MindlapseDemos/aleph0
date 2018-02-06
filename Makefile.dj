@@ -16,7 +16,7 @@ dbg = -g
 
 CC = $(TOOLPREFIX)gcc
 AR = $(TOOLPREFIX)ar
-CFLAGS = -pedantic -Wall $(dbg) $(opt) $(inc)
+CFLAGS = -pedantic -Wall -march=pentium $(dbg) $(opt) $(inc)
 LDFLAGS = libs/imago/imago.a libs/oldmik/mikmod.a
 
 $(bin): $(obj) imago mikmod

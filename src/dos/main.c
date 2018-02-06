@@ -15,7 +15,7 @@
 #include "logger.h"
 #include "tinyfps.h"
 
-#define NOKEYB
+#undef NOKEYB
 
 static int handle_sball_event(sball_event *ev);
 static void recalc_sball_matrix(float *xform);

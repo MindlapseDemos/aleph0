@@ -1,0 +1,61 @@
+src = $(wildcard src/*.c) $(wildcard src/dos/*.c)
+obj = $(src:.c=.o)
+dep = $(obj:.o=.d)
+bin = demo.exe
+
+ifeq ($(findstring COMMAND.COM, $(SHELL)), COMMAND.COM)
+	hostsys = dos
+else
+	hostsys = unix
+	TOOLPREFIX = i586-pc-msdosdjgpp-
+endif
+
+inc = -Isrc -Isrc/dos -Ilibs/imago/src -Ilibs/oldmik/src
+opt = -O3 -ffast-math
+dbg = -g
+
+CC = $(TOOLPREFIX)gcc
+AR = $(TOOLPREFIX)ar
+CFLAGS = -pedantic -Wall $(dbg) $(opt) $(inc)
+LDFLAGS = libs/imago/imago.a libs/oldmik/mikmod.a
+
+$(bin): $(obj) imago mikmod
+	$(CC) -o $@ -Wl,-Map=ld.map $(obj) $(LDFLAGS)
+
+-include $(dep)
+
+%.d: %.c
+	@$(CPP) $(CFLAGS) $< -MM -MT $(@:.d=.o) >$@
+
+.PHONY: imago
+imago:
+	$(MAKE) -C libs/imago -f Makefile.dj
+
+.PHONY: mikmod
+mikmod:
+	$(MAKE) -C libs/oldmik -f Makefile.dj
+
+.PHONY: cleanlibs
+cleanlibs:
+	$(MAKE) -C libs/imago -f Makefile.dj clean
+	$(MAKE) -C libs/oldmik -f Makefile.dj clean
+
+.PHONY: clean
+.PHONY: cleandep
+
+ifeq ($(hostsys), dos)
+clean:
+	del src\*.o
+	del src\dos\*.o
+	del $(bin)
+
+cleandep:
+	del src\*.d
+	del src\dos\*.d
+else
+clean:
+	rm -f $(obj) $(bin)
+
+cleandep:
+	rm -f $(dep)
+endif

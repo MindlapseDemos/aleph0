@@ -17,26 +17,31 @@ typedef unsigned short uint16_t;
 int have_mouse(void)
 {
 	uint16_t res = 0;
+#ifdef __WATCOMC__
 	_asm {
 		mov eax, QUERY
 		int INTR
 		mov res, ax
 	}
+#endif
 	return res;
 }
 
 void show_mouse(int show)
 {
 	uint16_t cmd = show ? SHOW : HIDE;
+#ifdef __WATCOMC__
 	_asm {
 		mov ax, cmd
 		int INTR
 	}
+#endif
 }
 
 int read_mouse(int *xp, int *yp)
 {
 	uint16_t x, y, state;
+#ifdef __WATCOMC__
 	_asm {
 		mov eax, READ
 		int INTR
@@ -44,6 +49,10 @@ int read_mouse(int *xp, int *yp)
 		mov x, cx
 		mov y, dx
 	}
+#endif
+#ifdef __DJGPP__
+	x = y = state = 0;
+#endif
 
 	if(xp) *xp = x;
 	if(yp) *yp = y;
@@ -52,16 +61,19 @@ int read_mouse(int *xp, int *yp)
 
 void set_mouse(int x, int y)
 {
+#ifdef __WATCOMC__
 	_asm {
 		mov eax, WRITE
 		mov ecx, x
 		mov edx, y
 		int INTR
 	}
+#endif
 }
 
 void set_mouse_limits(int xmin, int ymin, int xmax, int ymax)
 {
+#ifdef __WATCOMC__
 	_asm {
 		mov eax, XLIM
 		mov ecx, xmin
@@ -72,16 +84,19 @@ void set_mouse_limits(int xmin, int ymin, int xmax, int ymax)
 		mov edx, ymax
 		int INTR
 	}
+#endif
 }
 
 void set_mouse_rate(int xrate, int yrate)
 {
+#ifdef __WATCOMC__
 	_asm {
 		mov ax, PIXRATE
 		mov ecx, xrate
 		mov edx, yrate
 		int INTR
 	}
+#endif
 }
 
 void set_mouse_mode(enum mouse_mode mode)

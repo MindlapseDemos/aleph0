@@ -3,6 +3,12 @@
 
 #include "inttypes.h"
 
+#ifdef __GNUC__
+#define PACKED	__attribute__((packed))
+#else
+#define PACKED
+#endif
+
 #define VBE_ATTR_LFB	(1 << 7)
 #define VBE_MODE_LFB	(1 << 14)
 
@@ -20,7 +26,7 @@ struct vbe_info {
 	uint32_t oem_product_rev_ptr;
 	uint8_t reserved[222];
 	uint8_t oem_data[256];
-};
+} PACKED;
 
 struct vbe_mode_info {
 	uint16_t mode_attr;
@@ -54,7 +60,7 @@ struct vbe_mode_info {
 	uint16_t reserved3;
 
 	uint8_t reserved4[206];
-};
+} PACKED;
 #pragma pack (pop)
 
 struct vbe_info *vbe_get_info(void);

@@ -1,0 +1,31 @@
+csrc = $(wildcard src/*.c)
+obj = $(csrc:.c=.o)
+
+alib = mikmod.a
+
+opt = -O3 -ffast-math
+#dbg = -g
+
+ifeq ($(findstring COMMAND.COM, $(SHELL)), COMMAND.COM)
+	hostsys = dos
+else
+	hostsys = unix
+	TOOLPREFIX = i586-pc-msdosdjgpp-
+endif
+
+CC = $(TOOLPREFIX)gcc
+AR = $(TOOLPREFIX)ar
+CFLAGS = $(opt) $(dbg) -Isrc
+
+$(alib): $(obj)
+	$(AR) rcs $@ $(obj)
+
+.PHONY: clean
+ifeq ($(hostsys), dos)
+clean:
+	del src\*.o
+	del $(alib)
+else
+clean:
+	rm -f $(obj) $(alib)
+endif

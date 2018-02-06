@@ -5,6 +5,7 @@ struct options {
 	const char *start_scr;
 	int music;
 	int sball;
+	int vsync;
 };
 
 extern struct options opt;

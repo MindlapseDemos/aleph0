@@ -22,7 +22,17 @@ along with the program. If not, see <http://www.gnu.org/licenses/>
 #include <string.h>
 #include <conio.h>
 #include <dos.h>
+
+#ifdef __WATCOMC__
 #include <i86.h>
+#endif
+#ifdef __DJGPP__
+#include <stdint.h>
+#include <dpmi.h>
+#include <go32.h>
+#include <pc.h>
+#endif
+
 #include "keyb.h"
 #include "scancode.h"
 
@@ -32,11 +42,24 @@ along with the program. If not, see <http://www.gnu.org/licenses/>
 #define PIC1_CMD_PORT	0x20
 #define OCW2_EOI		(1 << 5)
 
+#ifdef __WATCOMC__
+#define INTERRUPT __interrupt __far
+
 #define DONE_INIT	(prev_handler)
+static void (INTERRUPT *prev_handler)();
+#endif
 
-static void __interrupt __far kbintr();
+#ifdef __DJGPP__
+#define INTERRUPT
 
-static void (__interrupt __far *prev_handler)();
+#define DONE_INIT prev_intr.pm_offset
+static _go32_dpmi_seginfo intr, prev_intr;
+
+#define outp(p, v)	outportb(p, v)
+#define inp(p)	inportb(p)
+#endif
+
+static void INTERRUPT kbintr();
 
 static int *buffer;
 static int buffer_size, buf_ridx, buf_widx;
@@ -67,8 +90,17 @@ int kb_init(int bufsz)
 
 	/* set our interrupt handler */
 	_disable();
+#ifdef __WATCOMC__
 	prev_handler = _dos_getvect(KB_INTR);
 	_dos_setvect(KB_INTR, kbintr);
+#endif
+#ifdef __DJGPP__
+	_go32_dpmi_get_protected_mode_interrupt_vector(KB_INTR, &prev_intr);
+	intr.pm_offset = (intptr_t)kbintr;
+	intr.pm_selector = _go32_my_cs();
+	_go32_dpmi_allocate_iret_wrapper(&intr);
+	_go32_dpmi_set_protected_mode_interrupt_vector(KB_INTR, &intr);
+#endif
 	_enable();
 
 	return 0;
@@ -82,7 +114,13 @@ void kb_shutdown(void)
 
 	/* restore the original interrupt handler */
 	_disable();
+#ifdef __WATCOMC__
 	_dos_setvect(KB_INTR, prev_handler);
+#endif
+#ifdef __DJGPP__
+	_go32_dpmi_set_protected_mode_interrupt_vector(KB_INTR, &prev_intr);
+	_go32_dpmi_free_iret_wrapper(&intr);
+#endif
 	_enable();
 
 	free(buffer);
@@ -103,6 +141,17 @@ int kb_isdown(int key)
 	return keystate[key];
 }
 
+#ifdef __WATCOMC__
+void halt(void);
+#pragma aux halt = \
+	"sti" \
+	"hlt";
+#endif
+
+#ifdef __DJGPP__
+#define halt() asm volatile("sti\n\thlt\n\t")
+#endif
+
 void kb_wait(void)
 {
 	int key;
@@ -110,10 +159,7 @@ void kb_wait(void)
 		/* put the processor to sleep while waiting for keypresses, but first
 		 * make sure interrupts are enabled, or we'll sleep forever
 		 */
-		__asm {
-			sti
-			hlt
-		}
+		halt();
 	}
 	kb_putback(key);
 }
@@ -157,7 +203,7 @@ void kb_putback(int key)
 	}
 }
 
-static void __interrupt __far kbintr()
+static void INTERRUPT kbintr()
 {
 	unsigned char code;
 	int key, press;

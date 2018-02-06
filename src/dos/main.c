@@ -3,6 +3,7 @@
 #include <math.h>
 #include <string.h>
 #include <limits.h>
+#include <conio.h>
 #include "demo.h"
 #include "keyb.h"
 #include "mouse.h"
@@ -12,6 +13,9 @@
 #include "sball.h"
 #include "cfgopt.h"
 #include "logger.h"
+#include "tinyfps.h"
+
+#define NOKEYB
 
 static int handle_sball_event(sball_event *ev);
 static void recalc_sball_matrix(float *xform);
@@ -31,7 +35,9 @@ int main(int argc, char **argv)
 	init_logger("demo.log");
 
 	init_timer(100);
+#ifndef NOKEYB
 	kb_init(32);
+#endif
 
 	if((use_mouse = have_mouse())) {
 		set_mouse_limits(0, 0, fb_width, fb_height);
@@ -61,10 +67,16 @@ int main(int argc, char **argv)
 	reset_timer();
 
 	while(!quit) {
+#ifndef NOKEYB
 		int key;
 		while((key = kb_getkey()) != -1) {
 			demo_keyboard(key, 1);
 		}
+#else
+		if(kbhit()) {
+			demo_keyboard(getch(), 1);
+		}
+#endif
 		if(quit) goto break_evloop;
 
 		if(use_mouse) {
@@ -86,7 +98,9 @@ int main(int argc, char **argv)
 break_evloop:
 	set_text_mode();
 	demo_cleanup();
+#ifndef NOKEYB
 	kb_shutdown();
+#endif
 	if(use_sball) {
 		sball_shutdown();
 	}
@@ -102,11 +116,17 @@ void swap_buffers(void *pixels)
 {
 	/* TODO implement page flipping */
 	if(pixels) {
-		/*wait_vsync();*/
+		if(opt.vsync) {
+			wait_vsync();
+		}
 		drawFps(pixels);
 		memcpy(vmem_front, pixels, fbsize);
 	} else {
 		drawFps(vmem_back);
+
+		if(opt.vsync) {
+			wait_vsync();
+		}
 	}
 }
 

@@ -185,10 +185,10 @@ static SLONG lvolmul,rvolmul;
 static void VC_Sample32To8Copy(SLONG *srce,SBYTE *dest,ULONG count,UBYTE shift)
 {
 	SLONG c;
-	int shift=(24-ampshift);
+	int fooshift=(24-ampshift);
 
 	while(count--){
-		c=*srce >> shift;
+		c=*srce >> fooshift;
 		if(c>127) c=127;
 		else if(c<-128) c=-128;
 		*dest++=c+128;
@@ -200,10 +200,10 @@ static void VC_Sample32To8Copy(SLONG *srce,SBYTE *dest,ULONG count,UBYTE shift)
 static void VC_Sample32To16Copy(SLONG *srce,SWORD *dest,ULONG count,UBYTE shift)
 {
 	SLONG c;
-	int shift=(16-ampshift);
+	int fooshift=(16-ampshift);
 
 	while(count--){
-		c=*srce >> shift;
+		c=*srce >> fooshift;
 		if(c>32767) c=32767;
 		else if(c<-32768) c=-32768;
 		*dest++=c;

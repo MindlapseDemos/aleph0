@@ -1,7 +1,20 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <dos.h>
 #include <conio.h>
+
+#ifdef __WATCOMC__
 #include <i86.h>
+#endif
+
+#ifdef __DJGPP__
+#include <stdint.h>
+#include <dpmi.h>
+#include <go32.h>
+#include <pc.h>
+#endif
+
 #include "sball.h"
 
 struct motion {
@@ -96,6 +109,11 @@ struct motion {
 #define PIC2_DATA_PORT	0xa1
 #define OCW2_EOI		0x20
 
+struct packet {
+	int id;
+	char data[80];
+};
+
 static int init_smouse(void);
 static void read_motion(int *m, const char *s);
 static void read_keystate(unsigned int *stptr, const char *s);
@@ -105,6 +123,7 @@ static void enqueue_event(sball_event *ev);
 #define COM_FMT_8N1		LCTL_8N1
 #define COM_FMT_8N2		LCTL_8N2
 static void com_setup(int port, int baud, unsigned int fmt);
+static void com_close(void);
 
 static void com_putc(char c);
 static void com_puts(const char *s);
@@ -114,15 +133,25 @@ static char *com_gets(char *buf, int sz);
 static int com_have_recv(void);
 static int com_can_send(void);
 
-static void __interrupt __far recv_intr(void);
+#ifdef __WATCOMC__
+#define INTERRUPT	__interrupt __far
+static void (INTERRUPT *prev_recv_intr)(void);
+#endif
+
+#ifdef __DJGPP__
+#define INTERRUPT
+
+static _go32_dpmi_seginfo intr, prev_intr;
+
+#define outp(port, val)	outportb(port, val)
+#define inp(port) inportb(port)
+#endif
+
+static void INTERRUPT recv_intr(void);
 
 static int uart_base, uart_intr_num;
-static void (__interrupt __far *prev_recv_intr)(void);
 
-static struct packet {
-	int id;
-	char data[80];
-} pktbuf[16];
+static struct packet pktbuf[16];
 static int pktbuf_ridx, pktbuf_widx;
 #define BNEXT(x)	(((x) + 1) & 0xf)
 #define BEMPTY(b)	(b##_ridx == b##_widx)
@@ -260,8 +289,17 @@ static void com_setup(int port, int baud, unsigned int fmt)
 	uart_intr_num = irq[port] | 8;
 
 	_disable();
+#ifdef __WATCOMC__
 	prev_recv_intr = _dos_getvect(uart_intr_num);
 	_dos_setvect(uart_intr_num, recv_intr);
+#endif
+#ifdef __DJGPP__
+	_go32_dpmi_get_protected_mode_interrupt_vector(uart_intr_num, &prev_intr);
+	intr.pm_offset = (intptr_t)recv_intr;
+	intr.pm_selector = _go32_my_cs();
+	_go32_dpmi_allocate_iret_wrapper(&intr);
+	_go32_dpmi_set_protected_mode_interrupt_vector(uart_intr_num, &intr);
+#endif
 	/* unmask the appropriate interrupt */
 	outp(PIC1_DATA_PORT, inp(PIC1_DATA_PORT) & ~(1 << irq[port]));
 
@@ -281,7 +319,13 @@ static void com_close(void)
 	_disable();
 	outp(uart_base + UART_INTR, 0);
 	outp(uart_base + UART_MCTL, 0);
+#ifdef __WATCOMC__
 	_dos_setvect(uart_intr_num, prev_recv_intr);
+#endif
+#ifdef __DJGPP__
+	_go32_dpmi_set_protected_mode_interrupt_vector(uart_intr_num, &prev_intr);
+	_go32_dpmi_free_iret_wrapper(&intr);
+#endif
 	_enable();
 }
 
@@ -340,7 +384,7 @@ static int com_can_send(void)
 	return inp(uart_base + UART_LSTAT) & LST_TREG_EMPTY;
 }
 
-static void __interrupt __far recv_intr()
+static void INTERRUPT recv_intr()
 {
 	static char buf[128];
 	static char *bptr = buf;

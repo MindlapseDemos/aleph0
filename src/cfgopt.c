@@ -4,7 +4,12 @@
 #include <ctype.h>
 #include "cfgopt.h"
 
-struct options opt;
+struct options opt = {
+	0,	/* start_scr */
+	0,	/* music */
+	0,	/* sball */
+	1	/* vsync */
+};
 
 int parse_args(int argc, char **argv)
 {
@@ -21,6 +26,10 @@ int parse_args(int argc, char **argv)
 				scrname = argv[++i];
 			} else if(strcmp(argv[i], "-sball") == 0) {
 				opt.sball = !opt.sball;
+			} else if(strcmp(argv[i], "-vsync") == 0) {
+				opt.vsync = 1;
+			} else if(strcmp(argv[i], "-novsync") == 0) {
+				opt.vsync = 0;
 			} else {
 				fprintf(stderr, "invalid option: %s\n", argv[i]);
 				return -1;
@@ -105,6 +114,8 @@ int load_config(const char *fname)
 			opt.start_scr = strdup(value);
 		} else if(strcmp(line, "sball") == 0) {
 			opt.sball = bool_value(value);
+		} else if(strcmp(line, "vsync") == 0) {
+			opt.vsync = bool_value(value);
 		} else {
 			fprintf(stderr, "%s:%d invalid option: %s\n", fname, nline, line);
 			return -1;

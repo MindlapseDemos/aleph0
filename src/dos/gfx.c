@@ -6,15 +6,23 @@
 #include <string.h>
 #include <limits.h>
 #include "vbe.h"
-#include "dpmi.h"
+#include "cdpmi.h"
 
+#ifdef __DJGPP__
+#include <sys/nearptr.h>
+
+#define REALPTR(s, o)	(void*)(((uint32_t)(s) << 4) - __djgpp_base_address + (uint32_t)(o))
+#else
 #define REALPTR(s, o)	(void*)(((uint32_t)(s) << 4) + (uint32_t)(o))
+#endif
+
 #define VBEPTR(x)		REALPTR(((x) & 0xffff0000) >> 16, (x) & 0xffff)
 #define VBEPTR_SEG(x)	(((x) & 0xffff0000) >> 16)
 #define VBEPTR_OFF(x)	((x) & 0xffff)
 
 #define SAME_BPP(a, b)	\
-	((a) == (b) || (a) == 16 && (b) == 15 || (a) == 15 && (b) == 16 || (a) == 32 && (b) == 24 || (a) == 24 && (b) == 32)
+	((a) == (b) || ((a) == 16 && (b) == 15) || ((a) == 15 && (b) == 16) || \
+	 ((a) == 32 && (b) == 24) || ((a) == 24 && (b) == 32))
 
 static unsigned int make_mask(int sz, int pos);
 
@@ -25,8 +33,13 @@ static int pal_bits = 6;
 void *set_video_mode(int xsz, int ysz, int bpp)
 {
 	int i;
-	uint16_t *modes, best = 0;
+	static uint16_t *modes;
+	uint16_t best = 0;
 	unsigned int fbsize;
+
+#ifdef __DJGPP__
+	__djgpp_nearptr_enable();
+#endif
 
 	/* check for VBE2 support and output some info */
 	if(!vbe_info) {
@@ -41,8 +54,8 @@ void *set_video_mode(int xsz, int ysz, int bpp)
 			return 0;
 		}
 
-		printf("Graphics adapter: %s, %s (%s)\n", VBEPTR(vbe_info->oem_vendor_name_ptr),
-				VBEPTR(vbe_info->oem_product_name_ptr), VBEPTR(vbe_info->oem_product_rev_ptr));
+		printf("Graphics adapter: %s, %s (%s)\n", (char*)VBEPTR(vbe_info->oem_vendor_name_ptr),
+				(char*)VBEPTR(vbe_info->oem_product_name_ptr), (char*)VBEPTR(vbe_info->oem_product_rev_ptr));
 		printf("Video memory: %dkb\n", vbe_info->total_mem << 6);
 
 		modes = VBEPTR(vbe_info->vid_mode_ptr);
@@ -141,20 +154,42 @@ void set_palette(int idx, int r, int g, int b)
 	vbe_set_palette(idx, col, 1, pal_bits);
 }
 
+#ifdef __WATCOMC__
+void wait_vsync_asm(void);
+#pragma aux wait_vsync_asm = \
+	"mov dx, 0x3da" \
+	"l1:" \
+	"in al, dx" \
+	"and al, 0x8" \
+	"jnz l1" \
+	"l2:" \
+	"in al, dx" \
+	"and al, 0x8" \
+	"jz l2" \
+	modify[al dx];
+
 void wait_vsync(void)
 {
-	__asm {
-		mov dx, 0x3da
-	l1:
-		in al, dx
-		and al, 0x8
-		jnz l1
-	l2:
-		in al, dx
-		and al, 0x8
-		jz l2
-	}
+	wait_vsync_asm();
 }
+#endif
+
+#ifdef __DJGPP__
+void wait_vsync(void)
+{
+	asm volatile (
+		"mov $0x3da, %%dx\n\t"
+		"0:\n\t"
+		"in %%dx, %%al\n\t"
+		"and $8, %%al\n\t"
+		"jnz 0b\n\t"
+		"0:\n\t"
+		"in %%dx, %%al\n\t"
+		"and $8, %%al\n\t"
+		"jz 0b\n\t"
+		:::"%eax","%edx");
+}
+#endif
 
 static unsigned int make_mask(int sz, int pos)
 {

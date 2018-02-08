@@ -7,7 +7,7 @@ struct g3d_vertex {
 	float x, y, z, w;
 	float nx, ny, nz;
 	float u, v;
-	unsigned char r, g, b;
+	unsigned char r, g, b, a;
 };
 
 enum {
@@ -19,14 +19,15 @@ enum {
 
 /* g3d_enable/g3d_disable bits */
 enum {
-	G3D_CULL_FACE = 1,
-	G3D_DEPTH_TEST = 2,	/* XXX not implemented */
-	G3D_LIGHTING = 4,
-	G3D_LIGHT0 = 8,
-	G3D_LIGHT1 = 16,
-	G3D_LIGHT2 = 32,
-	G3D_LIGHT3 = 64,
-	G3D_TEXTURE = 128,
+	G3D_CULL_FACE	= 0x0001,
+	G3D_DEPTH_TEST	= 0x0002,	/* XXX not implemented */
+	G3D_LIGHTING	= 0x0004,
+	G3D_LIGHT0		= 0x0008,
+	G3D_LIGHT1		= 0x0010,
+	G3D_LIGHT2		= 0x0020,
+	G3D_LIGHT3		= 0x0040,
+	G3D_TEXTURE		= 0x0080,
+	G3D_BLEND		= 0x0100,
 
 	G3D_ALL = 0x7fffffff
 };

@@ -24,6 +24,11 @@ imago:
 mikmod:
 	$(MAKE) -C libs/mikmod
 
+.PHONY: cleanlibs
+cleanlibs:
+	$(MAKE) -C libs/imago -f Makefile.dj clean
+	$(MAKE) -C libs/oldmik -f Makefile.dj clean
+
 .PHONY: clean
 clean:
 	rm -f $(obj) $(bin)

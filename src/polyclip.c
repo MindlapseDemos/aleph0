@@ -14,6 +14,7 @@ static int clip_edge_frustum(struct g3d_vertex *poly, int *vnumptr,
 		const struct g3d_vertex *v0, const struct g3d_vertex *v1, int fplane);
 static float distance_signed(float *pos, const struct cplane *plane);
 static int intersect(const struct ray *ray, const struct cplane *plane, float *t);
+static int inside_frustum_plane(const struct g3d_vertex *v, int fplane);
 
 
 int clip_poly(struct g3d_vertex *vout, int *voutnum,
@@ -46,6 +47,11 @@ int clip_frustum(struct g3d_vertex *vout, int *voutnum,
 	int i;
 	int edges_clipped = 0;
 	int out_vnum = 0;
+
+	if(vnum == 1) {
+		/* special case: point clipping */
+		return inside_frustum_plane(vin, fplane) ? 1 : -1;
+	}
 
 	for(i=0; i<vnum; i++) {
 		int res = clip_edge_frustum(vout, &out_vnum, vin + i, vin + (i + 1) % vnum, fplane);

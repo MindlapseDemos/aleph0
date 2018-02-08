@@ -15,7 +15,7 @@ enum {
 struct pvertex {
 	int32_t x, y; /* 24.8 fixed point */
 	int32_t u, v; /* 16.16 fixed point */
-	int32_t r, g, b;  /* int 0-255 */
+	int32_t r, g, b, a;  /* int 0-255 */
 };
 
 struct pimage {

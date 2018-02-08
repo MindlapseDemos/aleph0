@@ -4,9 +4,11 @@
 #include <math.h>
 #include <assert.h>
 #include "3dgfx.h"
+#include "gfxutil.h"
 #include "polyfill.h"
 #include "polyclip.h"
 #include "inttypes.h"
+#include "demo.h"
 #include "util.h"
 
 #define STACK_SIZE	8
@@ -451,6 +453,7 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 			pv[i].r = v[i].r;
 			pv[i].g = v[i].g;
 			pv[i].b = v[i].b;
+			pv[i].a = v[i].a;
 		}
 
 		/* backface culling */
@@ -467,7 +470,29 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 			}
 		}
 
-		polyfill(st->fill_mode, pv, vnum);
+		switch(vnum) {
+		case 1:
+			if(st->opt & G3D_BLEND) {
+				int r, g, b;
+				int inv_alpha = 255 - pv[0].a;
+				uint16_t *dest = fb_pixels + (pv[0].y >> 8) * fb_width + (pv[0].x >> 8);
+				r = ((int)pv[0].r * pv[0].a + UNPACK_R16(*dest) * inv_alpha) >> 8;
+				g = ((int)pv[0].g * pv[0].a + UNPACK_G16(*dest) * inv_alpha) >> 8;
+				b = ((int)pv[0].b * pv[0].a + UNPACK_B16(*dest) * inv_alpha) >> 8;
+				*dest++ = PACK_RGB16(r, g, b);
+			} else {
+				uint16_t *dest = fb_pixels + (pv[0].y >> 8) * fb_width + (pv[0].x >> 8);
+				*dest = PACK_RGB16(pv[0].r, pv[0].g, pv[0].b);
+			}
+			break;
+
+		case 2:
+			/* TODO: draw line */
+			break;
+
+		default:
+			polyfill(st->fill_mode, pv, vnum);
+		}
 	}
 }
 

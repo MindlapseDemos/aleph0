@@ -31,5 +31,10 @@ data
 *.CFG
 *.cfg
 *.$$$
-
 /dosdemo.vcxproj.user
+*.dep
+*.DEP
+*.cof
+*.COF
+*.dja
+*.DJA

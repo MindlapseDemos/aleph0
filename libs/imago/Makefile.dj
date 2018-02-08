@@ -2,8 +2,8 @@ src = $(wildcard src/*.c) \
 	  $(wildcard zlib/*.c) \
 	  $(wildcard libpng/*.c) \
 	  $(wildcard jpeglib/*.c)
-obj = $(src:.c=.o)
-alib = imago.a
+obj = $(src:.c=.cof)
+alib = imago.dja
 
 ifeq ($(findstring COMMAND.COM, $(SHELL)), COMMAND.COM)
 	hostsys = dos
@@ -19,13 +19,16 @@ CFLAGS = -pedantic -Wall -Wno-main -march=pentium -g -O3 -ffast-math -Izlib -Ili
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)
 
+%.cof: %.c
+	$(CC) $(CFLAGS) -o $@ -c $<
+
 .PHONY: clean
 ifeq ($(hostsys), dos)
 clean:
-	del src\*.o
-	del zlib\*.o
-	del libpng\*.o
-	del jpeglib\*.o
+	del src\*.cof
+	del zlib\*.cof
+	del libpng\*.cof
+	del jpeglib\*.cof
 	del $(alib)
 else
 clean:

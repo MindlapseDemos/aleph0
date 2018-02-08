@@ -1,7 +1,7 @@
 csrc = $(wildcard src/*.c)
-obj = $(csrc:.c=.o)
+obj = $(csrc:.c=.cof)
 
-alib = mikmod.a
+alib = mikmod.dja
 
 opt = -O3 -ffast-math
 #dbg = -g
@@ -20,10 +20,13 @@ CFLAGS = -march=pentium $(opt) $(dbg) -Isrc
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)
 
+%.cof: %.c
+	$(CC) $(CFLAGS) -o $@ -c $<
+
 .PHONY: clean
 ifeq ($(hostsys), dos)
 clean:
-	del src\*.o
+	del src\*.cof
 	del $(alib)
 else
 clean:

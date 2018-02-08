@@ -1,6 +1,6 @@
 src = $(wildcard src/*.c) $(wildcard src/dos/*.c)
-obj = $(src:.c=.o)
-dep = $(obj:.o=.d)
+obj = $(src:.c=.cof)
+dep = $(obj:.cof=.dep)
 bin = demo.exe
 
 ifeq ($(findstring COMMAND.COM, $(SHELL)), COMMAND.COM)
@@ -17,15 +17,18 @@ dbg = -g
 CC = $(TOOLPREFIX)gcc
 AR = $(TOOLPREFIX)ar
 CFLAGS = -pedantic -Wall -march=pentium $(dbg) $(opt) $(inc)
-LDFLAGS = libs/imago/imago.a libs/oldmik/mikmod.a
+LDFLAGS = libs/imago/imago.dja libs/oldmik/mikmod.dja
 
 $(bin): $(obj) imago mikmod
 	$(CC) -o $@ -Wl,-Map=ld.map $(obj) $(LDFLAGS)
 
 -include $(dep)
 
-%.d: %.c
-	@$(CPP) $(CFLAGS) $< -MM -MT $(@:.d=.o) >$@
+%.cof: %.c
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+%.dep: %.c
+	@$(CPP) $(CFLAGS) $< -MM -MT $(@:.dep=.cof) >$@
 
 .PHONY: imago
 imago:
@@ -45,13 +48,13 @@ cleanlibs:
 
 ifeq ($(hostsys), dos)
 clean:
-	del src\*.o
-	del src\dos\*.o
+	del src\*.cof
+	del src\dos\*.cof
 	del $(bin)
 
 cleandep:
-	del src\*.d
-	del src\dos\*.d
+	del src\*.dep
+	del src\dos\*.dep
 else
 clean:
 	rm -f $(obj) $(bin)

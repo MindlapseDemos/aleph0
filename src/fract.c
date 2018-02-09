@@ -43,9 +43,6 @@ static void destroy(void)
 {
 }
 
-#define PACK_RGB16(r, g, b) \
-	(((((r) >> 3) & 0x1f) << 11) | ((((g) >> 2) & 0x3f) << 5) | (((b) >> 3) & 0x1f))
-
 static void draw(void)
 {
 	int i, j;

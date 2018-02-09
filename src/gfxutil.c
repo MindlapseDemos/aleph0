@@ -142,3 +142,47 @@ void draw_line(int x0, int y0, int x1, int y1, unsigned short color)
 		}
 	}
 }
+
+
+/* TODO bound blur rad to image size to avoid inner loop conditionals */
+/* TODO make version with pow2 (rad*2+1) to avoid div with count everywhere */
+void blur_grey_horiz(uint16_t *dest, uint16_t *src, int xsz, int ysz, int rad)
+{
+	int i, j;
+
+	for(i=0; i<ysz; i++) {
+		int sum = src[0] * (rad + 1);
+		int count = rad * 2 + 1;
+		uint16_t lastpix = src[xsz - 1];
+
+		/* add up the contributions for the -1 pixel */
+		for(j=0; j<rad; j++) {
+			sum += src[j];
+		}
+
+		/* first part adding src[rad] and subtracting src[0] */
+		for(j=0; j<rad; j++) {
+			sum += src[rad] - src[0];
+			++src;
+			*dest++ = sum / count;
+		}
+
+		/* middle part adding src[rad] and subtracting src[-(rad+1)] */
+		for(j=0; j<xsz - rad; j++) {
+			sum += src[rad] - src[-(rad + 1)];
+			++src;
+			*dest++ = sum / count;
+		}
+
+		/* last part adding lastpix and subtracting src[-(rad+1)] */
+		for(j=0; j<rad; j++) {
+			sum += lastpix - src[-(rad + 1)];
+			++src;
+			*dest++ = sum / count;
+		}
+	}
+}
+
+void blur_grey_vert(uint16_t *dest, uint16_t *src, int xsz, int ysz, int radius)
+{
+}

@@ -30,7 +30,7 @@ struct vec3 {
 struct particle {
 	float x, y, z;
 	float vx, vy, vz;	/* velocity */
-	float r, g, b;
+	int r, g, b;
 	float life;
 };
 
@@ -203,7 +203,9 @@ int init_emitter(struct emitter *em, int num, unsigned char *map, int xsz, int y
 		p->x = (float)x / (float)xsz - 0.5;
 		p->y = -(float)y / (float)xsz + 0.5 / aspect;
 		p->z = ((float)i / (float)num * 2.0 - 1.0) * 0.005;
-		p->r = p->g = p->b = 0.9;
+		p->r = 0;
+		p->g = 0x1f;
+		p->b = 255;
 		p->vx = p->vy = p->vz = 0.0f;
 		p->life = MAX_LIFE;
 		++p;
@@ -233,7 +235,9 @@ void update_particles(struct emitter *em, float dt)
 		v->y = p->y;
 		v->z = p->z;
 		v->w = 1.0f;
-		v->r = v->g = v->b = 200;
+		v->r = p->r;
+		v->g = p->g;
+		v->b = p->b;
 		v->a = cround64(p->life * 255.0 / MAX_LIFE);
 		++v;
 

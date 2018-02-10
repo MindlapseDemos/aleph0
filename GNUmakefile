@@ -11,6 +11,9 @@ LDFLAGS = -Llibs/imago -Llibs/mikmod -limago -lmikmod `sdl-config --libs` -lm
 $(bin): $(obj) imago mikmod
 	$(CC) -o $@ $(obj) $(LDFLAGS)
 
+%.o: %.asm
+	nasm -f elf -o $@ $<
+
 -include $(dep)
 
 %.d: %.c

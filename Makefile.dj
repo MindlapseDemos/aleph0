@@ -22,6 +22,9 @@ LDFLAGS = libs/imago/imago.dja libs/oldmik/mikmod.dja
 $(bin): $(obj) imago mikmod
 	$(CC) -o $@ -Wl,-Map=ld.map $(obj) $(LDFLAGS)
 
+%.cof: %.asm
+	nasm -f coff -o $@ $<
+
 -include $(dep)
 
 %.cof: %.c

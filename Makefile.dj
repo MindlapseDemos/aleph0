@@ -10,14 +10,14 @@ else
 	TOOLPREFIX = i586-pc-msdosdjgpp-
 endif
 
-inc = -Isrc -Isrc/dos -Ilibs/imago/src -Ilibs/oldmik/src
+inc = -Isrc -Isrc/dos -Ilibs/imago/src -Ilibs/mikmod/include
 opt = -O3 -ffast-math
 dbg = -g
 
 CC = $(TOOLPREFIX)gcc
 AR = $(TOOLPREFIX)ar
 CFLAGS = -pedantic -Wall -march=pentium $(dbg) $(opt) $(inc)
-LDFLAGS = libs/imago/imago.dja libs/oldmik/mikmod.dja
+LDFLAGS = libs/imago/imago.dja libs/mikmod/dos/libmikmod.a
 
 $(bin): $(obj) imago mikmod
 	$(CC) -o $@ -Wl,-Map=ld.map $(obj) $(LDFLAGS)
@@ -39,12 +39,12 @@ imago:
 
 .PHONY: mikmod
 mikmod:
-	$(MAKE) -C libs/oldmik -f Makefile.dj
+	$(MAKE) -C libs/mikmod/dos -f Makefile.dj
 
 .PHONY: cleanlibs
 cleanlibs:
 	$(MAKE) -C libs/imago -f Makefile.dj clean
-	$(MAKE) -C libs/oldmik -f Makefile.dj clean
+	$(MAKE) -C libs/mikmod/dos -f Makefile.dj clean
 
 .PHONY: clean
 .PHONY: cleandep

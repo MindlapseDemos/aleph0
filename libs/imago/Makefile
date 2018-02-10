@@ -22,6 +22,12 @@ opt = -5 -fp5 -otexan
 dbg = -d1
 def = -DPNG_NO_SNPRINTF
 
+!ifdef __UNIX__
+RM = rm -f
+!else
+RM = del
+!endif
+
 CC = wcc386
 CFLAGS = $(dbg) $(opt) $(def) -zq -bt=dos -Ilibpng -Izlib -Ijpeglib
 
@@ -38,7 +44,7 @@ cflags.occ: Makefile
 	$(CC) -fo=$@ @cflags.occ $[*
 
 clean: .symbolic
-	del *.obj
-	del *.occ
-	del *.lbc
-	del $(alib)
+	$(RM) *.obj
+	$(RM) *.occ
+	$(RM) *.lbc
+	$(RM) $(alib)

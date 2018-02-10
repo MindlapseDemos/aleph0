@@ -2,15 +2,31 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <assert.h>
 #include "demo.h"
 #include "3dgfx.h"
 #include "screen.h"
 #include "cfgopt.h"
 #include "imago2.h"
 #include "util.h"
+#include "gfxutil.h"
+#include "timer.h"
+
+#ifdef MSDOS
+#include "dos/gfx.h"	/* for wait_vsync assembly macro */
+#else
+void wait_vsync(void);
+#endif
+
+/* if defined, use bilinear interpolation for dispersion field vectors */
+#define BILERP_FIELD
+/* if defined randomize field vectors by RAND_FIELD_MAX */
+#define RANDOMIZE_FIELD
+
+#define RAND_FIELD_MAX	0.7
 
 #define PCOUNT		4000
-#define MAX_LIFE	6.0f
+#define MAX_LIFE	7.0f
 #define PALPHA		1.0f
 #define ZBIAS		0.25
 #define DRAG		0.95
@@ -74,6 +90,16 @@ static struct vfield vfield;
 static struct g3d_vertex *varr;
 static long start_time;
 
+static uint16_t *cur_smokebuf, *prev_smokebuf;
+static int smokebuf_size;
+#define smokebuf_start	(cur_smokebuf < prev_smokebuf ? cur_smokebuf : prev_smokebuf)
+#define swap_smoke_buffers() \
+	do { \
+		uint16_t *tmp = cur_smokebuf; \
+		cur_smokebuf = prev_smokebuf; \
+		prev_smokebuf = tmp; \
+	} while(0)
+
 static float cam_theta, cam_phi = 25;
 static float cam_dist = 3;
 
@@ -105,11 +131,21 @@ static int init(void)
 		return -1;
 	}
 
+	smokebuf_size = fb_width * fb_height * sizeof *cur_smokebuf;
+	if(!(cur_smokebuf = malloc(smokebuf_size * 2))) {
+		perror("failed to allocate smoke framebuffer");
+		return -1;
+	}
+	prev_smokebuf = cur_smokebuf + fb_width * fb_height;
+
 	return 0;
 }
 
 static void destroy(void)
 {
+	free(varr);
+	free(vfield.v);
+	free(smokebuf_start);
 }
 
 static void start(long trans_time)
@@ -117,6 +153,8 @@ static void start(long trans_time)
 	g3d_matrix_mode(G3D_PROJECTION);
 	g3d_load_identity();
 	g3d_perspective(50.0, 1.3333333, 0.5, 100.0);
+
+	memset(smokebuf_start, 0, smokebuf_size * 2);
 
 	start_time = time_msec;
 }
@@ -161,9 +199,12 @@ static void update(void)
 
 static void draw(void)
 {
-	update();
+	int i, j;
+	uint16_t *dest, *src;
+	unsigned long msec;
+	static unsigned long last_swap;
 
-	memset(fb_pixels, 0, fb_width * fb_height * 2);
+	update();
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
@@ -175,9 +216,35 @@ static void draw(void)
 		g3d_rotate(cam_theta, 0, 1, 0);
 	}
 
-	draw_particles(&em);
+	memcpy(cur_smokebuf, prev_smokebuf, smokebuf_size);
 
+	g3d_framebuffer(fb_width, fb_height, cur_smokebuf);
+	draw_particles(&em);
+	g3d_framebuffer(fb_width, fb_height, fb_pixels);
+
+	dest = fb_pixels;
+	src = cur_smokebuf;
+	for(i=0; i<fb_height; i++) {
+		for(j=0; j<fb_width; j++) {
+			unsigned int alpha = *src++;
+			*dest++ = PACK_RGB16(alpha, alpha, alpha);
+		}
+	}
+
+#define BLUR_RAD	5
+	blur_grey_horiz(prev_smokebuf, cur_smokebuf, fb_width, fb_height, BLUR_RAD, 240);
+	blur_grey_vert(cur_smokebuf, prev_smokebuf, fb_width, fb_height, BLUR_RAD, 240);
+	swap_smoke_buffers();
+
+	msec = get_msec();
+	if(msec - last_swap < 16) {
+		wait_vsync();
+	}
+	if(!opt.vsync) {
+		wait_vsync();
+	}
 	swap_buffers(fb_pixels);
+	last_swap = get_msec();
 }
 
 
@@ -203,9 +270,7 @@ int init_emitter(struct emitter *em, int num, unsigned char *map, int xsz, int y
 		p->x = (float)x / (float)xsz - 0.5;
 		p->y = -(float)y / (float)xsz + 0.5 / aspect;
 		p->z = ((float)i / (float)num * 2.0 - 1.0) * 0.005;
-		p->r = 0;
-		p->g = 0x1f;
-		p->b = 255;
+		p->r = p->g = p->b = 255;
 		p->vx = p->vy = p->vz = 0.0f;
 		p->life = MAX_LIFE;
 		++p;
@@ -235,10 +300,10 @@ void update_particles(struct emitter *em, float dt)
 		v->y = p->y;
 		v->z = p->z;
 		v->w = 1.0f;
-		v->r = p->r;
-		v->g = p->g;
-		v->b = p->b;
 		v->a = cround64(p->life * 255.0 / MAX_LIFE);
+		v->r = 0;
+		v->g = (v->a & 0xe0) >> 3;
+		v->b = (v->a & 0x1f) << 3;
 		++v;
 
 		++p;
@@ -247,9 +312,7 @@ void update_particles(struct emitter *em, float dt)
 
 void draw_particles(struct emitter *em)
 {
-	g3d_enable(G3D_BLEND);
 	g3d_draw(G3D_POINTS, varr, PCOUNT);
-	g3d_disable(G3D_BLEND);
 }
 
 
@@ -312,14 +375,15 @@ void vfield_eval(struct vfield *vf, float x, float y, struct vec2 *dir)
 	if(x > vf->width - 2) x = vf->width - 2;
 	if(y > vf->height - 2) y = vf->height - 2;
 
-	tx = fmod(x, 1.0f);
-	ty = fmod(y, 1.0f);
-
 	px = (int)x;
 	py = (int)y;
 
 	p1 = vf->v + (py << vf->xshift) + px;
+#ifdef BILERP_FIELD
 	p2 = p1 + vf->width;
+
+	tx = fmod(x, 1.0f);
+	ty = fmod(y, 1.0f);
 
 	left.x = p1->x + (p2->x - p1->x) * ty;
 	left.y = p1->y + (p2->y - p1->y) * ty;
@@ -330,7 +394,13 @@ void vfield_eval(struct vfield *vf, float x, float y, struct vec2 *dir)
 
 	dir->x = left.x + (right.x - left.x) * tx;
 	dir->y = left.y + (right.y - left.y) * ty;
+#else
+	dir->x = p1->x;
+	dir->y = p1->y;
+#endif
 
-	dir->x += ((float)rand() / RAND_MAX - 0.5) * 0.7;
-	dir->y += ((float)rand() / RAND_MAX - 0.5) * 0.7;
+#ifdef RANDOMIZE_FIELD
+	dir->x += ((float)rand() / RAND_MAX - 0.5) * RAND_FIELD_MAX;
+	dir->y += ((float)rand() / RAND_MAX - 0.5) * RAND_FIELD_MAX;
+#endif
 }

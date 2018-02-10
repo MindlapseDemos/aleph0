@@ -44,7 +44,7 @@ struct g3d_state {
 	struct material mtl;
 
 	int width, height;
-	void *pixels;
+	uint16_t *pixels;
 
 	int vport[4];
 };
@@ -475,13 +475,13 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 			if(st->opt & G3D_BLEND) {
 				int r, g, b;
 				int inv_alpha = 255 - pv[0].a;
-				uint16_t *dest = fb_pixels + (pv[0].y >> 8) * fb_width + (pv[0].x >> 8);
+				uint16_t *dest = st->pixels + (pv[0].y >> 8) * st->width + (pv[0].x >> 8);
 				r = ((int)pv[0].r * pv[0].a + UNPACK_R16(*dest) * inv_alpha) >> 8;
 				g = ((int)pv[0].g * pv[0].a + UNPACK_G16(*dest) * inv_alpha) >> 8;
 				b = ((int)pv[0].b * pv[0].a + UNPACK_B16(*dest) * inv_alpha) >> 8;
 				*dest++ = PACK_RGB16(r, g, b);
 			} else {
-				uint16_t *dest = fb_pixels + (pv[0].y >> 8) * fb_width + (pv[0].x >> 8);
+				uint16_t *dest = st->pixels + (pv[0].y >> 8) * st->width + (pv[0].x >> 8);
 				*dest = PACK_RGB16(pv[0].r, pv[0].g, pv[0].b);
 			}
 			break;

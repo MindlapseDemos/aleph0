@@ -144,45 +144,60 @@ void draw_line(int x0, int y0, int x1, int y1, unsigned short color)
 }
 
 
+#define BLUR(w, h, pstep, sstep) \
+	for(i=0; i<h; i++) { \
+		int sum = sptr[0] * (rad + 1); \
+		int count = (rad * 2 + 1) << 8; \
+		int midsize = w - rad * 2; \
+		int lastpix = sptr[pstep * (w - 1)]; \
+		/* add up the contributions for the -1 pixel */ \
+		for(j=0; j<rad; j++) { \
+			sum += sptr[pstep * j]; \
+		} \
+		/* first part adding sptr[rad] and subtracting sptr[0] */ \
+		for(j=0; j<rad + 1; j++) { \
+			sum += (int)sptr[pstep * rad] - (int)sptr[0]; \
+			sptr += pstep; \
+			*dptr = scale * sum / count; \
+			dptr += pstep; \
+		} \
+		/* middle part adding sptr[rad] and subtracting sptr[-(rad+1)] */ \
+		for(j=0; j<midsize - 1; j++) { \
+			sum += (int)sptr[pstep * rad] - (int)sptr[-(rad + 1) * pstep]; \
+			sptr += pstep; \
+			*dptr = scale * sum / count; \
+			dptr += pstep; \
+		} \
+		/* last part adding lastpix and subtracting sptr[-(rad+1)] */ \
+		for(j=0; j<rad; j++) { \
+			sum += lastpix - (int)sptr[-(rad + 1) * pstep]; \
+			sptr += pstep; \
+			*dptr = scale * sum / count; \
+			dptr += pstep; \
+		} \
+		sptr += sstep; \
+		dptr += sstep; \
+	}
+
 /* TODO bound blur rad to image size to avoid inner loop conditionals */
 /* TODO make version with pow2 (rad*2+1) to avoid div with count everywhere */
-void blur_grey_horiz(uint16_t *dest, uint16_t *src, int xsz, int ysz, int rad)
+void blur_grey_horiz(uint16_t *dest, uint16_t *src, int xsz, int ysz, int rad, int scale)
 {
 	int i, j;
+	unsigned char *dptr = (unsigned char*)dest;
+	unsigned char *sptr = (unsigned char*)src;
 
-	for(i=0; i<ysz; i++) {
-		int sum = src[0] * (rad + 1);
-		int count = rad * 2 + 1;
-		uint16_t lastpix = src[xsz - 1];
-
-		/* add up the contributions for the -1 pixel */
-		for(j=0; j<rad; j++) {
-			sum += src[j];
-		}
-
-		/* first part adding src[rad] and subtracting src[0] */
-		for(j=0; j<rad; j++) {
-			sum += src[rad] - src[0];
-			++src;
-			*dest++ = sum / count;
-		}
-
-		/* middle part adding src[rad] and subtracting src[-(rad+1)] */
-		for(j=0; j<xsz - rad; j++) {
-			sum += src[rad] - src[-(rad + 1)];
-			++src;
-			*dest++ = sum / count;
-		}
-
-		/* last part adding lastpix and subtracting src[-(rad+1)] */
-		for(j=0; j<rad; j++) {
-			sum += lastpix - src[-(rad + 1)];
-			++src;
-			*dest++ = sum / count;
-		}
-	}
+	BLUR(xsz, ysz, 2, 0);
 }
 
-void blur_grey_vert(uint16_t *dest, uint16_t *src, int xsz, int ysz, int radius)
+
+void blur_grey_vert(uint16_t *dest, uint16_t *src, int xsz, int ysz, int rad, int scale)
 {
+	int i, j;
+	unsigned char *dptr = (unsigned char*)dest;
+	unsigned char *sptr = (unsigned char*)src;
+	int pixel_step = xsz * 2;
+	int scanline_step = 2 - ysz * pixel_step;
+
+	BLUR(ysz, xsz, pixel_step, scanline_step);
 }

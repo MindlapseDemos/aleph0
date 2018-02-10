@@ -4,12 +4,13 @@
 #include <SDL/SDL.h>
 #include "demo.h"
 #include "tinyfps.h"
+#include "timer.h"
+#include "cfgopt.h"
 
 static void handle_event(SDL_Event *ev);
 static void toggle_fullscreen(void);
 
 static int quit;
-static long start_time;
 static SDL_Surface *fbsurf;
 
 static int fbscale = 2;
@@ -52,7 +53,7 @@ int main(int argc, char **argv)
 		SDL_Quit();
 		return 1;
 	}
-	start_time = SDL_GetTicks();
+	reset_timer();
 
 	while(!quit) {
 		SDL_Event ev;
@@ -61,7 +62,7 @@ int main(int argc, char **argv)
 			if(quit) goto break_evloop;
 		}
 
-		time_msec = SDL_GetTicks() - start_time;
+		time_msec = get_msec();
 		demo_draw();
 		drawFps(fb_pixels);
 
@@ -103,9 +104,19 @@ void demo_quit(void)
 	quit = 1;
 }
 
+void wait_vsync(void)
+{
+	unsigned long start = SDL_GetTicks();
+	unsigned long until = (start | 0xf) + 1;
+	while(SDL_GetTicks() <= until);
+}
+
 void swap_buffers(void *pixels)
 {
 	/* do nothing, all pointers point to the same buffer */
+	if(opt.vsync) {
+		wait_vsync();
+	}
 }
 
 static void handle_event(SDL_Event *ev)

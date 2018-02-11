@@ -25,6 +25,8 @@ void wait_vsync(void);
 
 #define RAND_FIELD_MAX	0.7
 
+#define BLUR_RAD	5
+
 #define PCOUNT		4000
 #define MAX_LIFE	7.0f
 #define PALPHA		1.0f
@@ -231,8 +233,12 @@ static void draw(void)
 		}
 	}
 
-#define BLUR_RAD	5
+	/*perf_start();*/
 	blur_grey_horiz(prev_smokebuf, cur_smokebuf, fb_width, fb_height, BLUR_RAD, 240);
+	/*
+	perf_end();
+	printf("blur perf: %lu\n", (unsigned long)perf_interval_count);
+	*/
 	blur_grey_vert(cur_smokebuf, prev_smokebuf, fb_width, fb_height, BLUR_RAD, 240);
 	swap_smoke_buffers();
 

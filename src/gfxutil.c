@@ -149,20 +149,21 @@ void draw_line(int x0, int y0, int x1, int y1, unsigned short color)
 		int sum = sptr[0] * (rad + 1); \
 		int count = (rad * 2 + 1) << 8; \
 		int midsize = w - rad * 2; \
+		int firstpix = sptr[0]; \
 		int lastpix = sptr[pstep * (w - 1)]; \
 		/* add up the contributions for the -1 pixel */ \
 		for(j=0; j<rad; j++) { \
 			sum += sptr[pstep * j]; \
 		} \
 		/* first part adding sptr[rad] and subtracting sptr[0] */ \
-		for(j=0; j<rad + 1; j++) { \
-			sum += (int)sptr[pstep * rad] - (int)sptr[0]; \
+		for(j=0; j<=rad; j++) { \
+			sum += (int)sptr[pstep * rad] - firstpix; \
 			sptr += pstep; \
 			*dptr = scale * sum / count; \
 			dptr += pstep; \
 		} \
 		/* middle part adding sptr[rad] and subtracting sptr[-(rad+1)] */ \
-		for(j=0; j<midsize - 1; j++) { \
+		for(j=1; j<midsize; j++) { \
 			sum += (int)sptr[pstep * rad] - (int)sptr[-(rad + 1) * pstep]; \
 			sptr += pstep; \
 			*dptr = scale * sum / count; \

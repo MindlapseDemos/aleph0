@@ -1,4 +1,5 @@
 src = $(wildcard src/*.c) $(wildcard src/dos/*.c)
+asmsrc = $(wildcard src/*.asm)
 obj = $(src:.c=.cof)
 dep = $(obj:.cof=.dep)
 bin = demo.exe

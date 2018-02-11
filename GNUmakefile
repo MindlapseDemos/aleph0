@@ -1,5 +1,5 @@
 src = $(wildcard src/*.c) $(wildcard src/sdl/*.c)
-obj = $(src:.c=.o)
+obj = $(src:.c=.o) $(asmsrc:.asm=.o)
 dep = $(obj:.o=.d)
 bin = demo
 
@@ -29,8 +29,8 @@ mikmod:
 
 .PHONY: cleanlibs
 cleanlibs:
-	$(MAKE) -C libs/imago -f Makefile.dj clean
-	$(MAKE) -C libs/oldmik -f Makefile.dj clean
+	$(MAKE) -C libs/imago clean
+	$(MAKE) -C libs/mikmod clean
 
 .PHONY: clean
 clean:

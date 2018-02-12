@@ -24,42 +24,53 @@ static INLINE int32_t cround64(double val)
 	return *(int32_t*)&val;
 }
 
-uint32_t perf_start_count, perf_interval_count;
+extern uint32_t perf_start_count, perf_interval_count;
 
 #ifdef __WATCOMC__
 void perf_start(void);
 #pragma aux perf_start = \
+	"xor eax, eax" \
+	"cpuid" \
 	"rdtsc" \
 	"mov [perf_start_count], eax" \
-	modify[eax edx];
+	modify[eax ebx ecx edx];
 
 void perf_end(void);
 #pragma aux perf_end = \
+	"xor eax, eax" \
+	"cpuid" \
 	"rdtsc" \
 	"sub eax, [perf_start_count]" \
 	"mov [perf_interval_count], eax" \
-	modify [eax edx];
+	modify [eax ebx ecx edx];
 #endif
 
 #ifdef __GNUC__
 #define perf_start()  asm volatile ( \
+	"xor %%eax, %%eax\n" \
+	"cpuid\n" \
 	"rdtsc\n" \
 	"mov %%eax, %0\n" \
-	: "=m"(perf_start_count) :: "%eax", "%edx")
+	: "=m"(perf_start_count) \
+	:: "%eax", "%ebx", "%ecx", "%edx")
 
 #define perf_end() asm volatile ( \
+	"xor %%eax, %%eax\n" \
+	"cpuid\n" \
 	"rdtsc\n" \
 	"sub %1, %%eax\n" \
 	"mov %%eax, %0\n" \
 	: "=m"(perf_interval_count) \
 	: "m"(perf_start_count) \
-	: "%eax", "%edx")
+	: "%eax", "%ebx", "%ecx", "%edx")
 #endif
 
 #ifdef _MSC_VER
 #define perf_start() \
 	do { \
 		__asm { \
+			xor eax, eax \
+			cpuid \
 			rdtsc \
 			mov [perf_start_count], eax \
 		} \
@@ -68,6 +79,8 @@ void perf_end(void);
 #define perf_end() \
 	do { \
 		__asm { \
+			xor eax, eax \
+			cpuid \
 			rdtsc \
 			sub eax, [perf_start_count] \
 			mov [perf_interval_count], eax \

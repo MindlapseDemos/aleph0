@@ -41,3 +41,46 @@ The demo datafiles are in their own subversion repo. To checkout the data files
 run the following in the demo root directory:
 
   svn co svn://mutantstargoat.com/datadirs/dosdemo data
+
+Random optimization details about the Pentium1 (p54c)
+-----------------------------------------------------
+Use cround64 (util.h) for float -> integer conversions, instead of casts.
+
+Performance measurement with RDTSC:
+    perf_start();
+    /* code under test */
+    perf_end(); /* result in perf_interval_count */
+
+Cache organization (L1): 8kb data / 8kb instruction
+128 sets of 2 cache lines, 32 bytes per cache line.
+
+Addresses which are multiples of 4096 fall in the same set and can only have
+two of them in cache at any time.
+
+U/V pipe pairing rules:
+ - both instructions must be simple
+ - no read-after-write or write-after-write reg dependencies
+ - no displacement AND immediate in either instruction
+ - instr. with prefixes (except 0x0f) can only run on U pipe.
+ - prefixes are treated as separate 1-byte instructions (except 0x0f).
+ - branches can be paired if they are the second instr. of the pair only.
+
+Simple instructions are:
+ - mov reg, reg/mem/imm
+ - mov mem, reg/imm
+ - alu reg, reg/mem/imm (alu: add/sub/cmp/and/or/xor)
+ - alu mem, reg/imm
+ - inc reg/mem
+ - dec reg/mem
+ - push reg/mem
+ - pop reg
+ - lea reg,mem
+ - jmp/call/jcc near
+ - nop
+ - test reg,reg/mem
+ - test acc,imm
+
+U-only pairable instructions:
+ - adc, sbb
+ - shr, sar, shl, sal with immediate
+ - ror, rol, rcr, rcl with immediate=1

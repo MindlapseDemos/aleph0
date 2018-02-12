@@ -3,7 +3,7 @@ demoobj = main.obj demo.obj screen.obj cfgopt.obj music.obj gfxutil.obj &
 scrobj = tunnel.obj fract.obj grise.obj polytest.obj plasma.obj bump.obj &
 thunder.obj metaball.obj greets.obj
 sysobj = gfx.obj vbe.obj watdpmi.obj timer.obj keyb.obj mouse.obj sball.obj &
-logger.obj tinyfps.obj
+logger.obj tinyfps.obj util.obj
 obj = $(baseobj) $(demoobj) $(sysobj) $(scrobj)
 bin = demo.exe
 

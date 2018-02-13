@@ -20,7 +20,7 @@ void demo_cleanup(void);
 
 void demo_draw(void);
 
-void demo_keyboard(int key, int state);
+void demo_keyboard(int key, int press);
 
 
 /* defined in main_*.c */
@@ -33,5 +33,8 @@ void set_palette(int idx, int r, int g, int b);
  * instead of flipping.
  */
 void swap_buffers(void *pixels);
+
+/* call each frame to get 3D viewing spherical coordinates */
+void mouse_orbit_update(float *theta, float *phi, float *dist);
 
 #endif	/* DEMO_H_ */

@@ -128,10 +128,9 @@ static void handle_event(SDL_Event *ev)
 
 	case SDL_KEYDOWN:
 	case SDL_KEYUP:
-		if(ev->key.keysym.sym == 'f') {
-			if(ev->key.state == SDL_PRESSED) {
-				toggle_fullscreen();
-			}
+		if(ev->key.keysym.sym == SDLK_RETURN && (SDL_GetModState() & KMOD_ALT) &&
+				ev->key.state == SDL_PRESSED) {
+			toggle_fullscreen();
 			break;
 		}
 		demo_keyboard(ev->key.keysym.sym, ev->key.state == SDL_PRESSED ? 1 : 0);

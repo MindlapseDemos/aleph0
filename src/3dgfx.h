@@ -98,4 +98,12 @@ void g3d_draw(int prim, const struct g3d_vertex *varr, int varr_size);
 void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 		const int16_t *iarr, int iarr_size);
 
+void g3d_begin(int prim);
+void g3d_end(void);
+void g3d_vertex(float x, float y, float z);
+void g3d_normal(float x, float y, float z);
+void g3d_color(float r, float g, float b);
+void g3d_color4(float r, float g, float b, float a);
+void g3d_texcoord(float u, float v);
+
 #endif	/* THREEDGFX_H_ */

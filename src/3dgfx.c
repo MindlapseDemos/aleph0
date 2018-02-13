@@ -14,8 +14,9 @@
 #define STACK_SIZE	8
 typedef float g3d_matrix[16];
 
-#define MAX_VBUF_SIZE	256
 #define MAX_LIGHTS		4
+
+#define IMM_VBUF_SIZE	256
 
 struct light {
 	float x, y, z;
@@ -47,8 +48,15 @@ struct g3d_state {
 	uint16_t *pixels;
 
 	int vport[4];
+
+	/* immediate mode */
+	int imm_prim;
+	int imm_numv, imm_pcount;
+	struct g3d_vertex imm_curv;
+	struct g3d_vertex imm_vbuf[IMM_VBUF_SIZE];
 };
 
+static void imm_flush(void);
 static void xform4_vec3(const float *mat, float *vec);
 static void xform3_vec3(const float *mat, float *vec);
 static void shade(struct g3d_vertex *v);
@@ -494,6 +502,94 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 			polyfill(st->fill_mode, pv, vnum);
 		}
 	}
+}
+
+void g3d_begin(int prim)
+{
+	st->imm_prim = prim;
+	st->imm_pcount = prim;
+	st->imm_numv = 0;
+}
+
+void g3d_end(void)
+{
+	imm_flush();
+}
+
+static void imm_flush(void)
+{
+	int numv = st->imm_numv;
+	st->imm_numv = 0;
+	g3d_draw_indexed(st->imm_prim, st->imm_vbuf, numv, 0, 0);
+}
+
+void g3d_vertex(float x, float y, float z)
+{
+	struct g3d_vertex *vptr = st->imm_vbuf + st->imm_numv++;
+	*vptr = st->imm_curv;
+	vptr->x = x;
+	vptr->y = y;
+	vptr->z = z;
+	vptr->w = 1.0f;
+
+	if(!--st->imm_pcount) {
+		if(st->imm_numv >= IMM_VBUF_SIZE - st->imm_prim) {
+			imm_flush();
+		}
+		st->imm_pcount = st->imm_prim;
+	}
+}
+
+void g3d_normal(float x, float y, float z)
+{
+	st->imm_curv.nx = x;
+	st->imm_curv.ny = y;
+	st->imm_curv.nz = z;
+}
+
+void g3d_color3b(unsigned char r, unsigned char g, unsigned char b)
+{
+	st->imm_curv.r = r;
+	st->imm_curv.g = g;
+	st->imm_curv.b = b;
+	st->imm_curv.a = 255;
+}
+
+void g3d_color4b(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
+{
+	st->imm_curv.r = r;
+	st->imm_curv.g = g;
+	st->imm_curv.b = b;
+	st->imm_curv.a = a;
+}
+
+void g3d_color3f(float r, float g, float b)
+{
+	int ir = r * 255.0f;
+	int ig = g * 255.0f;
+	int ib = b * 255.0f;
+	st->imm_curv.r = ir > 255 ? 255 : ir;
+	st->imm_curv.g = ig > 255 ? 255 : ig;
+	st->imm_curv.b = ib > 255 ? 255 : ib;
+	st->imm_curv.a = 255;
+}
+
+void g3d_color4f(float r, float g, float b, float a)
+{
+	int ir = r * 255.0f;
+	int ig = g * 255.0f;
+	int ib = b * 255.0f;
+	int ia = a * 255.0f;
+	st->imm_curv.r = ir > 255 ? 255 : ir;
+	st->imm_curv.g = ig > 255 ? 255 : ig;
+	st->imm_curv.b = ib > 255 ? 255 : ib;
+	st->imm_curv.a = ia > 255 ? 255 : ia;
+}
+
+void g3d_texcoord(float u, float v)
+{
+	st->imm_curv.u = u;
+	st->imm_curv.v = v;
 }
 
 static void xform4_vec3(const float *mat, float *vec)

@@ -102,8 +102,10 @@ void g3d_begin(int prim);
 void g3d_end(void);
 void g3d_vertex(float x, float y, float z);
 void g3d_normal(float x, float y, float z);
-void g3d_color(float r, float g, float b);
-void g3d_color4(float r, float g, float b, float a);
+void g3d_color3b(unsigned char r, unsigned char g, unsigned char b);
+void g3d_color4b(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
+void g3d_color3f(float r, float g, float b);
+void g3d_color4f(float r, float g, float b, float a);
 void g3d_texcoord(float u, float v);
 
 #endif	/* THREEDGFX_H_ */

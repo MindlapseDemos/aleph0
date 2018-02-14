@@ -9,13 +9,7 @@
 #include "gfxutil.h"
 #include "util.h"
 #include "metasurf.h"
-
-struct mesh {
-	int prim;
-	struct g3d_vertex *varr;
-	int16_t *iarr;
-	int vcount, icount;
-};
+#include "mesh.h"
 
 struct metaball {
 	float energy;
@@ -26,8 +20,6 @@ static int init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
-static void draw_mesh(struct mesh *mesh);
-static void zsort(struct mesh *m);
 
 static void calc_voxel_field(void);
 
@@ -41,7 +33,7 @@ static struct screen scr = {
 
 static float cam_theta, cam_phi = 25;
 static float cam_dist = 10;
-static struct mesh mmesh;
+static struct g3d_mesh mmesh;
 
 static struct metasurface *msurf;
 
@@ -104,49 +96,21 @@ static void start(long trans_time)
 
 static void update(void)
 {
-	static int prev_mx, prev_my;
-	static unsigned int prev_bmask;
+	int i, j;
+	float tsec = time_msec / 1000.0f;
+	static float phase[] = {0.0, M_PI / 3.0, M_PI * 0.8};
+	static float speed[] = {0.8, 1.4, 1.0};
+	static float scale[][3] = {{1, 2, 0.8}, {0.5, 1.6, 0.6}, {1.5, 0.7, 0.5}};
+	static float offset[][3] = {{0, 0, 0}, {0.25, 0, 0}, {-0.2, 0.15, 0.2}};
 
-	if(mouse_bmask) {
-		if((mouse_bmask ^ prev_bmask) == 0) {
-			int dx = mouse_x - prev_mx;
-			int dy = mouse_y - prev_my;
+	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
 
-			if(dx || dy) {
-				if(mouse_bmask & 1) {
-					cam_theta += dx * 1.0;
-					cam_phi += dy * 1.0;
+	for(i=0; i<NUM_MBALLS; i++) {
+		float t = (tsec + phase[i]) * speed[i];
 
-					if(cam_phi < -90) cam_phi = -90;
-					if(cam_phi > 90) cam_phi = 90;
-				}
-				if(mouse_bmask & 4) {
-					cam_dist += dy * 0.5;
-
-					if(cam_dist < 0) cam_dist = 0;
-				}
-			}
-		}
-	}
-	prev_mx = mouse_x;
-	prev_my = mouse_y;
-	prev_bmask = mouse_bmask;
-
-	{
-		int i, j;
-		float tsec = time_msec / 1000.0f;
-		static float phase[] = {0.0, M_PI / 3.0, M_PI * 0.8};
-		static float speed[] = {0.8, 1.4, 1.0};
-		static float scale[][3] = {{1, 2, 0.8}, {0.5, 1.6, 0.6}, {1.5, 0.7, 0.5}};
-		static float offset[][3] = {{0, 0, 0}, {0.25, 0, 0}, {-0.2, 0.15, 0.2}};
-
-		for(i=0; i<NUM_MBALLS; i++) {
-			float t = (tsec + phase[i]) * speed[i];
-
-			for(j=0; j<3; j++) {
-				float x = sin(t + j * M_PI / 2.0);
-				mball[i].pos[j] = offset[i][j] + x * scale[i][j];
-			}
+		for(j=0; j<3; j++) {
+			float x = sin(t + j * M_PI / 2.0);
+			mball[i].pos[j] = offset[i][j] + x * scale[i][j];
 		}
 	}
 
@@ -180,7 +144,7 @@ static void draw(void)
 
 	g3d_light_pos(0, -10, 10, 20);
 
-	zsort(&mmesh);
+	zsort_mesh(&mmesh);
 
 	g3d_mtl_diffuse(0.6, 0.6, 0.6);
 
@@ -189,49 +153,6 @@ static void draw(void)
 	g3d_viewport(0, 0, fb_width, fb_height);
 
 	swap_buffers(fb_pixels);
-}
-
-static void draw_mesh(struct mesh *mesh)
-{
-	if(mesh->iarr) {
-		g3d_draw_indexed(mesh->prim, mesh->varr, mesh->vcount, mesh->iarr, mesh->icount);
-	} else {
-		g3d_draw(mesh->prim, mesh->varr, mesh->vcount);
-	}
-}
-
-static struct {
-	struct g3d_vertex *varr;
-	const float *xform;
-} zsort_cls;
-
-static int zsort_cmp(const void *aptr, const void *bptr)
-{
-	const float *m = zsort_cls.xform;
-
-	const struct g3d_vertex *va = (const struct g3d_vertex*)aptr;
-	const struct g3d_vertex *vb = (const struct g3d_vertex*)bptr;
-
-	float za = m[2] * va->x + m[6] * va->y + m[10] * va->z + m[14];
-	float zb = m[2] * vb->x + m[6] * vb->y + m[10] * vb->z + m[14];
-
-	++va;
-	++vb;
-
-	za += m[2] * va->x + m[6] * va->y + m[10] * va->z + m[14];
-	zb += m[2] * vb->x + m[6] * vb->y + m[10] * vb->z + m[14];
-
-	return za - zb;
-}
-
-static void zsort(struct mesh *m)
-{
-	int nfaces = m->vcount / m->prim;
-
-	zsort_cls.varr = m->varr;
-	zsort_cls.xform = g3d_get_matrix(G3D_MODELVIEW, 0);
-
-	qsort(m->varr, nfaces, m->prim * sizeof *m->varr, zsort_cmp);
 }
 
 static void calc_voxel_field(void)

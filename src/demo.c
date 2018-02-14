@@ -11,6 +11,7 @@
 #include "music.h"
 #include "cfgopt.h"
 #include "tinyfps.h"
+#include "util.h"
 
 int fb_width = 320;
 int fb_height = 240;
@@ -119,6 +120,10 @@ void demo_keyboard(int key, int press)
 		switch(key) {
 		case 27:
 			demo_quit();
+			break;
+
+		case 127:
+			debug_break();
 			break;
 
 		case '\n':

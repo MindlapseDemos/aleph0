@@ -43,6 +43,9 @@ void perf_end(void);
 	"sub eax, [perf_start_count]" \
 	"mov [perf_interval_count], eax" \
 	modify [eax ebx ecx edx];
+
+void debug_break(void);
+#pragma aux debug_break = "int 3";
 #endif
 
 #ifdef __GNUC__
@@ -63,6 +66,9 @@ void perf_end(void);
 	: "=m"(perf_interval_count) \
 	: "m"(perf_start_count) \
 	: "%eax", "%ebx", "%ecx", "%edx")
+
+#define debug_break() \
+	asm volatile ("int $3")
 #endif
 
 #ifdef _MSC_VER
@@ -85,6 +91,11 @@ void perf_end(void);
 			sub eax, [perf_start_count] \
 			mov [perf_interval_count], eax \
 		} \
+	} while(0)
+
+#define debug_break() \
+	do { \
+		__asm { int 3 } \
 	} while(0)
 #endif
 

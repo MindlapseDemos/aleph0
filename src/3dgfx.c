@@ -470,7 +470,7 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 			int32_t ay = pv[1].y - pv[0].y;
 			int32_t bx = pv[2].x - pv[0].x;
 			int32_t by = pv[2].y - pv[0].y;
-			int32_t cross_z = ax * (by >> 8) - ay * (bx >> 8);
+			int32_t cross_z = (ax >> 4) * (by >> 4) - (ay >> 4) * (bx >> 4);
 			int sign = (cross_z >> 31) & 1;
 
 			if(!(sign ^ st->frontface)) {

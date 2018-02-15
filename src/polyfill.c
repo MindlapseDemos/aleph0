@@ -67,7 +67,7 @@ void polyfill_wire(struct pvertex *verts, int nverts)
  * but produces some slight quantization artifacts, due to the limited precision
  * of fixed-point calculations.
  */
-#undef HIGH_QUALITY
+#define HIGH_QUALITY
 
 /* extra bits of precision to use when interpolating colors.
  * try tweaking this if you notice strange quantization artifacts.

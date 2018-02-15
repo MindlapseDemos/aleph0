@@ -22,4 +22,6 @@ void draw_line(int x0, int y0, int x1, int y1, unsigned short color);
 void blur_grey_horiz(uint16_t *dest, uint16_t *src, int xsz, int ysz, int radius, int scale);
 void blur_grey_vert(uint16_t *dest, uint16_t *src, int xsz, int ysz, int radius, int scale);
 
+void convimg_rgb24_rgb16(uint16_t *dest, unsigned char *src, int xsz, int ysz);
+
 #endif	/* GFXUTIL_H_ */

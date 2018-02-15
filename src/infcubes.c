@@ -26,7 +26,7 @@ static struct screen scr = {
 
 static float cam_theta = -29, cam_phi = 35;
 static float cam_dist = 5;
-static struct pimage tex_crate;
+static struct pimage tex_inner, tex_outer;
 static struct g3d_mesh mesh_cube;
 
 struct screen *infcubes_screen(void)
@@ -37,25 +37,19 @@ struct screen *infcubes_screen(void)
 
 static int init(void)
 {
-	int i, npixels;
-	unsigned char *src;
-	uint16_t *dst;
-
-	if(!(tex_crate.pixels = img_load_pixels("data/crate.jpg", &tex_crate.width,
-					&tex_crate.height, IMG_FMT_RGB24))) {
+	if(!(tex_inner.pixels = img_load_pixels("data/crate.jpg", &tex_inner.width,
+					&tex_inner.height, IMG_FMT_RGB24))) {
 		fprintf(stderr, "infcubes: failed to load crate texture\n");
 		return -1;
 	}
+	convimg_rgb24_rgb16(tex_inner.pixels, (unsigned char*)tex_inner.pixels, tex_inner.width, tex_inner.height);
 
-	npixels = tex_crate.width * tex_crate.height;
-	src = (unsigned char*)tex_crate.pixels;
-	dst = tex_crate.pixels;
-	for(i=0; i<npixels; i++) {
-		int r = *src++;
-		int g = *src++;
-		int b = *src++;
-		*dst++ = PACK_RGB16(r, g, b);
+	if(!(tex_outer.pixels = img_load_pixels("data/steelfrm.jpg", &tex_outer.width,
+					&tex_outer.height, IMG_FMT_RGB24))) {
+		fprintf(stderr, "infcubes: failed to load ornamental texture\n");
+		return -1;
 	}
+	convimg_rgb24_rgb16(tex_outer.pixels, (unsigned char*)tex_outer.pixels, tex_outer.width, tex_outer.height);
 
 	if(gen_cube_mesh(&mesh_cube, 1.0f, 3) == -1) {
 		return -1;
@@ -65,7 +59,7 @@ static int init(void)
 
 static void destroy(void)
 {
-	img_free_pixels(tex_crate.pixels);
+	img_free_pixels(tex_inner.pixels);
 }
 
 static void start(long trans_time)
@@ -77,8 +71,6 @@ static void start(long trans_time)
 	g3d_enable(G3D_CULL_FACE);
 	g3d_disable(G3D_LIGHTING);
 	g3d_enable(G3D_LIGHT0);
-
-	g3d_set_texture(tex_crate.width, tex_crate.height, tex_crate.pixels);
 }
 
 static void update(void)
@@ -101,11 +93,15 @@ static void draw(void)
 
 	memset(fb_pixels, 0, fb_width * fb_height * 2);
 
-	g3d_polygon_mode(G3D_FLAT);
-	draw_cube(-6);
-
 	g3d_polygon_mode(G3D_TEX);
-	/*draw_cube(1);*/
+
+	g3d_push_matrix();
+	g3d_scale(-6, -6, -6);
+	g3d_set_texture(tex_outer.width, tex_outer.height, tex_outer.pixels);
+	draw_mesh(&mesh_cube);
+	g3d_pop_matrix();
+
+	g3d_set_texture(tex_inner.width, tex_inner.height, tex_inner.pixels);
 	draw_mesh(&mesh_cube);
 
 	swap_buffers(fb_pixels);

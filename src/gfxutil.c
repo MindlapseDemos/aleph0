@@ -202,3 +202,16 @@ void blur_grey_vert(uint16_t *dest, uint16_t *src, int xsz, int ysz, int rad, in
 
 	BLUR(ysz, xsz, pixel_step, scanline_step);
 }
+
+void convimg_rgb24_rgb16(uint16_t *dest, unsigned char *src, int xsz, int ysz)
+{
+	int i;
+	int npixels = xsz * ysz;
+
+	for(i=0; i<npixels; i++) {
+		int r = *src++;
+		int g = *src++;
+		int b = *src++;
+		*dest++ = PACK_RGB16(r, g, b);
+	}
+}

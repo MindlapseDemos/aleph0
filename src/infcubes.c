@@ -8,6 +8,7 @@
 #include "polyfill.h"
 #include "imago2.h"
 #include "gfxutil.h"
+#include "mesh.h"
 
 static int init(void);
 static void destroy(void);
@@ -26,6 +27,7 @@ static struct screen scr = {
 static float cam_theta = -29, cam_phi = 35;
 static float cam_dist = 5;
 static struct pimage tex_crate;
+static struct g3d_mesh mesh_cube;
 
 struct screen *infcubes_screen(void)
 {
@@ -53,6 +55,10 @@ static int init(void)
 		int g = *src++;
 		int b = *src++;
 		*dst++ = PACK_RGB16(r, g, b);
+	}
+
+	if(gen_cube_mesh(&mesh_cube, 1.0f, 3) == -1) {
+		return -1;
 	}
 	return 0;
 }
@@ -99,7 +105,8 @@ static void draw(void)
 	draw_cube(-6);
 
 	g3d_polygon_mode(G3D_TEX);
-	draw_cube(1);
+	/*draw_cube(1);*/
+	draw_mesh(&mesh_cube);
 
 	swap_buffers(fb_pixels);
 }

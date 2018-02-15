@@ -1,7 +1,7 @@
 demoobj = main.obj demo.obj screen.obj cfgopt.obj music.obj gfxutil.obj &
-3dgfx.obj polyfill.obj polyclip.obj metasurf.obj dynarr.obj
+3dgfx.obj polyfill.obj polyclip.obj metasurf.obj dynarr.obj mesh.obj
 scrobj = tunnel.obj fract.obj grise.obj polytest.obj plasma.obj bump.obj &
-thunder.obj metaball.obj greets.obj
+thunder.obj metaball.obj greets.obj infcubes.obj
 sysobj = gfx.obj vbe.obj watdpmi.obj timer.obj keyb.obj mouse.obj sball.obj &
 logger.obj tinyfps.obj util.obj
 obj = $(baseobj) $(demoobj) $(sysobj) $(scrobj)

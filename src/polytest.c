@@ -44,8 +44,8 @@ static int init(void)
 {
 	int i;
 
-	gen_cube(&cube, 1.0, 0);
-	gen_torus(&torus, 1.0, 0.25, 24, 12);
+	gen_cube_mesh(&cube, 1.0, 0);
+	gen_torus_mesh(&torus, 1.0, 0.25, 24, 12);
 	/* scale texcoords */
 	for(i=0; i<torus.vcount; i++) {
 		torus.varr[i].u *= 4.0;

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 #include "mesh.h"
 #include "3dgfx.h"
@@ -80,74 +81,249 @@ void draw_mesh(struct g3d_mesh *mesh)
 	}
 }
 
-
-#define NORMAL(vp, x, y, z) do { vp->nx = x; vp->ny = y; vp->nz = z; } while(0)
-#define COLOR(vp, cr, cg, cb) do { vp->r = cr; vp->g = cg; vp->b = cb; } while(0)
-#define TEXCOORD(vp, tu, tv) do { vp->u = tu; vp->v = tv; } while(0)
-#define VERTEX(vp, vx, vy, vz) \
-	do { \
-		vp->x = vx; vp->y = vy; vp->z = vz; vp->w = 1.0f; \
-		++vp; \
-	} while(0)
-
-int gen_cube(struct g3d_mesh *mesh, float sz, int sub)
+void apply_mesh_xform(struct g3d_mesh *mesh, const float *xform)
 {
-	struct g3d_vertex *vptr;
-	float hsz = sz / 2.0;
+	int i;
+	struct g3d_vertex *v = mesh->varr;
 
-	mesh->prim = G3D_QUADS;
-	mesh->iarr = 0;
-	mesh->icount = 0;
+	for(i=0; i<mesh->vcount; i++) {
+		float x = xform[0] * v->x + xform[4] * v->y + xform[8] * v->z + xform[12];
+		float y = xform[1] * v->x + xform[5] * v->y + xform[9] * v->z + xform[13];
+		v->z = xform[2] * v->x + xform[6] * v->y + xform[10] * v->z + xform[14];
+		v->x = x;
+		v->y = y;
+		x = xform[0] * v->nx + xform[4] * v->ny + xform[8] * v->nz;
+		y = xform[1] * v->nx + xform[5] * v->ny + xform[9] * v->nz;
+		v->nz = xform[2] * v->nx + xform[6] * v->ny + xform[10] * v->nz;
+		v->nx = x;
+		v->ny = y;
+		++v;
+	}
+}
 
-	mesh->vcount = 24;
-	if(!(mesh->varr = malloc(mesh->vcount * sizeof *mesh->varr))) {
+int append_mesh(struct g3d_mesh *ma, struct g3d_mesh *mb)
+{
+	int i, new_vcount, new_icount;
+	void *tmp;
+	int16_t *iptr;
+
+	if(ma->prim != mb->prim) {
+		fprintf(stderr, "append_mesh failed, primitive mismatch\n");
 		return -1;
 	}
-	vptr = mesh->varr;
 
-	/* -Z */
-	NORMAL(vptr, 0, 0, -1);
-	COLOR(vptr, 255, 0, 255);
-	VERTEX(vptr, hsz, -hsz, -hsz);
-	VERTEX(vptr, -hsz, -hsz, -hsz);
-	VERTEX(vptr, -hsz, hsz, -hsz);
-	VERTEX(vptr, hsz, hsz, -hsz);
-	/* -Y */
-	NORMAL(vptr, 0, -1, 0);
-	COLOR(vptr, 0, 255, 255);
-	VERTEX(vptr, -hsz, -hsz, -hsz);
-	VERTEX(vptr, hsz, -hsz, -hsz);
-	VERTEX(vptr, hsz, -hsz, hsz);
-	VERTEX(vptr, -hsz, -hsz, hsz);
-	/* -X */
-	NORMAL(vptr, -1, 0, 0);
-	COLOR(vptr, 255, 255, 0);
-	VERTEX(vptr, -hsz, -hsz, -hsz);
-	VERTEX(vptr, -hsz, -hsz, hsz);
-	VERTEX(vptr, -hsz, hsz, hsz);
-	VERTEX(vptr, -hsz, hsz, -hsz);
-	/* +X */
-	NORMAL(vptr, 1, 0, 0);
-	COLOR(vptr, 255, 0, 0);
-	VERTEX(vptr, hsz, -hsz, hsz);
-	VERTEX(vptr, hsz, -hsz, -hsz);
-	VERTEX(vptr, hsz, hsz, -hsz);
-	VERTEX(vptr, hsz, hsz, hsz);
-	/* +Y */
-	NORMAL(vptr, 0, 1, 0);
-	COLOR(vptr, 0, 255, 0);
-	VERTEX(vptr, -hsz, hsz, hsz);
-	VERTEX(vptr, hsz, hsz, hsz);
-	VERTEX(vptr, hsz, hsz, -hsz);
-	VERTEX(vptr, -hsz, hsz, -hsz);
-	/* +Z */
-	NORMAL(vptr, 0, 0, 1);
-	COLOR(vptr, 0, 0, 255);
-	VERTEX(vptr, -hsz, -hsz, hsz);
-	VERTEX(vptr, hsz, -hsz, hsz);
-	VERTEX(vptr, hsz, hsz, hsz);
-	VERTEX(vptr, -hsz, hsz, hsz);
+	if(ma->iarr || mb->iarr) {
+		if(!ma->iarr) {
+			if(indexify_mesh(ma) == -1) {
+				return -1;
+			}
+		} else if(!mb->iarr) {
+			if(indexify_mesh(mb) == -1) {
+				return -1;
+			}
+		}
 
+		new_icount = ma->icount + mb->icount;
+		if(!(iptr = realloc(ma->iarr, new_icount * sizeof *iptr))) {
+			fprintf(stderr, "append_mesh: failed to allocate combined index buffer (%d indices)\n", new_icount);
+			return -1;
+		}
+		ma->iarr = iptr;
+
+		iptr += ma->icount;
+		for(i=0; i<mb->icount; i++) {
+			*iptr++ = mb->iarr[i] + ma->vcount;
+		}
+		ma->icount = new_icount;
+	}
+
+	new_vcount = ma->vcount + mb->vcount;
+	if(!(tmp = realloc(ma->varr, new_vcount * sizeof *ma->varr))) {
+		fprintf(stderr, "append_mesh: failed to allocate combined vertex buffer (%d verts)\n", new_vcount);
+		return -1;
+	}
+	ma->varr = tmp;
+	memcpy(ma->varr + ma->vcount, mb->varr, mb->vcount * sizeof *ma->varr);
+	ma->vcount = new_vcount;
+	return 0;
+}
+
+#define FEQ(a, b)	((a) - (b) < 1e-5 && (b) - (a) < 1e-5)
+static int cmp_vertex(struct g3d_vertex *a, struct g3d_vertex *b)
+{
+	if(!FEQ(a->x, b->x) || !FEQ(a->y, b->y) || !FEQ(a->z, b->z) || !FEQ(a->w, b->w))
+		return -1;
+	if(!FEQ(a->nx, b->nx) || !FEQ(a->ny, b->ny) || !FEQ(a->nz, b->nz))
+		return -1;
+	if(!FEQ(a->u, b->u) || !FEQ(a->v, b->v))
+		return -1;
+	if(a->r != b->r || a->g != b->g || a->b != b->b || a->a != b->a)
+		return -1;
+	return 0;
+}
+
+static int find_existing(struct g3d_vertex *v, struct g3d_vertex *varr, int vcount)
+{
+	int i;
+	for(i=0; i<vcount; i++) {
+		if(cmp_vertex(v, varr++) == 0) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+int indexify_mesh(struct g3d_mesh *mesh)
+{
+	int i, j, nfaces, max_icount, idx;
+	int out_vcount = 0;
+	struct g3d_vertex *vin, *vout;
+	int16_t *iout;
+
+	if(mesh->iarr) {
+		fprintf(stderr, "indexify_mesh failed: already indexed\n");
+		return -1;
+	}
+
+	nfaces = mesh->vcount / mesh->prim;
+	max_icount = mesh->vcount;
+
+	if(!(mesh->iarr = malloc(max_icount * sizeof *mesh->iarr))) {
+		fprintf(stderr, "indexify_mesh failed to allocate index buffer of %d indices\n", max_icount);
+		return -1;
+	}
+
+	vin = vout = mesh->varr;
+	iout = mesh->iarr;
+
+	for(i=0; i<nfaces; i++) {
+		for(j=0; j<mesh->prim; j++) {
+			if((idx = find_existing(vin, mesh->varr, out_vcount)) >= 0) {
+				*iout++ = idx;
+			} else {
+				*iout++ = out_vcount++;
+				if(vin != vout) {
+					*vout++ = *vin;
+				}
+			}
+			++vin;
+		}
+	}
+
+	/* XXX also shrink buffers? I'll just leave them to max size for now */
+	return 0;
+}
+
+int gen_plane_mesh(struct g3d_mesh *m, float width, float height, int usub, int vsub)
+{
+	int i, j;
+	int nfaces, nverts, nidx, uverts, vverts;
+	float x, y, u, v, du, dv;
+	struct g3d_vertex *vptr;
+	int16_t *iptr;
+
+	if(usub < 1) usub = 1;
+	if(vsub < 1) vsub = 1;
+
+	nfaces = usub * vsub;
+	uverts = usub + 1;
+	vverts = vsub + 1;
+	du = (float)width / (float)usub;
+	dv = (float)height / (float)vsub;
+
+	nverts = uverts * vverts;
+	nidx = nfaces * 4;
+
+	if(!(m->varr = malloc(nverts * sizeof *m->varr))) {
+		fprintf(stderr, "gen_plane_mesh: failed to allocate vertex buffer (%d vertices)\n", nverts);
+		return -1;
+	}
+	if(!(m->iarr = malloc(nidx * sizeof *m->iarr))) {
+		fprintf(stderr, "gen_plane_mesh: failed to allocate index buffer (%d indices)\n", nidx);
+		free(m->varr);
+		m->varr = 0;
+		return -1;
+	}
+
+	m->prim = G3D_QUADS;
+	m->vcount = nverts;
+	m->icount = nidx;
+
+	vptr = m->varr;
+	iptr = m->iarr;
+
+	v = 0.0f;
+	for(i=0; i<vverts; i++) {
+		y = (v - 0.5) * height;
+		u = 0.0f;
+
+		for(j=0; j<uverts; j++) {
+			x = (u - 0.5) * width;
+
+			vptr->x = x;
+			vptr->y = y;
+			vptr->z = 0.0f;
+			vptr->w = 1.0f;
+			vptr->nx = 0.0f;
+			vptr->ny = 0.0f;
+			vptr->nz = 1.0f;
+			vptr->u = u;
+			vptr->v = v;
+			vptr->r = vptr->g = vptr->b = vptr->a = 255;
+			++vptr;
+
+			u += du;
+		}
+		v += dv;
+	}
+
+	for(i=0; i<vsub; i++) {
+		for(j=0; j<usub; j++) {
+			int idx = i * uverts + j;
+			*iptr++ = idx;
+			*iptr++ = idx + 1;
+			*iptr++ = idx + uverts + 1;
+			*iptr++ = idx + uverts;
+		}
+	}
+	return 0;
+}
+
+int gen_cube_mesh(struct g3d_mesh *mesh, float sz, int sub)
+{
+	int i;
+	struct g3d_mesh *m;
+	struct g3d_mesh tmpmesh;
+	float xform[16];
+	static float rotface[][4] = {
+		{0, 0, 1, 0},
+		{90, 0, 1, 0},
+		{180, 0, 1, 0},
+		{270, 0, 1, 0},
+		{90, 1, 0, 0},
+		{-90, 1, 0, 0}
+	};
+
+	g3d_matrix_mode(G3D_MODELVIEW);
+	g3d_push_matrix();
+
+	for(i=0; i<6; i++) {
+		m = i > 0 ? &tmpmesh : mesh;
+		if(gen_plane_mesh(m, sz, sz, sub, sub) == -1)
+			return -1;
+		g3d_load_identity();
+		g3d_rotate(rotface[i][0], rotface[i][1], rotface[i][2], rotface[i][3]);
+		g3d_translate(0, 0, sz / 2.0f);
+		g3d_get_matrix(G3D_MODELVIEW, xform);
+		apply_mesh_xform(m, xform);
+		if(i > 0) {
+			if(append_mesh(mesh, m) == -1) {
+				return -1;
+			}
+		}
+	}
+
+	g3d_pop_matrix();
 	return 0;
 }
 
@@ -165,7 +341,7 @@ static void torusvec(float *res, float theta, float phi, float mr, float rr)
 	res[2] = -rx * cos(theta) + rz * sin(theta);
 }
 
-int gen_torus(struct g3d_mesh *mesh, float rad, float ringrad, int usub, int vsub)
+int gen_torus_mesh(struct g3d_mesh *mesh, float rad, float ringrad, int usub, int vsub)
 {
 	int i, j;
 	int nfaces, uverts, vverts;

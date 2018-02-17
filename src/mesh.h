@@ -6,11 +6,12 @@
 struct g3d_mesh {
 	int prim;
 	struct g3d_vertex *varr;
-	int16_t *iarr;
+	uint16_t *iarr;
 	int vcount, icount;
 };
 
 int load_mesh(struct g3d_mesh *mesh, const char *fname);
+int save_mesh(struct g3d_mesh *mesh, const char *fname);
 
 void zsort_mesh(struct g3d_mesh *mesh);
 void draw_mesh(struct g3d_mesh *mesh);
@@ -18,6 +19,8 @@ void draw_mesh(struct g3d_mesh *mesh);
 void apply_mesh_xform(struct g3d_mesh *mesh, const float *xform);
 int append_mesh(struct g3d_mesh *ma, struct g3d_mesh *mb);
 int indexify_mesh(struct g3d_mesh *mesh);
+
+void normalize_mesh_normals(struct g3d_mesh *mesh);
 
 int gen_plane_mesh(struct g3d_mesh *mesh, float width, float height, int usub, int vsub);
 int gen_cube_mesh(struct g3d_mesh *mesh, float sz, int sub);

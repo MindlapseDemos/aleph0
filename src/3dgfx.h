@@ -28,6 +28,7 @@ enum {
 	G3D_LIGHT3		= 0x0040,
 	G3D_TEXTURE		= 0x0080,
 	G3D_BLEND		= 0x0100,
+	G3D_TEXTURE_GEN	= 0x0200,
 
 	G3D_ALL = 0x7fffffff
 };
@@ -96,7 +97,7 @@ void g3d_set_texture(int xsz, int ysz, void *pixels);
 
 void g3d_draw(int prim, const struct g3d_vertex *varr, int varr_size);
 void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
-		const int16_t *iarr, int iarr_size);
+		const uint16_t *iarr, int iarr_size);
 
 void g3d_begin(int prim);
 void g3d_end(void);

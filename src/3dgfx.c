@@ -396,7 +396,7 @@ void g3d_draw(int prim, const struct g3d_vertex *varr, int varr_size)
 }
 
 void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
-		const int16_t *iarr, int iarr_size)
+		const uint16_t *iarr, int iarr_size)
 {
 	int i, j, nfaces;
 	struct pvertex pv[16];
@@ -422,6 +422,10 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 
 			if(st->opt & G3D_LIGHTING) {
 				shade(v + i);
+			}
+			if(st->opt & G3D_TEXTURE_GEN) {
+				v[i].u = v[i].nx * 0.5 + 0.5;
+				v[i].v = v[i].ny * 0.5 + 0.5;
 			}
 			xform4_vec3(st->mat[G3D_PROJECTION][ptop], &v[i].x);
 		}

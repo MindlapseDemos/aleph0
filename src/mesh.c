@@ -31,8 +31,8 @@ static int zsort_cmp(const void *aptr, const void *bptr)
 
 static int zsort_indexed_cmp(const void *aptr, const void *bptr)
 {
-	const int16_t *a = (const int16_t*)aptr;
-	const int16_t *b = (const int16_t*)bptr;
+	const uint16_t *a = (const uint16_t*)aptr;
+	const uint16_t *b = (const uint16_t*)bptr;
 
 	const float *m = zsort_cls.xform;
 
@@ -100,7 +100,7 @@ int append_mesh(struct g3d_mesh *ma, struct g3d_mesh *mb)
 {
 	int i, new_vcount, new_icount;
 	void *tmp;
-	int16_t *iptr;
+	uint16_t *iptr;
 
 	if(ma->prim != mb->prim) {
 		fprintf(stderr, "append_mesh failed, primitive mismatch\n");
@@ -173,7 +173,7 @@ int indexify_mesh(struct g3d_mesh *mesh)
 	int i, j, nfaces, max_icount, idx;
 	int out_vcount = 0;
 	struct g3d_vertex *vin, *vout;
-	int16_t *iout;
+	uint16_t *iout;
 
 	if(mesh->iarr) {
 		fprintf(stderr, "indexify_mesh failed: already indexed\n");
@@ -209,13 +209,28 @@ int indexify_mesh(struct g3d_mesh *mesh)
 	return 0;
 }
 
+void normalize_mesh_normals(struct g3d_mesh *mesh)
+{
+	int i;
+	struct g3d_vertex *v = mesh->varr;
+
+	for(i=0; i<mesh->vcount; i++) {
+		float mag = sqrt(v->nx * v->nx + v->ny * v->ny + v->nz * v->nz);
+		float s = (mag == 0.0f) ? 1.0f : 1.0f / mag;
+		v->nx *= s;
+		v->ny *= s;
+		v->nz *= s;
+		++v;
+	}
+}
+
 int gen_plane_mesh(struct g3d_mesh *m, float width, float height, int usub, int vsub)
 {
 	int i, j;
 	int nfaces, nverts, nidx, uverts, vverts;
 	float x, y, u, v, du, dv;
 	struct g3d_vertex *vptr;
-	int16_t *iptr;
+	uint16_t *iptr;
 
 	if(usub < 1) usub = 1;
 	if(vsub < 1) vsub = 1;
@@ -341,7 +356,7 @@ int gen_torus_mesh(struct g3d_mesh *mesh, float rad, float ringrad, int usub, in
 	int i, j;
 	int nfaces, uverts, vverts;
 	struct g3d_vertex *vptr;
-	int16_t *iptr;
+	uint16_t *iptr;
 
 	mesh->prim = G3D_QUADS;
 

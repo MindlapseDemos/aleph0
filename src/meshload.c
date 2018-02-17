@@ -1,16 +1,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <assert.h>
 #include "mesh.h"
 #include "dynarr.h"
 #include "rbtree.h"
 #include "vmath.h"
 #include "3dgfx.h"
+#include "util.h"
 
+struct vertex_pos_color {
+	float x, y, z;
+	float r, g, b, a;
+};
 
 struct facevertex {
 	int vidx, tidx, nidx;
-	int myidx;
 };
 
 static char *clean_line(char *s);
@@ -18,20 +23,31 @@ static char *parse_face_vert(char *ptr, struct facevertex *fv, int numv, int num
 static int cmp_facevert(const void *ap, const void *bp);
 static void free_rbnode_key(struct rbnode *n, void *cls);
 
-
+/* merge of different indices per attribute happens during face processing.
+ *
+ * A triplet of (vertex index/texcoord index/normal index) is used as the key
+ * to search in a balanced binary search tree for vertex buffer index assigned
+ * to the same triplet if it has been encountered before. That index is
+ * appended to the index buffer.
+ *
+ * If a particular triplet has not been encountered before, a new g3d_vertex is
+ * appended to the vertex buffer. The index of this new vertex is appended to
+ * the index buffer, and also inserted into the tree for future searches.
+ */
 int load_mesh(struct g3d_mesh *mesh, const char *fname)
 {
 	int i, line_num = 0, result = -1;
 	int found_quad = 0;
-	FILE *fp;
+	FILE *fp = 0;
 	char buf[256];
-	vec3_t *varr = 0, *narr = 0;
+	struct vertex_pos_color *varr = 0;
+	vec3_t *narr = 0;
 	vec2_t *tarr = 0;
-	struct rbtree *rbtree;
+	struct rbtree *rbtree = 0;
 
 	if(!(fp = fopen(fname, "rb"))) {
 		fprintf(stderr, "load_mesh: failed to open file: %s\n", fname);
-		return -1;
+		goto err;
 	}
 
 	if(!(rbtree = rb_create(cmp_facevert))) {
@@ -62,10 +78,23 @@ int load_mesh(struct g3d_mesh *mesh, const char *fname)
 		case 'v':
 			if(isspace(line[1])) {
 				/* vertex */
-				vec3_t v;
-				if(sscanf(line + 2, "%f %f %f", &v.x, &v.y, &v.z) != 3) {
+				struct vertex_pos_color v;
+				int num;
+
+				num = sscanf(line + 2, "%f %f %f %f %f %f %f", &v.x, &v.y, &v.z, &v.x, &v.y, &v.z, &v.a);
+				if(num < 3) {
 					fprintf(stderr, "%s:%d: invalid vertex definition: \"%s\"\n", fname, line_num, line);
 					goto err;
+				}
+				switch(num) {
+				case 3:
+					v.r = 1.0f;
+				case 4:
+					v.g = 1.0f;
+				case 5:
+					v.b = 1.0f;
+				case 6:
+					v.a = 1.0f;
 				}
 				if(!(varr = dynarr_push(varr, &v))) {
 					fprintf(stderr, "load_mesh: failed to resize vertex buffer\n");
@@ -125,7 +154,7 @@ int load_mesh(struct g3d_mesh *mesh, const char *fname)
 							goto err;
 						}
 					} else {
-						uint16_t idx = dynarr_size(mesh->varr);
+						uint16_t newidx = dynarr_size(mesh->varr);
 						struct g3d_vertex v;
 						struct facevertex *newfv;
 
@@ -133,6 +162,10 @@ int load_mesh(struct g3d_mesh *mesh, const char *fname)
 						v.y = varr[fv.vidx].y;
 						v.z = varr[fv.vidx].z;
 						v.w = 1.0f;
+						v.r = cround64(varr[fv.vidx].r * 255.0);
+						v.g = cround64(varr[fv.vidx].g * 255.0);
+						v.b = cround64(varr[fv.vidx].b * 255.0);
+						v.a = cround64(varr[fv.vidx].a * 255.0);
 						if(fv.tidx >= 0) {
 							v.u = tarr[fv.tidx].x;
 							v.v = tarr[fv.tidx].y;
@@ -148,13 +181,12 @@ int load_mesh(struct g3d_mesh *mesh, const char *fname)
 							v.nx = v.ny = 0.0f;
 							v.nz = 1.0f;
 						}
-						v.r = v.g = v.b = v.a = 255;
 
 						if(!(mesh->varr = dynarr_push(mesh->varr, &v))) {
 							fprintf(stderr, "load_mesh: failed to resize combined vertex array\n");
 							goto err;
 						}
-						if(!(mesh->iarr = dynarr_push(mesh->iarr, &idx))) {
+						if(!(mesh->iarr = dynarr_push(mesh->iarr, &newidx))) {
 							fprintf(stderr, "load_mesh: failed to resize index array\n");
 							goto err;
 						}
@@ -162,7 +194,7 @@ int load_mesh(struct g3d_mesh *mesh, const char *fname)
 						if((newfv = malloc(sizeof *newfv))) {
 							*newfv = fv;
 						}
-						if(!newfv || rb_insert(rbtree, newfv, &idx) == -1) {
+						if(!newfv || rb_insert(rbtree, newfv, (void*)(intptr_t)newidx) == -1) {
 							fprintf(stderr, "load_mesh: failed to insert facevertex to the binary search tree\n");
 							goto err;
 						}
@@ -198,6 +230,46 @@ err:
 	}
 	rb_free(rbtree);
 	return result;
+}
+
+int save_mesh(struct g3d_mesh *mesh, const char *fname)
+{
+	int i, fvcount;
+	FILE *fp;
+
+	if(!(fp = fopen(fname, "wb"))) {
+		fprintf(stderr, "save_mesh: failed to open %s for writing\n", fname);
+		return -1;
+	}
+	fprintf(fp, "# Wavefront OBJ file shoved in your FACE by Mindlapse. Deal with it\n");
+
+	for(i=0; i<mesh->vcount; i++) {
+		struct g3d_vertex *v = mesh->varr + i;
+		fprintf(fp, "v %f %f %f %f %f %f %f\n", v->x, v->y, v->z, v->r / 255.0f, v->g / 255.0f,
+				v->b / 255.0f, v->a / 255.0f);
+	}
+	for(i=0; i<mesh->vcount; i++) {
+		fprintf(fp, "vn %f %f %f\n", mesh->varr[i].nx, mesh->varr[i].ny, mesh->varr[i].nz);
+	}
+	for(i=0; i<mesh->vcount; i++) {
+		fprintf(fp, "vt %f %f\n", mesh->varr[i].u, mesh->varr[i].v);
+	}
+
+	fvcount = mesh->prim;
+	for(i=0; i<mesh->icount; i++) {
+		int idx = mesh->iarr[i] + 1;
+
+		if(fvcount == mesh->prim) {
+			fprintf(fp, "\nf");
+			fvcount = 0;
+		}
+		fprintf(fp, " %d/%d/%d", idx, idx, idx);
+		++fvcount;
+	}
+	fprintf(fp, "\n");
+
+	fclose(fp);
+	return 0;
 }
 
 static char *clean_line(char *s)

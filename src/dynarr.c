@@ -70,6 +70,11 @@ int dynarr_size(void *da)
 }
 
 
+void *dynarr_clear(void *da)
+{
+	return dynarr_resize(da, 0);
+}
+
 /* stack semantics */
 void *dynarr_push(void *da, void *item)
 {
@@ -125,4 +130,11 @@ void *dynarr_pop(void *da)
 	desc->nelem--;
 
 	return da;
+}
+
+void *dynarr_finalize(void *da)
+{
+	struct arrdesc *desc = DESC(da);
+	memmove(desc, da, desc->bufsz);
+	return desc;
 }

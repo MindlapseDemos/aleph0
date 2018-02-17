@@ -1,6 +1,8 @@
 #ifndef VMATH_H_
 #define VMATH_H_
 
+#include <math.h>
+
 #ifdef __GNUC__
 #define INLINE __inline
 
@@ -11,6 +13,7 @@
 #define INLINE
 #endif
 
+typedef struct { float x, y; } vec2_t;
 typedef struct { float x, y, z; } vec3_t;
 typedef struct { float x, y, z, w; } vec4_t;
 

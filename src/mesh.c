@@ -5,11 +5,6 @@
 #include "mesh.h"
 #include "3dgfx.h"
 
-int load_mesh(struct g3d_mesh *mesh, const char *fname)
-{
-	return -1;	/* TODO */
-}
-
 static struct {
 	struct g3d_vertex *varr;
 	const float *xform;

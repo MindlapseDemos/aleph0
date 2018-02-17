@@ -51,7 +51,12 @@ static int init(void)
 	}
 	convimg_rgb24_rgb16(tex_outer.pixels, (unsigned char*)tex_outer.pixels, tex_outer.width, tex_outer.height);
 
+	/*
 	if(gen_cube_mesh(&mesh_cube, 1.0f, 3) == -1) {
+		return -1;
+	}
+	*/
+	if(load_mesh(&mesh_cube, "data/bevelbox.obj") == -1) {
 		return -1;
 	}
 	return 0;

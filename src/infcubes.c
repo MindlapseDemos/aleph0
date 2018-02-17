@@ -16,7 +16,7 @@ static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
 static int gen_phong_tex(struct pimage *img, int xsz, int ysz, float sexp,
-		int dr, int dg, int db, int sr, int sg, int sb);
+		float offx, float offy,	int dr, int dg, int db, int sr, int sg, int sb);
 
 static struct screen scr = {
 	"infcubes",
@@ -49,7 +49,7 @@ static int init(void)
 	}
 	convimg_rgb24_rgb16(tex_inner.pixels, (unsigned char*)tex_inner.pixels, tex_inner.width, tex_inner.height);
 	*/
-	gen_phong_tex(&tex_inner, PHONG_TEX_SZ, PHONG_TEX_SZ, 5.0f, 10, 50, 92, 192, 192, 192);
+	gen_phong_tex(&tex_inner, PHONG_TEX_SZ, PHONG_TEX_SZ, 5.0f, 0, 0, 10, 50, 92, 192, 192, 192);
 
 	if(!(tex_outer.pixels = img_load_pixels("data/refmap1.jpg", &tex_outer.width,
 					&tex_outer.height, IMG_FMT_RGB24))) {
@@ -130,7 +130,7 @@ static void draw(void)
 }
 
 static int gen_phong_tex(struct pimage *img, int xsz, int ysz, float sexp,
-		int dr, int dg, int db, int sr, int sg, int sb)
+		float offx, float offy,	int dr, int dg, int db, int sr, int sg, int sb)
 {
 	int i, j;
 	float u, v, du, dv;
@@ -144,9 +144,9 @@ static int gen_phong_tex(struct pimage *img, int xsz, int ysz, float sexp,
 	du = 2.0f / (float)(xsz - 1);
 	dv = 2.0f / (float)(ysz - 1);
 
-	v = -1.0f;
+	v = -1.0f - offy;
 	for(i=0; i<ysz; i++) {
-		u = -1.0f;
+		u = -1.0f - offx;
 		for(j=0; j<xsz; j++) {
 			float d = sqrt(u * u + v * v);
 			float val = pow(cos(d * M_PI / 2.0f), sexp);

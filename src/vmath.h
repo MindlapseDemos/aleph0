@@ -29,9 +29,36 @@ static INLINE vec3_t v3_cons(float x, float y, float z)
 	return res;
 }
 
+static INLINE void v3_negate(vec3_t *v)
+{
+	v->x = -v->x;
+	v->y = -v->y;
+	v->z = -v->z;
+}
+
 static INLINE float v3_dot(vec3_t v1, vec3_t v2)
 {
 	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+}
+
+static INLINE vec3_t v3_cross(vec3_t v1, vec3_t v2)
+{
+	vec3_t res;
+	res.x = v1.y * v2.z - v1.z * v2.y;
+	res.y = v1.z * v2.x - v1.x * v2.z;
+	res.z = v1.x * v2.y - v1.y * v2.x;
+	return res;
+}
+
+static INLINE void v3_normalize(vec3_t *v)
+{
+	float mag = sqrt(v->x * v->x + v->y * v->y + v->z * v->z);
+	if(mag != 0.0f) {
+		float s = 1.0f / mag;
+		v->x *= s;
+		v->y *= s;
+		v->z *= s;
+	}
 }
 
 /* quaternion functions */

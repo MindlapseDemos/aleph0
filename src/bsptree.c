@@ -172,17 +172,38 @@ static struct bspnode *new_node(struct g3d_vertex *v, int vnum)
 static struct bspnode *add_poly_tree(struct bspnode *n, struct g3d_vertex *v, int vnum)
 {
 	struct bspnode *nres;
-	int clipres, clipped_vnum;
-	struct g3d_vertex *clipped;
+	int clipres, clipres_neg, clipped_vnum, clipped_neg_vnum;
+	struct g3d_vertex *clipped, *clipped_neg;
 	struct cplane negplane;
+
+	assert(vnum > 0);
 
 	if(!n) {
 		return new_node(v, vnum);
 	}
 
-	clipped = alloca((vnum + 1) * sizeof *clipped);
+	negplane.x = n->plane.x;
+	negplane.y = n->plane.y;
+	negplane.z = n->plane.z;
+	negplane.nx = -n->plane.nx;
+	negplane.ny = -n->plane.ny;
+	negplane.nz = -n->plane.nz;
+
+	clipped = alloca((vnum * 2) * sizeof *clipped);
+	clipped_neg = alloca((vnum * 2) * sizeof *clipped_neg);
 
 	clipres = clip_poly(clipped, &clipped_vnum, v, vnum, &n->plane);
+	clipres_neg = clip_poly(clipped_neg, &clipped_neg_vnum, v, vnum, &negplane);
+
+	/* detect edge cases where due to floating point imprecision, clipping
+	 * by the positive plane clips the polygon, but clipping by the negative
+	 * plane doesn't. If that happens, consider the polygon completely on
+	 * the side indicated by -clipres_neg
+	 */
+	if(clipres == 0 && clipres_neg != 0) {
+		clipres = -clipres_neg;
+	}
+
 	if(clipres > 0) {
 		/* polygon completely in the positive subspace */
 		if(!(nres = add_poly_tree(n->front, v, vnum))) {
@@ -204,17 +225,7 @@ static struct bspnode *add_poly_tree(struct bspnode *n, struct g3d_vertex *v, in
 		}
 		n->front = nres;
 
-		negplane.x = n->plane.x;
-		negplane.y = n->plane.y;
-		negplane.z = n->plane.z;
-		negplane.nx = -n->plane.nx;
-		negplane.ny = -n->plane.ny;
-		negplane.nz = -n->plane.nz;
-
-		clipres = clip_poly(clipped, &clipped_vnum, v, vnum, &negplane);
-		/*assert(clipres == 0);*/
-
-		if(!(nres = add_poly_tree(n->back, clipped, clipped_vnum))) {
+		if(!(nres = add_poly_tree(n->back, clipped_neg, clipped_neg_vnum))) {
 			return 0;
 		}
 		n->back = nres;

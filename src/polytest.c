@@ -9,6 +9,7 @@
 #include "polyfill.h"	/* just for struct pimage */
 #include "cfgopt.h"
 #include "mesh.h"
+#include "bsptree.h"
 
 static int init(void);
 static void destroy(void);
@@ -28,6 +29,7 @@ static struct screen scr = {
 static float cam_theta, cam_phi = 25;
 static float cam_dist = 3;
 static struct g3d_mesh cube, torus;
+static struct bsptree torus_bsp;
 
 static struct pimage tex;
 
@@ -52,6 +54,12 @@ static int init(void)
 		torus.varr[i].v *= 2.0;
 	}
 
+	init_bsp(&torus_bsp);
+	if(bsp_add_mesh(&torus_bsp, &torus) == -1) {
+		fprintf(stderr, "failed to construct torus BSP tree\n");
+		return -1;
+	}
+
 	gen_texture(&tex, 128, 128);
 
 #ifdef DEBUG_POLYFILL
@@ -70,6 +78,7 @@ static void destroy(void)
 	free(cube.varr);
 	free(torus.varr);
 	free(torus.iarr);
+	destroy_bsp(&torus_bsp);
 }
 
 static void start(long trans_time)
@@ -115,6 +124,7 @@ static void draw(void)
 	g3d_set_texture(tex.width, tex.height, tex.pixels);
 
 	draw_mesh(&torus);
+	/*draw_bsp(&torus_bsp);*/
 
 	/*draw_mesh(&cube);*/
 	swap_buffers(fb_pixels);

@@ -394,6 +394,7 @@ int gen_torus_mesh(struct g3d_mesh *mesh, float rad, float ringrad, int usub, in
 			int chess = (i & 1) == (j & 1);
 
 			torusvec(&vptr->x, theta, phi, rad, ringrad);
+			vptr->w = 1.0f;
 
 			vptr->nx = (vptr->x - rcent[0]) / ringrad;
 			vptr->ny = (vptr->y - rcent[1]) / ringrad;

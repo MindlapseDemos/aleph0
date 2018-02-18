@@ -23,7 +23,7 @@ int save_bsp(struct bsptree *bsp, const char *fname);
 int load_bsp(struct bsptree *bsp, const char *fname);
 
 int bsp_add_poly(struct bsptree *bsp, struct g3d_vertex *v, int vnum);
-void bsp_add_mesh(struct bsptree *bsp, struct g3d_mesh *m);
+int bsp_add_mesh(struct bsptree *bsp, struct g3d_mesh *m);
 
 void draw_bsp(struct bsptree *bsp, float view_x, float view_y, float view_z);
 

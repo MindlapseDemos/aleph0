@@ -92,7 +92,7 @@ int bsp_add_poly(struct bsptree *bsp, struct g3d_vertex *v, int vnum)
 	return 0;
 }
 
-void bsp_add_mesh(struct bsptree *bsp, struct g3d_mesh *m)
+int bsp_add_mesh(struct bsptree *bsp, struct g3d_mesh *m)
 {
 	int i, j, nfaces;
 	struct g3d_vertex v[4];
@@ -109,8 +109,11 @@ void bsp_add_mesh(struct bsptree *bsp, struct g3d_mesh *m)
 				v[j] = *vptr++;
 			}
 		}
-		bsp_add_poly(bsp, v, m->prim);
+		if(bsp_add_poly(bsp, v, m->prim) == -1) {
+			return -1;
+		}
 	}
+	return 0;
 }
 
 void draw_bsp(struct bsptree *bsp, float view_x, float view_y, float view_z)
@@ -180,39 +183,42 @@ static struct bspnode *add_poly_tree(struct bspnode *n, struct g3d_vertex *v, in
 	clipped = alloca((vnum + 1) * sizeof *clipped);
 
 	clipres = clip_poly(clipped, &clipped_vnum, v, vnum, &n->plane);
-	if(clipres > 0) {	/* polygon completely in the positive subspace */
+	if(clipres > 0) {
+		/* polygon completely in the positive subspace */
 		if(!(nres = add_poly_tree(n->front, v, vnum))) {
 			return 0;
 		}
 		n->front = nres;
-	}
-	if(clipres < 0) {	/* polygon completely in the negative subspace */
+
+	} else if(clipres < 0) {
+		/* polygon completely in the negative subspace */
 		if(!(nres = add_poly_tree(n->back, v, vnum))) {
 			return 0;
 		}
 		n->back = nres;
+
+	} else {
+		/* polygon is straddling the plane */
+		if(!(nres = add_poly_tree(n->front, clipped, clipped_vnum))) {
+			return 0;
+		}
+		n->front = nres;
+
+		negplane.x = n->plane.x;
+		negplane.y = n->plane.y;
+		negplane.z = n->plane.z;
+		negplane.nx = -n->plane.nx;
+		negplane.ny = -n->plane.ny;
+		negplane.nz = -n->plane.nz;
+
+		clipres = clip_poly(clipped, &clipped_vnum, v, vnum, &negplane);
+		/*assert(clipres == 0);*/
+
+		if(!(nres = add_poly_tree(n->back, clipped, clipped_vnum))) {
+			return 0;
+		}
+		n->back = nres;
 	}
-
-	/* polygon is straddling the plane */
-	if(!(nres = add_poly_tree(n->front, clipped, clipped_vnum))) {
-		return 0;
-	}
-	n->front = nres;
-
-	negplane.x = n->plane.x;
-	negplane.y = n->plane.y;
-	negplane.z = n->plane.z;
-	negplane.nx = -n->plane.nx;
-	negplane.ny = -n->plane.ny;
-	negplane.nz = -n->plane.nz;
-
-	clipres = clip_poly(clipped, &clipped_vnum, v, vnum, &negplane);
-	assert(clipres == 0);
-
-	if(!(nres = add_poly_tree(n->back, clipped, clipped_vnum))) {
-		return 0;
-	}
-	n->back = nres;
 	return n;
 }
 

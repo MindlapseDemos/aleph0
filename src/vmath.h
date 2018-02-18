@@ -126,4 +126,19 @@ static INLINE quat_t quat_rotate(quat_t q, float angle, float x, float y, float 
 	return quat_mul(q, rq);
 }
 
+static INLINE void mat4_transpose(float *mat)
+{
+	int i, j;
+
+	for(i=0; i<4; i++) {
+		for(j=0; j<i; j++) {
+			int rowidx = i * 4 + j;
+			int colidx = j * 4 + i;
+			float tmp = mat[rowidx];
+			mat[rowidx] = mat[colidx];
+			mat[colidx] = tmp;
+		}
+	}
+}
+
 #endif	/* VMATH_H_ */

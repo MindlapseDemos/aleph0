@@ -82,6 +82,8 @@ void g3d_ortho(float left, float right, float bottom, float top, float znear, fl
 void g3d_frustum(float left, float right, float bottom, float top, float znear, float zfar);
 void g3d_perspective(float vfov, float aspect, float znear, float zfar);
 
+/* returns pointer to the *internal* matrix, and if argument m is not null,
+ * also copies the internal matrix there. */
 const float *g3d_get_matrix(int which, float *m);
 
 void g3d_light_pos(int idx, float x, float y, float z);

@@ -404,6 +404,9 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 	int vnum = prim; /* primitive vertex counts correspond to enum values */
 	int mvtop = st->mtop[G3D_MODELVIEW];
 	int ptop = st->mtop[G3D_PROJECTION];
+	struct g3d_vertex *tmpv;
+
+	tmpv = alloca(prim * 6 * sizeof *tmpv);
 
 	/* calc the normal matrix */
 	memcpy(st->norm_mat, st->mat[G3D_MODELVIEW][mvtop], 16 * sizeof(float));
@@ -432,7 +435,6 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 
 		/* clipping */
 		for(i=0; i<6; i++) {
-			struct g3d_vertex tmpv[16];
 			memcpy(tmpv, v, vnum * sizeof *v);
 
 			if(clip_frustum(v, &vnum, tmpv, vnum, i) < 0) {

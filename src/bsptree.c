@@ -18,6 +18,7 @@ static void free_tree(struct bspnode *n);
 
 static struct bspnode *new_node(struct g3d_vertex *v, int vnum);
 static struct bspnode *add_poly_tree(struct bspnode *n, struct g3d_vertex *v, int vnum);
+static void draw_bsp_tree(struct bspnode *n, const vec3_t *vdir);
 
 static void save_bsp_tree(struct bspnode *n, FILE *fp);
 static struct bspnode *load_bsp_tree(FILE *fp);
@@ -118,6 +119,11 @@ int bsp_add_mesh(struct bsptree *bsp, struct g3d_mesh *m)
 
 void draw_bsp(struct bsptree *bsp, float view_x, float view_y, float view_z)
 {
+	vec3_t vdir;
+	vdir.x = view_x;
+	vdir.y = view_y;
+	vdir.z = view_z;
+	draw_bsp_tree(bsp->root, &vdir);
 }
 
 static int count_nodes(struct bspnode *n)
@@ -231,6 +237,24 @@ static struct bspnode *add_poly_tree(struct bspnode *n, struct g3d_vertex *v, in
 		n->back = nres;
 	}
 	return n;
+}
+
+static void draw_bsp_tree(struct bspnode *n, const vec3_t *vdir)
+{
+	float dot;
+
+	if(!n) return;
+
+	dot = vdir->x * n->plane.nx + vdir->y * n->plane.ny + vdir->z * n->plane.nz;
+	if(dot >= 0.0f) {
+		draw_bsp_tree(n->front, vdir);
+		g3d_draw_indexed(n->vcount, n->verts, n->vcount, 0, 0);
+		draw_bsp_tree(n->back, vdir);
+	} else {
+		draw_bsp_tree(n->back, vdir);
+		g3d_draw_indexed(n->vcount, n->verts, n->vcount, 0, 0);
+		draw_bsp_tree(n->front, vdir);
+	}
 }
 
 static void save_bsp_tree(struct bspnode *n, FILE *fp)

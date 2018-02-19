@@ -78,6 +78,12 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 	const uint16_t *iptr = iarr;
 
 	switch(prim) {
+	case G3D_POINTS:
+		glprim = GL_POINTS;
+		break;
+	case G3D_LINES:
+		glprim = GL_LINES;
+		break;
 	case G3D_TRIANGLES:
 		glprim = GL_TRIANGLES;
 		break;

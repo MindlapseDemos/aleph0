@@ -15,7 +15,7 @@ incpath = -I$(root)/src
 libpath = -L$(root)/libs/imago -L$(root)/libs/mikmod
 
 CFLAGS = -pedantic -Wall -g $(incpath)
-LDFLAGS = -lGL -lGLU -lglut -lm -limago -lmikmod
+LDFLAGS = $(libpath) -lGL -lGLU -lglut -lm -limago -lmikmod
 
 $(bin): $(obj)
 	$(CC) -o $@ $(obj) $(LDFLAGS)

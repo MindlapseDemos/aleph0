@@ -239,6 +239,22 @@ static struct bspnode *add_poly_tree(struct bspnode *n, struct g3d_vertex *v, in
 	return n;
 }
 
+void debug_draw_poly(struct g3d_vertex *varr, int vcount)
+{
+	int i, nfaces = vcount - 2;
+	int vbuf_size = nfaces * 3;
+	struct g3d_vertex *vbuf = alloca(vbuf_size * sizeof *vbuf);
+	struct g3d_vertex *vptr = varr + 1;
+
+	for(i=0; i<nfaces; i++) {
+		vbuf[i * 3] = varr[0];
+		vbuf[i * 3 + 1] = *vptr++;
+		vbuf[i * 3 + 2] = *vptr;
+	}
+
+	g3d_draw_indexed(G3D_TRIANGLES, vbuf, vbuf_size, 0, 0);
+}
+
 static void draw_bsp_tree(struct bspnode *n, const vec3_t *vdir)
 {
 	float dot;
@@ -248,11 +264,13 @@ static void draw_bsp_tree(struct bspnode *n, const vec3_t *vdir)
 	dot = vdir->x * n->plane.nx + vdir->y * n->plane.ny + vdir->z * n->plane.nz;
 	if(dot >= 0.0f) {
 		draw_bsp_tree(n->front, vdir);
-		g3d_draw_indexed(n->vcount, n->verts, n->vcount, 0, 0);
+		//g3d_draw_indexed(n->vcount, n->verts, n->vcount, 0, 0);
+		debug_draw_poly(n->verts, n->vcount);
 		draw_bsp_tree(n->back, vdir);
 	} else {
 		draw_bsp_tree(n->back, vdir);
-		g3d_draw_indexed(n->vcount, n->verts, n->vcount, 0, 0);
+		//g3d_draw_indexed(n->vcount, n->verts, n->vcount, 0, 0);
+		debug_draw_poly(n->verts, n->vcount);
 		draw_bsp_tree(n->front, vdir);
 	}
 }

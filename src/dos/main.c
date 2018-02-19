@@ -40,6 +40,7 @@ int main(int argc, char **argv)
 #endif
 
 	if((use_mouse = have_mouse())) {
+		printf("initializing mouse input\n");
 		set_mouse_limits(0, 0, fb_width, fb_height);
 		set_mouse(fb_width / 2, fb_height / 2);
 	}

@@ -7,11 +7,6 @@ enum {
 	MOUSE_MIDDLE	= 4
 };
 
-enum mouse_mode {
-	MOUSE_GFX,
-	MOUSE_TEXT
-};
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -22,7 +17,6 @@ int read_mouse(int *xp, int *yp);
 void set_mouse(int x, int y);
 void set_mouse_limits(int xmin, int ymin, int xmax, int ymax);
 void set_mouse_rate(int xrate, int yrate);
-void set_mouse_mode(enum mouse_mode mode);
 
 #ifdef __cplusplus
 }

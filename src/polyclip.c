@@ -23,23 +23,23 @@ int clip_poly(struct g3d_vertex *vout, int *voutnum,
 {
 	int i, nextidx, res;
 	int edges_clipped = 0;
-	int out_vnum = 0;
+
+	*voutnum = 0;
 
 	for(i=0; i<vnum; i++) {
 		nextidx = i + 1;
 		if(nextidx >= vnum) nextidx = 0;
-		res = clip_edge(vout, &out_vnum, vin + i, vin + nextidx, plane);
+		res = clip_edge(vout, voutnum, vin + i, vin + nextidx, plane);
 		if(res == 0) {
 			++edges_clipped;
 		}
 	}
 
-	if(out_vnum <= 0) {
+	if(*voutnum <= 0) {
 		assert(edges_clipped == 0);
 		return -1;
 	}
 
-	*voutnum = out_vnum;
 	return edges_clipped > 0 ? 0 : 1;
 }
 
@@ -49,28 +49,28 @@ int clip_frustum(struct g3d_vertex *vout, int *voutnum,
 {
 	int i, nextidx, res;
 	int edges_clipped = 0;
-	int out_vnum = 0;
 
 	if(vnum == 1) {
 		/* special case: point clipping */
 		return inside_frustum_plane(vin, fplane) ? 1 : -1;
 	}
 
+	*voutnum = 0;
+
 	for(i=0; i<vnum; i++) {
 		nextidx = i + 1;
 		if(nextidx >= vnum) nextidx = 0;
-		res = clip_edge_frustum(vout, &out_vnum, vin + i, vin + nextidx, fplane);
+		res = clip_edge_frustum(vout, voutnum, vin + i, vin + nextidx, fplane);
 		if(res == 0) {
 			++edges_clipped;
 		}
 	}
 
-	if(out_vnum <= 0) {
+	if(*voutnum <= 0) {
 		assert(edges_clipped == 0);
 		return -1;
 	}
 
-	*voutnum = out_vnum;
 	return edges_clipped > 0 ? 0 : 1;
 }
 

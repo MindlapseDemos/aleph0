@@ -12,6 +12,7 @@
 #include "inttypes.h"
 #include "polyclip.h"
 #include "vmath.h"
+#include "util.h"
 
 struct bspfile_header {
 	char magic[4];

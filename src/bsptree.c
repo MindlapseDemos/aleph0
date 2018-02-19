@@ -2,6 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#if defined(__WATCOMC__) || defined(_MSC_VER) || defined(__DJGPP__)
+#include <malloc.h>
+#else
+#include <alloca.h>
+#endif
 #include "bsptree.h"
 #include "dynarr.h"
 #include "inttypes.h"
@@ -239,7 +244,10 @@ static struct bspnode *add_poly_tree(struct bspnode *n, struct g3d_vertex *v, in
 	return n;
 }
 
-void debug_draw_poly(struct g3d_vertex *varr, int vcount)
+#undef DRAW_NGONS
+
+#ifndef DRAW_NGONS
+static void debug_draw_poly(struct g3d_vertex *varr, int vcount)
 {
 	int i, nfaces = vcount - 2;
 	int vbuf_size = nfaces * 3;
@@ -254,6 +262,7 @@ void debug_draw_poly(struct g3d_vertex *varr, int vcount)
 
 	g3d_draw_indexed(G3D_TRIANGLES, vbuf, vbuf_size, 0, 0);
 }
+#endif
 
 static void draw_bsp_tree(struct bspnode *n, const vec3_t *vdir)
 {
@@ -264,13 +273,19 @@ static void draw_bsp_tree(struct bspnode *n, const vec3_t *vdir)
 	dot = vdir->x * n->plane.nx + vdir->y * n->plane.ny + vdir->z * n->plane.nz;
 	if(dot >= 0.0f) {
 		draw_bsp_tree(n->front, vdir);
-		//g3d_draw_indexed(n->vcount, n->verts, n->vcount, 0, 0);
+#ifdef DRAW_NGONS
+		g3d_draw_indexed(n->vcount, n->verts, n->vcount, 0, 0);
+#else
 		debug_draw_poly(n->verts, n->vcount);
+#endif
 		draw_bsp_tree(n->back, vdir);
 	} else {
 		draw_bsp_tree(n->back, vdir);
-		//g3d_draw_indexed(n->vcount, n->verts, n->vcount, 0, 0);
+#ifdef DRAW_NGONS
+		g3d_draw_indexed(n->vcount, n->verts, n->vcount, 0, 0);
+#else
 		debug_draw_poly(n->verts, n->vcount);
+#endif
 		draw_bsp_tree(n->front, vdir);
 	}
 }

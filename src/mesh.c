@@ -6,48 +6,46 @@
 #include "3dgfx.h"
 
 static struct {
+	int prim;
 	struct g3d_vertex *varr;
 	const float *xform;
 } zsort_cls;
 
 static int zsort_cmp(const void *aptr, const void *bptr)
 {
+	int i;
+	float za = 0.0f;
+	float zb = 0.0f;
 	const float *m = zsort_cls.xform;
-
 	const struct g3d_vertex *va = (const struct g3d_vertex*)aptr;
 	const struct g3d_vertex *vb = (const struct g3d_vertex*)bptr;
 
-	float za = m[2] * va->x + m[6] * va->y + m[10] * va->z + m[14];
-	float zb = m[2] * vb->x + m[6] * vb->y + m[10] * vb->z + m[14];
-
-	++va;
-	++vb;
-
-	za += m[2] * va->x + m[6] * va->y + m[10] * va->z + m[14];
-	zb += m[2] * vb->x + m[6] * vb->y + m[10] * vb->z + m[14];
-
+	for(i=0; i<zsort_cls.prim; i++) {
+		za += m[2] * va->x + m[6] * va->y + m[10] * va->z + m[14];
+		zb += m[2] * vb->x + m[6] * vb->y + m[10] * vb->z + m[14];
+		++va;
+		++vb;
+	}
 	return za - zb;
 }
 
 static int zsort_indexed_cmp(const void *aptr, const void *bptr)
 {
+	int i;
+	float za = 0.0f;
+	float zb = 0.0f;
 	const uint16_t *a = (const uint16_t*)aptr;
 	const uint16_t *b = (const uint16_t*)bptr;
 
 	const float *m = zsort_cls.xform;
 
-	const struct g3d_vertex *va = zsort_cls.varr + a[0];
-	const struct g3d_vertex *vb = zsort_cls.varr + b[0];
+	for(i=0; i<zsort_cls.prim; i++) {
+		const struct g3d_vertex *va = zsort_cls.varr + a[i];
+		const struct g3d_vertex *vb = zsort_cls.varr + b[i];
 
-	float za = m[2] * va->x + m[6] * va->y + m[10] * va->z + m[14];
-	float zb = m[2] * vb->x + m[6] * vb->y + m[10] * vb->z + m[14];
-
-	va = zsort_cls.varr + a[2];
-	vb = zsort_cls.varr + b[2];
-
-	za += m[2] * va->x + m[6] * va->y + m[10] * va->z + m[14];
-	zb += m[2] * vb->x + m[6] * vb->y + m[10] * vb->z + m[14];
-
+		za += m[2] * va->x + m[6] * va->y + m[10] * va->z + m[14];
+		zb += m[2] * vb->x + m[6] * vb->y + m[10] * vb->z + m[14];
+	}
 	return za - zb;
 }
 
@@ -56,6 +54,7 @@ void zsort_mesh(struct g3d_mesh *m)
 {
 	zsort_cls.varr = m->varr;
 	zsort_cls.xform = g3d_get_matrix(G3D_MODELVIEW, 0);
+	zsort_cls.prim = m->prim;
 
 	if(m->iarr) {
 		int nfaces = m->icount / m->prim;

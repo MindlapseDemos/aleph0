@@ -3,6 +3,11 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
+#if defined(__WATCOMC__) || defined(_MSC_VER) || defined(__DJGPP__)
+#include <malloc.h>
+#else
+#include <alloca.h>
+#endif
 #include "3dgfx.h"
 #include "gfxutil.h"
 #include "polyfill.h"
@@ -398,10 +403,9 @@ void g3d_draw(int prim, const struct g3d_vertex *varr, int varr_size)
 void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 		const uint16_t *iarr, int iarr_size)
 {
-	int i, j, nfaces;
+	int i, j, vnum, nfaces;
 	struct pvertex pv[16];
 	struct g3d_vertex v[16];
-	int vnum = prim; /* primitive vertex counts correspond to enum values */
 	int mvtop = st->mtop[G3D_MODELVIEW];
 	int ptop = st->mtop[G3D_PROJECTION];
 	struct g3d_vertex *tmpv;
@@ -412,7 +416,7 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 	memcpy(st->norm_mat, st->mat[G3D_MODELVIEW][mvtop], 16 * sizeof(float));
 	st->norm_mat[12] = st->norm_mat[13] = st->norm_mat[14] = 0.0f;
 
-	nfaces = (iarr ? iarr_size : varr_size) / vnum;
+	nfaces = (iarr ? iarr_size : varr_size) / prim;
 
 	for(j=0; j<nfaces; j++) {
 		vnum = prim;	/* reset vnum for each iteration */

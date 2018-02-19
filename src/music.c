@@ -68,7 +68,7 @@ int music_open(const char *fname)
 		return -1;
 	}
 #else
-	if(!(mod = ML_LoadFN((const signed char*)fname))) {
+	if(!(mod = ML_LoadFN((char*)fname))) {
 		fprintf(stderr, "failed to load music: %s: %s\n", fname, myerr);
 		return -1;
 	}

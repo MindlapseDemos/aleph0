@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <math.h>
 #include <assert.h>
 #include "polyclip.h"
@@ -20,12 +21,14 @@ static int inside_frustum_plane(const struct g3d_vertex *v, int fplane);
 int clip_poly(struct g3d_vertex *vout, int *voutnum,
 		const struct g3d_vertex *vin, int vnum, struct cplane *plane)
 {
-	int i;
+	int i, nextidx, res;
 	int edges_clipped = 0;
 	int out_vnum = 0;
 
 	for(i=0; i<vnum; i++) {
-		int res = clip_edge(vout, &out_vnum, vin + i, vin + (i + 1) % vnum, plane);
+		nextidx = i + 1;
+		if(nextidx >= vnum) nextidx = 0;
+		res = clip_edge(vout, &out_vnum, vin + i, vin + nextidx, plane);
 		if(res == 0) {
 			++edges_clipped;
 		}
@@ -44,7 +47,7 @@ int clip_poly(struct g3d_vertex *vout, int *voutnum,
 int clip_frustum(struct g3d_vertex *vout, int *voutnum,
 		const struct g3d_vertex *vin, int vnum, int fplane)
 {
-	int i;
+	int i, nextidx, res;
 	int edges_clipped = 0;
 	int out_vnum = 0;
 
@@ -54,7 +57,9 @@ int clip_frustum(struct g3d_vertex *vout, int *voutnum,
 	}
 
 	for(i=0; i<vnum; i++) {
-		int res = clip_edge_frustum(vout, &out_vnum, vin + i, vin + (i + 1) % vnum, fplane);
+		nextidx = i + 1;
+		if(nextidx >= vnum) nextidx = 0;
+		res = clip_edge_frustum(vout, &out_vnum, vin + i, vin + nextidx, fplane);
 		if(res == 0) {
 			++edges_clipped;
 		}
@@ -138,9 +143,9 @@ static int clip_edge(struct g3d_vertex *poly, int *vnumptr,
 
 			intersect(&ray, plane, &t);
 
-			vptr->x = ray.origin[0] + ray.dir[0] + t;
-			vptr->y = ray.origin[1] + ray.dir[1] + t;
-			vptr->z = ray.origin[2] + ray.dir[2] + t;
+			vptr->x = ray.origin[0] + ray.dir[0] * t;
+			vptr->y = ray.origin[1] + ray.dir[1] * t;
+			vptr->z = ray.origin[2] + ray.dir[2] * t;
 			vptr->w = 1.0f;
 
 			LERP_VATTR(vptr, v0, v1, t);
@@ -172,7 +177,7 @@ static int intersect(const struct ray *ray, const struct cplane *plane, float *t
 	float orig_pt_dir[3];
 
 	float ndotdir = plane->nx * ray->dir[0] + plane->ny * ray->dir[1] + plane->nz * ray->dir[2];
-	if(fabs(ndotdir) < 1e-4) {
+	if(fabs(ndotdir) < 1e-6) {
 		*t = 0.0f;
 		return 0;
 	}

@@ -24,6 +24,7 @@ unsigned int mouse_bmask;
 float sball_matrix[] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
 
 static unsigned long nframes;
+static int console_active;
 
 int demo_init(int argc, char **argv)
 {
@@ -126,23 +127,44 @@ void demo_keyboard(int key, int press)
 			debug_break();
 			break;
 
+		case '`':
+			console_active = !console_active;
+			if(console_active) {
+				printf("> ");
+				fflush(stdout);
+			} else {
+				putchar('\n');
+			}
+			break;
+
+		case '\b':
+			if(console_active && wr != rd) {
+				printf("\b \b");
+				fflush(stdout);
+				wr = (wr + CBUF_SIZE - 1) & CBUF_MASK;
+			}
+			break;
+
 		case '\n':
 		case '\r':
-			dptr = inp;
-			while(rd != wr) {
-				*dptr++ = cbuf[rd];
-				rd = (rd + 1) & CBUF_MASK;
-			}
-			*dptr = 0;
-			if(inp[0]) {
-				printf("trying to match: %s\n", inp);
-				nscr = scr_num_screens();
-				for(i=0; i<nscr; i++) {
-					if(strstr(scr_screen(i)->name, inp)) {
-						change_screen(i);
-						break;
+			if(console_active) {
+				dptr = inp;
+				while(rd != wr) {
+					*dptr++ = cbuf[rd];
+					rd = (rd + 1) & CBUF_MASK;
+				}
+				*dptr = 0;
+				if(inp[0]) {
+					printf("\ntrying to match: %s\n", inp);
+					nscr = scr_num_screens();
+					for(i=0; i<nscr; i++) {
+						if(strstr(scr_screen(i)->name, inp)) {
+							change_screen(i);
+							break;
+						}
 					}
 				}
+				console_active = 0;
 			}
 			break;
 
@@ -153,7 +175,10 @@ void demo_keyboard(int key, int press)
 				change_screen(9);
 			}
 
-			if(key < 256 && isprint(key)) {
+			if(console_active && key < 256 && isprint(key)) {
+				putchar(key);
+				fflush(stdout);
+
 				cbuf[wr] = key;
 				wr = (wr + 1) & CBUF_MASK;
 				if(wr == rd) { /* overflow */

@@ -33,6 +33,8 @@ static struct bsptree torus_bsp;
 
 static struct pimage tex;
 
+static int use_bsp = 1;
+
 #define LOWRES_SCALE	10
 static uint16_t *lowres_pixels;
 static int lowres_width, lowres_height;
@@ -91,7 +93,7 @@ static void start(long trans_time)
 	g3d_enable(G3D_LIGHTING);
 	g3d_enable(G3D_LIGHT0);
 
-	g3d_polygon_mode(G3D_GOURAUD);
+	g3d_polygon_mode(G3D_TEX_GOURAUD);
 }
 
 static void update(void)
@@ -103,7 +105,7 @@ static void update(void)
 static void draw(void)
 {
 	float vdir[3];
-	float mat[16];
+	const float *mat;
 
 	update();
 
@@ -119,23 +121,24 @@ static void draw(void)
 		g3d_rotate(cam_theta, 0, 1, 0);
 	}
 
-	/* calc world-space view direction */
-	g3d_get_matrix(G3D_MODELVIEW, mat);
-	/* transform (0, 0, -1) with transpose(mat3x3) */
-	vdir[0] = -mat[2];
-	vdir[1] = -mat[6];
-	vdir[2] = -mat[10];
-
-
 	g3d_light_pos(0, -10, 10, 20);
-
-	zsort_mesh(&torus);
 
 	g3d_mtl_diffuse(0.4, 0.7, 1.0);
 	g3d_set_texture(tex.width, tex.height, tex.pixels);
 
-	/*draw_mesh(&torus);*/
-	draw_bsp(&torus_bsp, vdir[0], vdir[1], vdir[2]);
+	if(use_bsp) {
+		/* calc world-space view direction */
+		mat = g3d_get_matrix(G3D_MODELVIEW, 0);
+		/* transform (0, 0, -1) with transpose(mat3x3) */
+		vdir[0] = -mat[2];
+		vdir[1] = -mat[6];
+		vdir[2] = -mat[10];
+
+		draw_bsp(&torus_bsp, vdir[0], vdir[1], vdir[2]);
+	} else {
+		zsort_mesh(&torus);
+		draw_mesh(&torus);
+	}
 
 	/*draw_mesh(&cube);*/
 	swap_buffers(fb_pixels);

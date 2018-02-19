@@ -19,6 +19,9 @@ static int bnstate[8];
 /* ----------------------------------- */
 static struct g3d_mesh torus;
 static struct bsptree torus_bsp;
+
+static int rebuild_bsp;
+int debug_max_clip_level = 0;
 /* ----------------------------------- */
 
 int main(int argc, char **argv)
@@ -46,7 +49,6 @@ int main(int argc, char **argv)
 int init(void)
 {
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
 
@@ -68,10 +70,63 @@ void cleanup(void)
 	destroy_bsp(&torus_bsp);
 }
 
+static void draw_plane(struct bspnode *n)
+{
+	int i;
+	float cx = 0, cy = 0, cz = 0;
+
+	for(i=0; i<n->vcount; i++) {
+		cx += n->verts[i].x;
+		cy += n->verts[i].y;
+		cz += n->verts[i].z;
+	}
+	cx /= n->vcount;
+	cy /= n->vcount;
+	cz /= n->vcount;
+
+	glPushAttrib(GL_ENABLE_BIT);
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_LIGHTING);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glPushMatrix();
+	glTranslatef(cx, cy, cz);
+	glScalef(10, 10, 10);
+	glTranslatef(-cx, -cy, -cz);
+
+	glBegin(GL_POLYGON);
+	glColor4f(0.2, 0.3, 1.0, 0.5);
+	for(i=0; i<n->vcount; i++) {
+		glVertex3f(n->verts[i].x, n->verts[i].y, n->verts[i].z);
+	}
+	glEnd();
+
+	glBegin(GL_LINE_LOOP);
+	glColor4f(0.2, 0.3, 1.0, 0.85);
+	for(i=0; i<n->vcount; i++) {
+		glVertex3f(n->verts[i].x, n->verts[i].y, n->verts[i].z);
+	}
+	glEnd();
+
+	glPopMatrix();
+	glPopAttrib();
+}
+
 void display(void)
 {
 	float vdir[3];
 	float mat[16];
+
+	if(rebuild_bsp) {
+		destroy_bsp(&torus_bsp);
+		init_bsp(&torus_bsp);
+		if(bsp_add_mesh(&torus_bsp, &torus) == -1) {
+			fprintf(stderr, "failed to construct torus BSP tree\n");
+			abort();
+		}
+		rebuild_bsp = 0;
+	}
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -89,6 +144,8 @@ void display(void)
 	//g3d_draw_indexed(torus.prim, torus.varr, torus.vcount, torus.iarr, torus.icount);
 	draw_bsp(&torus_bsp, vdir[0], vdir[1], vdir[2]);
 
+	draw_plane(torus_bsp.root);
+
 	glutSwapBuffers();
 }
 
@@ -105,6 +162,23 @@ void keydown(unsigned char key, int x, int y)
 	switch(key) {
 	case 27:
 		exit(0);
+
+	case '=':
+		debug_max_clip_level++;
+		printf("max_clip_level: %d\n", debug_max_clip_level);
+		rebuild_bsp = 1;
+		glutPostRedisplay();
+		break;
+
+	case '-':
+		if(--debug_max_clip_level < 0) {
+			debug_max_clip_level = 0;
+		} else {
+			printf("max_clip_level: %d\n", debug_max_clip_level);
+			rebuild_bsp = 1;
+			glutPostRedisplay();
+		}
+		break;
 	}
 }
 

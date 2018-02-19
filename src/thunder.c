@@ -33,8 +33,6 @@ static unsigned char *blurBuffer, *blurBuffer2;
 
 #define CAMERA_DISTANCE 1.1f
 
-#define PI 3.14159f
-
 /* TODO: Load palette from file */
 static unsigned short palette[256];
 
@@ -200,7 +198,7 @@ void blitEffect() {
 			tl = *src1;
 			tr = (*src1 + *(src1 + 1)) >> 1;
 			bl = (*src1 + *src2) >> 1;
-			br = tr + ((*src2 + *(src2 + 1)) >> 1) >> 1;
+			br = (tr + ((*src2 + *(src2 + 1)) >> 1)) >> 1;
 
 			/* Pack 2 pixels in each 32 bit word */
 			*dst1 = (palette[tr] << 16) | palette[tl];
@@ -290,9 +288,9 @@ void animateMesh() {
 	by.y = 1.0f;
 	by.z = 0.0f;
 
-	bz.x = cos(yRot + PI/2.0f);
+	bz.x = cos(yRot + M_PI/2.0f);
 	bz.y = 0.0f;
-	bz.z = sin(yRot + PI/2.0f);
+	bz.z = sin(yRot + M_PI/2.0f);
 
 	for (i = 0; i < VERTEX_COUNT; i++) {
 		MyVertex v1, v2;

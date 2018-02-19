@@ -11,6 +11,8 @@ struct screen {
 	void (*stop)(long trans_time);
 
 	void (*draw)(void);
+
+	void (*keypress)(int key);
 };
 
 int scr_init(void);
@@ -18,6 +20,7 @@ void scr_shutdown(void);
 
 void scr_update(void);
 void scr_draw(void);
+void scr_keypress(int key);
 
 struct screen *scr_lookup(const char *name);
 struct screen *scr_screen(int idx);

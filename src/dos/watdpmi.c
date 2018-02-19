@@ -54,4 +54,6 @@ void dpmi_munmap(void *addr)
 		int 0x31
 	}
 }
+#else
+int stop_gcc_crying_about_empty_translation_units = 0;
 #endif	/* __WATCOM__ */

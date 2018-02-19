@@ -12,12 +12,13 @@ else
 endif
 
 inc = -Isrc -Isrc/dos -Ilibs/imago/src -Ilibs/mikmod/include
-opt = -O3 -ffast-math
+opt = -O3 -ffast-math -fno-strict-aliasing
 dbg = -g
+warn = -pedantic -Wall -Wno-unused-function -Wno-unused-variable
 
 CC = $(TOOLPREFIX)gcc
 AR = $(TOOLPREFIX)ar
-CFLAGS = -pedantic -Wall -march=pentium $(dbg) $(opt) $(inc)
+CFLAGS = $(warn) -march=pentium $(dbg) $(opt) $(inc)
 LDFLAGS = libs/imago/imago.dja libs/mikmod/dos/libmikmod.a
 
 $(bin): $(obj) imago mikmod

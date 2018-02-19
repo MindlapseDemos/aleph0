@@ -9,7 +9,8 @@ alib = libmikmod.a
 
 def = -DHAVE_CONFIG_H -DMIKMOD_BUILD
 inc = -I. -Iinclude
-CFLAGS = -pedantic -Wall -g $(def) $(inc) `pkg-config --cflags sdl`
+warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function
+CFLAGS = $(warn) -g $(def) $(inc) `pkg-config --cflags sdl`
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

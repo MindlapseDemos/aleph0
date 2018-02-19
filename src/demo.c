@@ -121,11 +121,11 @@ void demo_keyboard(int key, int press)
 		switch(key) {
 		case 27:
 			demo_quit();
-			break;
+			return;
 
 		case 127:
 			debug_break();
-			break;
+			return;
 
 		case '`':
 			console_active = !console_active;
@@ -135,13 +135,16 @@ void demo_keyboard(int key, int press)
 			} else {
 				putchar('\n');
 			}
-			break;
+			return;
 
 		case '\b':
-			if(console_active && wr != rd) {
-				printf("\b \b");
-				fflush(stdout);
-				wr = (wr + CBUF_SIZE - 1) & CBUF_MASK;
+			if(console_active) {
+				if(wr != rd) {
+					printf("\b \b");
+					fflush(stdout);
+					wr = (wr + CBUF_SIZE - 1) & CBUF_MASK;
+				}
+				return;
 			}
 			break;
 
@@ -165,6 +168,7 @@ void demo_keyboard(int key, int press)
 					}
 				}
 				console_active = 0;
+				return;
 			}
 			break;
 
@@ -175,18 +179,23 @@ void demo_keyboard(int key, int press)
 				change_screen(9);
 			}
 
-			if(console_active && key < 256 && isprint(key)) {
-				putchar(key);
-				fflush(stdout);
+			if(console_active) {
+				if(key < 256 && isprint(key)) {
+					putchar(key);
+					fflush(stdout);
 
-				cbuf[wr] = key;
-				wr = (wr + 1) & CBUF_MASK;
-				if(wr == rd) { /* overflow */
-					rd = (rd + 1) & CBUF_MASK;
+					cbuf[wr] = key;
+					wr = (wr + 1) & CBUF_MASK;
+					if(wr == rd) { /* overflow */
+						rd = (rd + 1) & CBUF_MASK;
+					}
 				}
+				return;
 			}
 			break;
 		}
+
+		scr_keypress(key);
 	}
 }
 

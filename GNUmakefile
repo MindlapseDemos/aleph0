@@ -4,8 +4,9 @@ dep = $(obj:.o=.d)
 bin = demo
 
 inc = -I/usr/local/include -Isrc -Isrc/sdl -Ilibs/imago/src -Ilibs/mikmod/include
+warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function
 
-CFLAGS = -pedantic -Wall -g $(inc) `sdl-config --cflags`
+CFLAGS = $(warn) -g $(inc) `sdl-config --cflags`
 LDFLAGS = -Llibs/imago -Llibs/mikmod -limago -lmikmod `sdl-config --libs` -lm
 
 $(bin): $(obj) imago mikmod

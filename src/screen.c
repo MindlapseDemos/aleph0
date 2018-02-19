@@ -97,6 +97,13 @@ void scr_draw(void)
 	if(cur) cur->draw();
 }
 
+void scr_keypress(int key)
+{
+	if(cur && cur->keypress) {
+		cur->keypress(key);
+	}
+}
+
 struct screen *scr_lookup(const char *name)
 {
 	int i;

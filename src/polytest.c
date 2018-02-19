@@ -23,7 +23,8 @@ static struct screen scr = {
 	init,
 	destroy,
 	start, 0,
-	draw
+	draw,
+	0
 };
 
 static float cam_theta, cam_phi = 25;

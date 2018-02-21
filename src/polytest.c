@@ -16,6 +16,7 @@ static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
 static void draw_lowres_raster(void);
+static void keypress(int key);
 static int gen_texture(struct pimage *img, int xsz, int ysz);
 
 static struct screen scr = {
@@ -24,7 +25,7 @@ static struct screen scr = {
 	destroy,
 	start, 0,
 	draw,
-	0
+	keypress
 };
 
 static float cam_theta, cam_phi = 25;
@@ -199,6 +200,16 @@ static void draw_lowres_raster(void)
 			dptr += LOWRES_SCALE;
 		}
 		dptr += fb_width * LOWRES_SCALE - fb_width;
+	}
+}
+
+static void keypress(int key)
+{
+	switch(key) {
+	case 'b':
+		use_bsp = !use_bsp;
+		printf("drawing with %s\n", use_bsp ? "BSP tree" : "z-sorting");
+		break;
 	}
 }
 

@@ -7,6 +7,13 @@
 //#define LEFT_STR3
 //#define LEFT_STR4
 
+//#define LEFT_J1
+//#define LEFT_J2
+//#define LEFT_J3
+#define LEFT_J4
+
+#define STD_RAD		0.05
+#define FAT_RAD		0.08
 #define CON_RAD(r)	((r) * 1.4)
 #define CON_WIDTH	0.04
 
@@ -17,6 +24,7 @@ static Object *gen_pipeworks();
 static Object *gen_pipe(float x, float y, float rad);
 static Object *gen_pipe_inwall(float x, float y, float rad);
 static Object *gen_pipe_s(float x, float y0, float y1, float rad);
+static Object *gen_pipe_corner(float x, float y, float z, float rad);
 
 static Mat4 xform;
 
@@ -104,44 +112,68 @@ static Object *gen_pipeworks()
 {
 	Object *head = 0, *tail = 0;
 
-	float start_y = CON_RAD(0.08) + 0.01;
+	// --- right straight pipes ---
+	float start_y = CON_RAD(FAT_RAD) + 0.01;
 
 #if defined(RIGHT_STR1) || defined(RIGHT_STR2)
-	add_object(gen_pipe(0.5 - 0.08, start_y, 0.08));
+	add_object(gen_pipe(0.5 - FAT_RAD, start_y, FAT_RAD));
 #endif
-	start_y += (CON_RAD(0.08) + CON_RAD(0.05)) * 0.9;
+	start_y += (CON_RAD(FAT_RAD) + CON_RAD(STD_RAD)) * 0.9;
 
 	for(int i=0; i<3; i++) {
-		float x = 0.5 - CON_RAD(0.05);
-		float y = start_y + i * (CON_RAD(0.05) * 1.8);
+		float x = 0.5 - CON_RAD(STD_RAD);
+		float y = start_y + i * (CON_RAD(STD_RAD) * 1.8);
 
 #ifdef RIGHT_STR2
 		if(i == 1) {
-			add_object(gen_pipe_inwall(x, y, 0.05));
+			add_object(gen_pipe_inwall(x, y, STD_RAD));
 		} else {
-			add_object(gen_pipe(x, y, 0.05));
+			add_object(gen_pipe(x, y, STD_RAD));
 		}
 #endif
 #ifdef RIGHT_STR1
-		add_object(gen_pipe(x, y, 0.05));
+		add_object(gen_pipe(x, y, STD_RAD));
 #endif
 	}
 
+	// --- left straight pipes ---
 #if defined(LEFT_STR1) || defined(LEFT_STR2) || defined(LEFT_STR3) || defined(LEFT_STR4)
-	//add_object(gen_pipe(-0.5 + 0.08, start_y, 0.08));
-	add_object(gen_pipe(-0.5 + CON_RAD(0.05), 0.8, 0.05));
+	//add_object(gen_pipe(-0.5 + FAT_RAD, start_y, FAT_RAD));
+	add_object(gen_pipe(-0.5 + CON_RAD(STD_RAD), 0.8, STD_RAD));
 #endif
 #ifdef LEFT_STR1
-	add_object(gen_pipe(-0.5 + CON_RAD(0.05), 0.68, 0.05));
+	add_object(gen_pipe(-0.5 + CON_RAD(STD_RAD), 0.68, STD_RAD));
 #endif
 #ifdef LEFT_STR2
-	add_object(gen_pipe(-0.5 + CON_RAD(0.05), 0.3, 0.05));
+	add_object(gen_pipe(-0.5 + CON_RAD(STD_RAD), 0.3, STD_RAD));
 #endif
 #ifdef LEFT_STR3
-	add_object(gen_pipe_s(-0.5 + CON_RAD(0.05), 0.3, 0.67, 0.05));
+	add_object(gen_pipe_s(-0.5 + CON_RAD(STD_RAD), 0.3, 0.67, STD_RAD));
 #endif
 #ifdef LEFT_STR4
-	add_object(gen_pipe_s(-0.5 + CON_RAD(0.05), 0.67, 0.3, 0.05));
+	add_object(gen_pipe_s(-0.5 + CON_RAD(STD_RAD), 0.68, 0.3, STD_RAD));
+#endif
+
+	// --- left junction pipes ---
+#if defined(LEFT_J1) || defined(LEFT_J2) || defined(LEFT_J3) || defined(LEFT_J4)
+	add_object(gen_pipe_corner(-0.5, 0.8, 0.5, STD_RAD));
+	add_object(gen_pipe_corner(-0.5, 0.8, -0.5, STD_RAD));
+#endif
+#ifdef LEFT_J1
+	add_object(gen_pipe_corner(-0.5, 0.68, 0.5, STD_RAD));
+	add_object(gen_pipe_corner(-0.5, 0.68, -0.5, STD_RAD));
+#endif
+#ifdef LEFT_J2
+	add_object(gen_pipe_corner(-0.5, 0.3, 0.5, STD_RAD));
+	add_object(gen_pipe_corner(-0.5, 0.3, -0.5, STD_RAD));
+#endif
+#ifdef LEFT_J3
+	add_object(gen_pipe_corner(-0.5, 0.3, 0.5, STD_RAD));
+	add_object(gen_pipe_corner(-0.5, 0.68, -0.5, STD_RAD));
+#endif
+#ifdef LEFT_J4
+	add_object(gen_pipe_corner(-0.5, 0.68, 0.5, STD_RAD));
+	add_object(gen_pipe_corner(-0.5, 0.3, -0.5, STD_RAD));
 #endif
 	return head;
 }
@@ -260,5 +292,59 @@ static Object *gen_pipe_s(float x, float y0, float y1, float rad)
 	obj->mesh->append(tmp);
 
 	obj->xform.translation(x, (y0 + y1) / 2.0, 0);
+	return obj;
+}
+
+static Object *gen_pipe_corner(float x, float y, float z, float rad)
+{
+	Mesh tmp;
+	Object *obj = new Object;
+	obj->mesh = new Mesh;
+
+	float xoffs = CON_RAD(rad);
+	float pipelen = 0.5 - CON_WIDTH - (rad * 2.0 - xoffs + CON_WIDTH);
+
+	float sign = z >= 0.0f ? 1.0f : -1.0f;
+
+	gen_torus(&tmp, rad * 2.0, rad, 4, 6, 0.25);
+	xform.rotation_y(deg_to_rad(sign >= 0.0f ? -90 : 180));
+	xform.translate(xoffs - rad * 2.0, 0, sign * (0.5 + rad * 2.0 - xoffs));
+	tmp.apply_xform(xform);
+	obj->mesh->append(tmp);
+
+	for(int i=0; i<2; i++) {
+		Mesh pipe;
+		gen_cylinder(&tmp, rad, pipelen, 6, 1);
+		xform.rotation_x(deg_to_rad(90));
+		xform.rotate_z(deg_to_rad(90));
+		xform.translate(xoffs, 0, sign * (1 - pipelen / 2 - CON_WIDTH));
+		tmp.apply_xform(xform);
+		pipe.append(tmp);
+
+		gen_cylinder(&tmp, CON_RAD(rad), CON_WIDTH, 7, 1, 1);
+		xform.rotation_x(deg_to_rad(90));
+		xform.translate(xoffs, 0, sign * (1 - CON_WIDTH / 2));
+		tmp.apply_xform(xform);
+		pipe.append(tmp);
+
+		gen_cylinder(&tmp, CON_RAD(rad), CON_WIDTH, 7, 1, 1);
+		xform.rotation_x(deg_to_rad(90));
+		xform.translate(xoffs, 0, sign * (0.5 + rad * 2.0 - xoffs + CON_WIDTH / 2.0));
+		tmp.apply_xform(xform);
+		pipe.append(tmp);
+
+		if(i > 0) {
+			xform = Mat4::identity;
+			xform.translate(-xoffs, 0, sign * -0.5);
+			xform.rotate_y(deg_to_rad(sign * -90));
+			xform.translate(xoffs, 0, sign * 0.5);
+			xform.translate(-xoffs, 0, sign * -xoffs);
+			pipe.apply_xform(xform);
+		}
+
+		obj->mesh->append(pipe);
+	}
+
+	obj->xform.translation(x, y, 0);
 	return obj;
 }

@@ -1,7 +1,8 @@
 //#define BASE_STR
-#define BASE_LEFTJ
+//#define BASE_LEFTJ
+#define BASE_RIGHTJ
 //#define RIGHT_STR1
-#define RIGHT_STR2
+//#define RIGHT_STR2
 //#define LEFT_STR1
 //#define LEFT_STR2
 //#define LEFT_STR3
@@ -10,7 +11,7 @@
 //#define LEFT_J1
 //#define LEFT_J2
 //#define LEFT_J3
-#define LEFT_J4
+//#define LEFT_J4
 
 #define STD_RAD		0.05
 #define FAT_RAD		0.08
@@ -26,18 +27,34 @@ static Object *gen_pipe_inwall(float x, float y, float rad);
 static Object *gen_pipe_s(float x, float y0, float y1, float rad);
 static Object *gen_pipe_corner(float x, float y, float z, float rad);
 
+static unsigned char *gen_texture(int x, int y);
+
 static Mat4 xform;
+
+#define YSTEP	(CON_RAD(STD_RAD) * 1.8)
+#define Y0		(CON_RAD(FAT_RAD) + 0.01)
+#define Y1		(Y0 + YSTEP)
+#define Y2		(Y1 + YSTEP)
+#define Y3		(Y2 + YSTEP)
+#define Y4		(Y3 + YSTEP)
+#define Y5		(Y4 + YSTEP)
+#define Y6		(Y5 + YSTEP)
+static const float yslots[] = {
+	Y0, Y1, Y2, Y3, Y4, Y5, Y6
+};
 
 #define add_object(o) \
 	do { \
 		Object *tmp = o; \
-		if(head) { \
-			tail->next = tmp; \
-			tail = tmp; \
-		} else { \
-			head = tail = tmp; \
+		if(tmp) { \
+			if(head) { \
+				tail->next = tmp; \
+				tail = tmp; \
+			} else { \
+				head = tail = tmp; \
+			} \
+			while(tail->next) tail = tail->next; \
 		} \
-		while(tail->next) tail = tail->next; \
 	} while(0)
 
 extern "C" Object *generate()
@@ -50,7 +67,20 @@ extern "C" Object *generate()
 #ifdef BASE_LEFTJ
 	add_object(gen_base_left_junction());
 #endif
+#ifdef BASE_RIGHTJ
+	add_object(gen_base_right_junction());
+#endif
 	add_object(gen_pipeworks());
+
+	unsigned char *tex = gen_texture(256, 256);
+	tail = head;
+	while(tail) {
+		tail->texture.pixels = tex;
+		tail->texture.width = tail->texture.height = 256;
+		tail->texture.fmt = PFMT_RGB;
+		tail = tail->next;
+	}
+
 	return head;
 }
 
@@ -67,6 +97,8 @@ static Object *gen_base_straight()
 
 	xform.translation(0, 0.5, 0);
 	owalls->mesh->apply_xform(xform);
+
+	owalls->mesh->texcoord_gen_box();
 
 	return owalls;
 }
@@ -105,6 +137,18 @@ static Object *gen_base_left_junction()
 
 	obj->mesh->append(tmp);
 
+	obj->mesh->texcoord_gen_box();
+
+	return obj;
+}
+
+static Object *gen_base_right_junction()
+{
+	Object *obj = gen_base_left_junction();
+	xform.rotation_y(deg_to_rad(180));
+	obj->mesh->apply_xform(xform);
+
+	obj->mesh->texcoord_gen_box();
 	return obj;
 }
 
@@ -117,24 +161,19 @@ static Object *gen_pipeworks()
 
 #if defined(RIGHT_STR1) || defined(RIGHT_STR2)
 	add_object(gen_pipe(0.5 - FAT_RAD, start_y, FAT_RAD));
-#endif
 	start_y += (CON_RAD(FAT_RAD) + CON_RAD(STD_RAD)) * 0.9;
 
 	for(int i=0; i<3; i++) {
 		float x = 0.5 - CON_RAD(STD_RAD);
 		float y = start_y + i * (CON_RAD(STD_RAD) * 1.8);
-
 #ifdef RIGHT_STR2
-		if(i == 1) {
+		if(i == 1)
 			add_object(gen_pipe_inwall(x, y, STD_RAD));
-		} else {
+		else
+#endif
 			add_object(gen_pipe(x, y, STD_RAD));
-		}
-#endif
-#ifdef RIGHT_STR1
-		add_object(gen_pipe(x, y, STD_RAD));
-#endif
 	}
+#endif
 
 	// --- left straight pipes ---
 #if defined(LEFT_STR1) || defined(LEFT_STR2) || defined(LEFT_STR3) || defined(LEFT_STR4)
@@ -175,7 +214,17 @@ static Object *gen_pipeworks()
 	add_object(gen_pipe_corner(-0.5, 0.68, 0.5, STD_RAD));
 	add_object(gen_pipe_corner(-0.5, 0.3, -0.5, STD_RAD));
 #endif
+
+	// --- right junction pipes ---
 	return head;
+}
+
+static void gen_conn(Mesh *mesh, float rad)
+{
+	gen_cylinder(mesh, CON_RAD(rad), CON_WIDTH, 7, 1, 1);
+
+	xform.scaling(1, 0.05, 1);
+	mesh->texcoord_apply_xform(xform);
 }
 
 static Object *gen_pipe(float x, float y, float rad)
@@ -193,12 +242,12 @@ static Object *gen_pipe(float x, float y, float rad)
 		tmp.apply_xform(xform);
 		opipe->mesh->append(tmp);
 
-		gen_cylinder(&tmp, CON_RAD(rad), CON_WIDTH, 7, 1, 1);
+		gen_conn(&tmp, rad);
 		xform.translation(0, 1 - i - CON_WIDTH / 2, 0);
 		tmp.apply_xform(xform);
 		opipe->mesh->append(tmp);
 
-		gen_cylinder(&tmp, CON_RAD(rad), CON_WIDTH, 7, 1, 1);
+		gen_conn(&tmp, rad);
 		xform.translation(0, 1 - i - CON_WIDTH * 1.5 - pipelen, 0);
 		tmp.apply_xform(xform);
 		opipe->mesh->append(tmp);
@@ -237,7 +286,7 @@ static Object *gen_pipe_inwall(float x, float y, float rad)
 		tmp.apply_xform(xform);
 		opipe->mesh->append(tmp);
 
-		gen_cylinder(&tmp, CON_RAD(rad), CON_WIDTH, 7, 1, 1);
+		gen_conn(&tmp, rad);
 		xform.rotation_x(deg_to_rad(90));
 		xform.translate(0, 0, sign * (1 - CON_WIDTH / 2.0));
 		tmp.apply_xform(xform);
@@ -275,13 +324,13 @@ static Object *gen_pipe_s(float x, float y0, float y1, float rad)
 		tmp.apply_xform(xform);
 		obj->mesh->append(tmp);
 
-		gen_cylinder(&tmp, CON_RAD(rad), CON_WIDTH, 7, 1, 1);
+		gen_conn(&tmp, rad);
 		xform.rotation_x(deg_to_rad(90));
 		xform.translate(0, ysign * -dist / 2.0, zsign * (1 - CON_WIDTH / 2.0));
 		tmp.apply_xform(xform);
 		obj->mesh->append(tmp);
 
-		gen_cylinder(&tmp, CON_RAD(rad), CON_WIDTH, 7, 1, 1);
+		gen_conn(&tmp, rad);
 		xform.rotation_x(deg_to_rad(90));
 		xform.translate(0, ysign * -dist / 2.0, zsign * (rad * 2.0 + CON_WIDTH / 2.0));
 		tmp.apply_xform(xform);
@@ -321,13 +370,13 @@ static Object *gen_pipe_corner(float x, float y, float z, float rad)
 		tmp.apply_xform(xform);
 		pipe.append(tmp);
 
-		gen_cylinder(&tmp, CON_RAD(rad), CON_WIDTH, 7, 1, 1);
+		gen_conn(&tmp, rad);
 		xform.rotation_x(deg_to_rad(90));
 		xform.translate(xoffs, 0, sign * (1 - CON_WIDTH / 2));
 		tmp.apply_xform(xform);
 		pipe.append(tmp);
 
-		gen_cylinder(&tmp, CON_RAD(rad), CON_WIDTH, 7, 1, 1);
+		gen_conn(&tmp, rad);
 		xform.rotation_x(deg_to_rad(90));
 		xform.translate(xoffs, 0, sign * (0.5 + rad * 2.0 - xoffs + CON_WIDTH / 2.0));
 		tmp.apply_xform(xform);
@@ -347,4 +396,19 @@ static Object *gen_pipe_corner(float x, float y, float z, float rad)
 
 	obj->xform.translation(x, y, 0);
 	return obj;
+}
+
+static unsigned char *gen_texture(int x, int y)
+{
+	unsigned char *pixels = new unsigned char[x * y * 3];
+	unsigned char *ptr = pixels;
+
+	for(int i=0; i<y; i++) {
+		for(int j=0; j<x; j++) {
+			*ptr++ = i ^ j;
+			*ptr++ = (i ^ j) << 1;
+			*ptr++ = (i ^ j) << 2;
+		}
+	}
+	return pixels;
 }

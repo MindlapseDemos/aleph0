@@ -200,7 +200,7 @@ int load_mesh(struct g3d_mesh *mesh, const char *fname)
 						}
 					}
 				}
-				if(i >= 3) found_quad = 1;
+				if(i > 3) found_quad = 1;
 			}
 			break;
 

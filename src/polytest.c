@@ -35,7 +35,7 @@ static struct bsptree torus_bsp;
 
 static struct pimage tex;
 
-static int use_bsp = 1;
+static int use_bsp = 0;
 
 #define LOWRES_SCALE	10
 static uint16_t *lowres_pixels;
@@ -58,11 +58,13 @@ static int init(void)
 		torus.varr[i].v *= 2.0;
 	}
 
+	/*
 	init_bsp(&torus_bsp);
 	if(bsp_add_mesh(&torus_bsp, &torus) == -1) {
 		fprintf(stderr, "failed to construct torus BSP tree\n");
 		return -1;
 	}
+	*/
 
 	gen_texture(&tex, 128, 128);
 
@@ -82,7 +84,9 @@ static void destroy(void)
 	free(cube.varr);
 	free(torus.varr);
 	free(torus.iarr);
+	/*
 	destroy_bsp(&torus_bsp);
+	*/
 }
 
 static void start(long trans_time)

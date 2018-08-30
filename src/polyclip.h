@@ -25,6 +25,12 @@ enum {
 int clip_poly(struct g3d_vertex *vout, int *voutnum,
 		const struct g3d_vertex *vin, int vnum, struct cplane *plane);
 
+/* only checks if the polygon would be clipped by the plane, and classifies it
+ * as inside/outside/straddling, without actually producing a clipped polygon.
+ * return values are the same as clip_poly.
+ */
+int check_clip_poly(const struct g3d_vertex *v, int vnum, struct cplane *plane);
+
 /* Special-case frustum clipper (might be slightly faster) */
 int clip_frustum(struct g3d_vertex *vout, int *voutnum,
 		const struct g3d_vertex *vin, int vnum, int fplane);

@@ -11,6 +11,8 @@ struct ray {
 static int clip_edge(struct g3d_vertex *poly, int *vnumptr,
 		const struct g3d_vertex *v0, const struct g3d_vertex *v1,
 		const struct cplane *plane);
+static int check_clip_edge(const struct g3d_vertex *v0,
+		const struct g3d_vertex *v1, const struct cplane *plane);
 static int clip_edge_frustum(struct g3d_vertex *poly, int *vnumptr,
 		const struct g3d_vertex *v0, const struct g3d_vertex *v1, int fplane);
 static float distance_signed(float *pos, const struct cplane *plane);
@@ -43,6 +45,21 @@ int clip_poly(struct g3d_vertex *vout, int *voutnum,
 	return edges_clipped > 0 ? 0 : 1;
 }
 
+int check_clip_poly(const struct g3d_vertex *v, int vnum, struct cplane *plane)
+{
+	int i, nextidx, res;
+	int edges_clipped = 0;
+
+	for(i=0; i<vnum; i++) {
+		nextidx = i + 1;
+		if(nextidx >= vnum) nextidx = 0;
+		res = check_clip_edge(v + i, v + nextidx, plane);
+		if(res == 0) {
+			++edges_clipped;
+		}
+	}
+	return edges_clipped ? 0 : res;
+}
 
 int clip_frustum(struct g3d_vertex *vout, int *voutnum,
 		const struct g3d_vertex *vin, int vnum, int fplane)
@@ -163,6 +180,27 @@ static int clip_edge(struct g3d_vertex *poly, int *vnumptr,
 	return 0;
 }
 
+/* same as above, but only checks for clipping and classifies the edge */
+static int check_clip_edge(const struct g3d_vertex *v0,
+		const struct g3d_vertex *v1, const struct cplane *plane)
+{
+	float pos0[3], pos1[3];
+	float d0, d1;
+
+	pos0[0] = v0->x; pos0[1] = v0->y; pos0[2] = v0->z;
+	pos1[0] = v1->x; pos1[1] = v1->y; pos1[2] = v1->z;
+
+	d0 = distance_signed(pos0, plane);
+	d1 = distance_signed(pos1, plane);
+
+	if(d0 > 0.0f && d1 > 0.0f) {
+		return 1;
+	}
+	if(d0 < 0.0f && d1 < 0.0f) {
+		return -1;
+	}
+	return 0;
+}
 
 static float distance_signed(float *pos, const struct cplane *plane)
 {

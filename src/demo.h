@@ -13,6 +13,12 @@ extern unsigned long time_msec;
 extern int mouse_x, mouse_y;
 extern unsigned int mouse_bmask;
 
+enum {
+	MOUSE_LEFT		= 1,
+	MOUSE_RIGHT		= 2,
+	MOUSE_MIDDLE	= 4
+};
+
 extern float sball_matrix[16];
 
 int demo_init(int argc, char **argv);

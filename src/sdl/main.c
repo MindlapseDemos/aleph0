@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 	}
 	vmem_front = vmem_back = fb_pixels;
 
-	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER);
+	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_NOPARACHUTE);
 	if(!(fbsurf = SDL_SetVideoMode(xsz, ysz, fb_bpp, sdl_flags))) {
 		fprintf(stderr, "failed to set video mode %dx%d %dbpp\n", fb_width, fb_height, fb_bpp);
 		free(fb_pixels);
@@ -119,6 +119,21 @@ void swap_buffers(void *pixels)
 	}
 }
 
+static int bnmask(int sdlbn)
+{
+	switch(sdlbn) {
+	case SDL_BUTTON_LEFT:
+		return MOUSE_LEFT;
+	case SDL_BUTTON_RIGHT:
+		return MOUSE_RIGHT;
+	case SDL_BUTTON_MIDDLE:
+		return MOUSE_MIDDLE;
+	default:
+		break;
+	}
+	return 0;
+}
+
 static void handle_event(SDL_Event *ev)
 {
 	switch(ev->type) {
@@ -142,10 +157,10 @@ static void handle_event(SDL_Event *ev)
 		break;
 
 	case SDL_MOUSEBUTTONDOWN:
-		mouse_bmask |= 1 << (ev->button.button - SDL_BUTTON_LEFT);
+		mouse_bmask |= bnmask(ev->button.button);
 		if(0) {
 	case SDL_MOUSEBUTTONUP:
-			mouse_bmask &= ~(1 << (ev->button.button - SDL_BUTTON_LEFT));
+			mouse_bmask &= ~bnmask(ev->button.button);
 		}
 		mouse_x = ev->button.x / fbscale;
 		mouse_y = ev->button.y / fbscale;

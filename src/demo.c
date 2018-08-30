@@ -211,7 +211,7 @@ void mouse_orbit_update(float *theta, float *phi, float *dist)
 			int dy = mouse_y - prev_my;
 
 			if(dx || dy) {
-				if(mouse_bmask & 1) {
+				if(mouse_bmask & MOUSE_LEFT) {
 					float p = *phi;
 					*theta += dx * 1.0;
 					p += dy * 1.0;
@@ -220,7 +220,7 @@ void mouse_orbit_update(float *theta, float *phi, float *dist)
 					if(p > 90) p = 90;
 					*phi = p;
 				}
-				if(mouse_bmask & 4) {
+				if(mouse_bmask & MOUSE_RIGHT) {
 					*dist += dy * 0.5;
 
 					if(*dist < 0) *dist = 0;

@@ -1,10 +1,8 @@
-#ifndef GFX_H_
-#define GFX_H_
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include "gfx.h"
 #include "vbe.h"
 #include "cdpmi.h"
 
@@ -30,12 +28,15 @@ static struct vbe_info *vbe_info;
 static struct vbe_mode_info *mode_info;
 static int pal_bits = 6;
 
+static void *vpgaddr[2];
+
+
 void *set_video_mode(int xsz, int ysz, int bpp)
 {
 	int i;
 	static uint16_t *modes;
 	uint16_t best = 0;
-	unsigned int fbsize;
+	unsigned int fbsize, pgsize;
 
 #ifdef __DJGPP__
 	__djgpp_nearptr_enable();
@@ -94,8 +95,20 @@ void *set_video_mode(int xsz, int ysz, int bpp)
 	}
 	*/
 
-	fbsize = xsz * ysz * mode_info->num_img_pages * (bpp / CHAR_BIT);
-	return (void*)dpmi_mmap(mode_info->fb_addr, fbsize);
+	printf("avail video pages: %d\n", mode_info->num_img_pages);
+	printf("bytes per scanline: %d (%d pixels)\n", vbe_get_scanlen(VBE_SCANLEN_BYTES),
+			vbe_get_scanlen(VBE_SCANLEN_PIXELS));
+
+	pgsize = xsz * ysz * (bpp / CHAR_BIT);
+	fbsize = mode_info->num_img_pages * pgsize;
+	vpgaddr[0] = (void*)dpmi_mmap(mode_info->fb_addr, fbsize);
+
+	if(mode_info->num_img_pages > 1) {
+		vpgaddr[1] = (char*)vpgaddr[0] + pgsize;
+	} else {
+		vpgaddr[1] = 0;
+	}
+	return vpgaddr[0];
 }
 
 int set_text_mode(void)
@@ -154,6 +167,33 @@ void set_palette(int idx, int r, int g, int b)
 	vbe_set_palette(idx, col, 1, pal_bits);
 }
 
+void *page_flip(int vsync)
+{
+	static int frame;
+	void *nextaddr;
+	int y, when, bufidx;
+
+	if(!vpgaddr[1]) {
+		/* page flipping not supported */
+		return 0;
+	}
+
+	bufidx = ++frame & 1;
+
+	y = bufidx ? mode_info->yres : 0;
+	nextaddr = vpgaddr[bufidx];
+
+	when = vsync ? VBE_SET_DISP_START_VBLANK : VBE_SET_DISP_START_NOW;
+	if(vbe_set_disp_start(0, y, when) == -1) {
+		return 0;
+	}
+
+	if(vsync == FLIP_VBLANK_WAIT) {
+		wait_vsync();
+	}
+	return nextaddr;
+}
+
 static unsigned int make_mask(int sz, int pos)
 {
 	unsigned int i, mask = 0;
@@ -163,6 +203,3 @@ static unsigned int make_mask(int sz, int pos)
 	}
 	return mask << pos;
 }
-
-
-#endif	/* GFX_H_ */

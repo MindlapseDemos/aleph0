@@ -13,8 +13,11 @@
 #include "tinyfps.h"
 #include "util.h"
 
-int fb_width = 320;
-int fb_height = 240;
+#define FB_WIDTH	320
+#define FB_HEIGHT	240
+
+int fb_width = FB_WIDTH;
+int fb_height = FB_HEIGHT;
 int fb_bpp = 16;
 uint16_t *fb_pixels, *vmem_back, *vmem_front;
 unsigned long time_msec;
@@ -99,7 +102,66 @@ void demo_draw(void)
 	scr_update();
 	scr_draw();
 
+	draw_mouse_pointer(vmem_front);
+
 	++nframes;
+}
+
+
+
+#define DEST(x, y)	dest[(y) * FB_WIDTH + (x)]
+void draw_mouse_pointer(uint16_t *fb)
+{
+	uint16_t *dest = fb + mouse_y * FB_WIDTH + mouse_x;
+	int ylines = FB_HEIGHT - mouse_y;
+
+	switch(ylines) {
+	default:
+	case 10:
+		DEST(0, 9) = 0xffff;
+	case 9:
+		DEST(0, 8) = 0xffff;
+		DEST(1, 8) = 0xffff;
+	case 8:
+		DEST(0, 7) = 0xffff;
+		DEST(2, 7) = 0xffff;
+		DEST(1, 7) = 0;
+	case 7:
+		DEST(6, 6) = 0xffff;
+		DEST(0, 6) = 0xffff;
+		DEST(3, 6) = 0xffff;
+		DEST(4, 6) = 0xffff;
+		DEST(5, 6) = 0xffff;
+		DEST(1, 6) = 0;
+		DEST(2, 6) = 0;
+	case 6:
+		DEST(5, 5) = 0xffff;
+		DEST(0, 5) = 0xffff;
+		DEST(1, 5) = 0;
+		DEST(2, 5) = 0;
+		DEST(3, 5) = 0;
+		DEST(4, 5) = 0;
+	case 5:
+		DEST(4, 4) = 0xffff;
+		DEST(0, 4) = 0xffff;
+		DEST(1, 4) = 0;
+		DEST(2, 4) = 0;
+		DEST(3, 4) = 0;
+	case 4:
+		DEST(3, 3) = 0xffff;
+		DEST(0, 3) = 0xffff;
+		DEST(1, 3) = 0;
+		DEST(2, 3) = 0;
+	case 3:
+		DEST(2, 2) = 0xffff;
+		DEST(0, 2) = 0xffff;
+		DEST(1, 2) = 0;
+	case 2:
+		DEST(1, 1) = 0xffff;
+		DEST(0, 1) = 0xffff;
+	case 1:
+		DEST(0, 0) = 0xffff;
+	}
 }
 
 static void change_screen(int idx)
@@ -211,7 +273,7 @@ void mouse_orbit_update(float *theta, float *phi, float *dist)
 			int dy = mouse_y - prev_my;
 
 			if(dx || dy) {
-				if(mouse_bmask & MOUSE_LEFT) {
+				if(mouse_bmask & MOUSE_BN_LEFT) {
 					float p = *phi;
 					*theta += dx * 1.0;
 					p += dy * 1.0;
@@ -220,7 +282,7 @@ void mouse_orbit_update(float *theta, float *phi, float *dist)
 					if(p > 90) p = 90;
 					*phi = p;
 				}
-				if(mouse_bmask & MOUSE_RIGHT) {
+				if(mouse_bmask & MOUSE_BN_RIGHT) {
 					*dist += dy * 0.5;
 
 					if(*dist < 0) *dist = 0;
@@ -228,6 +290,7 @@ void mouse_orbit_update(float *theta, float *phi, float *dist)
 			}
 		}
 	}
+
 	prev_mx = mouse_x;
 	prev_my = mouse_y;
 	prev_bmask = mouse_bmask;

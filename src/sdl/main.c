@@ -46,6 +46,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	SDL_WM_SetCaption("dosdemo/SDL", 0);
+	SDL_ShowCursor(0);
 
 	time_msec = 0;
 	if(demo_init(argc, argv) == -1) {
@@ -123,11 +124,11 @@ static int bnmask(int sdlbn)
 {
 	switch(sdlbn) {
 	case SDL_BUTTON_LEFT:
-		return MOUSE_LEFT;
+		return MOUSE_BN_LEFT;
 	case SDL_BUTTON_RIGHT:
-		return MOUSE_RIGHT;
+		return MOUSE_BN_RIGHT;
 	case SDL_BUTTON_MIDDLE:
-		return MOUSE_MIDDLE;
+		return MOUSE_BN_MIDDLE;
 	default:
 		break;
 	}

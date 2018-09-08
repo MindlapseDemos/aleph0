@@ -14,9 +14,9 @@ extern int mouse_x, mouse_y;
 extern unsigned int mouse_bmask;
 
 enum {
-	MOUSE_LEFT		= 1,
-	MOUSE_RIGHT		= 2,
-	MOUSE_MIDDLE	= 4
+	MOUSE_BN_LEFT		= 1,
+	MOUSE_BN_RIGHT		= 2,
+	MOUSE_BN_MIDDLE		= 4
 };
 
 extern float sball_matrix[16];
@@ -42,5 +42,7 @@ void swap_buffers(void *pixels);
 
 /* call each frame to get 3D viewing spherical coordinates */
 void mouse_orbit_update(float *theta, float *phi, float *dist);
+
+void draw_mouse_pointer(uint16_t *fb);
 
 #endif	/* DEMO_H_ */

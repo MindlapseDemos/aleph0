@@ -130,6 +130,62 @@ void vbe_set_palette(int idx, int *col, int count, int bits)
 	}
 }
 
+int vbe_set_disp_start(int x, int y, int when)
+{
+	struct dpmi_real_regs regs;
+
+	memset(&regs, 0, sizeof regs);
+	regs.eax = 0x4f07;
+	regs.ebx = when & 0xffff;
+	regs.ecx = x & 0xffff;
+	regs.edx = y & 0xffff;
+	dpmi_real_int(0x10, &regs);
+
+	if(regs.eax == 0x100) {
+		return -1;
+	}
+	return 0;
+}
+
+int vbe_set_scanlen(int len, int mode)
+{
+	struct dpmi_real_regs regs;
+
+	memset(&regs, 0, sizeof regs);
+	regs.eax = 0x4f06;
+	regs.ebx = mode;
+	regs.ecx = len & 0xffff;
+	dpmi_real_int(0x10, &regs);
+
+	if(regs.eax == 0x100) {
+		return -1;
+	}
+	return regs.ecx & 0xffff;
+}
+
+int vbe_get_scanlen(int mode)
+{
+	int res;
+	struct dpmi_real_regs regs;
+
+	memset(&regs, 0, sizeof regs);
+	regs.eax = 0x4f06;
+	regs.ebx = 1;
+	dpmi_real_int(0x10, &regs);
+
+	if(regs.eax == 0x100) {
+		return -1;
+	}
+
+	if(mode == VBE_SCANLEN_PIXELS) {
+		res = regs.ecx & 0xffff;
+	} else {
+		res = regs.ebx & 0xffff;
+	}
+	return res;
+}
+
+
 static unsigned int get_mask(int sz, int pos)
 {
 	unsigned int i, mask = 0;

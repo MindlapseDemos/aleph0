@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include "music.h"
+
+#ifndef NO_MUSIC
 #include "mikmod.h"
 
 #ifdef __WATCOMC__
@@ -149,4 +151,29 @@ static void MikMod_RegisterAllLoaders(void)
 	ML_RegisterLoader(&load_uni);
 	ML_RegisterLoader(&load_xm);
 }
+#endif
+
+#else	/* NO_MUSIC */
+
+int music_open(const char *fname)
+{
+	return 0;
+}
+
+void music_close(void)
+{
+}
+
+void music_play(void)
+{
+}
+
+void music_stop(void)
+{
+}
+
+void music_update(void)
+{
+}
+
 #endif

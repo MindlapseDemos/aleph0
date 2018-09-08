@@ -3,6 +3,7 @@
 #include <math.h>
 #include <string.h>
 #include <limits.h>
+#include <assert.h>
 #include <conio.h>
 #include "demo.h"
 #include "keyb.h"
@@ -50,11 +51,15 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if(!(vmem_front = set_video_mode(fb_width, fb_height, fb_bpp))) {
+	if(!(vmem_back = set_video_mode(fb_width, fb_height, fb_bpp))) {
 		return 1;
 	}
-	/* TODO implement multiple video memory pages for flipping */
-	vmem_back = vmem_front;
+	if(!(vmem_front = page_flip(FLIP_NOW))) {
+		fprintf(stderr, "page flipping not supported. falling back to double buffering\n");
+		vmem_front = vmem_back;
+	} else {
+		assert(vmem_back != vmem_front);
+	}
 
 	if(demo_init(argc, argv) == -1) {
 		set_text_mode();
@@ -115,18 +120,30 @@ void demo_quit(void)
 
 void swap_buffers(void *pixels)
 {
-	/* TODO implement page flipping */
 	if(pixels) {
+		/* just memcpy to the front buffer */
 		if(opt.vsync) {
 			wait_vsync();
 		}
 		drawFps(pixels);
 		memcpy(vmem_front, pixels, fbsize);
-	} else {
-		drawFps(vmem_back);
 
-		if(opt.vsync) {
-			wait_vsync();
+	} else {
+		/* attempt page flipping */
+		void *next;
+
+		drawFps(vmem_back);
+		if((next = page_flip(opt.vsync ? FLIP_VBLANK_WAIT : FLIP_NOW))) {
+			assert(next == vmem_back);
+			vmem_back = vmem_front;
+			vmem_front = next;
+		} else {
+			/* failed to page flip, assume we drew in the front buffer then
+			 * and just wait for vsync if necessary
+			 */
+			if(opt.vsync) {
+				wait_vsync();
+			}
 		}
 	}
 }

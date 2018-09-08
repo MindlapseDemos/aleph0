@@ -82,6 +82,7 @@ int g3d_init(void)
 		fprintf(stderr, "failed to allocate G3D context\n");
 		return -1;
 	}
+	st->opt = G3D_CLIP_FRUSTUM;
 	st->fill_mode = POLYFILL_FLAT;
 
 	for(i=0; i<G3D_NUM_MATRICES; i++) {
@@ -114,6 +115,13 @@ void g3d_framebuffer(int width, int height, void *pixels)
 	pfill_fb.height = height;
 
 	g3d_viewport(0, 0, width, height);
+}
+
+/* set the framebuffer pointer, without resetting the size */
+void g3d_framebuffer_addr(void *pixels)
+{
+	st->pixels = pixels;
+	pfill_fb.pixels = pixels;
 }
 
 void g3d_viewport(int x, int y, int w, int h)
@@ -438,17 +446,19 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 		}
 
 		/* clipping */
-		for(i=0; i<6; i++) {
-			memcpy(tmpv, v, vnum * sizeof *v);
+		if(st->opt & G3D_CLIP_FRUSTUM) {
+			for(i=0; i<6; i++) {
+				memcpy(tmpv, v, vnum * sizeof *v);
 
-			if(clip_frustum(v, &vnum, tmpv, vnum, i) < 0) {
-				/* polygon completely outside of view volume. discard */
-				vnum = 0;
-				break;
+				if(clip_frustum(v, &vnum, tmpv, vnum, i) < 0) {
+					/* polygon completely outside of view volume. discard */
+					vnum = 0;
+					break;
+				}
 			}
-		}
 
-		if(!vnum) continue;
+			if(!vnum) continue;
+		}
 
 		for(i=0; i<vnum; i++) {
 			if(v[i].w != 0.0f) {

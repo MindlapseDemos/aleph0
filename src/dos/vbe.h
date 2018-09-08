@@ -71,6 +71,15 @@ int vbe_set_mode(int mode);
 int vbe_set_palette_bits(int bits);
 void vbe_set_palette(int idx, int *col, int count, int bits);
 
+#define VBE_SET_DISP_START_NOW		0
+#define VBE_SET_DISP_START_VBLANK	0x80
+int vbe_set_disp_start(int x, int y, int when);
+
+#define VBE_SCANLEN_PIXELS	0
+#define VBE_SCANLEN_BYTES	2
+int vbe_set_scanlen(int len, int mode);
+int vbe_get_scanlen(int mode);
+
 void print_mode_info(FILE *fp, struct vbe_mode_info *modei);
 
 #endif	/* VBE_H_ */

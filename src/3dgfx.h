@@ -19,16 +19,21 @@ enum {
 
 /* g3d_enable/g3d_disable bits */
 enum {
-	G3D_CULL_FACE	= 0x0001,
-	G3D_DEPTH_TEST	= 0x0002,	/* XXX not implemented */
-	G3D_LIGHTING	= 0x0004,
-	G3D_LIGHT0		= 0x0008,
-	G3D_LIGHT1		= 0x0010,
-	G3D_LIGHT2		= 0x0020,
-	G3D_LIGHT3		= 0x0040,
-	G3D_TEXTURE		= 0x0080,
-	G3D_BLEND		= 0x0100,
-	G3D_TEXTURE_GEN	= 0x0200,
+	G3D_CULL_FACE	= 0x000001,
+	G3D_DEPTH_TEST	= 0x000002,	/* XXX not implemented */
+	G3D_LIGHTING	= 0x000004,
+	G3D_LIGHT0		= 0x000008,
+	G3D_LIGHT1		= 0x000010,
+	G3D_LIGHT2		= 0x000020,
+	G3D_LIGHT3		= 0x000040,
+	G3D_TEXTURE		= 0x000080,
+	G3D_BLEND		= 0x000100,
+	G3D_TEXTURE_GEN	= 0x000200,
+	G3D_CLIP_FRUSTUM = 0x000800,/* when disabled, don't clip against the frustum */
+	G3D_CLIP_PLANE0 = 0x001000,	/* user-defined 3D clipping planes XXX not impl. */
+	G3D_CLIP_PLANE1 = 0x002000,
+	G3D_CLIP_PLANE2 = 0x004000,
+	G3D_CLIP_PLANE3 = 0x008000,
 
 	G3D_ALL = 0x7fffffff
 };
@@ -57,6 +62,7 @@ int g3d_init(void);
 void g3d_destroy(void);
 
 void g3d_framebuffer(int width, int height, void *pixels);
+void g3d_framebuffer_addr(void *pixels);
 void g3d_viewport(int x, int y, int w, int h);
 
 void g3d_enable(unsigned int opt);

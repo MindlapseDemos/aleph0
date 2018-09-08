@@ -93,6 +93,12 @@ void POLYFILL(struct pvertex *pv, int nverts)
 		if(pv[i].y > pv[botidx].y) botidx = i;
 	}
 
+	int winding = 0;
+	for(i=0; i<nverts; i++) {
+		int next = NEXTIDX(i);
+		winding += (pv[next].x - pv[i].x) * (pv[next].y + pv[i].y);
+	}
+
 	/* +1 to avoid crashing due to off-by-one rounding errors in the rasterization */
 	left = alloca((pfill_fb.height + 1) * sizeof *left);
 	right = alloca((pfill_fb.height + 1) * sizeof *right);
@@ -133,9 +139,16 @@ void POLYFILL(struct pvertex *pv, int nverts)
 				if(idx < sltop) sltop = idx;
 			/*}*/
 		} else {
-			struct pvertex *edge = y0 > y1 ? left : right;
-			uint32_t res = SCANEDGE(pv + i, pv + next, edge);
-			uint32_t tmp = (res >> 16) & 0xffff;
+			struct pvertex *edge;
+			uint32_t res, tmp;
+
+			if(winding < 0) {
+				edge = y0 > y1 ? left : right;
+			} else {
+				edge = y0 > y1 ? right : left;
+			}
+			res = SCANEDGE(pv + i, pv + next, edge);
+			tmp = (res >> 16) & 0xffff;
 			if(tmp > slbot) slbot = tmp;
 			if((tmp = res & 0xffff) < sltop) {
 				sltop = tmp;

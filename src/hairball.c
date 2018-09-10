@@ -6,6 +6,14 @@
 #include "vmath.h"
 #include "screen.h"
 #include "util.h"
+#include "cfgopt.h"
+
+
+#ifdef MSDOS
+#include "dos/gfx.h"	/* for wait_vsync assembly macro */
+#else
+void wait_vsync(void);
+#endif
 
 #define NSPAWNPOS	128
 #define SPAWN_RATE	16.0f
@@ -15,7 +23,7 @@
 struct particle {
 	vec3_t pos;
 	vec3_t vel;
-	float r, g, b, a;
+	int r, g, b, a;
 	int life;
 
 	struct particle *next;
@@ -111,7 +119,7 @@ static void update(void)
 		hball.pos.y -= mouse_dy * 0.05;
 	}
 
-	hball.rot = quat_rotate(hball.rot, dt * 2.0f, 0, 1, 0);
+	//hball.rot = quat_rotate(hball.rot, dt * 2.0f, 0, 1, 0);
 
 	quat_to_mat(hball.xform, hball.rot);
 	hball.xform[12] = hball.pos.x;
@@ -123,6 +131,9 @@ static void update(void)
 
 static void draw(void)
 {
+	unsigned long msec;
+	static unsigned long last_swap;
+
 	update();
 
 	memset(fb_pixels, 0, fb_width * fb_height * 2);
@@ -133,7 +144,15 @@ static void draw(void)
 
 	draw_hairball(&hball);
 
+	msec = get_msec();
+	if(msec - last_swap < 16) {
+		wait_vsync();
+	}
+	if(!opt.vsync) {
+		wait_vsync();
+	}
 	swap_buffers(fb_pixels);
+	last_swap = get_msec();
 }
 
 static void update_hairball(struct hairball *hb, float dt)
@@ -159,6 +178,9 @@ static void update_hairball(struct hairball *hb, float dt)
 			p->pos.y += p->vel.y * dt;
 			p->pos.z += p->vel.z * dt;
 			p->vel.y += GRAV * dt;
+
+			p->r = p->g = p->b = (p->life << 8) / HAIR_LENGTH - 1;
+
 			prev = p;
 		}
 
@@ -179,7 +201,6 @@ static void update_hairball(struct hairball *hb, float dt)
 
 			p->vel = spawndir[i];
 			p->life = HAIR_LENGTH;
-			/* TODO color */
 
 			p->next = hb->plist[i];
 			hb->plist[i] = p;
@@ -203,8 +224,7 @@ static void draw_hairball(struct hairball *hb)
 
 		j = 0;
 		while(p) {
-			col = 255 - j++ * (HAIR_LENGTH - 1);
-			g3d_color3b(col, col, col);
+			g3d_color3b(p->r, p->g, p->b);
 			g3d_vertex(prevpos.x, prevpos.y, prevpos.z);
 			g3d_vertex(p->pos.x, p->pos.y, p->pos.z);
 			prevpos = p->pos;

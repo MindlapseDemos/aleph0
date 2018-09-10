@@ -15,6 +15,7 @@ struct screen *thunder_screen(void);
 struct screen *metaballs_screen(void);
 struct screen *greets_screen(void);
 struct screen *infcubes_screen(void);
+struct screen *hairball_screen(void);
 
 #define NUM_SCR 32
 static struct screen *scr[NUM_SCR];
@@ -55,6 +56,9 @@ int scr_init(void)
 		return -1;
 	}
 	if(!(scr[idx++] = infcubes_screen())) {
+		return -1;
+	}
+	if(!(scr[idx++] = hairball_screen())) {
 		return -1;
 	}
 	num_screens = idx;

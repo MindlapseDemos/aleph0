@@ -141,4 +141,22 @@ static INLINE void mat4_transpose(float *mat)
 	}
 }
 
+/* misc stuff */
+static vec3_t INLINE sphrand(float rad)
+{
+	vec3_t res;
+
+	float u = (float)rand() / RAND_MAX;
+	float v = (float)rand() / RAND_MAX;
+
+	float theta = 2.0f * M_PI * u;
+	float phi = acos(2.0f * v - 1.0f);
+
+	res.x = rad * cos(theta) * sin(phi);
+	res.y = rad * sin(theta) * sin(phi);
+	res.z = rad * cos(phi);
+
+	return res;
+}
+
 #endif	/* VMATH_H_ */

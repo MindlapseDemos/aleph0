@@ -515,7 +515,10 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 			break;
 
 		case 2:
-			/* TODO: draw line */
+			{
+				uint16_t col = PACK_RGB16(pv[0].r, pv[0].g, pv[0].b);
+				draw_line(pv[0].x >> 8, pv[0].y >> 8, pv[1].x >> 8, pv[1].y >> 8, col);
+			}
 			break;
 
 		default:

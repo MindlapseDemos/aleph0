@@ -7,6 +7,7 @@
 #include "screen.h"
 #include "util.h"
 #include "cfgopt.h"
+#include "mesh.h"
 
 
 #ifdef MSDOS
@@ -15,10 +16,11 @@
 void wait_vsync(void);
 #endif
 
-#define NSPAWNPOS	128
+#define NSPAWNPOS	64
 #define SPAWN_RATE	16.0f
-#define GRAV		(-6.0f)
-#define HAIR_LENGTH 32
+//#define GRAV		(-6.0f)
+#define GRAV		0.0f
+#define HAIR_LENGTH 20
 
 struct particle {
 	vec3_t pos;
@@ -58,9 +60,12 @@ static struct screen scr = {
 
 static long start_time;
 
-static vec3_t *spawnpos, *spawndir;
+static float cam_theta, cam_phi = 15;
+static float cam_dist = 8;
 
+static vec3_t *spawnpos, *spawndir;
 static struct hairball hball;
+static struct g3d_mesh sphmesh;
 
 struct screen *hairball_screen(void)
 {
@@ -70,6 +75,8 @@ struct screen *hairball_screen(void)
 static int init(void)
 {
 	int i;
+
+	gen_sphere_mesh(&sphmesh, 1.0f, 12, 6);
 
 	hball.xform[0] = hball.xform[5] = hball.xform[10] = hball.xform[15] = 1.0f;
 	hball.rot.w = 1.0f;
@@ -114,19 +121,24 @@ static void update(void)
 	prev_mx = mouse_x;
 	prev_my = mouse_y;
 
-	if(mouse_bmask) {
-		hball.pos.x += mouse_dx * 0.05;
-		hball.pos.y -= mouse_dy * 0.05;
+
+	if(opt.sball) {
+		memcpy(hball.xform, sball_matrix, 16 * sizeof(float));
+	} else {
+		if(mouse_bmask & MOUSE_BN_MIDDLE) {
+			hball.pos.x += mouse_dx * 0.05;
+			hball.pos.y -= mouse_dy * 0.05;
+		}
+
+		quat_to_mat(hball.xform, hball.rot);
+		hball.xform[12] = hball.pos.x;
+		hball.xform[13] = hball.pos.y;
+		hball.xform[14] = hball.pos.z;
 	}
 
-	//hball.rot = quat_rotate(hball.rot, dt * 2.0f, 0, 1, 0);
-
-	quat_to_mat(hball.xform, hball.rot);
-	hball.xform[12] = hball.pos.x;
-	hball.xform[13] = hball.pos.y;
-	hball.xform[14] = hball.pos.z;
-
 	update_hairball(&hball, dt);
+
+	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
 }
 
 static void draw(void)
@@ -140,7 +152,9 @@ static void draw(void)
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
-	g3d_translate(0, 0, -8);
+	g3d_translate(0, 0, -cam_dist);
+	g3d_rotate(cam_phi, 1, 0, 0);
+	g3d_rotate(cam_theta, 0, 1, 0);
 
 	draw_hairball(&hball);
 
@@ -211,18 +225,22 @@ static void update_hairball(struct hairball *hb, float dt)
 
 static void draw_hairball(struct hairball *hb)
 {
-	int i, j, col;
+	int i, col;
 	struct particle *p;
 	vec3_t prevpos;
+	vec3_t start[NSPAWNPOS];
+
+	for(i=0; i<NSPAWNPOS; i++) {
+		start[i].x = hb->xform[0] * spawnpos[i].x + hb->xform[4] * spawnpos[i].y + hb->xform[8] * spawnpos[i].z + hb->xform[12];
+		start[i].y = hb->xform[1] * spawnpos[i].x + hb->xform[5] * spawnpos[i].y + hb->xform[9] * spawnpos[i].z + hb->xform[13];
+		start[i].z = hb->xform[2] * spawnpos[i].x + hb->xform[6] * spawnpos[i].y + hb->xform[10] * spawnpos[i].z + hb->xform[14];
+	}
 
 	g3d_begin(G3D_LINES);
 	for(i=0; i<NSPAWNPOS; i++) {
+		if(start[i].z >= hb->pos.z) continue;
 		p = hb->plist[i];
-		prevpos.x = hb->xform[0] * spawnpos[i].x + hb->xform[4] * spawnpos[i].y + hb->xform[8] * spawnpos[i].z + hb->xform[12];
-		prevpos.y = hb->xform[1] * spawnpos[i].x + hb->xform[5] * spawnpos[i].y + hb->xform[9] * spawnpos[i].z + hb->xform[13];
-		prevpos.z = hb->xform[2] * spawnpos[i].x + hb->xform[6] * spawnpos[i].y + hb->xform[10] * spawnpos[i].z + hb->xform[14];
-
-		j = 0;
+		prevpos = start[i];
 		while(p) {
 			g3d_color3b(p->r, p->g, p->b);
 			g3d_vertex(prevpos.x, prevpos.y, prevpos.z);
@@ -232,6 +250,29 @@ static void draw_hairball(struct hairball *hb)
 		}
 	}
 	g3d_end();
+
+
+	g3d_push_matrix();
+	g3d_mult_matrix(hb->xform);
+	zsort_mesh(&sphmesh);
+	draw_mesh(&sphmesh);
+	g3d_pop_matrix();
+
+	g3d_begin(G3D_LINES);
+	for(i=0; i<NSPAWNPOS; i++) {
+		if(start[i].z < hb->pos.z) continue;
+		p = hb->plist[i];
+		prevpos = start[i];
+		while(p) {
+			g3d_color3b(p->r, p->g, p->b);
+			g3d_vertex(prevpos.x, prevpos.y, prevpos.z);
+			g3d_vertex(p->pos.x, p->pos.y, p->pos.z);
+			prevpos = p->pos;
+			p = p->next;
+		}
+	}
+	g3d_end();
+
 }
 
 

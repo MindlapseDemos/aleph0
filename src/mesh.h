@@ -22,6 +22,7 @@ int indexify_mesh(struct g3d_mesh *mesh);
 
 void normalize_mesh_normals(struct g3d_mesh *mesh);
 
+int gen_sphere_mesh(struct g3d_mesh *mesh, float rad, int usub, int vsub);
 int gen_plane_mesh(struct g3d_mesh *mesh, float width, float height, int usub, int vsub);
 int gen_cube_mesh(struct g3d_mesh *mesh, float sz, int sub);
 int gen_torus_mesh(struct g3d_mesh *mesh, float rad, float ringrad, int usub, int vsub);

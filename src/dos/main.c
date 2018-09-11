@@ -90,7 +90,6 @@ int main(int argc, char **argv)
 		}
 		if(use_sball && sball_pending()) {
 			sball_event ev;
-			printf("got sball event\n");
 			while(sball_getevent(&ev)) {
 				handle_sball_event(&ev);
 			}

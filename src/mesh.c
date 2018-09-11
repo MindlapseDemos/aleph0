@@ -223,6 +223,79 @@ void normalize_mesh_normals(struct g3d_mesh *mesh)
 	}
 }
 
+
+static void sphvec(float *res, float theta, float phi, float rad)
+{
+	theta = -theta;
+	res[0] = sin(theta) * sin(phi);
+	res[1] = cos(phi);
+	res[2] = cos(theta) * sin(phi);
+}
+
+int gen_sphere_mesh(struct g3d_mesh *mesh, float rad, int usub, int vsub)
+{
+	int i, j;
+	int nfaces, uverts, vverts;
+	struct g3d_vertex *vptr;
+	uint16_t *iptr;
+
+	mesh->prim = G3D_QUADS;
+
+	if(usub < 4) usub = 4;
+	if(vsub < 2) vsub = 2;
+
+	uverts = usub + 1;
+	vverts = vsub + 1;
+
+	mesh->vcount = uverts * vverts;
+	nfaces = usub * vsub;
+	mesh->icount = nfaces * 4;
+
+	if(!(mesh->varr = malloc(mesh->vcount * sizeof *mesh->varr))) {
+		fprintf(stderr, "gen_sphere_mesh: failed to allocate vertex buffer (%d vertices)\n", mesh->vcount);
+		return -1;
+	}
+	if(!(mesh->iarr = malloc(mesh->icount * sizeof *mesh->iarr))) {
+		fprintf(stderr, "gen_sphere_mesh: failed to allocate index buffer (%d indices)\n", mesh->icount);
+		return -1;
+	}
+	vptr = mesh->varr;
+	iptr = mesh->iarr;
+
+	for(i=0; i<uverts; i++) {
+		float u = (float)i / (float)(uverts - 1);
+		float theta = u * 2.0 * M_PI;
+
+		for(j=0; j<vverts; j++) {
+			float v = (float)j / (float)(vverts - 1);
+			float phi = v * M_PI;
+			int chess = (i & 1) == (j & 1);
+
+			sphvec(&vptr->x, theta, phi, rad);
+			vptr->w = 1.0f;
+
+			vptr->nx = vptr->x / rad;
+			vptr->ny = vptr->y / rad;
+			vptr->nz = vptr->z / rad;
+			vptr->u = u;
+			vptr->v = v;
+			vptr->r = chess ? 255 : 64;
+			vptr->g = 128;
+			vptr->b = chess ? 64 : 255;
+			++vptr;
+
+			if(i < usub && j < vsub) {
+				int idx = i * vverts + j;
+				*iptr++ = idx;
+				*iptr++ = idx + 1;
+				*iptr++ = idx + vverts + 1;
+				*iptr++ = idx + vverts;
+			}
+		}
+	}
+	return 0;
+}
+
 int gen_plane_mesh(struct g3d_mesh *m, float width, float height, int usub, int vsub)
 {
 	int i, j;

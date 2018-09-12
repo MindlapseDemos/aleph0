@@ -124,6 +124,10 @@ static void update(void)
 
 	if(opt.sball) {
 		memcpy(hball.xform, sball_matrix, 16 * sizeof(float));
+
+		hball.pos.x = hball.xform[12];
+		hball.pos.y = hball.xform[13];
+		hball.pos.z = hball.xform[14];
 	} else {
 		if(mouse_bmask & MOUSE_BN_MIDDLE) {
 			hball.pos.x += mouse_dx * 0.05;
@@ -208,12 +212,15 @@ static void update_hairball(struct hairball *hb, float dt)
 			struct particle *p = palloc();
 			float *mat = hb->xform;
 			vec3_t pos = spawnpos[i];
+			vec3_t dir = spawndir[i];
 
 			p->pos.x = mat[0] * pos.x + mat[4] * pos.y + mat[8] * pos.z + mat[12];
 			p->pos.y = mat[1] * pos.x + mat[5] * pos.y + mat[9] * pos.z + mat[13];
 			p->pos.z = mat[2] * pos.x + mat[6] * pos.y + mat[10] * pos.z + mat[14];
 
-			p->vel = spawndir[i];
+			p->vel.x = mat[0] * dir.x + mat[4] * dir.y + mat[8] * dir.z;
+			p->vel.y = mat[1] * dir.x + mat[5] * dir.y + mat[9] * dir.z;
+			p->vel.z = mat[2] * dir.x + mat[6] * dir.y + mat[10] * dir.z;
 			p->life = HAIR_LENGTH;
 
 			p->next = hb->plist[i];

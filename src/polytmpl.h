@@ -96,7 +96,7 @@ void POLYFILL(struct pvertex *pv, int nverts)
 	int winding = 0;
 	for(i=0; i<nverts; i++) {
 		int next = NEXTIDX(i);
-		winding += ((pv[next].x - pv[i].x) >> 8) * ((pv[next].y + pv[i].y) >> 8);
+		winding += ((pv[next].x - pv[i].x) >> 4) * ((pv[next].y + pv[i].y) >> 4);
 	}
 
 	/* +1 to avoid crashing due to off-by-one rounding errors in the rasterization */
@@ -143,8 +143,10 @@ void POLYFILL(struct pvertex *pv, int nverts)
 			uint32_t res, tmp;
 
 			if(winding < 0) {
+				// clockwise
 				edge = y0 > y1 ? left : right;
 			} else {
+				// counter-clockwise
 				edge = y0 > y1 ? right : left;
 			}
 			res = SCANEDGE(pv + i, pv + next, edge);

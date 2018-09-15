@@ -96,7 +96,7 @@ void POLYFILL(struct pvertex *pv, int nverts)
 	int winding = 0;
 	for(i=0; i<nverts; i++) {
 		int next = NEXTIDX(i);
-		winding += (pv[next].x - pv[i].x) * (pv[next].y + pv[i].y);
+		winding += ((pv[next].x - pv[i].x) >> 8) * ((pv[next].y + pv[i].y) >> 8);
 	}
 
 	/* +1 to avoid crashing due to off-by-one rounding errors in the rasterization */

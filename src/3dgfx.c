@@ -442,6 +442,14 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 				v[i].u = v[i].nx * 0.5 + 0.5;
 				v[i].v = v[i].ny * 0.5 + 0.5;
 			}
+			if(st->opt & G3D_TEXTURE_MAT) {
+				float *mat = st->mat[G3D_TEXTURE][st->mtop[G3D_TEXTURE]];
+				float x = mat[0] * v[i].u + mat[4] * v[i].v + mat[12];
+				float y = mat[1] * v[i].u + mat[5] * v[i].v + mat[13];
+				float w = mat[3] * v[i].u + mat[7] * v[i].v + mat[15];
+				v[i].u = x / w;
+				v[i].v = y / w;
+			}
 			xform4_vec3(st->mat[G3D_PROJECTION][ptop], &v[i].x);
 		}
 

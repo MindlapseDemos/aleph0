@@ -26,7 +26,7 @@ enum {
 	G3D_LIGHT1		= 0x000010,
 	G3D_LIGHT2		= 0x000020,
 	G3D_LIGHT3		= 0x000040,
-	G3D_TEXTURE		= 0x000080,
+	G3D_TEXTURE_2D	= 0x000080,	/* XXX doesn't affect anything, use g3d_polygon_mode */
 	G3D_BLEND		= 0x000100,
 	G3D_TEXTURE_GEN	= 0x000200,
 	G3D_CLIP_FRUSTUM = 0x000800,/* when disabled, don't clip against the frustum */
@@ -34,6 +34,8 @@ enum {
 	G3D_CLIP_PLANE1 = 0x002000,
 	G3D_CLIP_PLANE2 = 0x004000,
 	G3D_CLIP_PLANE3 = 0x008000,
+
+	G3D_TEXTURE_MAT	= 0x010000,
 
 	G3D_ALL = 0x7fffffff
 };
@@ -54,6 +56,7 @@ enum {
 enum {
 	G3D_MODELVIEW,
 	G3D_PROJECTION,
+	G3D_TEXTURE,
 
 	G3D_NUM_MATRICES
 };

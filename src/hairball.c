@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <float.h>
 #include "demo.h"
 #include "3dgfx.h"
 #include "vmath.h"
@@ -74,7 +75,7 @@ struct screen *hairball_screen(void)
 
 static int init(void)
 {
-	int i;
+	int i, j, numpt = 0;
 
 	gen_sphere_mesh(&sphmesh, 1.0f, 12, 6);
 
@@ -87,8 +88,30 @@ static int init(void)
 		return -1;
 	}
 
-	for(i=0; i<NSPAWNPOS; i++) {
-		spawnpos[i] = spawndir[i] = sphrand(1.0f);
+	while(numpt < NSPAWNPOS) {
+		float best_dist = -1.0f;
+		for(i=0; i<100; i++) {
+			vec3_t pos = sphrand(1.0f);
+
+			float mindist = FLT_MAX;
+			for(j=0; j<numpt; j++) {
+				float dx = pos.x - spawnpos[i].x;
+				float dy = pos.y - spawnpos[i].y;
+				float dz = pos.z - spawnpos[i].z;
+				float dsq = dx * dx + dy * dy + dz * dz;
+				if(dsq < mindist) {
+					mindist = dsq;
+				}
+			}
+
+			if(mindist > best_dist) {
+				spawnpos[numpt] = pos;
+				best_dist = mindist;
+			}
+		}
+
+		spawndir[numpt] = spawnpos[numpt];
+		++numpt;
 	}
 
 	return 0;

@@ -5,6 +5,18 @@
 #include "mesh.h"
 #include "3dgfx.h"
 
+void free_mesh(struct g3d_mesh *mesh)
+{
+	destroy_mesh(mesh);
+	free(mesh);
+}
+
+void destroy_mesh(struct g3d_mesh *mesh)
+{
+	free(mesh->varr);
+	free(mesh->iarr);
+}
+
 static struct {
 	int prim;
 	struct g3d_vertex *varr;

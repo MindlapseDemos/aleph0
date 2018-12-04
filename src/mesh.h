@@ -10,6 +10,9 @@ struct g3d_mesh {
 	int vcount, icount;
 };
 
+void free_mesh(struct g3d_mesh *mesh);
+void destroy_mesh(struct g3d_mesh *mesh);
+
 int load_mesh(struct g3d_mesh *mesh, const char *fname);
 int save_mesh(struct g3d_mesh *mesh, const char *fname);
 

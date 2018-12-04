@@ -1,26 +1,25 @@
-demoobj = main.obj demo.obj screen.obj cfgopt.obj music.obj gfxutil.obj &
-3dgfx.obj polyfill.obj polyclip.obj metasurf.obj mesh.obj meshload.obj &
-bsptree.obj
-scrobj = tunnel.obj fract.obj grise.obj polytest.obj plasma.obj bump.obj &
-thunder.obj metaball.obj greets.obj infcubes.obj
-sysobj = gfx.obj vbe.obj watdpmi.obj timer.obj keyb.obj mouse.obj sball.obj &
-logger.obj tinyfps.obj util.obj dynarr.obj rbtree.obj
-obj = $(baseobj) $(demoobj) $(sysobj) $(scrobj)
+obj = 3dgfx.obj bsptree.obj bump.obj cfgopt.obj demo.obj djdpmi.obj dynarr.obj &
+fract.obj gfx.obj gfxutil.obj greets.obj grise.obj hairball.obj infcubes.obj &
+keyb.obj logger.obj main.obj mesh.obj meshload.obj metaball.obj metasurf.obj &
+mouse.obj music.obj noise.obj plasma.obj polyclip.obj polyfill.obj polytest.obj &
+rbtree.obj sball.obj screen.obj smoketxt.obj thunder.obj tilemaze.obj timer.obj &
+tinyfps.obj treestor.obj ts_text.obj tunnel.obj util.obj vbe.obj watdpmi.obj
+
 bin = demo.exe
 
-libs = imago.lib mikmod.lib
+libs = imago.lib
 
 def = -dM_PI=3.141592653589793
 opt = -5 -fp5 -otexan -oh -oi -ei
 dbg = -d1
 
 !ifdef __UNIX__
-incpath = -Isrc -Isrc/dos -Ilibs/imago/src -Ilibs/oldmik/src
-libpath = libpath libs/imago libpath libs/oldmik
+incpath = -Isrc -Isrc/dos -Ilibs/imago/src
+libpath = libpath libs/imago
 RM = rm -f
 !else
-incpath = -Isrc -Isrc\dos -Ilibs\imago\src -Ilibs\oldmik\src
-libpath = libpath libs\imago libpath libs\oldmik
+incpath = -Isrc -Isrc\dos -Ilibs\imago\src
+libpath = libpath libs\imago
 RM = del
 !endif
 
@@ -47,9 +46,6 @@ cflags.occ: Makefile
 
 cxxflags.occ: Makefile
 	%write $@ $(CXXFLAGS)
-
-music.obj: music.c
-	$(CC) -fo=$@ @cflags.occ -zu $[*
 
 .c.obj: .autodepend
 	$(CC) -fo=$@ @cflags.occ $[*

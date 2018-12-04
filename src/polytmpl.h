@@ -69,7 +69,7 @@ static uint32_t SCANEDGE(struct pvertex *v0, struct pvertex *v1, struct pvertex 
 
 void POLYFILL(struct pvertex *pv, int nverts)
 {
-	int i;
+	int i, winding;
 	int topidx = 0, botidx = 0, sltop = pfill_fb.height, slbot = 0;
 	struct pvertex *left, *right;
 	uint16_t color;
@@ -93,7 +93,7 @@ void POLYFILL(struct pvertex *pv, int nverts)
 		if(pv[i].y > pv[botidx].y) botidx = i;
 	}
 
-	int winding = 0;
+	winding = 0;
 	for(i=0; i<nverts; i++) {
 		int next = NEXTIDX(i);
 		winding += ((pv[next].x - pv[i].x) >> 4) * ((pv[next].y + pv[i].y) >> 4);

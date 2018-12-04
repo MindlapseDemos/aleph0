@@ -1,0 +1,6 @@
+#!/bin/sh
+# tool to generate object file lists for watcom make
+# run from project root
+
+obj=`find src \( -name '*.c' -o -name '*.asm' \) | xargs basename -a | sort | uniq | sed 's/\(\.c\|\.asm\)$/.obj/g'`
+echo 'obj =' $obj

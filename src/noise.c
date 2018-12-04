@@ -320,8 +320,9 @@ float pnoise4(float x, float y, float z, float w, int per_x, int per_y, int per_
 
 float fbm1(float x, int octaves)
 {
+	int i;
 	float res = 0.0f, freq = 1.0f;
-	for(int i=0; i<octaves; i++) {
+	for(i=0; i<octaves; i++) {
 		res += noise1(x * freq) / freq;
 		freq *= 2.0f;
 	}
@@ -330,8 +331,9 @@ float fbm1(float x, int octaves)
 
 float fbm2(float x, float y, int octaves)
 {
+	int i;
 	float res = 0.0f, freq = 1.0f;
-	for(int i=0; i<octaves; i++) {
+	for(i=0; i<octaves; i++) {
 		res += noise2(x * freq, y * freq) / freq;
 		freq *= 2.0f;
 	}
@@ -340,8 +342,9 @@ float fbm2(float x, float y, int octaves)
 
 float fbm3(float x, float y, float z, int octaves)
 {
+	int i;
 	float res = 0.0f, freq = 1.0f;
-	for(int i=0; i<octaves; i++) {
+	for(i=0; i<octaves; i++) {
 		res += noise3(x * freq, y * freq, z * freq) / freq;
 		freq *= 2.0f;
 	}
@@ -351,8 +354,9 @@ float fbm3(float x, float y, float z, int octaves)
 
 float fbm4(float x, float y, float z, float w, int octaves)
 {
+	int i;
 	float res = 0.0f, freq = 1.0f;
-	for(int i=0; i<octaves; i++) {
+	for(i=0; i<octaves; i++) {
 		res += noise4(x * freq, y * freq, z * freq, w * freq) / freq;
 		freq *= 2.0f;
 	}
@@ -362,8 +366,9 @@ float fbm4(float x, float y, float z, float w, int octaves)
 
 float pfbm1(float x, int per, int octaves)
 {
+	int i;
 	float res = 0.0f, freq = 1.0f;
-	for(int i=0; i<octaves; i++) {
+	for(i=0; i<octaves; i++) {
 		res += pnoise1(x * freq, per) / freq;
 		freq *= 2.0f;
 		per *= 2;
@@ -373,8 +378,9 @@ float pfbm1(float x, int per, int octaves)
 
 float pfbm2(float x, float y, int per_x, int per_y, int octaves)
 {
+	int i;
 	float res = 0.0f, freq = 1.0f;
-	for(int i=0; i<octaves; i++) {
+	for(i=0; i<octaves; i++) {
 		res += pnoise2(x * freq, y * freq, per_x, per_y) / freq;
 		freq *= 2.0f;
 		per_x *= 2;
@@ -385,8 +391,9 @@ float pfbm2(float x, float y, int per_x, int per_y, int octaves)
 
 float pfbm3(float x, float y, float z, int per_x, int per_y, int per_z, int octaves)
 {
+	int i;
 	float res = 0.0f, freq = 1.0f;
-	for(int i=0; i<octaves; i++) {
+	for(i=0; i<octaves; i++) {
 		res += pnoise3(x * freq, y * freq, z * freq, per_x, per_y, per_z) / freq;
 		freq *= 2.0f;
 		per_x *= 2;
@@ -398,8 +405,9 @@ float pfbm3(float x, float y, float z, int per_x, int per_y, int per_z, int octa
 
 float pfbm4(float x, float y, float z, float w, int per_x, int per_y, int per_z, int per_w, int octaves)
 {
+	int i;
 	float res = 0.0f, freq = 1.0f;
-	for(int i=0; i<octaves; i++) {
+	for(i=0; i<octaves; i++) {
 		res += pnoise4(x * freq, y * freq, z * freq, w * freq,
 				per_x, per_y, per_z, per_w) / freq;
 		freq *= 2.0f;
@@ -414,8 +422,9 @@ float pfbm4(float x, float y, float z, float w, int per_x, int per_y, int per_z,
 
 float turbulence1(float x, int octaves)
 {
+	int i;
 	float res = 0.0f, freq = 1.0f;
-	for(int i=0; i<octaves; i++) {
+	for(i=0; i<octaves; i++) {
 		res += fabs(noise1(x * freq) / freq);
 		freq *= 2.0f;
 	}
@@ -424,8 +433,9 @@ float turbulence1(float x, int octaves)
 
 float turbulence2(float x, float y, int octaves)
 {
+	int i;
 	float res = 0.0f, freq = 1.0f;
-	for(int i=0; i<octaves; i++) {
+	for(i=0; i<octaves; i++) {
 		res += fabs(noise2(x * freq, y * freq) / freq);
 		freq *= 2.0f;
 	}
@@ -434,8 +444,9 @@ float turbulence2(float x, float y, int octaves)
 
 float turbulence3(float x, float y, float z, int octaves)
 {
+	int i;
 	float res = 0.0f, freq = 1.0f;
-	for(int i=0; i<octaves; i++) {
+	for(i=0; i<octaves; i++) {
 		res += fabs(noise3(x * freq, y * freq, z * freq) / freq);
 		freq *= 2.0f;
 	}
@@ -444,8 +455,9 @@ float turbulence3(float x, float y, float z, int octaves)
 
 float turbulence4(float x, float y, float z, float w, int octaves)
 {
+	int i;
 	float res = 0.0f, freq = 1.0f;
-	for(int i=0; i<octaves; i++) {
+	for(i=0; i<octaves; i++) {
 		res += fabs(noise4(x * freq, y * freq, z * freq, w * freq) / freq);
 		freq *= 2.0f;
 	}
@@ -455,8 +467,9 @@ float turbulence4(float x, float y, float z, float w, int octaves)
 
 float pturbulence1(float x, int per, int octaves)
 {
+	int i;
 	float res = 0.0f, freq = 1.0f;
-	for(int i=0; i<octaves; i++) {
+	for(i=0; i<octaves; i++) {
 		res += fabs(pnoise1(x * freq, per) / freq);
 		freq *= 2.0f;
 		per *= 2;
@@ -466,8 +479,9 @@ float pturbulence1(float x, int per, int octaves)
 
 float pturbulence2(float x, float y, int per_x, int per_y, int octaves)
 {
+	int i;
 	float res = 0.0f, freq = 1.0f;
-	for(int i=0; i<octaves; i++) {
+	for(i=0; i<octaves; i++) {
 		res += fabs(pnoise2(x * freq, y * freq, per_x, per_y) / freq);
 		freq *= 2.0f;
 		per_x *= 2;
@@ -478,8 +492,9 @@ float pturbulence2(float x, float y, int per_x, int per_y, int octaves)
 
 float pturbulence3(float x, float y, float z, int per_x, int per_y, int per_z, int octaves)
 {
+	int i;
 	float res = 0.0f, freq = 1.0f;
-	for(int i=0; i<octaves; i++) {
+	for(i=0; i<octaves; i++) {
 		res += fabs(pnoise3(x * freq, y * freq, z * freq, per_x, per_y, per_z) / freq);
 		freq *= 2.0f;
 		per_x *= 2;
@@ -491,8 +506,9 @@ float pturbulence3(float x, float y, float z, int per_x, int per_y, int per_z, i
 
 float pturbulence4(float x, float y, float z, float w, int per_x, int per_y, int per_z, int per_w, int octaves)
 {
+	int i;
 	float res = 0.0f, freq = 1.0f;
-	for(int i=0; i<octaves; i++) {
+	for(i=0; i<octaves; i++) {
 		res += fabs(pnoise4(x * freq, y * freq, z * freq, w * freq,
 				per_x, per_y, per_z, per_w) / freq);
 		freq *= 2.0f;

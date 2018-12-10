@@ -7,19 +7,19 @@ tinyfps.obj treestor.obj ts_text.obj tunnel.obj util.obj vbe.obj watdpmi.obj
 
 bin = demo.exe
 
-libs = imago.lib
+libs = imago.lib anim.lib
 
 def = -dM_PI=3.141592653589793
 opt = -5 -fp5 -otexan -oh -oi -ei
 dbg = -d1
 
 !ifdef __UNIX__
-incpath = -Isrc -Isrc/dos -Ilibs/imago/src
-libpath = libpath libs/imago
+incpath = -Isrc -Isrc/dos -Ilibs -Ilibs/imago/src -Ilibs/anim/src
+libpath = libpath libs/imago libpath libs/anim
 RM = rm -f
 !else
-incpath = -Isrc -Isrc\dos -Ilibs\imago\src
-libpath = libpath libs\imago
+incpath = -Isrc -Isrc\dos -Ilibs -Ilibs\imago\src -Ilibs\anim\src
+libpath = libpath libs\imago libpath libs\anim
 RM = del
 !endif
 

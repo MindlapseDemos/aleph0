@@ -4,7 +4,7 @@
 #include <errno.h>
 #include "treestor.h"
 
-#ifdef WIN32
+#if defined(__WATCOMC__) || defined(_MSC_VER) || defined(__DJGPP__)
 #include <malloc.h>
 #else
 #include <alloca.h>

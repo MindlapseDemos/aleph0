@@ -40,6 +40,23 @@ static inline void cgm_mmul(float *a, const float *b)
 	cgm_mcopy(a, res);
 }
 
+static inline void cgm_mpremul(float *a, const float *b)
+{
+	int i, j;
+	float res[16];
+	float *resptr = res;
+	const float *brow = b;
+
+	for(i=0; i<4; i++) {
+		for(j=0; j<4; j++) {
+			*resptr++ = brow[0] * a[j] + brow[1] * a[4 + j] +
+				brow[2] * a[8 + j] + brow[3] * a[12 + j];
+		}
+		brow += 4;
+	}
+	cgm_mcopy(a, res);
+}
+
 static inline void cgm_msubmatrix(float *m, int row, int col)
 {
 	float orig[16];
@@ -256,6 +273,29 @@ static inline void cgm_mrotation_euler(float *m, float a, float b, float c, int 
 	cgm_mmul(m, ma);
 }
 
+static inline void cgm_mrotation_quat(float *m, const cgm_quat *q)
+{
+	float xsq2 = 2.0f * q->x * q->x;
+	float ysq2 = 2.0f * q->y * q->y;
+	float zsq2 = 2.0f * q->z * q->z;
+	float sx = 1.0f - ysq2 - zsq2;
+	float sy = 1.0f - xsq2 - zsq2;
+	float sz = 1.0f - xsq2 - ysq2;
+
+	m[3] = m[7] = m[11] = m[12] = m[13] = m[14] = 0.0f;
+	m[15] = 1.0f;
+
+	m[0] = sx;
+	m[1] = 2.0f * q->x * q->y + 2.0f * q->w * q->z;
+	m[2] = 2.0f * q->z * q->x - 2.0f * q->w * q->y;
+	m[4] = 2.0f * q->x * q->y - 2.0f * q->w * q->z;
+	m[5] = sy;
+	m[6] = 2.0f * q->y * q->z + 2.0f * q->w * q->x;
+	m[8] = 2.0f * q->z * q->x + 2.0f * q->w * q->y;
+	m[9] = 2.0f * q->y * q->z - 2.0f * q->w * q->x;
+	m[10] = sz;
+}
+
 static inline void cgm_mtranslate(float *m, float x, float y, float z)
 {
 	float tm[16];
@@ -312,69 +352,75 @@ static inline void cgm_mrotate_euler(float *m, float a, float b, float c, int mo
 	cgm_mmul(m, rm);
 }
 
+static inline void cgm_mrotate_quat(float *m, const cgm_quat *q)
+{
+	float rm[16];
+	cgm_mrotation_quat(rm, q);
+	cgm_mmul(m, rm);
+}
+
 
 static inline void cgm_mpretranslate(float *m, float x, float y, float z)
 {
-	float tmp[16];
-	cgm_mcopy(tmp, m);
-	cgm_mtranslation(m, x, y, z);
-	cgm_mmul(m, tmp);
+	float tm[16];
+	cgm_mtranslation(tm, x, y, z);
+	cgm_mpremul(m, tm);
 }
 
 static inline void cgm_mprescale(float *m, float sx, float sy, float sz)
 {
-	float tmp[16];
-	cgm_mcopy(tmp, m);
-	cgm_mscaling(m, sx, sy, sz);
-	cgm_mmul(m, tmp);
+	float sm[16];
+	cgm_mscaling(sm, sx, sy, sz);
+	cgm_mpremul(m, sm);
 }
 
 static inline void cgm_mprerotate_x(float *m, float angle)
 {
-	float tmp[16];
-	cgm_mcopy(tmp, m);
-	cgm_mrotation_x(m, angle);
-	cgm_mmul(m, tmp);
+	float rm[16];
+	cgm_mrotation_x(rm, angle);
+	cgm_mpremul(m, rm);
 }
 
 static inline void cgm_mprerotate_y(float *m, float angle)
 {
-	float tmp[16];
-	cgm_mcopy(tmp, m);
-	cgm_mrotation_y(m, angle);
-	cgm_mmul(m, tmp);
+	float rm[16];
+	cgm_mrotation_y(rm, angle);
+	cgm_mpremul(m, rm);
 }
 
 static inline void cgm_mprerotate_z(float *m, float angle)
 {
-	float tmp[16];
-	cgm_mcopy(tmp, m);
-	cgm_mrotation_z(m, angle);
-	cgm_mmul(m, tmp);
+	float rm[16];
+	cgm_mrotation_z(rm, angle);
+	cgm_mpremul(m, rm);
 }
 
 static inline void cgm_mprerotate_axis(float *m, int idx, float angle)
 {
-	float tmp[16];
-	cgm_mcopy(tmp, m);
-	cgm_mrotation_axis(m, idx, angle);
-	cgm_mmul(m, tmp);
+	float rm[16];
+	cgm_mrotation_axis(rm, idx, angle);
+	cgm_mpremul(m, rm);
 }
 
 static inline void cgm_mprerotate(float *m, float angle, float x, float y, float z)
 {
-	float tmp[16];
-	cgm_mcopy(tmp, m);
-	cgm_mrotation(m, angle, x, y, z);
-	cgm_mmul(m, tmp);
+	float rm[16];
+	cgm_mrotation(rm, angle, x, y, z);
+	cgm_mpremul(m, rm);
 }
 
 static inline void cgm_mprerotate_euler(float *m, float a, float b, float c, int mode)
 {
-	float tmp[16];
-	cgm_mcopy(tmp, m);
-	cgm_mrotation_euler(m, a, b, c, mode);
-	cgm_mmul(m, tmp);
+	float rm[16];
+	cgm_mrotation_euler(rm, a, b, c, mode);
+	cgm_mpremul(m, rm);
+}
+
+static inline void cgm_mprerotate_quat(float *m, const cgm_quat *q)
+{
+	float rm[16];
+	cgm_mrotation_quat(rm, q);
+	cgm_mpremul(m, rm);
 }
 
 

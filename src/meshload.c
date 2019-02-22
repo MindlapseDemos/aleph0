@@ -81,7 +81,7 @@ int load_mesh(struct g3d_mesh *mesh, const char *fname)
 				struct vertex_pos_color v;
 				int num;
 
-				num = sscanf(line + 2, "%f %f %f %f %f %f %f", &v.x, &v.y, &v.z, &v.x, &v.y, &v.z, &v.a);
+				num = sscanf(line + 2, "%f %f %f %f %f %f %f", &v.x, &v.y, &v.z, &v.r, &v.g, &v.b, &v.a);
 				if(num < 3) {
 					fprintf(stderr, "%s:%d: invalid vertex definition: \"%s\"\n", fname, line_num, line);
 					goto err;

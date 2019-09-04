@@ -3,7 +3,7 @@ obj = $(src:.c=.o) $(asmsrc:.asm=.o)
 dep = $(obj:.o=.d)
 bin = demo
 
-inc = -I/usr/local/include -Isrc -Isrc/sdl -Ilibs/imago/src -Ilibs/mikmod/include
+inc = -I/usr/local/include -Isrc -Isrc/sdl -Ilibs -Ilibs/imago/src -Ilibs/mikmod/include
 warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function
 
 CFLAGS = $(warn) -g $(inc) `sdl-config --cflags`

@@ -37,7 +37,7 @@ struct material {
 struct g3d_state {
 	unsigned int opt;
 	int frontface;
-	int fill_mode;
+	int polymode;
 
 	g3d_matrix mat[G3D_NUM_MATRICES][STACK_SIZE];
 	int mtop[G3D_NUM_MATRICES];
@@ -50,7 +50,7 @@ struct g3d_state {
 	struct material mtl;
 
 	int width, height;
-	uint16_t *pixels;
+	g3d_pixel *pixels;
 
 	int vport[4];
 
@@ -83,7 +83,7 @@ int g3d_init(void)
 		return -1;
 	}
 	st->opt = G3D_CLIP_FRUSTUM;
-	st->fill_mode = POLYFILL_FLAT;
+	st->polymode = POLYFILL_FLAT;
 
 	for(i=0; i<G3D_NUM_MATRICES; i++) {
 		g3d_matrix_mode(i);
@@ -159,7 +159,7 @@ void g3d_front_face(unsigned int order)
 
 void g3d_polygon_mode(int pmode)
 {
-	st->fill_mode = pmode;
+	st->polymode = pmode;
 }
 
 void g3d_matrix_mode(int mmode)
@@ -411,7 +411,7 @@ void g3d_draw(int prim, const struct g3d_vertex *varr, int varr_size)
 void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 		const uint16_t *iarr, int iarr_size)
 {
-	int i, j, vnum, nfaces;
+	int i, j, vnum, nfaces, fill_mode;
 	struct pvertex pv[16];
 	struct g3d_vertex v[16];
 	int mvtop = st->mtop[G3D_MODELVIEW];
@@ -511,26 +511,33 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 			if(st->opt & G3D_BLEND) {
 				int r, g, b;
 				int inv_alpha = 255 - pv[0].a;
-				uint16_t *dest = st->pixels + (pv[0].y >> 8) * st->width + (pv[0].x >> 8);
-				r = ((int)pv[0].r * pv[0].a + UNPACK_R16(*dest) * inv_alpha) >> 8;
-				g = ((int)pv[0].g * pv[0].a + UNPACK_G16(*dest) * inv_alpha) >> 8;
-				b = ((int)pv[0].b * pv[0].a + UNPACK_B16(*dest) * inv_alpha) >> 8;
-				*dest++ = PACK_RGB16(r, g, b);
+				g3d_pixel *dest = st->pixels + (pv[0].y >> 8) * st->width + (pv[0].x >> 8);
+				r = ((int)pv[0].r * pv[0].a + G3D_UNPACK_R(*dest) * inv_alpha) >> 8;
+				g = ((int)pv[0].g * pv[0].a + G3D_UNPACK_G(*dest) * inv_alpha) >> 8;
+				b = ((int)pv[0].b * pv[0].a + G3D_UNPACK_B(*dest) * inv_alpha) >> 8;
+				*dest++ = G3D_PACK_RGB(r, g, b);
 			} else {
-				uint16_t *dest = st->pixels + (pv[0].y >> 8) * st->width + (pv[0].x >> 8);
-				*dest = PACK_RGB16(pv[0].r, pv[0].g, pv[0].b);
+				g3d_pixel *dest = st->pixels + (pv[0].y >> 8) * st->width + (pv[0].x >> 8);
+				*dest = G3D_PACK_RGB(pv[0].r, pv[0].g, pv[0].b);
 			}
 			break;
 
 		case 2:
 			{
-				uint16_t col = PACK_RGB16(pv[0].r, pv[0].g, pv[0].b);
+				g3d_pixel col = G3D_PACK_RGB(pv[0].r, pv[0].g, pv[0].b);
 				draw_line(pv[0].x >> 8, pv[0].y >> 8, pv[1].x >> 8, pv[1].y >> 8, col);
 			}
 			break;
 
 		default:
-			polyfill(st->fill_mode, pv, vnum);
+			fill_mode = st->polymode;
+			if(st->opt & G3D_TEXTURE_2D) {
+				fill_mode |= POLYFILL_TEX_BIT;
+			}
+			if(st->opt & G3D_BLEND) {
+				fill_mode |= POLYFILL_BLEND_BIT;
+			}
+			polyfill(fill_mode, pv, vnum);
 		}
 	}
 }
@@ -578,20 +585,22 @@ void g3d_normal(float x, float y, float z)
 	st->imm_curv.nz = z;
 }
 
+#define CLAMP(x, a, b)	((x) < (a) ? (a) : ((x) > (b) ? (b) : (x)))
+
 void g3d_color3b(unsigned char r, unsigned char g, unsigned char b)
 {
-	st->imm_curv.r = r;
-	st->imm_curv.g = g;
-	st->imm_curv.b = b;
+	st->imm_curv.r = CLAMP(r, 0, 255);
+	st->imm_curv.g = CLAMP(g, 0, 255);
+	st->imm_curv.b = CLAMP(b, 0, 255);
 	st->imm_curv.a = 255;
 }
 
 void g3d_color4b(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
 {
-	st->imm_curv.r = r;
-	st->imm_curv.g = g;
-	st->imm_curv.b = b;
-	st->imm_curv.a = a;
+	st->imm_curv.r = CLAMP(r, 0, 255);
+	st->imm_curv.g = CLAMP(g, 0, 255);
+	st->imm_curv.b = CLAMP(b, 0, 255);
+	st->imm_curv.a = CLAMP(a, 0, 255);
 }
 
 void g3d_color3f(float r, float g, float b)
@@ -599,9 +608,9 @@ void g3d_color3f(float r, float g, float b)
 	int ir = r * 255.0f;
 	int ig = g * 255.0f;
 	int ib = b * 255.0f;
-	st->imm_curv.r = ir > 255 ? 255 : ir;
-	st->imm_curv.g = ig > 255 ? 255 : ig;
-	st->imm_curv.b = ib > 255 ? 255 : ib;
+	st->imm_curv.r = CLAMP(ir, 0, 255);
+	st->imm_curv.g = CLAMP(ig, 0, 255);
+	st->imm_curv.b = CLAMP(ib, 0, 255);
 	st->imm_curv.a = 255;
 }
 
@@ -611,10 +620,10 @@ void g3d_color4f(float r, float g, float b, float a)
 	int ig = g * 255.0f;
 	int ib = b * 255.0f;
 	int ia = a * 255.0f;
-	st->imm_curv.r = ir > 255 ? 255 : ir;
-	st->imm_curv.g = ig > 255 ? 255 : ig;
-	st->imm_curv.b = ib > 255 ? 255 : ib;
-	st->imm_curv.a = ia > 255 ? 255 : ia;
+	st->imm_curv.r = CLAMP(ir, 0, 255);
+	st->imm_curv.g = CLAMP(ig, 0, 255);
+	st->imm_curv.b = CLAMP(ib, 0, 255);
+	st->imm_curv.a = CLAMP(ia, 0, 255);
 }
 
 void g3d_texcoord(float u, float v)

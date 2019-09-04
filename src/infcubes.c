@@ -112,7 +112,8 @@ static void draw(void)
 
 	memset(fb_pixels, 0, fb_width * fb_height * 2);
 
-	g3d_polygon_mode(G3D_TEX);
+	g3d_polygon_mode(G3D_FLAT);
+	g3d_enable(G3D_TEXTURE_2D);
 	g3d_enable(G3D_TEXTURE_GEN);
 
 	g3d_push_matrix();

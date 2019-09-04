@@ -99,7 +99,8 @@ static void start(long trans_time)
 	g3d_enable(G3D_LIGHTING);
 	g3d_enable(G3D_LIGHT0);
 
-	g3d_polygon_mode(G3D_TEX_GOURAUD);
+	g3d_polygon_mode(G3D_GOURAUD);
+	g3d_enable(G3D_TEXTURE_2D);
 }
 
 static void update(void)

@@ -2,6 +2,24 @@
 #define THREEDGFX_H_
 
 #include "inttypes.h"
+#include "gfxutil.h"
+
+#define G3D_PIXFMT16
+typedef uint16_t g3d_pixel;
+
+#ifdef G3D_PIXFMT16
+#define G3D_PACK_RGB(r, g, b)	PACK_RGB16(r, g, b)
+#define G3D_UNPACK_R(c)			UNPACK_R16(c)
+#define G3D_UNPACK_G(c)			UNPACK_G16(c)
+#define G3D_UNPACK_B(c)			UNPACK_B16(c)
+#endif
+#ifdef G3D_PIXFMT32
+#define G3D_PACK_RGB(r, g, b)	PACK_RGB32(r, g, b)
+#define G3D_UNPACK_R(c)			UNPACK_R32(c)
+#define G3D_UNPACK_G(c)			UNPACK_G32(c)
+#define G3D_UNPACK_B(c)			UNPACK_B32(c)
+#endif
+
 
 struct g3d_vertex {
 	float x, y, z, w;
@@ -47,9 +65,7 @@ enum { G3D_CCW, G3D_CW };
 enum {
 	G3D_WIRE,
 	G3D_FLAT,
-	G3D_GOURAUD,
-	G3D_TEX,
-	G3D_TEX_GOURAUD
+	G3D_GOURAUD
 };
 
 /* matrix stacks */

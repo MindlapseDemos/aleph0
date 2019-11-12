@@ -7,7 +7,7 @@ the terms of the 3-clause BSD license. See COPYING for details.
  */
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
+#include <inttypes.h>
 #include <string.h>
 #include "rbtree.h"
 

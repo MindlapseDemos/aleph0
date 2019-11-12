@@ -5,12 +5,15 @@
 
 #ifdef __GNUC__
 #define INLINE __inline
+#define PACKED __attribute__((packed))
 
 #elif defined(__WATCOMC__)
 #define INLINE __inline
+#define PACKED
 
 #else
 #define INLINE
+#define PACKED
 #endif
 
 /* fast conversion of double -> 32bit int

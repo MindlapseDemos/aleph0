@@ -6,7 +6,9 @@
 #endif
 
 #include "inttypes.h"
+#include "util.h"
 
+#pragma pack (push, 1)
 struct dpmi_regs {
 	uint32_t edi, esi, ebp;
 	uint32_t reserved;
@@ -14,7 +16,8 @@ struct dpmi_regs {
 	uint16_t flags;
 	uint16_t es, ds, fs, gs;
 	uint16_t ip, cs, sp, ss;
-};
+} PACKED;
+#pragma pack (pop)
 
 uint16_t dpmi_alloc(unsigned int par, uint16_t *sel);
 void dpmi_free(uint16_t sel);
@@ -27,6 +30,9 @@ void dpmi_munmap(void *addr);
 		"mov ax, 0x100" \
 		"int 0x31" \
 		"mov [edi], dx" \
+		"jnc alloc_skip_err" \
+		"xor ax, ax" \
+		"alloc_skip_err:" \
 		value[ax] \
 		parm[ebx][edi];
 

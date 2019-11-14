@@ -198,11 +198,53 @@ void vbe_print_mode_info(FILE *fp, struct vbe_mode_info *minf)
 	if(minf->attr & VBE_ATTR_NOTVGA) fprintf(fp, " non-vga");
 	if(minf->attr & VBE_ATTR_BANKED) fprintf(fp, " banked");
 	if(minf->attr & VBE_ATTR_LFB) fprintf(fp, " lfb");
-	if(minf->attr & VBE_ATTR_2XSCAN) fprintf(fp, " dblscan");
+	if(minf->attr & VBE_ATTR_DBLSCAN) fprintf(fp, " dblscan");
 	if(minf->attr & VBE_ATTR_ILACE) fprintf(fp, " ilace");
 	if(minf->attr & VBE_ATTR_TRIPLEBUF) fprintf(fp, " trplbuf");
 	if(minf->attr & VBE_ATTR_STEREO) fprintf(fp, " stereo");
 	if(minf->attr & VBE_ATTR_STEREO_2FB) fprintf(fp, " stdual");
 	fprintf(fp, " ]\n");
 	fflush(fp);
+}
+
+int vbe_setmode(uint16_t mode)
+{
+	struct dpmi_regs regs = {0};
+
+	regs.eax = 0x4f02;
+	regs.ebx = mode;
+	dpmi_int(0x10, &regs);
+
+	if((regs.eax & 0xffff) != 0x4f) {
+		return -1;
+	}
+	return 0;
+}
+
+int vbe_setmode_crtc(uint16_t mode, struct vbe_crtc_info *crtc)
+{
+	void *lowbuf;
+	uint16_t seg, sel;
+	struct dpmi_regs regs = {0};
+
+	assert(sizeof *crtc == 59);
+
+	if(!(seg = dpmi_alloc((sizeof *crtc + 15) / 16, &sel))) {
+		return -1;
+	}
+	lowbuf = (void*)((uint32_t)seg << 4);
+
+	memcpy(lowbuf, crtc, sizeof *crtc);
+
+	regs.eax = 0x4f02;
+	regs.ebx = mode;
+	regs.es = seg;
+	dpmi_int(0x10, &regs);
+
+	dpmi_free(sel);
+
+	if((regs.eax & 0xffff) != 0x4f) {
+		return -1;
+	}
+	return 0;
 }

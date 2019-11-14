@@ -64,7 +64,16 @@ struct vbe_mode_info {
 	uint8_t lfb_xsize, lfb_xpos;
 	uint32_t max_pixel_clock;
 
-	uint8_t reserved2[190];
+	char reserved2[190];
+} PACKED;
+
+struct vbe_crtc_info {
+	uint16_t htotal, hsync_start, hsync_end;
+	uint16_t vtotal, vsync_start, vsync_end;
+	uint8_t flags;
+	uint32_t pixel_clock;
+	uint16_t rate_centihz;	/* refresh rate in 1/100 hz (pck / (htotal * vtotal)) */
+	char reserved[40];
 } PACKED;
 #pragma pack (pop)
 
@@ -95,7 +104,7 @@ enum {
 	VBE_ATTR_NOTVGA		= 0x0020,
 	VBE_ATTR_BANKED		= 0x0040,
 	VBE_ATTR_LFB		= 0x0080,
-	VBE_ATTR_2XSCAN		= 0x0100,
+	VBE_ATTR_DBLSCAN	= 0x0100,
 	/* VBE 3.0 */
 	VBE_ATTR_ILACE		= 0x0200,	/* ! */
 	VBE_ATTR_TRIPLEBUF	= 0x0400,
@@ -132,11 +141,61 @@ enum {
 	VBE_MODE_PRESERVE	= 0x8000
 };
 
+/* standard mode numbers */
+enum {
+	VBE_640X400_8BPP	= 0x100,
+	VBE_640X480_8BPP	= 0x101,
+	VBE_800X600_4BPP	= 0x102,
+	VBE_800X600_8BPP	= 0x103,
+	VBE_1024X768_4BPP	= 0x104,
+	VBE_1024X768_8BPP	= 0x105,
+	VBE_1280X1024_4BPP	= 0x106,
+	VBE_1280X1024_8BPP	= 0x107,
+	VBE_80X60_TEXT		= 0x108,
+	VBE_132X25_TEXT		= 0x109,
+	VBE_132X43_TEXT		= 0x10a,
+	VBE_132X50_TEXT		= 0x10b,
+	VBE_132X60_TEXT		= 0x10c,
+	/* VBE 1.2 */
+	VBE_320X200_15BPP	= 0x10d,
+	VBE_320X200_16BPP	= 0x10e,
+	VBE_320X200_24BPP	= 0x10f,
+	VBE_640X480_15BPP	= 0x110,
+	VBE_640X480_16BPP	= 0x111,
+	VBE_640X480_24BPP	= 0x112,
+	VBE_800X600_15BPP	= 0x113,
+	VBE_800X600_16BPP	= 0x114,
+	VBE_800X600_24BPP	= 0x115,
+	VBE_1024X768_15BPP	= 0x116,
+	VBE_1024X768_16BPP	= 0x117,
+	VBE_1024X768_24BPP	= 0x118,
+	VBE_1280X1024_15BPP	= 0x119,
+	VBE_1280X1024_16BPP	= 0x11a,
+	VBE_1280X1024_24BPP	= 0x11b,
+	/* VBE 2.0 */
+	VBE_1600X1200_8BPP	= 0x120,
+	VBE_1600X1200_15BPP	= 0x121,
+	VBE_1600X1200_16BPP	= 0x122,
+
+	VBE_VMEM_MODE		= 0x81ff
+};
+
+/* VBE CRTC flags (vbe_crtc_info.flags) */
+enum {
+	VBE_CRTC_DBLSCAN	= 0x01,
+	VBE_CRTC_ILACE		= 0x02,
+	VBE_CRTC_HSYNC_NEG	= 0x04,
+	VBE_CRTC_VSYNC_NEG	= 0x08
+};
+
 int vbe_info(struct vbe_info *info);
 int vbe_num_modes(struct vbe_info *info);
 int vbe_mode_info(int mode, struct vbe_mode_info *minf);
 
 void vbe_print_info(FILE *fp, struct vbe_info *info);
 void vbe_print_mode_info(FILE *fp, struct vbe_mode_info *minf);
+
+int vbe_setmode(uint16_t mode);
+int vbe_setmode_crtc(uint16_t mode, struct vbe_crtc_info *crtc);
 
 #endif	/* VBE_H_ */

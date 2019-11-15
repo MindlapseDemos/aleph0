@@ -586,21 +586,22 @@ void g3d_normal(float x, float y, float z)
 }
 
 #define CLAMP(x, a, b)	((x) < (a) ? (a) : ((x) > (b) ? (b) : (x)))
+#define MIN(a, b)		((a) < (b) ? (a) : (b))
 
 void g3d_color3b(unsigned char r, unsigned char g, unsigned char b)
 {
-	st->imm_curv.r = CLAMP(r, 0, 255);
-	st->imm_curv.g = CLAMP(g, 0, 255);
-	st->imm_curv.b = CLAMP(b, 0, 255);
+	st->imm_curv.r = MIN(r, 255);
+	st->imm_curv.g = MIN(g, 255);
+	st->imm_curv.b = MIN(b, 255);
 	st->imm_curv.a = 255;
 }
 
 void g3d_color4b(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
 {
-	st->imm_curv.r = CLAMP(r, 0, 255);
-	st->imm_curv.g = CLAMP(g, 0, 255);
-	st->imm_curv.b = CLAMP(b, 0, 255);
-	st->imm_curv.a = CLAMP(a, 0, 255);
+	st->imm_curv.r = MIN(r, 255);
+	st->imm_curv.g = MIN(g, 255);
+	st->imm_curv.b = MIN(b, 255);
+	st->imm_curv.a = MIN(a, 255);
 }
 
 void g3d_color3f(float r, float g, float b)

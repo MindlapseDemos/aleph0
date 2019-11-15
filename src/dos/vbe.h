@@ -77,6 +77,13 @@ struct vbe_crtc_info {
 } PACKED;
 #pragma pack (pop)
 
+/* returned by vbe_scanline_info() */
+struct vbe_scanline_info {
+	int size;
+	int num_pixels;
+	int max_scanlines;
+};
+
 enum {
 	VBE_8BIT_DAC	= 0x01,
 	VBE_NON_VGA		= 0x02,
@@ -188,6 +195,21 @@ enum {
 	VBE_CRTC_VSYNC_NEG	= 0x08
 };
 
+enum {
+	VBE_STATE_CTRLHW	= 0x01,
+	VBE_STATE_BIOS		= 0x02,
+	VBE_STATE_DAC		= 0x04,
+	VBE_STATE_REGS		= 0x08,
+
+	VBE_STATE_ALL		= 0xffff
+};
+
+enum {
+	VBE_SWAP_NOW,
+	VBE_SWAP_VBLANK,
+	VBE_SWAP_ASYNC	/* schedule swap and return (triple-buffering) */
+};
+
 int vbe_info(struct vbe_info *info);
 int vbe_num_modes(struct vbe_info *info);
 int vbe_mode_info(int mode, struct vbe_mode_info *minf);
@@ -197,5 +219,24 @@ void vbe_print_mode_info(FILE *fp, struct vbe_mode_info *minf);
 
 int vbe_setmode(uint16_t mode);
 int vbe_setmode_crtc(uint16_t mode, struct vbe_crtc_info *crtc);
+int vbe_getmode(void);
+
+int vbe_state_size(unsigned int flags);
+int vbe_save(void *stbuf, int sz, unsigned int flags);
+int vbe_restore(void *stbuf, int sz, unsigned int flags);
+
+int vbe_setwin(int wid, int pos);
+int vbe_getwin(int wid);
+
+/* returns the actual length in pixels, which might not be what was requested */
+int vbe_setscanlen(int len_pix);
+int vbe_getscanlen(void);
+int vbe_getpitch(void);
+int vbe_scanline_info(struct vbe_scanline_info *sinf);
+
+int vbe_setdisp(int x, int y, int when);
+int vbe_swap(uint32_t voffs, int when);
+int vbe_swap_pending(void);	/* 0: not pending (done) or error, 1: pending swap */
+/* TODO add stereo swap */
 
 #endif	/* VBE_H_ */

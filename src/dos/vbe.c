@@ -23,6 +23,10 @@
 #define NMODES(inf) *(uint16_t*)((inf)->sig)
 #define NACCMODES(inf) *(uint16_t*)((inf)->sig + 2)
 
+static int cur_pitch;
+/* TODO update cur_pitch on mode-change and on setscanlen */
+
+
 int vbe_info(struct vbe_info *info)
 {
 	int i, num;
@@ -247,4 +251,253 @@ int vbe_setmode_crtc(uint16_t mode, struct vbe_crtc_info *crtc)
 		return -1;
 	}
 	return 0;
+}
+
+int vbe_getmode(void)
+{
+	struct dpmi_regs regs = {0};
+
+	regs.eax = 0x4f03;
+	dpmi_int(0x10, &regs);
+
+	if((regs.eax & 0xffff) != 0x4f) {
+		return -1;
+	}
+	return regs.ebx & 0xffff;
+}
+
+int vbe_state_size(unsigned int flags)
+{
+	struct dpmi_regs regs = {0};
+
+	regs.eax = 0x4f04;
+	regs.edx = 0;
+	regs.ecx = flags;
+	dpmi_int(0x10, &regs);
+	if((regs.eax & 0xffff) != 0x4f) {
+		return -1;
+	}
+	return (regs.ebx & 0xffff) * 64;
+}
+
+int vbe_save(void *stbuf, int sz, unsigned int flags)
+{
+	void *lowbuf;
+	uint16_t seg, sel;
+	struct dpmi_regs regs = {0};
+
+	if(!(seg = dpmi_alloc((sz + 15) / 16, &sel))) {
+		return -1;
+	}
+	lowbuf = (void*)((uint32_t)seg << 4);
+
+	regs.eax = 0x4f04;
+	regs.edx = 1;	/* save */
+	regs.ecx = flags;
+	regs.es = seg;
+	dpmi_int(0x10, &regs);
+	if((regs.eax & 0xffff) != 0x4f) {
+		dpmi_free(sel);
+		return -1;
+	}
+
+	memcpy(stbuf, lowbuf, sz);
+	dpmi_free(sel);
+	return 0;
+}
+
+int vbe_restore(void *stbuf, int sz, unsigned int flags)
+{
+	void *lowbuf;
+	uint16_t seg, sel;
+	struct dpmi_regs regs = {0};
+
+	if(!(seg = dpmi_alloc((sz + 15) / 16, &sel))) {
+		return -1;
+	}
+	lowbuf = (void*)((uint32_t)seg << 4);
+
+	memcpy(lowbuf, stbuf, sz);
+
+	regs.eax = 0x4f04;
+	regs.edx = 2;	/* restore */
+	regs.ecx = flags;
+	regs.es = seg;
+	dpmi_int(0x10, &regs);
+	dpmi_free(sel);
+	if((regs.eax & 0xffff) != 0x4f) {
+		return -1;
+	}
+	return 0;
+}
+
+int vbe_setwin(int wid, int pos)
+{
+	struct dpmi_regs regs;
+
+	if(wid & ~1) return -1;
+
+	regs.eax = 0x4f05;
+	regs.ebx = wid;
+	regs.edx = pos;
+	dpmi_int(0x10, &regs);
+
+	if((regs.eax & 0xffff) != 0x4f) {
+		return -1;
+	}
+	return 0;
+}
+
+int vbe_getwin(int wid)
+{
+	struct dpmi_regs regs;
+
+	if(wid & ~1) return -1;
+
+	regs.eax = 0x4f05;
+	regs.ebx = wid;
+	dpmi_int(0x10, &regs);
+
+	if((regs.eax & 0xffff) != 0x4f) {
+		return -1;
+	}
+
+	return regs.edx & 0xffff;
+}
+
+int vbe_setscanlen(int len_pix)
+{
+	struct dpmi_regs regs;
+
+	regs.eax = 0x4f06;
+	regs.ebx = 0;	/* set scanline length in pixels */
+	regs.ecx = len_pix;
+	dpmi_int(0x10, &regs);
+
+	if((regs.eax & 0xffff) != 0x4f) {
+		return -1;
+	}
+
+	return regs.ecx;
+}
+
+int vbe_getscanlen(void)
+{
+	struct dpmi_regs regs;
+
+	regs.eax = 0x4f06;
+	regs.ebx = 1;	/* get scanline length */
+	dpmi_int(0x10, &regs);
+
+	if((regs.eax & 0xffff) != 0x4f) {
+		return -1;
+	}
+	return regs.ecx;
+}
+
+int vbe_getpitch(void)
+{
+	struct dpmi_regs regs;
+
+	regs.eax = 0x4f06;
+	regs.ebx = 1;	/* get scanline length */
+	dpmi_int(0x10, &regs);
+
+	if((regs.eax & 0xffff) != 0x4f) {
+		return -1;
+	}
+	return regs.ebx;
+}
+
+int vbe_scanline_info(struct vbe_scanline_info *sinf)
+{
+	struct dpmi_regs regs;
+
+	regs.eax = 0x4f06;
+	regs.ebx = 1;	/* get scanline length */
+	dpmi_int(0x10, &regs);
+
+	if((regs.eax & 0xffff) != 0x4f) {
+		return -1;
+	}
+
+	sinf->size = regs.ebx & 0xffff;
+	sinf->num_pixels = regs.ecx & 0xffff;
+	sinf->max_scanlines = regs.edx & 0xffff;
+	return 0;
+}
+
+enum {
+	SDISP_SET			= 0x00,
+	SDISP_GET			= 0x01,
+	SDISP_ALTSET		= 0x02,
+	SDISP_SET_STEREO	= 0x03,
+	SDISP_GETSCHED	= 0x04,
+	SDISP_STEREO_ON	= 0x05,
+	SDISP_STEREO_OFF	= 0x06,
+	SDISP_SET_VBLANK	= 0x80,
+	SDISP_ALTSET_VBLANK	= 0x82,
+	SDISP_SET_STEREO_VBLANK	= 0x83
+};
+
+int vbe_setdisp(int x, int y, int when)
+{
+	struct dpmi_regs regs;
+
+	regs.eax = 0x4f07;
+	regs.ebx = (when == VBE_SWAP_VBLANK) ? SDISP_SET_VBLANK : SDISP_SET;
+	regs.ecx = x;
+	regs.edx = y;
+	dpmi_int(0x10, &regs);
+
+	if((regs.eax & 0xffff) != 0x4f) {
+		return -1;
+	}
+	return 0;
+}
+
+int vbe_swap(uint32_t voffs, int when)
+{
+	struct dpmi_regs regs;
+	int op;
+
+	switch(when) {
+	case VBE_SWAP_ASYNC:
+		op = SDISP_ALTSET;
+		break;
+
+	case VBE_SWAP_NOW:
+		/* XXX is this the only way? */
+		return vbe_setdisp(voffs % cur_pitch, voffs / cur_pitch, when);
+
+	case VBE_SWAP_VBLANK:
+	default:
+		op = SDISP_ALTSET_VBLANK;
+		break;
+	}
+
+
+	regs.eax = 0x4f07;
+	regs.ebx = op;
+	regs.ecx = voffs;
+	dpmi_int(0x10, &regs);
+
+	if((regs.eax & 0xffff) != 0x4f) {
+		return -1;
+	}
+	return 0;
+}
+
+int vbe_swap_pending(void)
+{
+	struct dpmi_regs regs;
+
+	regs.eax = 0x4f07;
+	regs.ebx = SDISP_GETSCHED;
+	dpmi_int(0x10, &regs);
+
+	if((regs.eax & 0xffff) != 0x4f) {
+		return 0;
+	}
+	return regs.ecx;
 }

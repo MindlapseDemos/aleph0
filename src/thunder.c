@@ -186,7 +186,7 @@ void applyBlur() {
 }
 
 void blitEffect() {
-	unsigned int *dst1 = (unsigned int*) vmem_back;
+	unsigned int *dst1 = (unsigned int*) fb_pixels;
 	unsigned int *dst2 = dst1 + 160; /* We're writing two pixels at once */
 	unsigned char *src1 = blurBuffer + BLUR_BUFFER_WIDTH + 1;
 	unsigned char *src2 = src1 + BLUR_BUFFER_WIDTH;

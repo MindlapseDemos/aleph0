@@ -322,7 +322,7 @@ static void draw(void)
 	animateParticles();
 	renderParticles();
 
-	renderBump((unsigned short*)vmem_back);
+	renderBump((unsigned short*)fb_pixels);
 
 	swap_buffers(0);
 }

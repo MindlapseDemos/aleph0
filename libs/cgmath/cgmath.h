@@ -26,6 +26,10 @@
 #include <math.h>
 #include <string.h>
 
+#ifdef __WATCOMC__
+#define inline __inline
+#endif
+
 typedef struct {
 	float x, y, z;
 } cgm_vec3;

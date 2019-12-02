@@ -220,7 +220,7 @@ static void draw(void)
 
 	/* Blit effect to framebuffer */
 	src = backBuffer + PIXEL_PADDING;
-	dst = vmem_back;
+	dst = fb_pixels;
 	for (scanline = 0; scanline < fb_height; scanline++) {
 		memcpy(dst, src, fb_width * 2);
 		src += BB_SIZE;

@@ -46,7 +46,7 @@ static void destroy(void)
 static void draw(void)
 {
 	int i, j;
-	unsigned short *pixels = vmem_back;
+	unsigned short *pixels = fb_pixels;
 
 	cx = mouse_x;
 	cy = mouse_y;
@@ -58,9 +58,9 @@ static void draw(void)
 		}
 	}
 
-	pixels = vmem_back;
+	pixels = fb_pixels;
 	pixels[mouse_y * fb_width + mouse_x] = 0xffe;
-	swap_buffers(vmem_back);
+	swap_buffers(0);
 }
 
 static long normalize_coord(long x, long range)

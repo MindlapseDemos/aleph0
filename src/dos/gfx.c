@@ -54,7 +54,7 @@ void *set_video_mode(int xsz, int ysz, int bpp)
 	}
 
 	mode = -1;
-
+	nmodes = vbe_num_modes(&vbe);
 	for(i=0; i<nmodes; i++) {
 		vbe_mode_info(vbe.modes[i], &minf);
 		if(minf.xres != xsz || minf.yres != ysz) continue;

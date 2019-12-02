@@ -183,9 +183,9 @@ static void draw(void)
 		int starty = i * num_lines;
 		int resty = starty + draw_lines;
 		int rest_lines = num_lines - draw_lines;
-		draw_tunnel_range(vmem_back, xoffs, yoffs, starty, draw_lines, time_msec);
+		draw_tunnel_range(fb_pixels, xoffs, yoffs, starty, draw_lines, time_msec);
 		if(rest_lines) {
-			memset(vmem_back + resty * fb_width, 0, rest_lines * fb_width * 2);
+			memset(fb_pixels + resty * fb_width, 0, rest_lines * fb_width * 2);
 		}
 	}
 

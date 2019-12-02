@@ -90,7 +90,7 @@ static void draw(void)
 	int t2 = sin(0.2f * dt) * 248 + 248;
 	int t3 = sin(0.5f * dt) * 380 + 380;
 
-	unsigned int *vram32 = (unsigned int*)vmem_back;
+	unsigned int *vram32 = (unsigned int*)fb_pixels;
 	unsigned int p0, p1;
 	for (y = 0; y < fb_height; y++)
 	{

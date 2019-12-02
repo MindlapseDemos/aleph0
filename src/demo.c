@@ -19,7 +19,7 @@
 int fb_width = FB_WIDTH;
 int fb_height = FB_HEIGHT;
 int fb_bpp = 16;
-uint16_t *fb_pixels, *vmem_back, *vmem_front;
+uint16_t *fb_pixels, *vmem;
 unsigned long time_msec;
 int mouse_x, mouse_y;
 unsigned int mouse_bmask;
@@ -102,7 +102,7 @@ void demo_draw(void)
 	scr_update();
 	scr_draw();
 
-	draw_mouse_pointer(vmem_front);
+	draw_mouse_pointer(vmem);
 
 	++nframes;
 }

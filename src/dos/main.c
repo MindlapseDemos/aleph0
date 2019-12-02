@@ -51,14 +51,8 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if(!(vmem_back = set_video_mode(fb_width, fb_height, fb_bpp))) {
+	if(!(vmem = set_video_mode(fb_width, fb_height, fb_bpp))) {
 		return 1;
-	}
-	if(!(vmem_front = page_flip(FLIP_NOW))) {
-		fprintf(stderr, "page flipping not supported. falling back to double buffering\n");
-		vmem_front = vmem_back;
-	} else {
-		assert(vmem_back != vmem_front);
 	}
 
 	if(demo_init(argc, argv) == -1) {
@@ -119,32 +113,16 @@ void demo_quit(void)
 
 void swap_buffers(void *pixels)
 {
-	if(pixels) {
-		/* just memcpy to the front buffer */
-		if(opt.vsync) {
-			wait_vsync();
-		}
-		drawFps(pixels);
-		memcpy(vmem_front, pixels, fbsize);
-
-	} else {
-		/* attempt page flipping */
-		void *next;
-
-		drawFps(vmem_back);
-		if((next = page_flip(opt.vsync ? FLIP_VBLANK : FLIP_NOW))) {
-			assert(next == vmem_back);
-			vmem_back = vmem_front;
-			vmem_front = next;
-		} else {
-			/* failed to page flip, assume we drew in the front buffer then
-			 * and just wait for vsync if necessary
-			 */
-			if(opt.vsync) {
-				wait_vsync();
-			}
-		}
+	if(!pixels) {
+		pixels = fb_pixels;
 	}
+
+	/* just memcpy to the front buffer */
+	if(opt.vsync) {
+		wait_vsync();
+	}
+	drawFps(pixels);
+	memcpy(vmem, pixels, fbsize);
 }
 
 

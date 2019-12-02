@@ -132,7 +132,7 @@ void swap_buffers(void *pixels)
 		void *next;
 
 		drawFps(vmem_back);
-		if((next = page_flip(opt.vsync ? FLIP_VBLANK_WAIT : FLIP_NOW))) {
+		if((next = page_flip(opt.vsync ? FLIP_VBLANK : FLIP_NOW))) {
 			assert(next == vmem_back);
 			vmem_back = vmem_front;
 			vmem_front = next;

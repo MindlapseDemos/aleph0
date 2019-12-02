@@ -3,7 +3,7 @@ fract.obj gfx.obj gfxutil.obj greets.obj grise.obj hairball.obj infcubes.obj &
 keyb.obj logger.obj main.obj mesh.obj meshload.obj metaball.obj metasurf.obj &
 mouse.obj music.obj noise.obj plasma.obj polyclip.obj polyfill.obj polytest.obj &
 rbtree.obj sball.obj screen.obj smoketxt.obj thunder.obj tilemaze.obj timer.obj &
-tinyfps.obj treestor.obj ts_text.obj tunnel.obj util.obj vbe.obj watdpmi.obj
+tinyfps.obj treestor.obj ts_text.obj tunnel.obj util.obj vbe.obj vga.obj
 
 bin = demo.exe
 

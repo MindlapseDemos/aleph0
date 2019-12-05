@@ -34,7 +34,8 @@ void dpmi_munmap(void *addr);
 		"xor ax, ax" \
 		"alloc_skip_err:" \
 		value[ax] \
-		parm[ebx][edi];
+		parm[ebx][edi] \
+		modify[dx];
 
 #pragma aux dpmi_free = \
 		"mov ax, 0x101" \
@@ -65,7 +66,7 @@ void dpmi_munmap(void *addr);
 		"mov ax, cx" \
 		value[eax] \
 		parm[ebx][esi] \
-		modify[cx di];
+		modify[bx cx di esi];
 
 #pragma aux dpmi_munmap = \
 		"mov ax, 0x801" \
@@ -73,7 +74,7 @@ void dpmi_munmap(void *addr);
 		"shr ebx, 16" \
 		"int 0x31" \
 		parm[ebx] \
-		modify[ax];
+		modify[ax cx ebx];
 #endif	/* __WATCOMC__ */
 
 #ifdef __DJGPP__

@@ -25,11 +25,25 @@ static int fbidx;
 
 static int init_vbe(void)
 {
+	int i, num;
+
 	if(vbe_info(&vbe) == -1) {
+		fprintf(stderr, "failed to retrieve VBE information\n");
 		return -1;
 	}
 
 	vbe_print_info(stdout, &vbe);
+
+	num = vbe_num_modes(&vbe);
+	for(i=0; i<num; i++) {
+		struct vbe_mode_info minf;
+
+		if(vbe_mode_info(vbe.modes[i], &minf) == -1) {
+			continue;
+		}
+		printf("%04x: ", vbe.modes[i]);
+		vbe_print_mode_info(stdout, &minf);
+	}
 	fflush(stdout);
 
 	vbe_init_ver = VBE_VER_MAJOR(vbe.ver);
@@ -56,7 +70,11 @@ void *set_video_mode(int xsz, int ysz, int bpp)
 	mode = -1;
 	nmodes = vbe_num_modes(&vbe);
 	for(i=0; i<nmodes; i++) {
-		vbe_mode_info(vbe.modes[i], &minf);
+		if(vbe_mode_info(vbe.modes[i], &minf) == -1) {
+			continue;
+		}
+		printf("trying to match mode: %d (%dx%d %dbpp)\n", vbe.modes[i],
+				minf.xres, minf.yres, minf.bpp);
 		if(minf.xres != xsz || minf.yres != ysz) continue;
 		if(minf.bpp == bpp) {
 			mode = vbe.modes[i];

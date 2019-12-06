@@ -222,6 +222,8 @@ int vbe_setmode(uint16_t mode)
 	if((regs.eax & 0xffff) != 0x4f) {
 		return -1;
 	}
+
+	cur_pitch = vbe_getpitch();
 	return 0;
 }
 
@@ -250,6 +252,8 @@ int vbe_setmode_crtc(uint16_t mode, struct vbe_crtc_info *crtc)
 	if((regs.eax & 0xffff) != 0x4f) {
 		return -1;
 	}
+
+	cur_pitch = vbe_getpitch();
 	return 0;
 }
 
@@ -378,6 +382,7 @@ int vbe_setscanlen(int len_pix)
 		return -1;
 	}
 
+	cur_pitch = vbe_getpitch();
 	return regs.ecx;
 }
 
@@ -432,8 +437,8 @@ enum {
 	SDISP_GET			= 0x01,
 	SDISP_ALTSET		= 0x02,
 	SDISP_SET_STEREO	= 0x03,
-	SDISP_GETSCHED	= 0x04,
-	SDISP_STEREO_ON	= 0x05,
+	SDISP_GETSCHED		= 0x04,
+	SDISP_STEREO_ON		= 0x05,
 	SDISP_STEREO_OFF	= 0x06,
 	SDISP_SET_VBLANK	= 0x80,
 	SDISP_ALTSET_VBLANK	= 0x82,

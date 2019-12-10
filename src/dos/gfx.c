@@ -73,8 +73,6 @@ void *set_video_mode(int xsz, int ysz, int bpp)
 		if(vbe_mode_info(vbe.modes[i], &minf) == -1) {
 			continue;
 		}
-		printf("trying to match mode: %d (%dx%d %dbpp)\n", vbe.modes[i],
-				minf.xres, minf.yres, minf.bpp);
 		if(minf.xres != xsz || minf.yres != ysz) continue;
 		if(minf.bpp == bpp) {
 			mode = vbe.modes[i];

@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-void *set_video_mode(int xsz, int ysz, int bpp);
+void *set_video_mode(int xsz, int ysz, int bpp, int nbuf);
 int set_text_mode(void);
 
 int get_color_depth(void);

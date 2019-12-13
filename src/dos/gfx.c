@@ -22,6 +22,7 @@ static struct vbe_mode_info mode_info;
 
 static void *vpgaddr[2];
 static int fbidx;
+static int pgcount;
 
 static int init_vbe(void)
 {
@@ -50,7 +51,7 @@ static int init_vbe(void)
 	return 0;
 }
 
-void *set_video_mode(int xsz, int ysz, int bpp)
+void *set_video_mode(int xsz, int ysz, int bpp, int nbuf)
 {
 	int i, nmodes;
 	int best_match_mode = -1;
@@ -70,7 +71,7 @@ void *set_video_mode(int xsz, int ysz, int bpp)
 	mode = -1;
 	nmodes = vbe_num_modes(&vbe);
 	for(i=0; i<nmodes; i++) {
-		if(vbe_mode_info(vbe.modes[i], &minf) == -1) {
+		if(vbe_mode_info(vbe.modes[i] | VBE_MODE_LFB, &minf) == -1) {
 			continue;
 		}
 		if(minf.xres != xsz || minf.yres != ysz) continue;
@@ -95,17 +96,22 @@ void *set_video_mode(int xsz, int ysz, int bpp)
 	printf("setting video mode %x: (%dx%d %d)\n", (unsigned int)mode, mode_info.xres,
 			mode_info.yres, mode_info.bpp);
 
-	if(vbe_setmode(mode) == -1) {
+	if(vbe_setmode(mode | VBE_MODE_LFB) == -1) {
 		fprintf(stderr, "failed to set video mode\n");
 		return 0;
 	}
 
+	if(nbuf < 1) nbuf = 1;
+	if(nbuf > 2) nbuf = 2;
+	pgcount = nbuf > mode_info.num_img_pages ? mode_info.num_img_pages : nbuf;
+
 	pgsize = mode_info.xres * mode_info.yres * (bpp / 8);
-	fbsize = mode_info.num_img_pages * pgsize;
+	fbsize = pgcount * pgsize;
 
 	vpgaddr[0] = (void*)dpmi_mmap(mode_info.fb_addr, fbsize);
+	memset(vpgaddr[0], 0xaa, fbsize);
 
-	if(mode_info.num_img_pages > 1) {
+	if(pgcount > 1) {
 		vpgaddr[1] = (char*)vpgaddr[0] + pgsize;
 		fbidx = 1;
 		page_flip(FLIP_NOW);	/* start with the second page visible */

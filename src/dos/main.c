@@ -31,7 +31,7 @@ static quat_t rot = {0, 0, 0, 1};
 
 int main(int argc, char **argv)
 {
-	fbsize = fb_width * fb_height * fb_bpp / CHAR_BIT;
+	fbsize = fb_width * fb_height * fb_bpp / 8;
 
 	init_logger("demo.log");
 
@@ -46,12 +46,14 @@ int main(int argc, char **argv)
 		set_mouse(fb_width / 2, fb_height / 2);
 	}
 
-	if(!(fb_pixels = malloc(fbsize))) {
+	/* allocate a couple extra rows as a guard band, until we fucking fix the rasterizer */
+	if(!(fb_pixels = malloc(fbsize + (fb_width * fb_bpp / 8) * 2))) {
 		fprintf(stderr, "failed to allocate backbuffer\n");
 		return 1;
 	}
+	fb_pixels += fb_width;
 
-	if(!(vmem = set_video_mode(fb_width, fb_height, fb_bpp))) {
+	if(!(vmem = set_video_mode(fb_width, fb_height, fb_bpp, 1))) {
 		return 1;
 	}
 

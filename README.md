@@ -1,17 +1,24 @@
-Building and running on DOS
+Unnamed Mindlapse DOS demo for Pentium 133
+------------------------------------------
+The demo requires VESA Bios Extensions (VBE) 2.0. If your graphics card doesn't
+support VBE 2.0 or greater, then make sure to run the `univbe` TSR first, or
+the demo will fail to find a usable LFB video mode.
+
+Building on DOS with Watcom
 ---------------------------
+NOTE: Don't. Watcom produces significantly worse code than GCC, and at the
+moment watcom-compiled version of the demo crashes on 3D scenes for some reason
+which I need to investigate at some point. Suspect either inline assembly with
+missing "modify" part, or more likely some FPU optimization which fucks up the
+clipper.
+
 Make sure you have Watcom or OpenWatcom installed, and the appropriate env-vars
 set (the watcom installer automatically adds them to autoexec.bat by default).
 
 Run wmake to build. Needs dos4gw.exe in current dir.
 
-The demo requires VESA Bios Extensions (VBE) 2.0. If your graphics card doesn't
-support VBE 2.0 or greater, then make sure to run the `univbe` TSR first, or
-the demo will fail to find a usable LFB video mode.
-
-
-Cross-compile on GNU/Linux
---------------------------
+OpenWatcom cross-compilation on UNIX
+------------------------------------
 source owdev script with contents (change WATCOM var as necessary):
 
   export WATCOM=$HOME/devel/ow
@@ -23,6 +30,35 @@ Run wmake to build. Needs dos4gw.exe and wstub.exe in current dir or PATH
 Simply running ./demo.exe might invoke magic of the ancients to start wine,
 which will in turn start dosbox, which will execute the DOS binary! If the gods
 are slumbering in valhalla, just typing `dosbox demo.exe` should do the trick.
+
+Building with DJGPP
+-------------------
+The DJGPP port of GCC is the recommended toolchain to use for building the demo,
+either natively or cross-compiled on UNIX.
+
+For native DOS builds add the DJGPP bin directory to the path (usually
+`c:\djgpp\bin`) and set the DJGPP environment variable to point to the
+`djgpp.env` file.
+
+For cross-compiling on UNIX simply source the `setenv` file which comes with
+DJGPP, which will set the `PATH` and `DJDIR` variables as necessary.
+
+In both cases, run `make -f Makefile.dj` to build. To run the resulting
+`demo.exe` you'll need to copy `cwsdpmi.exe` to the same directory. You can find
+it here: ftp://ftp.fu-berlin.de/pc/languages/djgpp/current/v2misc/csdpmi7b.zip
+
+When building natively on an old computer, and encounter a huge amount of disk
+swapping, and corresponding ridiculously long compile times, make sure to
+disable any memory managers and try again. `EMM386` may interfere with
+`CWSDPMI`'s ability to use more than 32mb of RAM, and modern versions of GCC
+need way more than that. Disable the memory manager with `emm386 off`, and
+verify the amount of usable RAM with `go32-v2`.
+
+Another problem is the MS-DOS version of `HIMEM.SYS` which only reports up to
+64mb. To use more than that, which is necessary for modern versions of GCC, you
+can either disable `HIMEM.SYS` completely, or use the `HIMEM.SYS` driver that
+comes with Windows 9x (DOS >= 7). Here's a copy in case you need it:
+http://mutantstargoat.com/~nuclear/tmp/d7himem.sys
 
 
 Building and running with the SDL backend

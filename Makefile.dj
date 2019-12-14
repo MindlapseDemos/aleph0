@@ -12,7 +12,7 @@ else
 endif
 
 inc = -Isrc -Isrc/dos -Ilibs -Ilibs/imago/src -Ilibs/anim/src -Ilibs/mikmod/include
-opt = -O3 -ffast-math -fno-strict-aliasing
+#opt = -O3 -ffast-math -fno-strict-aliasing
 dbg = -g
 warn = -pedantic -Wall -Wno-unused-function -Wno-unused-variable
 

@@ -16,7 +16,7 @@
 		} else { \
 			paddr = ((uint32_t)pseg << 4) + poffs; \
 		} \
-		(ptr) = (void*)paddr; \
+		(ptr) = (void*)phys_to_virt(paddr); \
 	} while(0)
 
 /* hijack the "VESA" sig field, to pre-cache number of modes */
@@ -40,7 +40,7 @@ int vbe_info(struct vbe_info *info)
 	if(!(seg = dpmi_alloc(sizeof *info / 16, &sel))) {
 		return -1;
 	}
-	lowbuf = (void*)((uint32_t)seg << 4);
+	lowbuf = (void*)phys_to_virt((uint32_t)seg << 4);
 
 	memcpy(lowbuf, "VBE2", 4);
 
@@ -107,7 +107,7 @@ int vbe_mode_info(int mode, struct vbe_mode_info *minf)
 	if(!(seg = dpmi_alloc(sizeof *minf / 16, &sel))) {
 		return -1;
 	}
-	lowbuf = (void*)((uint32_t)seg << 4);
+	lowbuf = (void*)phys_to_virt((uint32_t)seg << 4);
 
 	regs.eax = 0x4f01;
 	regs.ecx = mode;
@@ -238,7 +238,7 @@ int vbe_setmode_crtc(uint16_t mode, struct vbe_crtc_info *crtc)
 	if(!(seg = dpmi_alloc((sizeof *crtc + 15) / 16, &sel))) {
 		return -1;
 	}
-	lowbuf = (void*)((uint32_t)seg << 4);
+	lowbuf = (void*)phys_to_virt((uint32_t)seg << 4);
 
 	memcpy(lowbuf, crtc, sizeof *crtc);
 
@@ -293,7 +293,7 @@ int vbe_save(void *stbuf, int sz, unsigned int flags)
 	if(!(seg = dpmi_alloc((sz + 15) / 16, &sel))) {
 		return -1;
 	}
-	lowbuf = (void*)((uint32_t)seg << 4);
+	lowbuf = (void*)phys_to_virt((uint32_t)seg << 4);
 
 	regs.eax = 0x4f04;
 	regs.edx = 1;	/* save */
@@ -319,7 +319,7 @@ int vbe_restore(void *stbuf, int sz, unsigned int flags)
 	if(!(seg = dpmi_alloc((sz + 15) / 16, &sel))) {
 		return -1;
 	}
-	lowbuf = (void*)((uint32_t)seg << 4);
+	lowbuf = (void*)phys_to_virt((uint32_t)seg << 4);
 
 	memcpy(lowbuf, stbuf, sz);
 

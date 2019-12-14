@@ -1,15 +1,9 @@
 #include <stdio.h>
+#include <string.h>
 #include "gfx.h"
 #include "vbe.h"
 #include "vga.h"
 #include "cdpmi.h"
-
-#ifdef __DJGPP__
-#include <sys/nearptr.h>
-#define REALPTR(s, o)	(void*)(((uint32_t)(s) << 4) - __djgpp_base_address + ((uint32_t)(o)))
-#else
-#define REALPTR(s, o)	(void*)(((uint32_t)(s) << 4) + ((uint32_t)(o)))
-#endif
 
 #define SAME_BPP(a, b)  \
     ((a) == (b) || ((a) == 16 && (b) == 15) || ((a) == 15 && (b) == 16) || \

@@ -15,6 +15,7 @@
 #include "cfgopt.h"
 #include "logger.h"
 #include "tinyfps.h"
+#include "cdpmi.h"
 
 #undef NOKEYB
 
@@ -31,6 +32,10 @@ static quat_t rot = {0, 0, 0, 1};
 
 int main(int argc, char **argv)
 {
+#ifdef __DJGPP__
+	__djgpp_nearptr_enable();
+#endif
+
 	fbsize = fb_width * fb_height * fb_bpp / 8;
 
 	init_logger("demo.log");

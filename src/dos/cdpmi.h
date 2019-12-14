@@ -3,7 +3,17 @@
 
 #ifdef __DJGPP__
 #include <dpmi.h>
-#endif
+#include <sys/nearptr.h>
+
+#define virt_to_phys(v)	((v) + __djgpp_base_address)
+#define phys_to_virt(p)	((p) - __djgpp_base_address)
+
+#else	/* not djgpp (basically watcom) */
+
+#define virt_to_phys(v)	(v)
+#define phys_to_virt(p)	(p)
+
+#endif	/* __DJGPP__ */
 
 #include "inttypes.h"
 #include "util.h"

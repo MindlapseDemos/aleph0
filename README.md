@@ -1,8 +1,17 @@
 Unnamed Mindlapse DOS demo for Pentium 133
 ------------------------------------------
 The demo requires VESA Bios Extensions (VBE) 2.0. If your graphics card doesn't
-support VBE 2.0 or greater, then make sure to run the `univbe` TSR first, or
-the demo will fail to find a usable LFB video mode.
+support VBE 2.0 or greater, then make sure to load the `univbe` TSR first.
+
+Source structure
+----------------
+ - src/          cross-platform demo framework and miscellaneous utility code
+ - src/scr/      demo screens (parts) and effects support code
+ - src/dos/      DOS platform code
+ - src/sdl/      SDL 1.x platform code (windows/UNIX version)
+ - libs/cgmath/  math library, header-file only
+ - libs/imago/   image loading library (includes libpng, zlib, libjpeg)
+ - libs/anim/    keyframe animation library
 
 Building on DOS with Watcom
 ---------------------------

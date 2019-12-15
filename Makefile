@@ -37,9 +37,9 @@ $(bin): cflags.occ $(obj) libs/imago/imago.lib
 	%write ldflags.lnk $(LDFLAGS)
 	$(LD) debug all name $@ system dos4g file { @objects } @ldflags
 
-.c: src;src/dos
-.cc: src;src/dos
-.asm: src;src/dos
+.c: src;src/dos;src/scr
+.cc: src;src/dos;src/scr
+.asm: src;src/dos;src/scr
 
 cflags.occ: Makefile
 	%write $@ $(CFLAGS)

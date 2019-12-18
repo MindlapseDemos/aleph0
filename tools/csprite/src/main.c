@@ -20,9 +20,10 @@ int tile_xsz, tile_ysz;
 struct rect rect;
 int cmap_offs;
 int ckey;
-int fbpitch = 320;
+int fbpitch, fbwidth = 320;
 const char *name = "sprite";
 int asyntax = AS_GNU;
+int conv565;
 
 int main(int argc, char **argv)
 {
@@ -52,6 +53,13 @@ int main(int argc, char **argv)
 					return 1;
 				}
 
+			} else if(strcmp(argv[i], "-fbwidth") == 0) {
+				fbwidth = atoi(argv[++i]);
+				if(fbwidth <= 0) {
+					fprintf(stderr, "-fbwidth must be followed by a positive number\n");
+					return 1;
+				}
+
 			} else if(strcmp(argv[i], "-fbpitch") == 0) {
 				fbpitch = atoi(argv[++i]);
 				if(fbpitch <= 0) {
@@ -68,10 +76,13 @@ int main(int argc, char **argv)
 
 			} else if(strcmp(argv[i], "-k") == 0 || strcmp(argv[i], "-key") == 0) {
 				ckey = strtol(argv[++i], &endp, 10);
-				if(endp == argv[i] || ckey < 0 || ckey >= 256) {
+				if(endp == argv[i] || ckey < 0) {
 					fprintf(stderr, "%s must be followed by a valid color key\n", argv[i - 1]);
 					return 1;
 				}
+
+			} else if(strcmp(argv[i], "-conv565") == 0) {
+				conv565 = 1;
 
 			} else if(strcmp(argv[i], "-gas") == 0) {
 				asyntax = AS_GNU;
@@ -99,6 +110,7 @@ int main(int argc, char **argv)
 	return 0;
 }
 
+/* prototype of generated function is (void *fb, int x, int y, int idx) */
 const char *prefixfmt[] = {
 	/* GNU assembler template */
 	"\t.global %s\n"
@@ -136,6 +148,19 @@ int proc_sheet(const char *fname)
 		fprintf(stderr, "failed to load image: %s\n", fname);
 		return -1;
 	}
+	if(conv565) {
+		struct image tmp;
+		if(conv_image_rgb565(&tmp, &img) == -1) {
+			fprintf(stderr, "failed to convert image to 16bpp 565: %s\n", fname);
+			free(img.pixels);
+			return -1;
+		}
+		free(img.pixels);
+		img = tmp;
+	}
+
+	if(!fbpitch) fbpitch = fbwidth * img.bpp / 8;
+
 	if(rect.w <= 0) {
 		rect.w = img.width;
 		rect.h = img.height;
@@ -170,6 +195,7 @@ int proc_sheet(const char *fname)
 		}
 	}
 
+	free(img.pixels);
 	return 0;
 }
 
@@ -187,8 +213,8 @@ struct csop {
 
 int csprite(struct image *img, int x, int y, int xsz, int ysz)
 {
-	int i, j, numops, mode, new_mode, start, skip_acc;
-	unsigned char *pptr = img->pixels + y * img->scansz + x;
+	int i, j, numops, mode, new_mode, start, skip_acc, lenbytes, pixsz = img->bpp / 8;
+	unsigned char *pptr = img->pixels + y * img->scansz + x * pixsz;
 	struct csop *ops, *optr;
 
 	ops = optr = alloca((xsz + 1) * ysz * sizeof *ops);
@@ -202,7 +228,7 @@ int csprite(struct image *img, int x, int y, int xsz, int ysz)
 		}
 
 		for(j=0; j<xsz; j++) {
-			if(*pptr == ckey) {
+			if(memcmp(pptr, &ckey, pixsz) == 0) {
 				new_mode = CSOP_SKIP;
 			} else {
 				new_mode = CSOP_COPY;
@@ -218,9 +244,9 @@ int csprite(struct image *img, int x, int y, int xsz, int ysz)
 				mode = new_mode;
 				start = j;
 			}
-			pptr++;
+			pptr += pixsz;
 		}
-		pptr += img->scansz - xsz;
+		pptr += img->scansz - xsz * pixsz;
 
 		if(mode != -1) {
 			assert(start >= 0);
@@ -231,7 +257,7 @@ int csprite(struct image *img, int x, int y, int xsz, int ysz)
 	}
 	numops = optr - ops;
 
-	pptr = img->pixels + y * img->scansz + x;
+	pptr = img->pixels + y * img->scansz + x * img->bpp / 8;
 	optr = ops;
 	skip_acc = 0;
 	/* edx points to dest */
@@ -239,25 +265,26 @@ int csprite(struct image *img, int x, int y, int xsz, int ysz)
 		switch(optr->op) {
 		case CSOP_SKIP:
 			skip_acc += optr->len;
-			pptr += optr->len;
+			pptr += optr->len * pixsz;
 			break;
 
 		case CSOP_ENDL:
-			skip_acc += fbpitch - xsz;
-			pptr += img->scansz - xsz;
+			skip_acc += fbwidth - xsz;
+			pptr += img->scansz - xsz * pixsz;
 			break;
 
 		case CSOP_COPY:
 			if(skip_acc) {
 				if(asyntax == AS_GNU) {
-					printf("\tadd $%d, %%edx\n", skip_acc);
+					printf("\tadd $%d, %%edx\n", skip_acc * pixsz);
 				} else {
-					printf("\tadd edx, %d\n", skip_acc);
+					printf("\tadd edx, %d\n", skip_acc * pixsz);
 				}
 				skip_acc = 0;
 			}
 
-			for(j=0; j<optr->len / 4; j++) {
+			lenbytes = optr->len * pixsz;
+			for(j=0; j<lenbytes / 4; j++) {
 				if(asyntax == AS_GNU) {
 					printf("\tmovl $0x%x, %d(%%edx)\n", *(uint32_t*)pptr, j * 4);
 				} else {
@@ -266,7 +293,7 @@ int csprite(struct image *img, int x, int y, int xsz, int ysz)
 				pptr += 4;
 			}
 			j *= 4;
-			switch(optr->len % 4) {
+			switch(lenbytes % 4) {
 			case 3:
 				if(asyntax == AS_GNU) {
 					printf("\tmovb $0x%x, %d(%%edx)\n", (unsigned int)*pptr++, j++);
@@ -313,6 +340,7 @@ void print_usage(const char *argv0)
 	printf(" -coffset <offs>: colormap offset [0, 255] (default: 0)\n");
 	printf(" -fbpitch <pitch>: target framebuffer pitch (scanline size in bytes)\n");
 	printf(" -k,-key <color>: color-key for transparency (default: 0)\n");
+	printf(" -conv565: convert image to 16bpp 565 before processing\n");
 	printf(" -gas: output GNU assembler code (default)\n");
 	printf(" -nasm: output NASM-compatible code\n");
 	printf(" -h: print usage and exit\n");

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
@@ -183,6 +184,51 @@ int save_image(struct image *img, const char *fname)
 	png_destroy_write_struct(&png, &info);
 	free(scanline);
 	fclose(fp);
+	return 0;
+}
+
+int conv_image_rgb565(struct image *img16, struct image *img)
+{
+	int i, j;
+	uint16_t *dptr;
+	unsigned char *sptr;
+
+	if(!img->cmap_ncolors && img->bpp < 24) {
+		fprintf(stderr, "unsupported conversion from %dbpp to 16bpp 565\n", img->bpp);
+		return -1;
+	}
+
+	img16->width = img->width;
+	img16->height = img->height;
+	img16->nchan = img->nchan;
+	img16->bpp = 16;
+	img16->scansz = img16->pitch = img->width * 2;
+	if(!(img16->pixels = malloc(img16->height * img16->scansz))) {
+		return -1;
+	}
+
+	sptr = img->pixels;
+	dptr = (uint16_t*)img16->pixels;
+
+	for(i=0; i<img->height; i++) {
+		for(j=0; j<img->width; j++) {
+			unsigned int r, g, b;
+			if(img->bpp <= 8 && img->cmap_ncolors) {
+				int idx = *sptr++ % img->cmap_ncolors;
+				r = img->cmap[idx].r >> 3;
+				g = img->cmap[idx].g >> 2;
+				b = img->cmap[idx].b >> 3;
+			} else if(img->nchan == 1) {
+				g = (*sptr++ >> 2) & 0x3f;
+				r = b = g >> 1;
+			} else {
+				r = (*sptr++ >> 3) & 0x1f;
+				g = (*sptr++ >> 2) & 0x3f;
+				b = (*sptr++ >> 3) & 0x1f;
+			}
+			*dptr++ = (r << 11) | (g << 5) | b;
+		}
+	}
 	return 0;
 }
 

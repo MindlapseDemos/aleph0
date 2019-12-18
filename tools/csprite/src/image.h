@@ -19,6 +19,8 @@ int alloc_image(struct image *img, int x, int y, int bpp);
 int load_image(struct image *img, const char *fname);
 int save_image(struct image *img, const char *fname);
 
+int conv_image_rgb565(struct image *img16, struct image *img);
+
 int cmp_image(struct image *a, struct image *b);
 
 void blit_image(struct image *src, int sx, int sy, int w, int h, struct image *dst, int dx, int dy);

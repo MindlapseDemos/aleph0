@@ -113,8 +113,11 @@ int main(int argc, char **argv)
 /* prototype of generated function is (void *fb, int x, int y, int idx) */
 const char *prefixfmt[] = {
 	/* GNU assembler template */
+	"\t.text\n"
 	"\t.global %s\n"
+	"\t.global _%s\n"
 	"%s:\n"
+	"_%s:\n"
 	"\tmov 12(%%esp), %%eax\n"
 	"\tmov $%d, %%ecx\n"
 	"\tmul %%ecx\n"
@@ -129,8 +132,11 @@ const char *prefixfmt[] = {
 	/* TODO hardcoding the 16bpp changes for now, generalize later
 	 *      and while we're at it, let's get rid of the mul too ...
 	 */
+	"\tsection .text\n"
 	"\tglobal %s\n"
+	"\tglobal _%s\n"
 	"%s:\n"
+	"_%s:\n"
 	"\tmov eax, [esp + 12]\n"
 	";\tmov ecx, %d\n"
 	";\tmul ecx\n"
@@ -185,7 +191,7 @@ int proc_sheet(const char *fname)
 		ysz = tile_ysz;
 	}
 
-	printf(prefixfmt[asyntax], name, name, fbpitch);
+	printf(prefixfmt[asyntax], name, name, name, name, fbpitch);
 	for(i=0; i<num_ytiles*num_xtiles; i++) {
 		if(asyntax == AS_GNU) {
 			printf("\t.long tile%d\n", i);

@@ -4,6 +4,8 @@ obj = $(src:.c=.cof) $(asmsrc:.asm=.cof)
 dep = $(obj:.cof=.dep)
 bin = demo.exe
 
+asmsrc += font.asm
+
 ifeq ($(findstring COMMAND.COM, $(SHELL)), COMMAND.COM)
 	hostsys = dos
 else
@@ -75,3 +77,10 @@ clean:
 cleandep:
 	rm -f $(dep)
 endif
+
+
+tools/csprite/csprite:
+	$(MAKE) -C tools/csprite
+
+font.asm: data/legible.fnt tools/csprite/csprite
+	tools/csprite/csprite -n cs_font -s 8x16 -conv565 -nasm $< >$@

@@ -169,10 +169,10 @@ void cs_puts(void *fb, int x, int y, const char *str)
 	while(*str) {
 		int c = *str++;
 
-		if(isalpha(c)) {
-			cs_font(fb, x, y, toupper(c) - 'A');
+		if(c > ' ' && c < 128) {
+			cs_font(fb, x, y, c - ' ');
 		}
-		x += 14;
+		x += 9;
 	}
 }
 

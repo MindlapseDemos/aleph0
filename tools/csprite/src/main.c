@@ -126,11 +126,19 @@ const char *prefixfmt[] = {
 	"tiletab:\n",
 
 	/* NASM template */
+	/* TODO hardcoding the 16bpp changes for now, generalize later
+	 *      and while we're at it, let's get rid of the mul too ...
+	 */
 	"\tglobal %s\n"
 	"%s:\n"
 	"\tmov eax, [esp + 12]\n"
-	"\tmov ecx, %d\n"
-	"\tmul ecx\n"
+	";\tmov ecx, %d\n"
+	";\tmul ecx\n"
+	"\tmov ecx, eax\n"
+	"\tshl eax, 9\n"
+	"\tshl ecx, 7\n"
+	"\tadd eax, ecx\n"
+	"\tadd eax, [esp + 8]\n"
 	"\tadd eax, [esp + 8]\n"
 	"\tadd eax, [esp + 4]\n"
 	"\tmov edx, eax\n"

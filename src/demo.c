@@ -164,6 +164,18 @@ void draw_mouse_pointer(uint16_t *fb)
 	}
 }
 
+void cs_puts(void *fb, int x, int y, const char *str)
+{
+	while(*str) {
+		int c = *str++;
+
+		if(isalpha(c)) {
+			cs_font(fb, x, y, toupper(c) - 'A');
+		}
+		x += 14;
+	}
+}
+
 static void change_screen(int idx)
 {
 	printf("change screen %d\n", idx);

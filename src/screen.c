@@ -96,9 +96,15 @@ void scr_update(void)
 	}
 }
 
+
 void scr_draw(void)
 {
-	if(cur) cur->draw();
+	if(cur) {
+		cur->draw();
+
+		/* print screen name */
+		cs_puts(fb_pixels, 0, 0, cur->name);
+	}
 }
 
 void scr_keypress(int key)

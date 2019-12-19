@@ -55,4 +55,4 @@ tools/csprite/csprite:
 	$(MAKE) -C tools/csprite
 
 font.asm: data/font.png tools/csprite/csprite
-	tools/csprite/csprite -n font -s 16x16 -r 288x32+32+17 -conv565 -nasm $< >$@
+	tools/csprite/csprite -n cs_font -s 16x16 -r 288x32+32+17 -conv565 -nasm $< >$@

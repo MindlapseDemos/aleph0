@@ -40,4 +40,10 @@ void mouse_orbit_update(float *theta, float *phi, float *dist);
 
 void draw_mouse_pointer(uint16_t *fb);
 
+/* compiled sprites available */
+void cs_font(void *fb, int x, int y, int idx);
+
+/* helper to print text with cs_font */
+void cs_puts(void *fb, int x, int y, const char *str);
+
 #endif	/* DEMO_H_ */

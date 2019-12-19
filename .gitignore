@@ -38,3 +38,5 @@ data
 *.COF
 *.dja
 *.DJA
+tools/csprite/csprite
+font.asm

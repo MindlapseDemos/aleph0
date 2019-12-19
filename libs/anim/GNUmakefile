@@ -2,7 +2,7 @@ src = $(wildcard src/*.c)
 obj = $(src:.c=.o)
 alib = libanim.a
 
-CFLAGS = -Wno-main -g -I.. -I../../src
+CFLAGS = -m32 -Wno-main -g -I.. -I../../src
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

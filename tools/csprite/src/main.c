@@ -126,10 +126,10 @@ const char *prefixfmt[] = {
 	"tiletab:\n",
 
 	/* NASM template */
-	"\tglobl %s\n"
+	"\tglobal %s\n"
 	"%s:\n"
 	"\tmov eax, [esp + 12]\n"
-	"\tmov ecx. %d\n"
+	"\tmov ecx, %d\n"
 	"\tmul ecx\n"
 	"\tadd eax, [esp + 8]\n"
 	"\tadd eax, [esp + 4]\n"

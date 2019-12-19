@@ -3,11 +3,20 @@ obj = $(src:.c=.o) $(asmsrc:.asm=.o)
 dep = $(obj:.o=.d)
 bin = demo
 
+asmsrc += font.asm
+
 inc = -I/usr/local/include -Isrc -Isrc/scr -Isrc/sdl -Ilibs -Ilibs/imago/src -Ilibs/mikmod/include
 warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function
 
-CFLAGS = $(warn) -g $(inc) `sdl-config --cflags`
-LDFLAGS = -Llibs/imago -Llibs/mikmod -limago -lmikmod `sdl-config --libs` -lm
+CFLAGS = $(arch) $(warn) -g $(inc) `sdl-config --cflags`
+LDFLAGS = $(arch) -Llibs/imago -Llibs/mikmod -limago -lmikmod $(sdl_ldflags) -lm
+
+ifneq ($(shell uname -m), i386)
+	arch = -m32
+	sdl_ldflags = -L/usr/lib/i386-linux-gnu -lSDL
+else
+	sdl_ldflags = `sdl-config --libs`
+endif
 
 $(bin): $(obj) imago mikmod
 	$(CC) -o $@ $(obj) $(LDFLAGS)
@@ -18,6 +27,7 @@ $(bin): $(obj) imago mikmod
 -include $(dep)
 
 %.d: %.c
+	@echo dep $@
 	@$(CPP) $(CFLAGS) $< -MM -MT $(@:.d=.o) >$@
 
 .PHONY: imago
@@ -40,3 +50,9 @@ clean:
 .PHONY: cleandep
 cleandep:
 	rm -f $(dep)
+
+tools/csprite/csprite:
+	$(MAKE) -C tools/csprite
+
+font.asm: data/font.png tools/csprite/csprite
+	tools/csprite/csprite -n font -s 16x16 -r 288x32+32+17 -conv565 -nasm $< >$@

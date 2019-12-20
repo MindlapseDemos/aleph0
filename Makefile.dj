@@ -4,7 +4,7 @@ obj = $(src:.c=.cof) $(asmsrc:.asm=.cof)
 dep = $(obj:.cof=.dep)
 bin = demo.exe
 
-asmsrc += font.asm
+asmsrc += cspr/dbgfont.asm cspr/confont.asm
 
 ifeq ($(findstring COMMAND.COM, $(SHELL)), COMMAND.COM)
 	hostsys = dos
@@ -22,6 +22,11 @@ CC = $(TOOLPREFIX)gcc
 AR = $(TOOLPREFIX)ar
 CFLAGS = $(warn) -march=pentium $(dbg) $(opt) $(inc)
 LDFLAGS = libs/imago/imago.dja libs/anim/anim.dja libs/mikmod/dos/libmikmod.a
+
+ifneq ($(hostsys), dos)
+.PHONY: all
+all: data $(bin)
+endif
 
 $(bin): $(obj) imago anim mikmod
 	$(CC) -o $@ -Wl,-Map=ld.map $(obj) $(LDFLAGS)
@@ -76,11 +81,8 @@ clean:
 
 cleandep:
 	rm -f $(dep)
+
+.PHONY: data
+data:
+	@tools/procdata
 endif
-
-
-tools/csprite/csprite:
-	$(MAKE) -C tools/csprite
-
-font.asm: data/legible.fnt tools/csprite/csprite
-	tools/csprite/csprite -n cs_font -s 8x16 -conv565 -nasm $< >$@

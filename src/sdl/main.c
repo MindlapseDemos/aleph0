@@ -16,6 +16,8 @@ static void toggle_fullscreen(void);
 static int handle_sball_event(sball_event *ev);
 static void recalc_sball_matrix(float *xform);
 
+static int sdlkey_to_demokey(int sdlkey);
+
 
 static int quit;
 static SDL_Surface *fbsurf;
@@ -91,7 +93,6 @@ int main(int argc, char **argv)
 
 		time_msec = get_msec();
 		demo_draw();
-		drawFps(fb_pixels);
 
 		if(SDL_MUSTLOCK(fbsurf)) {
 			SDL_LockSurface(fbsurf);
@@ -140,6 +141,8 @@ void wait_vsync(void)
 
 void swap_buffers(void *pixels)
 {
+	demo_post_draw(pixels ? pixels : fb_pixels);
+
 	/* do nothing, all pointers point to the same buffer */
 	if(opt.vsync) {
 		wait_vsync();
@@ -163,6 +166,8 @@ static int bnmask(int sdlbn)
 
 static void handle_event(SDL_Event *ev)
 {
+	int key;
+
 	switch(ev->type) {
 	case SDL_QUIT:
 		quit = 1;
@@ -175,7 +180,8 @@ static void handle_event(SDL_Event *ev)
 			toggle_fullscreen();
 			break;
 		}
-		demo_keyboard(ev->key.keysym.sym, ev->key.state == SDL_PRESSED ? 1 : 0);
+		key = sdlkey_to_demokey(ev->key.keysym.sym);
+		demo_keyboard(key, ev->key.state == SDL_PRESSED ? 1 : 0);
 		break;
 
 	case SDL_MOUSEMOTION:
@@ -252,10 +258,17 @@ static int handle_sball_event(sball_event *ev)
 	return 0;
 }
 
-void recalc_sball_matrix(float *xform)
+static void recalc_sball_matrix(float *xform)
 {
 	quat_to_mat(xform, rot);
 	xform[12] = pos.x;
 	xform[13] = pos.y;
 	xform[14] = pos.z;
+}
+
+static int sdlkey_to_demokey(int sdlkey)
+{
+	if(sdlkey < 128) return sdlkey;
+	if(sdlkey < 256) return 0;
+	return sdlkey - 128;
 }

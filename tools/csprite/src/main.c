@@ -24,6 +24,8 @@ int fbpitch, fbwidth = 320;
 const char *name = "sprite";
 int asyntax = AS_GNU;
 int conv565;
+int padding;
+const char *wrop = "mov";
 
 int main(int argc, char **argv)
 {
@@ -43,6 +45,13 @@ int main(int argc, char **argv)
 				rect.x = rect.y = 0;
 				if(sscanf(argv[++i], "%dx%d+%d+%d", &rect.w, &rect.h, &rect.x, &rect.y) < 2 || rect.w <= 0 || rect.h <= 0) {
 					fprintf(stderr, "%s must be followed by WIDTHxHEIGHT+X+Y\n", argv[i - 1]);
+					return 1;
+				}
+
+			} else if(strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "-pad") == 0) {
+				padding = strtol(argv[++i], &endp, 10);
+				if(endp == argv[i] || padding < 0) {
+					fprintf(stderr, "%s must be followed by a positive number\n", argv[i - 1]);
 					return 1;
 				}
 
@@ -83,6 +92,9 @@ int main(int argc, char **argv)
 
 			} else if(strcmp(argv[i], "-conv565") == 0) {
 				conv565 = 1;
+
+			} else if(strcmp(argv[i], "-x") == 0 || strcmp(argv[i], "-xor") == 0) {
+				wrop = "xor";
 
 			} else if(strcmp(argv[i], "-gas") == 0) {
 				asyntax = AS_GNU;
@@ -155,7 +167,7 @@ const char *prefixfmt[] = {
 
 int proc_sheet(const char *fname)
 {
-	int i, j, num_xtiles, num_ytiles, xsz, ysz, tidx;
+	int i, j, x, y, num_xtiles, num_ytiles, xsz, ysz, tidx;
 	struct image img;
 
 	if(load_image(&img, fname) == -1) {
@@ -182,11 +194,25 @@ int proc_sheet(const char *fname)
 
 	if(tile_xsz <= 0) {
 		num_xtiles = num_ytiles = 1;
-		xsz = rect.w;
-		ysz = rect.h;
+		xsz = rect.w - padding;
+		ysz = rect.h - padding;
 	} else {
-		num_xtiles = rect.w / tile_xsz;
-		num_ytiles = rect.h / tile_ysz;
+		if(padding) {
+			num_xtiles = num_ytiles = 0;
+			i = 0;
+			while(i < rect.w) {
+				num_xtiles++;
+				i += tile_xsz + padding;
+			}
+			i = 0;
+			while(i < rect.h) {
+				num_ytiles++;
+				i += tile_ysz + padding;
+			}
+		} else {
+			num_xtiles = rect.w / tile_xsz;
+			num_ytiles = rect.h / tile_ysz;
+		}
 		xsz = tile_xsz;
 		ysz = tile_ysz;
 	}
@@ -202,11 +228,15 @@ int proc_sheet(const char *fname)
 	putchar('\n');
 
 	tidx = 0;
+	y = rect.y;
 	for(i=0; i<num_ytiles; i++) {
+		x = rect.x;
 		for(j=0; j<num_xtiles; j++) {
 			printf("tile%d:\n", tidx++);
-			csprite(&img, rect.x + j * xsz, rect.y + i * ysz, xsz, ysz);
+			csprite(&img, x, y, xsz, ysz);
+			x += xsz + padding;
 		}
+		y += ysz + padding;
 	}
 
 	free(img.pixels);
@@ -300,9 +330,9 @@ int csprite(struct image *img, int x, int y, int xsz, int ysz)
 			lenbytes = optr->len * pixsz;
 			for(j=0; j<lenbytes / 4; j++) {
 				if(asyntax == AS_GNU) {
-					printf("\tmovl $0x%x, %d(%%edx)\n", *(uint32_t*)pptr, j * 4);
+					printf("\t%sl $0x%x, %d(%%edx)\n", wrop, *(uint32_t*)pptr, j * 4);
 				} else {
-					printf("\tmov dword [edx + %d], 0x%x\n", j * 4, *(uint32_t*)pptr);
+					printf("\t%s dword [edx + %d], 0x%x\n", wrop, j * 4, *(uint32_t*)pptr);
 				}
 				pptr += 4;
 			}
@@ -310,24 +340,24 @@ int csprite(struct image *img, int x, int y, int xsz, int ysz)
 			switch(lenbytes % 4) {
 			case 3:
 				if(asyntax == AS_GNU) {
-					printf("\tmovb $0x%x, %d(%%edx)\n", (unsigned int)*pptr++, j++);
+					printf("\t%sb $0x%x, %d(%%edx)\n", wrop, (unsigned int)*pptr++, j++);
 				} else {
-					printf("\tmov byte [edx + %d], 0x%x\n", j++, (unsigned int)*pptr++);
+					printf("\t%s byte [edx + %d], 0x%x\n", wrop, j++, (unsigned int)*pptr++);
 				}
 			case 2:
 				if(asyntax == AS_GNU) {
-					printf("\tmovw $0x%x, %d(%%edx)\n", (unsigned int)*(uint16_t*)pptr, j);
+					printf("\t%sw $0x%x, %d(%%edx)\n", wrop, (unsigned int)*(uint16_t*)pptr, j);
 				} else {
-					printf("\tmov word [edx + %d], 0x%x\n", j, (unsigned int)*(uint16_t*)pptr);
+					printf("\t%s word [edx + %d], 0x%x\n", wrop, j, (unsigned int)*(uint16_t*)pptr);
 				}
 				pptr += 2;
 				j += 2;
 				break;
 			case 1:
 				if(asyntax == AS_GNU) {
-					printf("\tmovb $0x%x, %d(%%edx)\n", (unsigned int)*pptr++, j++);
+					printf("\t%sb $0x%x, %d(%%edx)\n", wrop, (unsigned int)*pptr++, j++);
 				} else {
-					printf("\tmov byte [edx + %d], 0x%x\n", j++, (unsigned int)*pptr++);
+					printf("\t%s byte [edx + %d], 0x%x\n", wrop, j++, (unsigned int)*pptr++);
 				}
 				break;
 			}
@@ -351,10 +381,12 @@ void print_usage(const char *argv0)
 	printf("Options:\n");
 	printf(" -s,-size <WxH>: tile size (default: whole image)\n");
 	printf(" -r,-rect <WxH+X+Y>: use rectangle of the input image (default: whole image)\n");
+	printf(" -p,-pad <N>: how many pixels to skip between tiles in source image (default: 0)\n");
 	printf(" -coffset <offs>: colormap offset [0, 255] (default: 0)\n");
 	printf(" -fbpitch <pitch>: target framebuffer pitch (scanline size in bytes)\n");
 	printf(" -k,-key <color>: color-key for transparency (default: 0)\n");
 	printf(" -conv565: convert image to 16bpp 565 before processing\n");
+	printf(" -x,-xor: use XOR for writing pixels instead of MOV\n");
 	printf(" -gas: output GNU assembler code (default)\n");
 	printf(" -nasm: output NASM-compatible code\n");
 	printf(" -h: print usage and exit\n");

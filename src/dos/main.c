@@ -124,11 +124,12 @@ void swap_buffers(void *pixels)
 		pixels = fb_pixels;
 	}
 
+	demo_post_draw(pixels);
+
 	/* just memcpy to the front buffer */
 	if(opt.vsync) {
 		wait_vsync();
 	}
-	drawFps(pixels);
 	memcpy(vmem, pixels, fbsize);
 }
 

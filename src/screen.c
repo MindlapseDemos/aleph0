@@ -5,6 +5,13 @@
 #include "screen.h"
 #include "demo.h"
 
+#define DBG_SCRCHG \
+	do { \
+		dbg_curscr_name = cur->name ? cur->name : "<unknown>"; \
+		dbg_curscr_name_len = strlen(dbg_curscr_name); \
+		dbg_curscr_name_pos = 320 - dbg_curscr_name_len * 9; \
+	} while(0)
+
 struct screen *tunnel_screen(void);
 struct screen *fract_screen(void);
 struct screen *grise_screen(void);
@@ -92,6 +99,8 @@ void scr_update(void)
 			prev = 0;
 			cur = next;
 			next = 0;
+
+			DBG_SCRCHG;
 		}
 	}
 }
@@ -101,9 +110,6 @@ void scr_draw(void)
 {
 	if(cur) {
 		cur->draw();
-
-		/* print screen name */
-		cs_puts(fb_pixels, 0, 0, cur->name);
 	}
 }
 
@@ -158,6 +164,8 @@ int scr_change(struct screen *s, long trans_time)
 
 		cur = s;
 		prev = 0;
+
+		DBG_SCRCHG;
 	}
 	return 0;
 }

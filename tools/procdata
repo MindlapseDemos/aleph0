@@ -1,0 +1,23 @@
+#!/bin/sh
+
+[ -f ./procdata ] && cd ..
+if [ ! -f tools/procdata ]; then
+	echo 'run from the demo root directory' >&2
+	exit 1
+fi
+
+if [ ! -f tools/csprite/csprite ]; then
+	make -C tools/csprite || exit 1
+fi
+
+alias csprite=tools/csprite/csprite
+
+mkdir -p cspr
+if [ ! -f cspr/dbgfont.asm -o data/legible.fnt -nt cspr/dbgfont.asm ]; then
+	echo 'csprite: dbgfont'
+	csprite -n cs_dbgfont -s 8x16 -conv565 -nasm -xor data/legible.fnt >cspr/dbgfont.asm
+fi
+if [ ! -f cspr/confont.asm -o data/con.fnt -nt cspr/confont.asm ]; then
+	echo 'csprite: confont'
+	csprite -n cs_confont -s 6x7 -pad 1 -conv565 -nasm data/con.fnt >cspr/confont.asm
+fi

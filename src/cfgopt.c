@@ -4,12 +4,25 @@
 #include <ctype.h>
 #include "cfgopt.h"
 
+#ifdef NDEBUG
+/* release build default options */
+struct options opt = {
+	0,	/* start_scr */
+	1,	/* music */
+	0,	/* sball */
+	1,	/* vsync */
+	0	/* dbginfo */
+};
+#else
+/* debug build default options */
 struct options opt = {
 	0,	/* start_scr */
 	0,	/* music */
 	0,	/* sball */
-	1	/* vsync */
+	1,	/* vsync */
+	1	/* dbginfo */
 };
+#endif
 
 int parse_args(int argc, char **argv)
 {
@@ -30,6 +43,10 @@ int parse_args(int argc, char **argv)
 				opt.vsync = 1;
 			} else if(strcmp(argv[i], "-novsync") == 0) {
 				opt.vsync = 0;
+			} else if(strcmp(argv[i], "-dbg") == 0) {
+				opt.dbginfo = 1;
+			} else if(strcmp(argv[i], "-nodbg") == 0) {
+				opt.dbginfo = 0;
 			} else {
 				fprintf(stderr, "invalid option: %s\n", argv[i]);
 				return -1;
@@ -116,6 +133,8 @@ int load_config(const char *fname)
 			opt.sball = bool_value(value);
 		} else if(strcmp(line, "vsync") == 0) {
 			opt.vsync = bool_value(value);
+		} else if(strcmp(line, "debug") == 0) {
+			opt.dbginfo = bool_value(value);
 		} else {
 			fprintf(stderr, "%s:%d invalid option: %s\n", fname, nline, line);
 			return -1;

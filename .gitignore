@@ -39,4 +39,4 @@ data
 *.dja
 *.DJA
 tools/csprite/csprite
-font.asm
+cspr/

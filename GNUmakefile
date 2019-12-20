@@ -3,7 +3,7 @@ obj = $(src:.c=.o) $(asmsrc:.asm=.o)
 dep = $(obj:.o=.d)
 bin = demo
 
-asmsrc += font.asm
+asmsrc += cspr/dbgfont.asm cspr/confont.asm
 
 inc = -I/usr/local/include -Isrc -Isrc/scr -Isrc/sdl -Ilibs -Ilibs/imago/src -Ilibs/mikmod/include
 warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function
@@ -17,6 +17,9 @@ ifneq ($(shell uname -m), i386)
 else
 	sdl_ldflags = `sdl-config --libs`
 endif
+
+.PHONY: all
+all: data $(bin)
 
 $(bin): $(obj) imago mikmod
 	$(CC) -o $@ $(obj) $(LDFLAGS)
@@ -51,8 +54,6 @@ clean:
 cleandep:
 	rm -f $(dep)
 
-tools/csprite/csprite:
-	$(MAKE) -C tools/csprite
-
-font.asm: data/legible.fnt tools/csprite/csprite
-	tools/csprite/csprite -n cs_font -s 8x16 -conv565 -nasm $< >$@
+.PHONY: data
+data:
+	@tools/procdata

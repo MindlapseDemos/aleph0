@@ -6,6 +6,7 @@ struct options {
 	int music;
 	int sball;
 	int vsync;
+	int dbginfo;
 };
 
 extern struct options opt;

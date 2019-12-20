@@ -10,6 +10,7 @@
 #include "3dgfx.h"
 #include "music.h"
 #include "cfgopt.h"
+#include "console.h"
 #include "tinyfps.h"
 #include "util.h"
 
@@ -27,7 +28,7 @@ unsigned int mouse_bmask;
 float sball_matrix[] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
 
 static unsigned long nframes;
-static int console_active;
+static int con_active;
 
 int demo_init(int argc, char **argv)
 {
@@ -44,6 +45,7 @@ int demo_init(int argc, char **argv)
 		return -1;
 	}
 
+	con_init();
 	initFpsFonts();
 
 	if(g3d_init() == -1) {
@@ -102,12 +104,25 @@ void demo_draw(void)
 	scr_update();
 	scr_draw();
 
-	draw_mouse_pointer(vmem);
-
 	++nframes;
 }
 
+/* called by swap_buffers just before the actual swap */
+void demo_post_draw(void *pixels)
+{
+	if(opt.dbginfo) {
+		drawFps(pixels);
+		if(dbg_curscr_name) {
+			cs_dputs(pixels, dbg_curscr_name_pos, 240 - 16, dbg_curscr_name);
+		}
+	}
 
+	if(con_active) {
+		con_draw(pixels);
+	}
+
+	draw_mouse_pointer(pixels);
+}
 
 #define DEST(x, y)	dest[(y) * FB_WIDTH + (x)]
 void draw_mouse_pointer(uint16_t *fb)
@@ -164,37 +179,37 @@ void draw_mouse_pointer(uint16_t *fb)
 	}
 }
 
-void cs_puts(void *fb, int x, int y, const char *str)
+void cs_puts_font(cs_font_func csfont, int sz, void *fb, int x, int y, const char *str)
 {
 	while(*str) {
 		int c = *str++;
 
 		if(c > ' ' && c < 128) {
-			cs_font(fb, x, y, c - ' ');
+			csfont(fb, x, y, c - ' ');
 		}
-		x += 9;
+		x += sz;
 	}
 }
 
-static void change_screen(int idx)
+void change_screen(int idx)
 {
 	printf("change screen %d\n", idx);
 	scr_change(scr_screen(idx), 4000);
 }
 
-#define CBUF_SIZE	64
-#define CBUF_MASK	(CBUF_SIZE - 1)
 void demo_keyboard(int key, int press)
 {
-	static char cbuf[CBUF_SIZE];
-	static int rd, wr;
-	char inp[CBUF_SIZE + 1], *dptr;
-	int i, nscr;
+	int nscr;
 
 	if(press) {
 		switch(key) {
 		case 27:
-			demo_quit();
+			if(con_active) {
+				con_stop();
+				con_active = 0;
+			} else {
+				demo_quit();
+			}
 			return;
 
 		case 127:
@@ -202,71 +217,34 @@ void demo_keyboard(int key, int press)
 			return;
 
 		case '`':
-			console_active = !console_active;
-			if(console_active) {
-				printf("> ");
-				fflush(stdout);
+			con_active = !con_active;
+			if(con_active) {
+				con_start();
 			} else {
-				putchar('\n');
+				con_stop();
 			}
 			return;
 
-		case '\b':
-			if(console_active) {
-				if(wr != rd) {
-					printf("\b \b");
-					fflush(stdout);
-					wr = (wr + CBUF_SIZE - 1) & CBUF_MASK;
-				}
+		case '/':
+			if(!con_active) {
+				con_start();
+				con_active = con_input('/');
 				return;
 			}
-			break;
-
-		case '\n':
-		case '\r':
-			if(console_active) {
-				dptr = inp;
-				while(rd != wr) {
-					*dptr++ = cbuf[rd];
-					rd = (rd + 1) & CBUF_MASK;
-				}
-				*dptr = 0;
-				if(inp[0]) {
-					printf("\ntrying to match: %s\n", inp);
-					nscr = scr_num_screens();
-					for(i=0; i<nscr; i++) {
-						if(strstr(scr_screen(i)->name, inp)) {
-							change_screen(i);
-							break;
-						}
-					}
-				}
-				console_active = 0;
-				return;
-			}
-			break;
 
 		default:
-			if(key >= '1' && key <= '9' && key <= '1' + scr_num_screens()) {
-				change_screen(key - '1');
-			} else if(key == '0' && scr_num_screens() >= 10) {
-				change_screen(9);
-			}
-
-			if(console_active) {
-				if(key < 256 && isprint(key)) {
-					putchar(key);
-					fflush(stdout);
-
-					cbuf[wr] = key;
-					wr = (wr + 1) & CBUF_MASK;
-					if(wr == rd) { /* overflow */
-						rd = (rd + 1) & CBUF_MASK;
-					}
-				}
+			if(con_active) {
+				con_active = con_input(key);
 				return;
 			}
-			break;
+
+			if(key >= '1' && key <= '9' && key <= '1' + scr_num_screens()) {
+				change_screen(key - '1');
+				return;
+			} else if(key == '0' && scr_num_screens() >= 10) {
+				change_screen(9);
+				return;
+			}
 		}
 
 		scr_keypress(key);

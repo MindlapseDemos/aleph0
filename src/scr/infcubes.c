@@ -67,7 +67,7 @@ static int init(void)
 	if(load_mesh(&mesh_cube, "data/bevelbox.obj") == -1) {
 		return -1;
 	}
-	if(load_mesh(&mesh_cube2, "data/bevelbox.obj") == -1) {
+	if(copy_mesh(&mesh_cube2, &mesh_cube) == -1) {
 		return -1;
 	}
 	apply_mesh_xform(&mesh_cube2, scalemat);

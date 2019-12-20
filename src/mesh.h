@@ -13,6 +13,8 @@ struct g3d_mesh {
 void free_mesh(struct g3d_mesh *mesh);
 void destroy_mesh(struct g3d_mesh *mesh);
 
+int copy_mesh(struct g3d_mesh *dest, struct g3d_mesh *src);
+
 int load_mesh(struct g3d_mesh *mesh, const char *fname);
 int save_mesh(struct g3d_mesh *mesh, const char *fname);
 

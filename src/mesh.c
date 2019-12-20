@@ -17,6 +17,28 @@ void destroy_mesh(struct g3d_mesh *mesh)
 	free(mesh->iarr);
 }
 
+int copy_mesh(struct g3d_mesh *dest, struct g3d_mesh *src)
+{
+	dest->prim = src->prim;
+	if(src->varr) {
+		if(!(dest->varr = malloc(src->vcount * sizeof *src->varr))) {
+			return -1;
+		}
+		memcpy(dest->varr, src->varr, src->vcount * sizeof *src->varr);
+	}
+	dest->vcount = src->vcount;
+	if(src->iarr) {
+		if(!(dest->iarr = malloc(src->icount * sizeof *src->iarr))) {
+			free(dest->varr);
+			dest->varr = 0;
+			return -1;
+		}
+		memcpy(dest->iarr, src->iarr, src->icount * sizeof *src->iarr);
+	}
+	dest->icount = src->icount;
+	return 0;
+}
+
 static struct {
 	int prim;
 	struct g3d_vertex *varr;

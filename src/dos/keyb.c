@@ -20,6 +20,7 @@ along with the program. If not, see <http://www.gnu.org/licenses/>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <conio.h>
 #include <dos.h>
 
@@ -138,6 +139,10 @@ int kb_isdown(int key)
 	case KB_CTRL:
 		return keystate[KB_LCTRL] + keystate[KB_RCTRL];
 	}
+
+	if(isalpha(key)) {
+		key = tolower(key);
+	}
 	return keystate[key];
 }
 
@@ -206,7 +211,7 @@ void kb_putback(int key)
 static void INTERRUPT kbintr()
 {
 	unsigned char code;
-	int key, press;
+	int key, c, press;
 
 	code = inp(KB_PORT);
 
@@ -224,12 +229,13 @@ static void INTERRUPT kbintr()
 	}
 
 	key = scantbl[code];
+	c = (keystate[KB_LSHIFT] | keystate[KB_RSHIFT]) ? scantbl_shift[code] : key;
 
 	if(press) {
 		/* append to buffer */
-		last_key = key;
+		last_key = c;
 		if(buffer_size > 0) {
-			buffer[buf_widx] = key;
+			buffer[buf_widx] = c;
 			ADVANCE(buf_widx);
 			/* if the write end overtook the read end, advance the read end
 			 * too, to discard the oldest keypress from the buffer

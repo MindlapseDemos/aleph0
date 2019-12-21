@@ -16,7 +16,7 @@ static void toggle_fullscreen(void);
 static int handle_sball_event(sball_event *ev);
 static void recalc_sball_matrix(float *xform);
 
-static int sdlkey_to_demokey(int sdlkey);
+static int sdlkey_to_demokey(int sdlkey, unsigned int mod);
 
 
 static int quit;
@@ -180,7 +180,7 @@ static void handle_event(SDL_Event *ev)
 			toggle_fullscreen();
 			break;
 		}
-		key = sdlkey_to_demokey(ev->key.keysym.sym);
+		key = sdlkey_to_demokey(ev->key.keysym.sym, ev->key.keysym.mod);
 		demo_keyboard(key, ev->key.state == SDL_PRESSED ? 1 : 0);
 		break;
 
@@ -266,9 +266,29 @@ static void recalc_sball_matrix(float *xform)
 	xform[14] = pos.z;
 }
 
-static int sdlkey_to_demokey(int sdlkey)
+#define SSORG	'\''
+#define SSEND	'`'
+static char symshift[] = {
+	'"', 0, 0, 0, 0, '<', '_', '>', '?',
+	')', '!', '@', '#', '$', '%', '^', '&', '*', '(',
+	0, ':', 0, '+', 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	'{', '|', '}', 0, 0, '~'
+};
+
+
+static int sdlkey_to_demokey(int sdlkey, unsigned int mod)
 {
-	if(sdlkey < 128) return sdlkey;
+	if(sdlkey < 128) {
+		if(mod & (KMOD_SHIFT)) {
+			if(sdlkey >= 'a' && sdlkey <= 'z') {
+				sdlkey = toupper(sdlkey);
+			} else if(sdlkey >= SSORG && sdlkey <= SSEND) {
+				sdlkey = symshift[sdlkey - SSORG];
+			}
+		}
+		return sdlkey;
+	}
 	if(sdlkey < 256) return 0;
 	return sdlkey - 128;
 }

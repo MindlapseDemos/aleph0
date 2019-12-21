@@ -17,7 +17,7 @@ if [ ! -f cspr/dbgfont.asm -o data/legible.fnt -nt cspr/dbgfont.asm ]; then
 	echo 'csprite: dbgfont'
 	csprite -n cs_dbgfont -s 8x16 -conv565 -nasm -xor data/legible.fnt >cspr/dbgfont.asm
 fi
-if [ ! -f cspr/confont.asm -o data/con.fnt -nt cspr/confont.asm ]; then
+if [ ! -f cspr/confont.asm -o data/console.fnt -nt cspr/confont.asm ]; then
 	echo 'csprite: confont'
-	csprite -n cs_confont -s 6x7 -pad 1 -conv565 -nasm data/con.fnt >cspr/confont.asm
+	csprite -n cs_confont -s 6x7 -pad 1 -conv565 -nasm data/console.fnt >cspr/confont.asm
 fi

@@ -28,7 +28,6 @@ along with the program. If not, see <http://www.gnu.org/licenses/>
 #include <i86.h>
 #endif
 #ifdef __DJGPP__
-#include <stdint.h>
 #include <dpmi.h>
 #include <go32.h>
 #include <pc.h>
@@ -36,6 +35,7 @@ along with the program. If not, see <http://www.gnu.org/licenses/>
 
 #include "keyb.h"
 #include "scancode.h"
+#include "inttypes.h"
 
 #define KB_INTR		0x9
 #define KB_PORT		0x60

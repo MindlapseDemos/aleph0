@@ -197,6 +197,10 @@ unsigned int img_gltexture_read(struct img_io *io)
 	return tex;
 }
 
+#if (defined(__DOS__) || defined(__MSDOS__)) && defined(__unix__)
+#undef __unix__
+#endif
+
 #if defined(__unix__) || defined(__APPLE__)
 #ifndef __USE_GNU
 #define __USE_GNU

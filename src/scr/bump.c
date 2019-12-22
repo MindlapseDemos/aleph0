@@ -1,4 +1,4 @@
-// Bump effect (not moving yet of course, I have many ideas on this to commit before it's ready)
+/* Bump effect (not moving yet of course, I have many ideas on this to commit before it's ready) */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -64,8 +64,9 @@ static int init(void)
 	const int particleLightSize = PARTICLE_LIGHT_WIDTH * PARTICLE_LIGHT_HEIGHT;
 	const int fb_size = fb_width * fb_height;
 
-	// Just some parameters to temporary test the colors of 3 lights
-	// if every light uses it's own channel bits, it's better
+	/* Just some parameters to temporary test the colors of 3 lights
+	 * if every light uses it's own channel bits, it's better
+	 */
 	const float rgbMul[9] = { 1.0f, 0.0f, 0.0f, 
 								  0.0f, 1.0f, 0.0f,
 								  0.0f, 0.0f, 1.0f};
@@ -83,16 +84,16 @@ static int init(void)
 	memset(bumpOffset, 0, sizeof(*bumpOffset) * fb_size);
 	memset(particlePoint, 0, sizeof(*particlePoint) * NUM_PARTICLES);
 
-	// Create random junk
+	/* Create random junk */
 	for (i = 0; i < fb_size; i++)
 		heightmap[i] = rand() & 255;
 
-	// Blur to smooth
+	/* Blur to smooth */
 	for (j = 0; j < numBlurs; j++)
 		for (i = 0; i < fb_size; i++)
 			heightmap[i] = (heightmap[abs((i - 1) % fb_size)] + heightmap[abs((i + 1) % fb_size)] + heightmap[abs((i - fb_width) % fb_size)] + heightmap[abs((i + fb_width) % fb_size)]) >> 2;
 
-	// Inclination precalculation
+	/* Inclination precalculation */
 	i = 0;
 	for (y = 0; y < fb_height; y++)
 	{
@@ -116,7 +117,7 @@ static int init(void)
 		}
 	}
 
-	// Generate three lights
+	/* Generate three lights */
 	i = 0;
 	for (y = 0; y < BIG_LIGHT_HEIGHT; y++)
 	{
@@ -315,7 +316,7 @@ static void draw(void)
 {
 	memset(lightmap, 0, fb_width * fb_height * sizeof(*lightmap));
 
-	//eraseLights();
+	/*eraseLights();*/
 	animateLights();
 	renderLights();
 

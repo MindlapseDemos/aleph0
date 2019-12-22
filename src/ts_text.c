@@ -216,9 +216,9 @@ static int next_token(struct parser *pst)
 
 	DYNARR_CLEAR(pst->token);
 
-	// skip whitespace
+	/* skip whitespace */
 	while((c = fgetc(pst->fp)) != -1) {
-		if(c == '#') { // skip to end of line
+		if(c == '#') { /* skip to end of line */
 			while((c = fgetc(pst->fp)) != -1 && c != '\n');
 			if(c == -1) return -1;
 		}
@@ -230,7 +230,7 @@ static int next_token(struct parser *pst)
 	DYNARR_STRPUSH(pst->token, c);
 
 	if(isdigit(c) || c == '-' || c == '+') {
-		// token is a number
+		/* token is a number */
 		int found_dot = 0;
 		while((c = fgetc(pst->fp)) != -1 &&
 				(isdigit(c) || (c == '.' && !found_dot))) {
@@ -241,7 +241,7 @@ static int next_token(struct parser *pst)
 		return TOK_NUM;
 	}
 	if(isalpha(c)) {
-		// token is an identifier
+		/* token is an identifier */
 		while((c = fgetc(pst->fp)) != -1 && (isalnum(c) || c == '_')) {
 			DYNARR_STRPUSH(pst->token, c);
 		}
@@ -249,8 +249,8 @@ static int next_token(struct parser *pst)
 		return TOK_ID;
 	}
 	if(c == '"') {
-		// token is a string constant
-		// remove the opening quote
+		/* token is a string constant */
+		/* remove the opening quote */
 		DYNARR_STRPOP(pst->token);
 		while((c = fgetc(pst->fp)) != -1 && c != '"') {
 			DYNARR_STRPUSH(pst->token, c);

@@ -19,7 +19,7 @@ void wait_vsync(void);
 
 #define NSPAWNPOS	64
 #define SPAWN_RATE	16.0f
-//#define GRAV		(-6.0f)
+/*#define GRAV		(-6.0f)*/
 #define GRAV		0.0f
 #define HAIR_LENGTH 20
 

@@ -62,8 +62,8 @@ struct g3d_state {
 };
 
 static void imm_flush(void);
-static void xform4_vec3(const float *mat, float *vec);
-static void xform3_vec3(const float *mat, float *vec);
+static __inline void xform4_vec3(const float *mat, float *vec);
+static __inline void xform3_vec3(const float *mat, float *vec);
 static void shade(struct g3d_vertex *v);
 
 static struct g3d_state *st;
@@ -633,28 +633,24 @@ void g3d_texcoord(float u, float v)
 	st->imm_curv.v = v;
 }
 
-static void xform4_vec3(const float *mat, float *vec)
+static __inline void xform4_vec3(const float *mat, float *vec)
 {
 	float x = mat[0] * vec[0] + mat[4] * vec[1] + mat[8] * vec[2] + mat[12];
 	float y = mat[1] * vec[0] + mat[5] * vec[1] + mat[9] * vec[2] + mat[13];
 	float z = mat[2] * vec[0] + mat[6] * vec[1] + mat[10] * vec[2] + mat[14];
-	float w = mat[3] * vec[0] + mat[7] * vec[1] + mat[11] * vec[2] + mat[15];
-
-	vec[0] = x;
-	vec[1] = y;
+	vec[3] = mat[3] * vec[0] + mat[7] * vec[1] + mat[11] * vec[2] + mat[15];
 	vec[2] = z;
-	vec[3] = w;
+	vec[1] = y;
+	vec[0] = x;
 }
 
-static void xform3_vec3(const float *mat, float *vec)
+static __inline void xform3_vec3(const float *mat, float *vec)
 {
 	float x = mat[0] * vec[0] + mat[4] * vec[1] + mat[8] * vec[2];
 	float y = mat[1] * vec[0] + mat[5] * vec[1] + mat[9] * vec[2];
-	float z = mat[2] * vec[0] + mat[6] * vec[1] + mat[10] * vec[2];
-
-	vec[0] = x;
+	vec[2] = mat[2] * vec[0] + mat[6] * vec[1] + mat[10] * vec[2];
 	vec[1] = y;
-	vec[2] = z;
+	vec[0] = x;
 }
 
 #define NORMALIZE(v) \

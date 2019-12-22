@@ -118,7 +118,7 @@ enum {
 	VBE_ATTR_STEREO		= 0x0800,
 	VBE_ATTR_STEREO_2FB	= 0x1000,
 	/* VBE/AF */
-	VBE_ATTR_MUSTLOCK	= 0x0200,	/* ! */
+	VBE_ATTR_MUSTLOCK	= 0x0200	/* ! */
 };
 
 /* VBE memory model type (vbe_mode_info.mem_model) */

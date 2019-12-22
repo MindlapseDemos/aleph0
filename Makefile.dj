@@ -13,23 +13,24 @@ else
 	TOOLPREFIX = i586-pc-msdosdjgpp-
 endif
 
-inc = -Isrc -Isrc/scr -Isrc/dos -Ilibs -Ilibs/imago/src -Ilibs/anim/src -Ilibs/mikmod/include
+inc = -Isrc -Isrc/scr -Isrc/dos -Ilibs -Ilibs/imago/src -Ilibs/anim/src
 opt = -O3 -ffast-math -fno-strict-aliasing
 dbg = -g
 #prof = -pg
 warn = -pedantic -Wall -Wno-unused-function -Wno-unused-variable
+def = -DNO_MUSIC
 
 CC = $(TOOLPREFIX)gcc
 AR = $(TOOLPREFIX)ar
-CFLAGS = $(warn) -march=pentium $(dbg) $(opt) $(prof) $(inc)
-LDFLAGS = libs/imago/imago.dja libs/anim/anim.dja libs/mikmod/dos/libmikmod.a
+CFLAGS = $(warn) -march=pentium $(dbg) $(opt) $(prof) $(inc) $(def)
+LDFLAGS = libs/imago/imago.dja libs/anim/anim.dja
 
 ifneq ($(hostsys), dos)
 .PHONY: all
 all: data $(bin)
 endif
 
-$(bin): $(obj) imago anim mikmod
+$(bin): $(obj) imago anim
 	$(CC) -o $@ -Wl,-Map=ld.map $(prof) $(obj) $(LDFLAGS)
 
 %.cof: %.asm
@@ -54,15 +55,10 @@ imago:
 anim:
 	$(MAKE) -C libs/anim -f Makefile.dj
 
-.PHONY: mikmod
-mikmod:
-	$(MAKE) -C libs/mikmod/dos -f Makefile.dj
-
 .PHONY: cleanlibs
 cleanlibs:
 	$(MAKE) -C libs/imago -f Makefile.dj clean
 	$(MAKE) -C libs/anim -f Makefile.dj clean
-	$(MAKE) -C libs/mikmod/dos -f Makefile.dj clean
 
 .PHONY: clean
 .PHONY: cleandep

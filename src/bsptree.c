@@ -263,7 +263,7 @@ static int choose_poly(struct bsppoly *polyarr, int num_polys)
 		}
 	}
 
-	//printf("choose_poly(..., %d) -> %d splits\n", num_polys, best_splits);
+	/*printf("choose_poly(..., %d) -> %d splits\n", num_polys, best_splits);*/
 
 	return best;
 }

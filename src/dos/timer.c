@@ -9,13 +9,13 @@
 #endif
 
 #ifdef __DJGPP__
-#include <stdint.h>
 #include <dpmi.h>
 #include <go32.h>
 #include <pc.h>
 #endif
 
 #include "pit8254.h"
+#include "inttypes.h"
 
 #define PIT_TIMER_INTR	8
 #define DOS_TIMER_INTR	0x1c

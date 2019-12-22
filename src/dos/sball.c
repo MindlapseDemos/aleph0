@@ -9,13 +9,13 @@
 #endif
 
 #ifdef __DJGPP__
-#include <stdint.h>
 #include <dpmi.h>
 #include <go32.h>
 #include <pc.h>
 #endif
 
 #include "sball.h"
+#include "inttypes.h"
 
 struct motion {
 	int x, y, z;

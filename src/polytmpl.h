@@ -162,10 +162,10 @@ void POLYFILL(struct pvertex *pv, int nverts)
 			uint32_t res, tmp;
 
 			if(winding < 0) {
-				// clockwise
+				/* clockwise */
 				edge = y0 > y1 ? left : right;
 			} else {
-				// counter-clockwise
+				/* counter-clockwise */
 				edge = y0 > y1 ? right : left;
 			}
 			res = SCANEDGE(pv + i, pv + next, edge);

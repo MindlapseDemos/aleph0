@@ -69,7 +69,6 @@ void sortPointSprites();
 static int init(void);
 static void destroy(void);
 static void start(long trans_time);
-static void stop(long trans_time);
 static void draw(void);
 
 static unsigned int lastFrameTime = 0;
@@ -253,7 +252,7 @@ MyVertex randomVertex() {
 	ret.y = rand() % 200 - 100; if (ret.y == 0) ret.y = 1;
 	ret.z = rand() % 200 - 100; if (ret.z == 0) ret.z = 1;
 	
-	// Normalize
+	/* Normalize */
 	l = sqrt(ret.x * ret.x + ret.y * ret.y + ret.z * ret.z);
 	ret.x /= l;
 	ret.y /= l;

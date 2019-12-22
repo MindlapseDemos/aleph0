@@ -17,7 +17,7 @@ void set_palette(int idx, int r, int g, int b);
 
 enum {
 	FLIP_NOW,
-	FLIP_VBLANK,
+	FLIP_VBLANK
 };
 /* page flip and return pointer to the start of the display area (front buffer) */
 void *page_flip(int vsync);

@@ -445,15 +445,15 @@ static inline void cgm_mget_rotation(const float *m, cgm_quat *res)
 	float root;
 
 	if(trace > 0.0f) {
-		// |w| > 1/2
-		root = sqrt(trace + 1.0f);	// 2w
+		/* |w| > 1/2 */
+		root = sqrt(trace + 1.0f);	/* 2w */
 		res->w = 0.5f * root;
-		root = 0.5f / root;	// 1 / 4w
+		root = 0.5f / root;	/* 1 / 4w */
 		res->x = (m[6] - m[9]) * root;
 		res->y = (m[8] - m[2]) * root;
 		res->z = (m[1] - m[4]) * root;
 	} else {
-		// |w| <= 1/2
+		/* |w| <= 1/2 */
 		i = 0;
 		if(m[5] > m[0]) {
 			i = 1;

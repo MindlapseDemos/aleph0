@@ -1,4 +1,4 @@
-// Just a test with a run of the mill plasma
+/* Just a test with a run of the mill plasma */
 
 #include <stdlib.h>
 #include <math.h>

@@ -4,9 +4,10 @@
 #include "tinyfps.h"
 #include "demo.h"
 
-// TinyFPS, just a minimal fraps like font to show FPS during the demo and not just after.
-// I'll be using it in my effects for my performance test purposes, just adding it here.
-// Maybe it would be nice if initFpsFonts would be called in demo.c once but I avoided touching that code.
+/* TinyFPS, just a minimal fraps like font to show FPS during the demo and not just after.
+ * I'll be using it in my effects for my performance test purposes, just adding it here.
+ * Maybe it would be nice if initFpsFonts would be called in demo.c once but I avoided touching that code.
+ */
 
 /*
 1110 0010 1110 1110 1010 1110 1110 1110 1110 1110
@@ -123,7 +124,7 @@ void drawFps(unsigned short *vram)
 		startingFpsTime = time_msec;
 		nFrames = 0;
 	}
-	//drawDecimal(fps, 4, 4, 2, vram);
-	// Moving this on the lower left side of screen for now, since the lack of double buffering generates flickering for this atm
+	/*drawDecimal(fps, 4, 4, 2, vram);*/
+	/* Moving this on the lower left side of screen for now, since the lack of double buffering generates flickering for this atm */
 	drawDecimal(fps, 4, fb_height - 12, 2, vram);
 }

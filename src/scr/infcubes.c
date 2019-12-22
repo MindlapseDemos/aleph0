@@ -110,7 +110,7 @@ static void draw(void)
 		g3d_mult_matrix(sball_matrix);
 	}
 
-	memset(fb_pixels, 0, fb_width * fb_height * 2);
+	/*memset(fb_pixels, 0, fb_width * fb_height * 2);*/
 
 	g3d_polygon_mode(G3D_FLAT);
 	g3d_enable(G3D_TEXTURE_2D);

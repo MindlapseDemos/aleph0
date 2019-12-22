@@ -16,11 +16,12 @@ endif
 inc = -Isrc -Isrc/scr -Isrc/dos -Ilibs -Ilibs/imago/src -Ilibs/anim/src -Ilibs/mikmod/include
 opt = -O3 -ffast-math -fno-strict-aliasing
 dbg = -g
+#prof = -pg
 warn = -pedantic -Wall -Wno-unused-function -Wno-unused-variable
 
 CC = $(TOOLPREFIX)gcc
 AR = $(TOOLPREFIX)ar
-CFLAGS = $(warn) -march=pentium $(dbg) $(opt) $(inc)
+CFLAGS = $(warn) -march=pentium $(dbg) $(opt) $(prof) $(inc)
 LDFLAGS = libs/imago/imago.dja libs/anim/anim.dja libs/mikmod/dos/libmikmod.a
 
 ifneq ($(hostsys), dos)
@@ -29,7 +30,7 @@ all: data $(bin)
 endif
 
 $(bin): $(obj) imago anim mikmod
-	$(CC) -o $@ -Wl,-Map=ld.map $(obj) $(LDFLAGS)
+	$(CC) -o $@ -Wl,-Map=ld.map $(prof) $(obj) $(LDFLAGS)
 
 %.cof: %.asm
 	nasm -f coff -o $@ $<

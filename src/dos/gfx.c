@@ -65,7 +65,7 @@ void *set_video_mode(int xsz, int ysz, int bpp, int nbuf)
 	mode = -1;
 	nmodes = vbe_num_modes(&vbe);
 	for(i=0; i<nmodes; i++) {
-		if(vbe_mode_info(vbe.modes[i] | VBE_MODE_LFB, &minf) == -1) {
+		if(vbe_mode_info(vbe.modes[i], &minf) == -1) {
 			continue;
 		}
 		if(minf.xres != xsz || minf.yres != ysz) continue;

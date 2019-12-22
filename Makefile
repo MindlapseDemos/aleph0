@@ -1,63 +1,85 @@
-obj = 3dgfx.obj bsptree.obj bump.obj cfgopt.obj demo.obj djdpmi.obj dynarr.obj &
-fract.obj gfx.obj gfxutil.obj greets.obj grise.obj hairball.obj infcubes.obj &
-keyb.obj logger.obj main.obj mesh.obj meshload.obj metaball.obj metasurf.obj &
-mouse.obj music.obj noise.obj plasma.obj polyclip.obj polyfill.obj polytest.obj &
-rbtree.obj sball.obj screen.obj smoketxt.obj thunder.obj tilemaze.obj timer.obj &
-tinyfps.obj treestor.obj ts_text.obj tunnel.obj util.obj vbe.obj vga.obj
-
+src = $(wildcard src/*.c) $(wildcard src/scr/*.c) $(wildcard src/dos/*.c)
+asmsrc = $(wildcard src/*.asm) $(wildcard src/scr/*.asm) $(wildcard src/dos/*.asm)
+obj = $(src:.c=.odj) $(asmsrc:.asm=.odj)
+dep = $(obj:.odj=.dep)
 bin = demo.exe
 
-libs = imago.lib anim.lib
+asmsrc += cspr/dbgfont.asm cspr/confont.asm
 
-def = -dM_PI=3.141592653589793
-opt = -5 -fp5 -otexan -oh -oi -ei
-dbg = -d2
+ifeq ($(findstring COMMAND.COM, $(SHELL)), COMMAND.COM)
+	hostsys = dos
+else
+	hostsys = unix
+	TOOLPREFIX = i586-pc-msdosdjgpp-
+endif
 
-!ifdef __UNIX__
-incpath = -Isrc -Isrc/dos -Ilibs -Ilibs/imago/src -Ilibs/anim/src
-libpath = libpath libs/imago libpath libs/anim
-RM = rm -f
-!else
-incpath = -Isrc -Isrc\dos -Ilibs -Ilibs\imago\src -Ilibs\anim\src
-libpath = libpath libs\imago libpath libs\anim
-RM = del
-!endif
+inc = -Isrc -Isrc/scr -Isrc/dos -Ilibs -Ilibs/imago/src -Ilibs/anim/src
+opt = -O3 -ffast-math -fno-strict-aliasing
+dbg = -g
+#prof = -pg
+warn = -pedantic -Wall -Wno-unused-function -Wno-unused-variable
+def = -DNO_MUSIC
 
-AS = nasm
-CC = wcc386
-CXX = wpp386
-ASFLAGS = -fobj
-CFLAGS = $(dbg) $(opt) $(def) -zq -bt=dos $(incpath)
-CXXFLAGS = $(CFLAGS)
-LDFLAGS = option stack=16k option map $(libpath) library { $(libs) }
-LD = wlink
+CC = $(TOOLPREFIX)gcc
+AR = $(TOOLPREFIX)ar
+CFLAGS = $(warn) -march=pentium $(dbg) $(opt) $(prof) $(inc) $(def)
+LDFLAGS = libs/imago/imago.dja libs/anim/anim.dja
 
-$(bin): cflags.occ $(obj) libs/imago/imago.lib
-	%write objects.lnk $(obj)
-	%write ldflags.lnk $(LDFLAGS)
-	$(LD) debug all name $@ system dos4g file { @objects } @ldflags
+ifneq ($(hostsys), dos)
+.PHONY: all
+all: data $(bin)
+endif
 
-.c: src;src/dos;src/scr
-.cc: src;src/dos;src/scr
-.asm: src;src/dos;src/scr
+$(bin): $(obj) imago anim
+	$(CC) -o $@ -Wl,-Map=ld.map $(prof) $(obj) $(LDFLAGS)
 
-cflags.occ: Makefile
-	%write $@ $(CFLAGS)
+%.odj: %.asm
+	nasm -f coff -o $@ $<
 
-cxxflags.occ: Makefile
-	%write $@ $(CXXFLAGS)
+ifneq ($(hostsys), dos)
+-include $(dep)
+endif
 
-.c.obj: .autodepend
-	$(CC) -fo=$@ @cflags.occ $[*
+%.odj: %.c
+	$(CC) $(CFLAGS) -o $@ -c $<
 
-.cc.obj: .autodepend
-	$(CXX) -fo=$@ @cxxflags.occ $[*
+%.dep: %.c
+	@echo dep $@
+	@$(CPP) $(CFLAGS) $< -MM -MT $(@:.dep=.odj) >$@
 
-.asm.obj:
-	$(AS) $(ASFLAGS) -o $@ $[*.asm
+.PHONY: imago
+imago:
+	$(MAKE) -C libs/imago -f Makefile
 
-clean: .symbolic
-	$(RM) *.obj
-	$(RM) *.occ
-	$(RM) *.lnk
-	$(RM) $(bin)
+.PHONY: anim
+anim:
+	$(MAKE) -C libs/anim -f Makefile
+
+.PHONY: cleanlibs
+cleanlibs:
+	$(MAKE) -C libs/imago -f Makefile clean
+	$(MAKE) -C libs/anim -f Makefile clean
+
+.PHONY: clean
+.PHONY: cleandep
+
+ifeq ($(hostsys), dos)
+clean:
+	del src\*.odj
+	del src\dos\*.odj
+	del $(bin)
+
+cleandep:
+	del src\*.dep
+	del src\dos\*.dep
+else
+clean:
+	rm -f $(obj) $(bin)
+
+cleandep:
+	rm -f $(dep)
+
+.PHONY: data
+data:
+	@tools/procdata
+endif

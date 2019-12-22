@@ -34,7 +34,7 @@ data
 /dosdemo.vcxproj.user
 *.dep
 *.DEP
-*.cof
+*.odj
 *.COF
 *.dja
 *.DJA

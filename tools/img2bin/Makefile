@@ -4,7 +4,7 @@ bin = img2bin
 root = ../..
 
 CFLAGS = -pedantic -Wall -g -I$(root)/libs/imago/src
-LDFLAGS = -L$(root)/libs/imago -limago
+LDFLAGS = -L$(root)/libs/imago -limago -lm
 
 $(bin): $(obj)
 	$(CC) -o $@ $(obj) $(LDFLAGS)

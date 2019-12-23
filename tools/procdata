@@ -8,7 +8,7 @@ fi
 
 # process embedded images
 if [ ! -f tools/img2bin/img2bin ]; then
-	make -C tools/img2bin/img2bin || exit 1
+	make -C tools/img2bin || exit 1
 fi
 alias img2bin=tools/img2bin/img2bin
 

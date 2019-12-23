@@ -15,7 +15,7 @@ LDFLAGS = $(arch) -Llibs/imago -Llibs/mikmod -limago -lmikmod $(sdl_ldflags) -lm
 
 ifneq ($(shell uname -m), i386)
 	arch = -m32
-	sdl_ldflags = -L/usr/lib/i386-linux-gnu -lSDL
+	sdl_ldflags = -L/usr/lib/i386-linux-gnu -lSDL-1.2
 else
 	sdl_ldflags = `sdl-config --libs`
 endif

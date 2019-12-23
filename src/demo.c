@@ -30,6 +30,9 @@ float sball_matrix[] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
 static unsigned long nframes;
 static int con_active;
 
+extern uint16_t loading_pixels[];	/* data.asm */
+
+
 int demo_init(int argc, char **argv)
 {
 	struct screen *scr;
@@ -44,6 +47,12 @@ int demo_init(int argc, char **argv)
 	if(parse_args(argc, argv) == -1) {
 		return -1;
 	}
+
+	/* reuse the loading image as our back buffer.
+	 * adjust fb_pixels to leave 4 pixels guard band top/bottom. We have enough
+	 * space since the loading image is 8 pixels taller.
+	 */
+	fb_pixels = loading_pixels + 320 * 4;
 
 	con_init();
 	initFpsFonts();

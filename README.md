@@ -129,3 +129,21 @@ U-only pairable instructions:
  - adc, sbb
  - shr, sar, shl, sal with immediate
  - ror, rol, rcr, rcl with immediate=1
+
+Notes about DJGPP & CWSDPMI
+---------------------------
+Can't use the `hlt` instruction for waiting for interrupts, because we're
+running in ring3 by default. I surrounded all the `hlt` instructions with a
+`USE_HLT` conditional, which is undefined when building with DJGPP.
+
+It's possible to arrange for our code to run on ring0 by changing the DPMI
+provider from `cwsdpmi.exe` to `cwsdpr0.exe` by running:
+`stubedit demo.exe dpmi=cwsdpr0.exe`, but I haven't tested under win9x to see if
+it still works if we do that.
+
+Our fucking segments don't start at 0 ... to access arbitrary parts of physical
+memory we need to call `__djgpp_nearptr_enable()` and use the following macros I
+defined in `cdpmi.h`:
+
+    #define virt_to_phys(v)	((v) + __djgpp_base_address)
+    #define phys_to_virt(p)	((p) - __djgpp_base_address)

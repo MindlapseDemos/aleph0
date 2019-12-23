@@ -51,12 +51,17 @@ int main(int argc, char **argv)
 		set_mouse(fb_width / 2, fb_height / 2);
 	}
 
+	/* now start_loadscr sets up fb_pixels to the space used by the loading image,
+	 * so no need to allocate another framebuffer
+	 */
+#if 0
 	/* allocate a couple extra rows as a guard band, until we fucking fix the rasterizer */
 	if(!(fb_pixels = malloc(fbsize + (fb_width * fb_bpp / 8) * 2))) {
 		fprintf(stderr, "failed to allocate backbuffer\n");
 		return 1;
 	}
 	fb_pixels += fb_width;
+#endif
 
 	if(!(vmem = set_video_mode(fb_width, fb_height, fb_bpp, 1))) {
 		return 1;

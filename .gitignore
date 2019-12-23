@@ -40,3 +40,4 @@ data
 *.DJA
 tools/csprite/csprite
 cspr/
+tools/img2bin/img2bin

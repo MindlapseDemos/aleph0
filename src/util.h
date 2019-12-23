@@ -49,6 +49,9 @@ void perf_end(void);
 
 void debug_break(void);
 #pragma aux debug_break = "int 3";
+
+void halt(void);
+#pragma aux halt = "hlt";
 #endif
 
 #ifdef __GNUC__
@@ -72,6 +75,9 @@ void debug_break(void);
 
 #define debug_break() \
 	asm volatile ("int $3")
+
+#define halt() \
+	asm volatile("hlt")
 #endif
 
 #ifdef _MSC_VER

@@ -95,9 +95,9 @@ static int init(void)
 
 			float mindist = FLT_MAX;
 			for(j=0; j<numpt; j++) {
-				float dx = pos.x - spawnpos[i].x;
-				float dy = pos.y - spawnpos[i].y;
-				float dz = pos.z - spawnpos[i].z;
+				float dx = pos.x - spawnpos[j].x;
+				float dy = pos.y - spawnpos[j].y;
+				float dz = pos.z - spawnpos[j].z;
 				float dsq = dx * dx + dy * dy + dz * dz;
 				if(dsq < mindist) {
 					mindist = dsq;

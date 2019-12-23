@@ -6,18 +6,30 @@ if [ ! -f tools/procdata ]; then
 	exit 1
 fi
 
+# process embedded images
+if [ ! -f tools/img2bin/img2bin ]; then
+	make -C tools/img2bin/img2bin || exit 1
+fi
+alias img2bin=tools/img2bin/img2bin
+
+mkdir -p data
+if [ ! -f data/loading.img -o data/loading.png -nt data/loading.img ]; then
+	echo 'img2bin: loading'
+	img2bin data/loading.png || exit 1
+fi
+
+# process compiled sprites
 if [ ! -f tools/csprite/csprite ]; then
 	make -C tools/csprite || exit 1
 fi
-
 alias csprite=tools/csprite/csprite
 
 mkdir -p cspr
 if [ ! -f cspr/dbgfont.asm -o data/legible.fnt -nt cspr/dbgfont.asm ]; then
 	echo 'csprite: dbgfont'
-	csprite -n cs_dbgfont -s 8x16 -conv565 -nasm -xor data/legible.fnt >cspr/dbgfont.asm
+	csprite -n cs_dbgfont -s 8x16 -conv565 -nasm -xor data/legible.fnt >cspr/dbgfont.asm || exit 1
 fi
 if [ ! -f cspr/confont.asm -o data/console.fnt -nt cspr/confont.asm ]; then
 	echo 'csprite: confont'
-	csprite -n cs_confont -s 6x7 -pad 1 -conv565 -nasm data/console.fnt >cspr/confont.asm
+	csprite -n cs_confont -s 6x7 -pad 1 -conv565 -nasm data/console.fnt >cspr/confont.asm || exit 1
 fi

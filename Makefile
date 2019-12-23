@@ -5,6 +5,7 @@ dep = $(obj:.odj=.dep)
 bin = demo.exe
 
 asmsrc += cspr/dbgfont.asm cspr/confont.asm
+bindata = data/loading.img
 
 ifeq ($(findstring COMMAND.COM, $(SHELL)), COMMAND.COM)
 	hostsys = dos
@@ -35,6 +36,8 @@ $(bin): $(obj) imago anim
 
 %.odj: %.asm
 	nasm -f coff -o $@ $<
+
+src/data.odj: src/data.asm $(bindata)
 
 ifneq ($(hostsys), dos)
 -include $(dep)

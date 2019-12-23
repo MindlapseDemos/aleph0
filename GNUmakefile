@@ -1,9 +1,11 @@
 src = $(wildcard src/*.c) $(wildcard src/scr/*.c) $(wildcard src/sdl/*.c)
+asmsrc = $(wildcard src/*.asm)
 obj = $(src:.c=.o) $(asmsrc:.asm=.o)
 dep = $(obj:.o=.d)
 bin = demo
 
 asmsrc += cspr/dbgfont.asm cspr/confont.asm
+bindata = data/loading.img
 
 inc = -I/usr/local/include -Isrc -Isrc/scr -Isrc/sdl -Ilibs -Ilibs/imago/src -Ilibs/mikmod/include
 warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function
@@ -26,6 +28,8 @@ $(bin): $(obj) imago mikmod
 
 %.o: %.asm
 	nasm -f elf -o $@ $<
+
+src/data.o: src/data.asm $(bindata)
 
 -include $(dep)
 

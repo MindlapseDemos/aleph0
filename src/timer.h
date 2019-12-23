@@ -13,6 +13,8 @@ void init_timer(int res_hz);
 void reset_timer(void);
 unsigned long get_msec(void);
 
+void sleep_msec(unsigned long msec);
+
 #ifdef __cplusplus
 }
 #endif

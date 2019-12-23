@@ -28,4 +28,7 @@ void blur_grey_vert(uint16_t *dest, uint16_t *src, int xsz, int ysz, int radius,
 
 void convimg_rgb24_rgb16(uint16_t *dest, unsigned char *src, int xsz, int ysz);
 
+void blitfb(uint16_t *dest, uint16_t *src, int xsz, int ysz, int pitch_pix);
+void blitfb_key(uint16_t *dest, uint16_t *src, int xsz, int ysz, int pitch_pix, uint16_t key);
+
 #endif	/* GFXUTIL_H_ */

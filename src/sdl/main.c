@@ -33,9 +33,8 @@ static quat_t rot = {0, 0, 0, 1};
 
 int main(int argc, char **argv)
 {
-	int s, i, j;
+	int s;
 	char *env;
-	unsigned short *sptr, *dptr;
 
 	if((env = getenv("FBSCALE")) && (s = atoi(env))) {
 		fbscale = s;
@@ -45,17 +44,21 @@ int main(int argc, char **argv)
 	xsz = fb_width * fbscale;
 	ysz = fb_height * fbscale;
 
+	/* now start_loadscr sets up fb_pixels to the space used by the loading image,
+	 * so no need to allocate another framebuffer
+	 */
+#if 0
 	/* allocate 1 extra row as a guard band, until we fucking fix the rasterizer */
 	if(!(fb_pixels = malloc(fb_width * (fb_height + 1) * fb_bpp / CHAR_BIT))) {
 		fprintf(stderr, "failed to allocate virtual framebuffer\n");
 		return 1;
 	}
-	vmem = fb_pixels;
+#endif
 
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_NOPARACHUTE);
 	if(!(fbsurf = SDL_SetVideoMode(xsz, ysz, fb_bpp, sdl_flags))) {
 		fprintf(stderr, "failed to set video mode %dx%d %dbpp\n", fb_width, fb_height, fb_bpp);
-		free(fb_pixels);
+		/*free(fb_pixels);*/
 		SDL_Quit();
 		return 1;
 	}
@@ -64,10 +67,11 @@ int main(int argc, char **argv)
 
 	time_msec = 0;
 	if(demo_init(argc, argv) == -1) {
-		free(fb_pixels);
+		/*free(fb_pixels);*/
 		SDL_Quit();
 		return 1;
 	}
+	vmem = fb_pixels;
 
 	if(opt.sball && sball_init() == 0) {
 		use_sball = 1;
@@ -93,32 +97,6 @@ int main(int argc, char **argv)
 
 		time_msec = get_msec();
 		demo_draw();
-
-		if(SDL_MUSTLOCK(fbsurf)) {
-			SDL_LockSurface(fbsurf);
-		}
-
-		sptr = fb_pixels;
-		dptr = (unsigned short*)fbsurf->pixels + (fbsurf->w - xsz) / 2;
-		for(i=0; i<fb_height; i++) {
-			for(j=0; j<fb_width; j++) {
-				int x, y;
-				unsigned short pixel = *sptr++;
-
-				for(y=0; y<fbscale; y++) {
-					for(x=0; x<fbscale; x++) {
-						dptr[y * fbsurf->w + x] = pixel;
-					}
-				}
-				dptr += fbscale;
-			}
-			dptr += (fbsurf->w - fb_width) * fbscale;
-		}
-
-		if(SDL_MUSTLOCK(fbsurf)) {
-			SDL_UnlockSurface(fbsurf);
-		}
-		SDL_Flip(fbsurf);
 	}
 
 break_evloop:
@@ -141,12 +119,40 @@ void wait_vsync(void)
 
 void swap_buffers(void *pixels)
 {
+	int i, j;
+	unsigned short *sptr, *dptr;
+
 	demo_post_draw(pixels ? pixels : fb_pixels);
 
-	/* do nothing, all pointers point to the same buffer */
 	if(opt.vsync) {
 		wait_vsync();
 	}
+
+	if(SDL_MUSTLOCK(fbsurf)) {
+		SDL_LockSurface(fbsurf);
+	}
+
+	sptr = fb_pixels;
+	dptr = (unsigned short*)fbsurf->pixels + (fbsurf->w - xsz) / 2;
+	for(i=0; i<fb_height; i++) {
+		for(j=0; j<fb_width; j++) {
+			int x, y;
+			unsigned short pixel = *sptr++;
+
+			for(y=0; y<fbscale; y++) {
+				for(x=0; x<fbscale; x++) {
+					dptr[y * fbsurf->w + x] = pixel;
+				}
+			}
+			dptr += fbscale;
+		}
+		dptr += (fbsurf->w - fb_width) * fbscale;
+	}
+
+	if(SDL_MUSTLOCK(fbsurf)) {
+		SDL_UnlockSurface(fbsurf);
+	}
+	SDL_Flip(fbsurf);
 }
 
 static int bnmask(int sdlbn)

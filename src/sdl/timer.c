@@ -16,3 +16,8 @@ unsigned long get_msec(void)
 {
 	return SDL_GetTicks() - start_time;
 }
+
+void sleep_msec(unsigned long msec)
+{
+	SDL_Delay(msec);
+}

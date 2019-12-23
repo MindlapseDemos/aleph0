@@ -161,10 +161,12 @@ void kb_wait(void)
 {
 	int key;
 	while((key = kb_getkey()) == -1) {
+#ifdef USE_HLT
 		/* put the processor to sleep while waiting for keypresses, but first
 		 * make sure interrupts are enabled, or we'll sleep forever
 		 */
 		halt();
+#endif
 	}
 	kb_putback(key);
 }

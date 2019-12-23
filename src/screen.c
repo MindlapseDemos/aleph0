@@ -4,6 +4,8 @@
 #include <assert.h>
 #include "screen.h"
 #include "demo.h"
+#include "gfxutil.h"
+#include "timer.h"
 
 #define DBG_SCRCHG \
 	do { \
@@ -24,6 +26,10 @@ struct screen *greets_screen(void);
 struct screen *infcubes_screen(void);
 struct screen *hairball_screen(void);
 
+void start_loadscr(void);
+void end_loadscr(void);
+void loadscr(int n, int count);
+
 #define NUM_SCR 32
 static struct screen *scr[NUM_SCR];
 static int num_screens;
@@ -34,6 +40,8 @@ static long trans_start, trans_dur;
 int scr_init(void)
 {
 	int i, idx = 0;
+
+	start_loadscr();
 
 	if(!(scr[idx++] = tunnel_screen())) {
 		return -1;
@@ -73,10 +81,13 @@ int scr_init(void)
 	assert(num_screens <= NUM_SCR);
 
 	for(i=0; i<num_screens; i++) {
+		loadscr(i, num_screens);
 		if(scr[i]->init() == -1) {
 			return -1;
 		}
 	}
+
+	end_loadscr();
 	return 0;
 }
 
@@ -168,4 +179,50 @@ int scr_change(struct screen *s, long trans_time)
 		DBG_SCRCHG;
 	}
 	return 0;
+}
+
+/* loading screen */
+extern uint16_t loading_pixels[];
+
+void start_loadscr(void)
+{
+	swap_buffers(loading_pixels);
+}
+
+#define SPLAT_X 288
+#define SPLAT_Y 104
+
+#define FING_X	217
+#define FING_LAST_X	291
+#define FING_Y	151
+#define FING_W	7
+#define FING_H	8
+
+void end_loadscr(void)
+{
+	blitfb(loading_pixels + SPLAT_Y * 320 + SPLAT_X, loading_pixels + 320 * 240, 32, 72, 32);
+	blitfb_key(loading_pixels + FING_Y * 320 + FING_LAST_X, loading_pixels + 247 * 320 + 64,
+			FING_W, FING_H, FING_W, 0);
+	swap_buffers(loading_pixels);
+	sleep_msec(300);
+}
+
+void loadscr(int n, int count)
+{
+	int xoffs = 75 * n / (count - 1);
+	static int prev_xoffs;
+	uint16_t *sptr, *dptr;
+
+	sptr = loading_pixels + 247 * 320 + 64;
+	dptr = loading_pixels + FING_Y * 320 + FING_X + prev_xoffs;
+
+	while(prev_xoffs < xoffs) {
+		blitfb_key(dptr, sptr, FING_W, FING_H, FING_W, 0);
+		dptr++;
+		prev_xoffs++;
+	}
+
+	swap_buffers(loading_pixels);
+
+	/*sleep_msec(200);*/
 }

@@ -9,7 +9,7 @@ bin = demo.exe
 
 libs = imago.lib anim.lib
 
-def = -dM_PI=3.141592653589793
+def = -dM_PI=3.141592653589793 -dUSE_HLT
 opt = -5 -fp5 -otexan -oh -oi -ei
 dbg = -d2
 

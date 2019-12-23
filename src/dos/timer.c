@@ -16,6 +16,7 @@
 
 #include "pit8254.h"
 #include "inttypes.h"
+#include "util.h"
 
 #define PIT_TIMER_INTR	8
 #define DOS_TIMER_INTR	0x1c
@@ -45,7 +46,7 @@ static _go32_dpmi_seginfo intr, prev_intr;
 
 static void INTERRUPT timer_irq();
 
-static unsigned long ticks;
+static volatile unsigned long ticks;
 static unsigned long tick_interval, ticks_per_dos_intr;
 static int inum;
 
@@ -121,6 +122,16 @@ void reset_timer(void)
 unsigned long get_msec(void)
 {
 	return ticks * tick_interval;
+}
+
+void sleep_msec(unsigned long msec)
+{
+	unsigned long wakeup_time = ticks + msec / tick_interval;
+	while(ticks < wakeup_time) {
+#ifdef USE_HLT
+		halt();
+#endif
+	}
 }
 
 static void set_timer_reload(int reload_val)

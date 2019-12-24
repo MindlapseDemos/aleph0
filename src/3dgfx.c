@@ -23,7 +23,20 @@ typedef float g3d_matrix[16];
 
 #define IMM_VBUF_SIZE	256
 
+#define NORMALIZE(v) \
+	do { \
+		float len = sqrt((v)[0] * (v)[0] + (v)[1] * (v)[1] + (v)[2] * (v)[2]); \
+		if(len != 0.0) { \
+			float s = 1.0 / len; \
+			(v)[0] *= s; \
+			(v)[1] *= s; \
+			(v)[2] *= s; \
+		} \
+	} while(0)
+
+enum {LT_POS, LT_DIR};
 struct light {
+	int type;
 	float x, y, z;
 	float r, g, b;
 };
@@ -336,11 +349,30 @@ void g3d_light_pos(int idx, float x, float y, float z)
 {
 	int mvtop = st->mtop[G3D_MODELVIEW];
 
+	st->lt[idx].type = LT_POS;
 	st->lt[idx].x = x;
 	st->lt[idx].y = y;
 	st->lt[idx].z = z;
 
 	xform4_vec3(st->mat[G3D_MODELVIEW][mvtop], &st->lt[idx].x);
+}
+
+void g3d_light_dir(int idx, float x, float y, float z)
+{
+	int mvtop = st->mtop[G3D_MODELVIEW];
+
+	st->lt[idx].type = LT_DIR;
+	st->lt[idx].x = x;
+	st->lt[idx].y = y;
+	st->lt[idx].z = z;
+
+	/* calc the normal matrix */
+	memcpy(st->norm_mat, st->mat[G3D_MODELVIEW][mvtop], 16 * sizeof(float));
+	st->norm_mat[12] = st->norm_mat[13] = st->norm_mat[14] = 0.0f;
+
+	xform4_vec3(st->norm_mat, &st->lt[idx].x);
+
+	NORMALIZE(&st->lt[idx].x);
 }
 
 void g3d_light_color(int idx, float r, float g, float b)
@@ -653,17 +685,6 @@ static __inline void xform3_vec3(const float *mat, float *vec)
 	vec[0] = x;
 }
 
-#define NORMALIZE(v) \
-	do { \
-		float len = sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]); \
-		if(len != 0.0) { \
-			float s = 1.0 / len; \
-			v[0] *= s; \
-			v[1] *= s; \
-			v[2] *= s; \
-		} \
-	} while(0)
-
 static void shade(struct g3d_vertex *v)
 {
 	int i, r, g, b;
@@ -681,10 +702,16 @@ static void shade(struct g3d_vertex *v)
 			continue;
 		}
 
-		ldir[0] = st->lt[i].x - v->x;
-		ldir[1] = st->lt[i].y - v->y;
-		ldir[2] = st->lt[i].z - v->z;
-		NORMALIZE(ldir);
+		ldir[0] = st->lt[i].x;
+		ldir[1] = st->lt[i].y;
+		ldir[2] = st->lt[i].z;
+
+		if(st->lt[i].type != LT_DIR) {
+			ldir[0] -= v->x;
+			ldir[1] -= v->y;
+			ldir[2] -= v->z;
+			NORMALIZE(ldir);
+		}
 
 		if((ndotl = v->nx * ldir[0] + v->ny * ldir[1] + v->nz * ldir[2]) < 0.0f) {
 			ndotl = 0.0f;
@@ -693,6 +720,22 @@ static void shade(struct g3d_vertex *v)
 		color[0] += st->mtl.kd[0] * st->lt[i].r * ndotl;
 		color[1] += st->mtl.kd[1] * st->lt[i].g * ndotl;
 		color[2] += st->mtl.kd[2] * st->lt[i].b * ndotl;
+
+		/*
+		if(st->opt & G3D_SPECULAR) {
+			float ndoth;
+			ldir[2] += 1.0f;
+			NORMALIZE(ldir);
+			if((ndoth = v->nx * ldir[0] + v->ny * ldir[1] + v->nz * ldir[2]) < 0.0f) {
+				ndoth = 0.0f;
+			}
+			ndoth = pow(ndoth, st->mtl.shin);
+
+			color[0] += st->mtl.ks[0] * st->lt[i].r * ndoth;
+			color[1] += st->mtl.ks[1] * st->lt[i].g * ndoth;
+			color[2] += st->mtl.ks[2] * st->lt[i].b * ndoth;
+		}
+		*/
 	}
 
 	r = cround64(color[0] * 255.0);

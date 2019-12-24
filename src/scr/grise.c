@@ -38,7 +38,7 @@ static void updatePropeller(float t);
 #define MAX_DISPLACEMENT 16
 
 #define MIN_SCROLL PIXEL_PADDING
-#define MAX_SCROLL (backgroundW - fb_width - MIN_SCROLL)
+#define MAX_SCROLL (backgroundW - FB_WIDTH - MIN_SCROLL)
 
 #define FAR_SCROLL_SPEED 15.0f
 #define NEAR_SCROLL_SPEED 120.0f
@@ -149,7 +149,7 @@ static void start(long trans_time)
 
 static void draw(void)
 {
-	int scroll = MIN_SCROLL + (MAX_SCROLL - MIN_SCROLL) * mouse_x / fb_width;
+	int scroll = MIN_SCROLL + (MAX_SCROLL - MIN_SCROLL) * mouse_x / FB_WIDTH;
 	unsigned short *dst = backBuffer + PIXEL_PADDING;
 	unsigned short *src = background + scroll;
 	int scanline = 0;
@@ -168,7 +168,7 @@ static void draw(void)
 
 	/* First, render the horizon */
 	for (scanline = 0; scanline < HORIZON_HEIGHT; scanline++) {
-		memcpy(dst, src, fb_width * 2);
+		memcpy(dst, src, FB_WIDTH * 2);
 		src += backgroundW;
 		dst += BB_SIZE;
 	}
@@ -182,13 +182,13 @@ static void draw(void)
 	src -= PIXEL_PADDING; /* We want to also fill the PADDING pixels here */
 	dst = backBuffer + (HORIZON_HEIGHT + 1) * BB_SIZE;
 	for (scanline = 0; scanline < REFLECTION_HEIGHT; scanline++) {
-		memcpy(dst, src, (fb_width + PIXEL_PADDING) * 2);
+		memcpy(dst, src, (FB_WIDTH + PIXEL_PADDING) * 2);
 		src += backgroundW;
 		dst += BB_SIZE;
 	}
 
 	/* Blit reflections first, to be  displaced */
-	for (i = 0; i < 5; i++) rleBlitScaleInv(backBuffer + PIXEL_PADDING, fb_width, fb_height, BB_SIZE, rlePropeller, 134 + (i-3) * 60, 200, 1.0f, 1.8f);
+	for (i = 0; i < 5; i++) rleBlitScaleInv(backBuffer + PIXEL_PADDING, FB_WIDTH, FB_HEIGHT, BB_SIZE, rlePropeller, 134 + (i-3) * 60, 200, 1.0f, 1.8f);
 
 	/* Perform displacement */
 	dst = backBuffer + HORIZON_HEIGHT * BB_SIZE + PIXEL_PADDING;
@@ -200,7 +200,7 @@ static void draw(void)
 		sc = scrollTableRounded[scanline];
 		accum = 0;
 
-		for (i = 0; i < fb_width; i++) {
+		for (i = 0; i < FB_WIDTH; i++) {
 			/* Try to immitate modulo without the division */
 			if (i == md) accum += md;
 			scrolledIndex = i - accum + sc;
@@ -211,20 +211,20 @@ static void draw(void)
 			*dst++ = src[i + d];
 		}
 		src += backgroundW;
-		dst += BB_SIZE - fb_width;
+		dst += BB_SIZE - FB_WIDTH;
 		dispScanline += backgroundW;
 	}
 
 	/* Then after displacement, blit the objects */
-	for (i = 0; i < 5; i++) rleBlit(backBuffer + PIXEL_PADDING, fb_width, fb_height, BB_SIZE, rlePropeller, 134 + (i-3) * 60, 100);
+	for (i = 0; i < 5; i++) rleBlit(backBuffer + PIXEL_PADDING, FB_WIDTH, FB_HEIGHT, BB_SIZE, rlePropeller, 134 + (i-3) * 60, 100);
 
 	/* Blit effect to framebuffer */
 	src = backBuffer + PIXEL_PADDING;
 	dst = fb_pixels;
-	for (scanline = 0; scanline < fb_height; scanline++) {
-		memcpy(dst, src, fb_width * 2);
+	for (scanline = 0; scanline < FB_HEIGHT; scanline++) {
+		memcpy(dst, src, FB_WIDTH * 2);
 		src += BB_SIZE;
-		dst += fb_width;
+		dst += FB_WIDTH;
 	}
 
 	swap_buffers(0);

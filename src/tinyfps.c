@@ -71,7 +71,7 @@ static void drawFont(unsigned char decimal, int posX, int posY, unsigned char zo
 
     unsigned short *fontData = (unsigned short*)&miniDecimalFonts[decimal * FPS_FONT_WIDTH * FPS_FONT_HEIGHT];
 
-	vram += posY * fb_width + posX;
+	vram += posY * FB_WIDTH + posX;
 
 	if (zoom < 1) zoom = 1;
 	if (zoom > 4) zoom = 4;
@@ -88,13 +88,13 @@ static void drawFont(unsigned char decimal, int posX, int posY, unsigned char zo
                 {
                     for (k=0; k<zoom; k++)
                     {
-                        *(vram + j * fb_width + k) ^= c;
+                        *(vram + j * FB_WIDTH + k) ^= c;
                     }
                 }
             }
             vram += zoom;
         }
-        vram += (-FPS_FONT_WIDTH * zoom + fb_width * zoom);
+        vram += (-FPS_FONT_WIDTH * zoom + FB_WIDTH * zoom);
     }
 }
 
@@ -126,5 +126,5 @@ void drawFps(unsigned short *vram)
 	}
 	/*drawDecimal(fps, 4, 4, 2, vram);*/
 	/* Moving this on the lower left side of screen for now, since the lack of double buffering generates flickering for this atm */
-	drawDecimal(fps, 4, fb_height - 12, 2, vram);
+	drawDecimal(fps, 4, FB_HEIGHT - 12, 2, vram);
 }

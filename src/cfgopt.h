@@ -4,7 +4,7 @@
 struct options {
 	const char *start_scr;
 	int music;
-	int sball;
+	int mouse, sball;
 	int vsync;
 	int dbginfo;
 };

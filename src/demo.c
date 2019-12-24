@@ -14,18 +14,26 @@
 #include "tinyfps.h"
 #include "util.h"
 
+#define MOUSE_TIMEOUT	1200
+
+/*
 #define FB_WIDTH	320
 #define FB_HEIGHT	240
 
 int fb_width = FB_WIDTH;
 int fb_height = FB_HEIGHT;
 int fb_bpp = 16;
+*/
 uint16_t *fb_pixels, *vmem;
 unsigned long time_msec;
 int mouse_x, mouse_y;
 unsigned int mouse_bmask;
 
 float sball_matrix[] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+
+static unsigned long last_mouse_move;
+static int prev_mx, prev_my, mouse_dx, mouse_dy;
+static unsigned int bmask_diff, prev_bmask;
 
 static unsigned long nframes;
 static int con_active;
@@ -60,7 +68,7 @@ int demo_init(int argc, char **argv)
 	if(g3d_init() == -1) {
 		return -1;
 	}
-	g3d_framebuffer(fb_width, fb_height, fb_pixels);
+	g3d_framebuffer(FB_WIDTH, FB_HEIGHT, fb_pixels);
 
 	if(opt.music) {
 		if(music_open("data/test.mod") == -1) {
@@ -83,7 +91,7 @@ int demo_init(int argc, char **argv)
 	}
 
 	/* clear the framebuffer at least once */
-	memset(fb_pixels, 0, fb_width * fb_height * fb_bpp / CHAR_BIT);
+	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * FB_BPP / CHAR_BIT);
 
 	if(opt.music) {
 		music_play();
@@ -107,6 +115,18 @@ void demo_cleanup(void)
 
 void demo_draw(void)
 {
+	if(opt.mouse) {
+		mouse_dx = mouse_x - prev_mx;
+		mouse_dy = mouse_y - prev_my;
+		prev_mx = mouse_x;
+		prev_my = mouse_y;
+		bmask_diff = mouse_bmask ^ prev_bmask;
+		prev_bmask = mouse_bmask;
+		if(mouse_dx | mouse_dy) {
+			last_mouse_move = time_msec;
+		}
+	}
+
 	if(opt.music) {
 		music_update();
 	}
@@ -119,6 +139,7 @@ void demo_draw(void)
 /* called by swap_buffers just before the actual swap */
 void demo_post_draw(void *pixels)
 {
+	char buf[32];
 	if(opt.dbginfo) {
 		drawFps(pixels);
 		if(dbg_curscr_name) {
@@ -130,61 +151,8 @@ void demo_post_draw(void *pixels)
 		con_draw(pixels);
 	}
 
-	draw_mouse_pointer(pixels);
-}
-
-#define DEST(x, y)	dest[(y) * FB_WIDTH + (x)]
-void draw_mouse_pointer(uint16_t *fb)
-{
-	uint16_t *dest = fb + mouse_y * FB_WIDTH + mouse_x;
-	int ylines = FB_HEIGHT - mouse_y;
-
-	switch(ylines) {
-	default:
-	case 10:
-		DEST(0, 9) = 0xffff;
-	case 9:
-		DEST(0, 8) = 0xffff;
-		DEST(1, 8) = 0xffff;
-	case 8:
-		DEST(0, 7) = 0xffff;
-		DEST(2, 7) = 0xffff;
-		DEST(1, 7) = 0;
-	case 7:
-		DEST(6, 6) = 0xffff;
-		DEST(0, 6) = 0xffff;
-		DEST(3, 6) = 0xffff;
-		DEST(4, 6) = 0xffff;
-		DEST(5, 6) = 0xffff;
-		DEST(1, 6) = 0;
-		DEST(2, 6) = 0;
-	case 6:
-		DEST(5, 5) = 0xffff;
-		DEST(0, 5) = 0xffff;
-		DEST(1, 5) = 0;
-		DEST(2, 5) = 0;
-		DEST(3, 5) = 0;
-		DEST(4, 5) = 0;
-	case 5:
-		DEST(4, 4) = 0xffff;
-		DEST(0, 4) = 0xffff;
-		DEST(1, 4) = 0;
-		DEST(2, 4) = 0;
-		DEST(3, 4) = 0;
-	case 4:
-		DEST(3, 3) = 0xffff;
-		DEST(0, 3) = 0xffff;
-		DEST(1, 3) = 0;
-		DEST(2, 3) = 0;
-	case 3:
-		DEST(2, 2) = 0xffff;
-		DEST(0, 2) = 0xffff;
-		DEST(1, 2) = 0;
-	case 2:
-		DEST(1, 1) = 0xffff;
-		DEST(0, 1) = 0xffff;
-	case 1:
-		DEST(0, 0) = 0xffff;
+	if(opt.mouse && time_msec - last_mouse_move < MOUSE_TIMEOUT) {
+		cs_mouseptr(pixels, mouse_x, mouse_y);
 	}
 }
 
@@ -263,34 +231,25 @@ void demo_keyboard(int key, int press)
 
 void mouse_orbit_update(float *theta, float *phi, float *dist)
 {
-	static int prev_mx, prev_my;
-	static unsigned int prev_bmask;
-
 	if(mouse_bmask) {
-		if((mouse_bmask ^ prev_bmask) == 0) {
-			int dx = mouse_x - prev_mx;
-			int dy = mouse_y - prev_my;
+		if(bmask_diff == 0) {
 
-			if(dx || dy) {
+			if(mouse_dx | mouse_dy) {
 				if(mouse_bmask & MOUSE_BN_LEFT) {
 					float p = *phi;
-					*theta += dx * 1.0;
-					p += dy * 1.0;
+					*theta += mouse_dx * 1.0;
+					p += mouse_dy * 1.0;
 
 					if(p < -90) p = -90;
 					if(p > 90) p = 90;
 					*phi = p;
 				}
 				if(mouse_bmask & MOUSE_BN_RIGHT) {
-					*dist += dy * 0.5;
+					*dist += mouse_dy * 0.5;
 
 					if(*dist < 0) *dist = 0;
 				}
 			}
 		}
 	}
-
-	prev_mx = mouse_x;
-	prev_my = mouse_y;
-	prev_bmask = mouse_bmask;
 }

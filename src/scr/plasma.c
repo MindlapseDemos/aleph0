@@ -92,11 +92,11 @@ static void draw(void)
 
 	unsigned int *vram32 = (unsigned int*)fb_pixels;
 	unsigned int p0, p1;
-	for (y = 0; y < fb_height; y++)
+	for (y = 0; y < FB_HEIGHT; y++)
 	{
 		s1 = psin2[y + t2];
 		s2 = psin3[y + t1];
-		for (x = 0; x < fb_width; x+=2)
+		for (x = 0; x < FB_WIDTH; x+=2)
 		{
 			c = psin1[x + t1] + s1 + psin3[x + y + t3] + psin1[psin2[x + t2] + s2 + t3];
 			p0 = plasmaPal[c];

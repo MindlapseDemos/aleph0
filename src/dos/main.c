@@ -23,7 +23,6 @@ static int handle_sball_event(sball_event *ev);
 static void recalc_sball_matrix(float *xform);
 
 static int quit;
-static int use_mouse;
 static long fbsize;
 
 static int use_sball;
@@ -36,7 +35,7 @@ int main(int argc, char **argv)
 	__djgpp_nearptr_enable();
 #endif
 
-	fbsize = fb_width * fb_height * fb_bpp / 8;
+	fbsize = FB_WIDTH * FB_HEIGHT * FB_BPP / 8;
 
 	init_logger("demo.log");
 
@@ -45,26 +44,28 @@ int main(int argc, char **argv)
 	kb_init(32);
 #endif
 
-	if((use_mouse = have_mouse())) {
-		printf("initializing mouse input\n");
-		set_mouse_limits(0, 0, fb_width, fb_height);
-		set_mouse(fb_width / 2, fb_height / 2);
-	}
-
 	/* now start_loadscr sets up fb_pixels to the space used by the loading image,
 	 * so no need to allocate another framebuffer
 	 */
 #if 0
 	/* allocate a couple extra rows as a guard band, until we fucking fix the rasterizer */
-	if(!(fb_pixels = malloc(fbsize + (fb_width * fb_bpp / 8) * 2))) {
+	if(!(fb_pixels = malloc(fbsize + (FB_WIDTH * FB_BPP / 8) * 2))) {
 		fprintf(stderr, "failed to allocate backbuffer\n");
 		return 1;
 	}
-	fb_pixels += fb_width;
+	fb_pixels += FB_WIDTH;
 #endif
 
-	if(!(vmem = set_video_mode(fb_width, fb_height, fb_bpp, 1))) {
+	if(!(vmem = set_video_mode(FB_WIDTH, FB_HEIGHT, FB_BPP, 1))) {
 		return 1;
+	}
+
+	if(opt.mouse) {
+		if((opt.mouse = have_mouse())) {
+			printf("initializing mouse input\n");
+			set_mouse_limits(0, 0, FB_WIDTH - 1, FB_HEIGHT - 1);
+			set_mouse(FB_WIDTH / 2, FB_HEIGHT / 2);
+		}
 	}
 
 	if(demo_init(argc, argv) == -1) {
@@ -91,7 +92,7 @@ int main(int argc, char **argv)
 #endif
 		if(quit) goto break_evloop;
 
-		if(use_mouse) {
+		if(opt.mouse) {
 			mouse_bmask = read_mouse(&mouse_x, &mouse_y);
 		}
 		if(use_sball && sball_pending()) {

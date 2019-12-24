@@ -127,7 +127,7 @@ static void draw(void)
 
 	update();
 
-	memset(fb_pixels, 0, fb_width * fb_height * 2);
+	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
 
 	for(i=0; i<120; i++) {
 		for(j=0; j<160; j++) {
@@ -150,7 +150,7 @@ static void draw(void)
 
 	draw_mesh(&mmesh);
 
-	g3d_viewport(0, 0, fb_width, fb_height);
+	g3d_viewport(0, 0, FB_WIDTH, FB_HEIGHT);
 
 	swap_buffers(fb_pixels);
 }

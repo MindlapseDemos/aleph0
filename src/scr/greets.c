@@ -65,12 +65,12 @@ static int init(void)
 		return -1;
 	}
 
-	smokebuf_size = fb_width * fb_height * sizeof *cur_smokebuf;
+	smokebuf_size = FB_WIDTH * FB_HEIGHT * sizeof *cur_smokebuf;
 	if(!(cur_smokebuf = malloc(smokebuf_size * 2))) {
 		perror("failed to allocate smoke framebuffer");
 		return -1;
 	}
-	prev_smokebuf = cur_smokebuf + fb_width * fb_height;
+	prev_smokebuf = cur_smokebuf + FB_WIDTH * FB_HEIGHT;
 
 	return 0;
 }
@@ -150,26 +150,26 @@ static void draw(void)
 
 	memcpy(cur_smokebuf, prev_smokebuf, smokebuf_size);
 
-	g3d_framebuffer(fb_width, fb_height, cur_smokebuf);
+	g3d_framebuffer(FB_WIDTH, FB_HEIGHT, cur_smokebuf);
 	draw_smktxt(stx);
-	g3d_framebuffer(fb_width, fb_height, fb_pixels);
+	g3d_framebuffer(FB_WIDTH, FB_HEIGHT, fb_pixels);
 
 	dest = fb_pixels;
 	src = cur_smokebuf;
-	for(i=0; i<fb_height; i++) {
-		for(j=0; j<fb_width; j++) {
+	for(i=0; i<FB_HEIGHT; i++) {
+		for(j=0; j<FB_WIDTH; j++) {
 			unsigned int alpha = *src++;
 			*dest++ = PACK_RGB16(alpha, alpha, alpha);
 		}
 	}
 
 	/*perf_start();*/
-	blur_grey_horiz(prev_smokebuf, cur_smokebuf, fb_width, fb_height, BLUR_RAD, 240);
+	blur_grey_horiz(prev_smokebuf, cur_smokebuf, FB_WIDTH, FB_HEIGHT, BLUR_RAD, 240);
 	/*
 	perf_end();
 	printf("blur perf: %lu\n", (unsigned long)perf_interval_count);
 	*/
-	blur_grey_vert(cur_smokebuf, prev_smokebuf, fb_width, fb_height, BLUR_RAD, 240);
+	blur_grey_vert(cur_smokebuf, prev_smokebuf, FB_WIDTH, FB_HEIGHT, BLUR_RAD, 240);
 	swap_smoke_buffers();
 
 	msec = get_msec();

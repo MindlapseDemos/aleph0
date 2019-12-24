@@ -54,6 +54,7 @@ enum {
 	G3D_CLIP_PLANE3 = 0x008000,
 
 	G3D_TEXTURE_MAT	= 0x010000,
+	G3D_SPECULAR	= 0x020000,
 
 	G3D_ALL = 0x7fffffff
 };
@@ -112,6 +113,7 @@ void g3d_perspective(float vfov, float aspect, float znear, float zfar);
 const float *g3d_get_matrix(int which, float *m);
 
 void g3d_light_pos(int idx, float x, float y, float z);
+void g3d_light_dir(int idx, float x, float y, float z);
 void g3d_light_color(int idx, float r, float g, float b);
 
 void g3d_light_ambient(float r, float g, float b);

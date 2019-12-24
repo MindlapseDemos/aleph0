@@ -62,10 +62,10 @@ static int init(void)
 	int i, j, n;
 	unsigned int *tmap;
 	unsigned char *fog;
-	float aspect = (float)fb_width / (float)fb_height;
+	float aspect = (float)FB_WIDTH / (float)FB_HEIGHT;
 
-	xsz = fb_width;
-	ysz = fb_height;
+	xsz = FB_WIDTH;
+	ysz = FB_HEIGHT;
 	vxsz = xsz * VSCALE;
 	vysz = ysz * VSCALE;
 
@@ -185,7 +185,7 @@ static void draw(void)
 		int rest_lines = num_lines - draw_lines;
 		draw_tunnel_range(fb_pixels, xoffs, yoffs, starty, draw_lines, time_msec);
 		if(rest_lines) {
-			memset(fb_pixels + resty * fb_width, 0, rest_lines * fb_width * 2);
+			memset(fb_pixels + resty * FB_WIDTH, 0, rest_lines * FB_WIDTH * 2);
 		}
 	}
 
@@ -221,7 +221,7 @@ static void draw_tunnel_range(unsigned short *pix, int xoffs, int yoffs, int sta
 	unsigned char *fog = tunnel_fog + (starty + yoffs) * vxsz + xoffs;
 
 	long toffs = tm / 8;
-	unsigned int *pixels = (unsigned int*)pix + starty * (fb_width >> 1);
+	unsigned int *pixels = (unsigned int*)pix + starty * (FB_WIDTH >> 1);
 
 	for(i=0; i<num_lines; i++) {
 		for(j=0; j<(xsz>>1); j++) {

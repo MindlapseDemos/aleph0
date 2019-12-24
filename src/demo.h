@@ -3,7 +3,10 @@
 
 #include "inttypes.h"
 
-extern int fb_width, fb_height, fb_bpp;
+/*extern int fb_width, fb_height, fb_bpp;*/
+#define FB_WIDTH	320
+#define FB_HEIGHT	240
+#define FB_BPP		16
 extern uint16_t *fb_pixels;	/* system-RAM pixel buffer: use swap_buffers(fb_pixels) */
 extern uint16_t *vmem;		/* visible video memory pointer */
 
@@ -70,7 +73,9 @@ void cs_confont(void *fb, int x, int y, int idx);
 /* helper to print text with cs_font */
 void cs_puts_font(cs_font_func csfont, int sz, void *fb, int x, int y, const char *str);
 
-#define cs_dputs(fb, x, y, idx)	cs_puts_font(cs_dbgfont, 9, fb, x, y, idx)
-#define cs_cputs(fb, x, y, idx)	cs_puts_font(cs_confont, 6, fb, x, y, idx)
+#define cs_dputs(fb, x, y, str)	cs_puts_font(cs_dbgfont, 9, fb, x, y, str)
+#define cs_cputs(fb, x, y, str)	cs_puts_font(cs_confont, 6, fb, x, y, str)
+
+#define cs_mouseptr(fb, x, y) cs_dbgfont(fb, x, y, 127 - ' ')
 
 #endif	/* DEMO_H_ */

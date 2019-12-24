@@ -41,23 +41,23 @@ int main(int argc, char **argv)
 		printf("Framebuffer scaling x%d\n", fbscale);
 	}
 
-	xsz = fb_width * fbscale;
-	ysz = fb_height * fbscale;
+	xsz = FB_WIDTH * fbscale;
+	ysz = FB_HEIGHT * fbscale;
 
 	/* now start_loadscr sets up fb_pixels to the space used by the loading image,
 	 * so no need to allocate another framebuffer
 	 */
 #if 0
 	/* allocate 1 extra row as a guard band, until we fucking fix the rasterizer */
-	if(!(fb_pixels = malloc(fb_width * (fb_height + 1) * fb_bpp / CHAR_BIT))) {
+	if(!(fb_pixels = malloc(FB_WIDTH * (FB_HEIGHT + 1) * FB_BPP / CHAR_BIT))) {
 		fprintf(stderr, "failed to allocate virtual framebuffer\n");
 		return 1;
 	}
 #endif
 
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_NOPARACHUTE);
-	if(!(fbsurf = SDL_SetVideoMode(xsz, ysz, fb_bpp, sdl_flags))) {
-		fprintf(stderr, "failed to set video mode %dx%d %dbpp\n", fb_width, fb_height, fb_bpp);
+	if(!(fbsurf = SDL_SetVideoMode(xsz, ysz, FB_BPP, sdl_flags))) {
+		fprintf(stderr, "failed to set video mode %dx%d %dbpp\n", FB_WIDTH, FB_HEIGHT, FB_BPP);
 		/*free(fb_pixels);*/
 		SDL_Quit();
 		return 1;
@@ -134,8 +134,8 @@ void swap_buffers(void *pixels)
 
 	sptr = fb_pixels;
 	dptr = (unsigned short*)fbsurf->pixels + (fbsurf->w - xsz) / 2;
-	for(i=0; i<fb_height; i++) {
-		for(j=0; j<fb_width; j++) {
+	for(i=0; i<FB_HEIGHT; i++) {
+		for(j=0; j<FB_WIDTH; j++) {
 			int x, y;
 			unsigned short pixel = *sptr++;
 
@@ -146,7 +146,7 @@ void swap_buffers(void *pixels)
 			}
 			dptr += fbscale;
 		}
-		dptr += (fbsurf->w - fb_width) * fbscale;
+		dptr += (fbsurf->w - FB_WIDTH) * fbscale;
 	}
 
 	if(SDL_MUSTLOCK(fbsurf)) {
@@ -215,7 +215,7 @@ static void toggle_fullscreen(void)
 	SDL_Surface *newsurf;
 	unsigned int newflags = sdl_flags ^ SDL_FULLSCREEN;
 
-	if(!(newsurf = SDL_SetVideoMode(xsz, ysz, fb_bpp, newflags))) {
+	if(!(newsurf = SDL_SetVideoMode(xsz, ysz, FB_BPP, newflags))) {
 		fprintf(stderr, "failed to go %s\n", newflags & SDL_FULLSCREEN ? "fullscreen" : "windowed");
 		return;
 	}

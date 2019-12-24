@@ -10,6 +10,7 @@
 #include "cfgopt.h"
 #include "mesh.h"
 #include "bsptree.h"
+#include "util.h"
 
 static int init(void);
 static void destroy(void);
@@ -66,11 +67,11 @@ static int init(void)
 	}
 	*/
 
-	gen_texture(&tex, 128, 128);
+	gen_texture(&tex, 64, 64);
 
 #ifdef DEBUG_POLYFILL
-	lowres_width = fb_width / LOWRES_SCALE;
-	lowres_height = fb_height / LOWRES_SCALE;
+	lowres_width = FB_WIDTH / LOWRES_SCALE;
+	lowres_height = FB_HEIGHT / LOWRES_SCALE;
 	lowres_pixels = malloc(lowres_width * lowres_height * 2);
 	scr.draw = draw_debug;
 #endif
@@ -116,7 +117,7 @@ static void draw(void)
 
 	update();
 
-	memset(fb_pixels, 0, fb_width * fb_height * 2);
+	memset16(fb_pixels, PACK_RGB16(20, 30, 50), FB_WIDTH * FB_HEIGHT);
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
@@ -128,9 +129,8 @@ static void draw(void)
 		g3d_rotate(cam_theta, 0, 1, 0);
 	}
 
-	g3d_light_pos(0, -10, 10, 20);
-
-	g3d_mtl_diffuse(0.4, 0.7, 1.0);
+	g3d_light_dir(0, -10, 10, 10);
+	g3d_mtl_diffuse(1.0, 1.0, 1.0);
 	g3d_set_texture(tex.width, tex.height, tex.pixels);
 
 	if(use_bsp) {
@@ -170,7 +170,7 @@ static void draw_debug(void)
 	draw_lowres_raster();
 
 
-	g3d_framebuffer(fb_width, fb_height, fb_pixels);
+	g3d_framebuffer(FB_WIDTH, FB_HEIGHT, fb_pixels);
 
 	g3d_polygon_mode(G3D_WIRE);
 	draw_mesh(&cube);
@@ -201,10 +201,10 @@ static void draw_lowres_raster(void)
 
 	for(i=0; i<lowres_height; i++) {
 		for(j=0; j<lowres_width; j++) {
-			draw_huge_pixel(dptr, fb_width, *sptr++);
+			draw_huge_pixel(dptr, FB_WIDTH, *sptr++);
 			dptr += LOWRES_SCALE;
 		}
-		dptr += fb_width * LOWRES_SCALE - fb_width;
+		dptr += FB_WIDTH * LOWRES_SCALE - FB_WIDTH;
 	}
 }
 
@@ -230,9 +230,12 @@ static int gen_texture(struct pimage *img, int xsz, int ysz)
 
 	for(i=0; i<ysz; i++) {
 		for(j=0; j<xsz; j++) {
-			int val = i ^ j;
+			int val = (i << 2) ^ (j << 2);
+			uint16_t r = val;
+			uint16_t g = val << 1;
+			uint16_t b = val << 2;
 
-			*pix++ = PACK_RGB16(val, val, val);
+			*pix++ = PACK_RGB16(r, g, b);
 		}
 	}
 

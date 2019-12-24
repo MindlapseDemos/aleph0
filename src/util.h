@@ -52,6 +52,11 @@ void debug_break(void);
 
 void halt(void);
 #pragma aux halt = "hlt";
+
+void memset16(void *ptr, int val, int count);
+#pragma aux memset16 = \
+	"rep stosw" \
+	parm[edi][eax][ecx];
 #endif
 
 #ifdef __GNUC__
@@ -78,6 +83,10 @@ void halt(void);
 
 #define halt() \
 	asm volatile("hlt")
+
+#define memset16(ptr, val, count) asm volatile ( \
+	"rep stosw\n\t" \
+	:: "D"(ptr), "a"(val), "c"(count))
 #endif
 
 #ifdef _MSC_VER
@@ -105,6 +114,16 @@ void halt(void);
 #define debug_break() \
 	do { \
 		__asm { int 3 } \
+	} while(0)
+
+#define memset16(ptr, val, count) \
+	do { \
+		__asm { \
+			mov edi, ptr \
+			mov ecx, count \
+			mov eax, val \
+			rep stosw \
+		} \
 	} while(0)
 #endif
 

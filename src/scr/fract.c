@@ -51,15 +51,15 @@ static void draw(void)
 	cx = mouse_x;
 	cy = mouse_y;
 
-	for(i=0; i<fb_height; i++) {
-		for(j=0; j<fb_width; j++) {
+	for(i=0; i<FB_HEIGHT; i++) {
+		for(j=0; j<FB_WIDTH; j++) {
 			unsigned char pidx = julia(j, i, cx, cy, max_iter) & 0xff;
 			*pixels++ = (pidx >> 3) | ((pidx >> 2) << 5) | ((pidx >> 3) << 11);
 		}
 	}
 
 	pixels = fb_pixels;
-	pixels[mouse_y * fb_width + mouse_x] = 0xffe;
+	pixels[mouse_y * FB_WIDTH + mouse_x] = 0xffe;
 	swap_buffers(0);
 }
 
@@ -74,10 +74,10 @@ static int julia(long x, long y, long cx, long cy, int max_iter)
 	int i;
 
 	/* convert to fixed point roughly [-1, 1] */
-	x = (normalize_coord(x, fb_width) >> 8) * xscale_24x8;
-	y = (normalize_coord(y, fb_height) >> 8) * yscale_24x8;
-	cx = (normalize_coord(cx, fb_width) >> 8) * xscale_24x8;
-	cy = (normalize_coord(cy, fb_height) >> 8) * yscale_24x8;
+	x = (normalize_coord(x, FB_WIDTH) >> 8) * xscale_24x8;
+	y = (normalize_coord(y, FB_HEIGHT) >> 8) * yscale_24x8;
+	cx = (normalize_coord(cx, FB_WIDTH) >> 8) * xscale_24x8;
+	cy = (normalize_coord(cy, FB_HEIGHT) >> 8) * yscale_24x8;
 
 	for(i=0; i<max_iter; i++) {
 		/* z_n = z_{n-1}**2 + c */

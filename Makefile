@@ -16,10 +16,15 @@ endif
 
 inc = -Isrc -Isrc/scr -Isrc/dos -Ilibs -Ilibs/imago/src -Ilibs/anim/src
 opt = -O3 -ffast-math -fno-strict-aliasing
-dbg = -g
-#prof = -pg
 warn = -pedantic -Wall -Wno-unused-function -Wno-unused-variable
-def = -DNO_MUSIC
+
+ifdef RELEASE
+	dbg = -g
+	def = -DNDEBUG -DNO_MUSIC
+else
+	def = -DNO_MUSIC
+endif
+#prof = -pg
 
 CC = $(TOOLPREFIX)gcc
 AR = $(TOOLPREFIX)ar
@@ -86,3 +91,7 @@ cleandep:
 data:
 	@tools/procdata
 endif
+
+.PHONY: strip
+strip: $(bin)
+	$(TOOLPREFIX)strip $(bin)

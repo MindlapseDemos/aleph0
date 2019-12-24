@@ -175,7 +175,7 @@ static void draw(void)
 
 	update();
 
-	memset(fb_pixels, 0, fb_width * fb_height * 2);
+	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();

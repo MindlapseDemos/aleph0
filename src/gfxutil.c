@@ -101,7 +101,7 @@ void draw_line(int x0, int y0, int x1, int y1, unsigned short color)
 	int i, dx, dy, x_inc, y_inc, error;
 	unsigned short *fb = fb_pixels;
 
-	fb += y0 * fb_width + x0;
+	fb += y0 * FB_WIDTH + x0;
 
 	dx = x1 - x0;
 	dy = y1 - y0;
@@ -113,9 +113,9 @@ void draw_line(int x0, int y0, int x1, int y1, unsigned short color)
 		dx = -dx;
 	}
 	if(dy >= 0) {
-		y_inc = fb_width;
+		y_inc = FB_WIDTH;
 	} else {
-		y_inc = -fb_width;
+		y_inc = -FB_WIDTH;
 		dy = -dy;
 	}
 

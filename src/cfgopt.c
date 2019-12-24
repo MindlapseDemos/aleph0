@@ -9,8 +9,9 @@
 struct options opt = {
 	0,	/* start_scr */
 	1,	/* music */
+	0,	/* mouse */
 	0,	/* sball */
-	1,	/* vsync */
+	0,	/* vsync */
 	0	/* dbginfo */
 };
 #else
@@ -18,8 +19,9 @@ struct options opt = {
 struct options opt = {
 	0,	/* start_scr */
 	0,	/* music */
+	1,	/* mouse */
 	0,	/* sball */
-	1,	/* vsync */
+	0,	/* vsync */
 	1	/* dbginfo */
 };
 #endif
@@ -37,6 +39,10 @@ int parse_args(int argc, char **argv)
 				opt.music = 0;
 			} else if(strcmp(argv[i], "-scr") == 0 || strcmp(argv[i], "-screen") == 0) {
 				scrname = argv[++i];
+			} else if(strcmp(argv[i], "-mouse") == 0) {
+				opt.mouse = 1;
+			} else if(strcmp(argv[i], "-nomouse") == 0) {
+				opt.mouse = 0;
 			} else if(strcmp(argv[i], "-sball") == 0) {
 				opt.sball = !opt.sball;
 			} else if(strcmp(argv[i], "-vsync") == 0) {
@@ -129,6 +135,8 @@ int load_config(const char *fname)
 			opt.music = bool_value(value);
 		} else if(strcmp(line, "screen") == 0) {
 			opt.start_scr = strdup(value);
+		} else if(strcmp(line, "mouse") == 0) {
+			opt.mouse = bool_value(value);
 		} else if(strcmp(line, "sball") == 0) {
 			opt.sball = bool_value(value);
 		} else if(strcmp(line, "vsync") == 0) {

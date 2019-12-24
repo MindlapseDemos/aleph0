@@ -11,7 +11,7 @@ endif
 
 CC = $(TOOLPREFIX)gcc
 AR = $(TOOLPREFIX)ar
-CFLAGS = -Wno-main -march=pentium -g -O3 -ffast-math -I.. -I../../src
+CFLAGS = -Wno-main -march=pentium -O3 -ffast-math -I.. -I../../src
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

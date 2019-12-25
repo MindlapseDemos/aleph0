@@ -108,7 +108,7 @@ void display(void)
 		{0.5, 0.3, 0.2, 1},
 		{0.2, 0.3, 0.2, 1}
 	};
-	int i;
+	int i, count;
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -123,7 +123,13 @@ void display(void)
 		glLightfv(GL_LIGHT0 + i, GL_DIFFUSE, lcol[i]);
 	}
 
-	cmesh_draw(scn);
+	count = cmesh_submesh_count(scn);
+	for(i=0; i<count; i++) {
+		cmesh_draw_submesh(scn, i);
+	}
+	cmesh_draw(mesh_gout);
+	cmesh_draw(mesh_gin);
+	cmesh_draw(mesh_suz);
 
 	glutSwapBuffers();
 }

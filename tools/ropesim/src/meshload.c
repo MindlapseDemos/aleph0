@@ -18,33 +18,49 @@
 
 #ifdef USE_ASSIMP
 
-static int add_mesh(struct cmesh *mesh, struct aiMesh *aimesh);
+static int add_mesh(struct cmesh *mesh, struct aiMesh *aimesh, const struct aiNode *ainode);
+static struct aiNode *find_node(struct aiNode *root, unsigned int midx);
 
 #define AIPPFLAGS \
-	(aiProcess_JoinIdenticalVertices | aiProcess_PreTransformVertices | \
+	(aiProcess_JoinIdenticalVertices | \
 	 aiProcess_Triangulate | aiProcess_SortByPType | aiProcess_FlipUVs)
 
 int cmesh_load(struct cmesh *mesh, const char *fname)
 {
 	int i;
 	const struct aiScene *aiscn;
+	const struct aiNode *ainode;
 
 	if(!(aiscn = aiImportFile(fname, AIPPFLAGS))) {
 		fprintf(stderr, "failed to open mesh file: %s\n", fname);
 		return -1;
 	}
 
+	printf("scene contains %d meshes\n", (int)aiscn->mNumMeshes);
 	for(i=0; i<(int)aiscn->mNumMeshes; i++) {
-		add_mesh(mesh, aiscn->mMeshes[i]);
+		if(aiscn->mRootNode->mNumChildren) {
+			ainode = find_node(aiscn->mRootNode, i);
+		} else {
+			ainode = 0;
+		}
+		add_mesh(mesh, aiscn->mMeshes[i], ainode);
 	}
 
 	aiReleaseImport(aiscn);
 	return 0;
 }
 
-static int add_mesh(struct cmesh *mesh, struct aiMesh *aim)
+static int add_mesh(struct cmesh *mesh, struct aiMesh *aim, const struct aiNode *ainode)
 {
 	int i, j, voffs, foffs;
+	const char *name;
+
+	if(ainode && ainode->mName.length > 0) {
+		name = ainode->mName.data;
+	} else {
+		name = aim->mName.data;
+	}
+	printf("adding mesh: %s\n", name);
 
 	voffs = cmesh_attrib_count(mesh, CMESH_ATTR_VERTEX);
 	foffs = cmesh_poly_count(mesh);
@@ -82,7 +98,26 @@ static int add_mesh(struct cmesh *mesh, struct aiMesh *aim)
 				cmesh_push_index(mesh, aim->mFaces[i].mIndices[j] + voffs);
 			}
 		}
-		cmesh_submesh(mesh, aim->mName.data, foffs, aim->mNumFaces);
+		cmesh_submesh(mesh, name, foffs, aim->mNumFaces);
+	}
+	return 0;
+}
+
+static struct aiNode *find_node(struct aiNode *node, unsigned int midx)
+{
+	unsigned int i;
+	struct aiNode *n;
+
+	for(i=0; i<node->mNumMeshes; i++) {
+		if(node->mMeshes[i] == midx) {
+			return node;
+		}
+	}
+
+	for(i=0; i<node->mNumChildren; i++) {
+		if((n = find_node(node->mChildren[i], midx))) {
+			return n;
+		}
 	}
 	return 0;
 }

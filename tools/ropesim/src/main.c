@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <GL/glut.h>
 #include "cmesh.h"
+#include "cgmath/cgmath.h"
 
 int init(void);
 void cleanup(void);
@@ -20,11 +21,13 @@ int prev_mx, prev_my;
 int bnstate[8];
 
 struct cmesh *scn;
+struct cmesh *mesh_gout, *mesh_gin, *mesh_suz;
+cgm_vec3 ganchor[4];
 
 int main(int argc, char **argv)
 {
 	glutInit(&argc, argv);
-	glutInitWindowSize(800, 600);
+	glutInitWindowSize(1280, 800);
 	glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);
 	glutCreateWindow("ropesim");
 
@@ -50,7 +53,10 @@ int main(int argc, char **argv)
 
 int init(void)
 {
-	float amb[] = {0.05, 0.05, 0.08, 1};
+	static const char *meshnames[] = {"suzanne", "gimbal_outer", "gimbal_inner"};
+	static struct cmesh **meshes[] = {&mesh_suz, &mesh_gout, &mesh_gin};
+	static const float amb[] = {0.05, 0.05, 0.08, 1};
+	int i;
 
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
@@ -65,11 +71,28 @@ int init(void)
 		fprintf(stderr, "failed to load scene file\n");
 		return -1;
 	}
+
+	for(i=0; i<sizeof meshes / sizeof *meshes; i++) {
+		int idx;
+		if((idx = cmesh_find_submesh(scn, meshnames[i])) == -1) {
+			fprintf(stderr, "failed to locate required submesh (%s)\n", meshnames[i]);
+			return -1;
+		}
+		if(!(*meshes[i] = cmesh_alloc()) || cmesh_clone_submesh(*meshes[i], scn, idx) == -1) {
+			fprintf(stderr, "failed to clone submesh\n");
+			return -1;
+		}
+		cmesh_remove_submesh(scn, idx);
+	}
+
 	return 0;
 }
 
 void cleanup(void)
 {
+	cmesh_free(mesh_suz);
+	cmesh_free(mesh_gout);
+	cmesh_free(mesh_gin);
 	cmesh_free(scn);
 }
 

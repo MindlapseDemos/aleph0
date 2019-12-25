@@ -3,6 +3,7 @@ obj = $(src:.c=.o)
 bin = ropesim
 
 def = -DUSE_ASSIMP
+inc = -I../../src
 warn = -pedantic -Wall -Wno-int-to-pointer-cast
 
 CFLAGS = $(warn) -g $(def)

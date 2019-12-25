@@ -41,3 +41,5 @@ data
 tools/csprite/csprite
 cspr/
 tools/img2bin/img2bin
+tools/ropesim/ropesim
+tools/gltest/test

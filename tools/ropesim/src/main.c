@@ -19,6 +19,7 @@ void sball_button(int bn, int st);
 float cam_theta, cam_phi, cam_dist = 10;
 int prev_mx, prev_my;
 int bnstate[8];
+int modkeys;
 
 long start_msec;
 
@@ -222,6 +223,7 @@ void mouse(int bn, int st, int x, int y)
 	prev_mx = x;
 	prev_my = y;
 	bnstate[bn - GLUT_LEFT_BUTTON] = st == GLUT_DOWN;
+	modkeys = glutGetModifiers();
 }
 
 void motion(int x, int y)
@@ -233,21 +235,23 @@ void motion(int x, int y)
 
 	if(!(dx | dy)) return;
 
-	if(bnstate[0]) {
-		cam_theta += dx * 0.5;
-		cam_phi += dy * 0.5;
-		if(cam_phi < -90) cam_phi = -90;
-		if(cam_phi > 90) cam_phi = 90;
-	}
+	if(modkeys) {
+		if(bnstate[0]) {
+			grot_theta += dx * 0.5;
+			grot_phi += dy * 0.5;
+		}
+	} else {
+		if(bnstate[0]) {
+			cam_theta += dx * 0.5;
+			cam_phi += dy * 0.5;
+			if(cam_phi < -90) cam_phi = -90;
+			if(cam_phi > 90) cam_phi = 90;
+		}
 
-	if(bnstate[1]) {
-		grot_theta += dx * 0.5;
-		grot_phi += dy * 0.5;
-	}
-
-	if(bnstate[2]) {
-		cam_dist += dy * 0.1;
-		if(cam_dist < 0.0f) cam_dist = 0.0f;
+		if(bnstate[2]) {
+			cam_dist += dy * 0.1;
+			if(cam_dist < 0.0f) cam_dist = 0.0f;
+		}
 	}
 }
 

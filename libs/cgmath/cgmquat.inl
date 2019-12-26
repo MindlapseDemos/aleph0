@@ -98,20 +98,20 @@ static inline void cgm_qinvert(cgm_quat *q)
 	}
 }
 
-static inline void cgm_qrotation(cgm_quat *q, const cgm_vec3 *axis, float angle)
+static inline void cgm_qrotation(cgm_quat *q, float angle, float x, float y, float z)
 {
 	float hangle = angle * 0.5f;
 	float sin_ha = sin(hangle);
 	q->w = cos(hangle);
-	q->x = axis->x * sin_ha;
-	q->y = axis->y * sin_ha;
-	q->z = axis->z * sin_ha;
+	q->x = x * sin_ha;
+	q->y = y * sin_ha;
+	q->z = z * sin_ha;
 }
 
-static inline void cgm_qrotate(cgm_quat *q, const cgm_vec3 *axis, float angle)
+static inline void cgm_qrotate(cgm_quat *q, float angle, float x, float y, float z)
 {
 	cgm_quat qrot;
-	cgm_qrotation(&qrot, axis, angle);
+	cgm_qrotation(&qrot, angle, x, y, z);
 	cgm_qmul(q, &qrot);
 }
 

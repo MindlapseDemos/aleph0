@@ -43,6 +43,42 @@ static inline float cgm_bezier(float a, float b, float c, float d, float t)
 	return (a * omt3) + (b * f * omt) + (c * f * t) + (d * t3);
 }
 
+static inline float cgm_bspline(float a, float b, float c, float d, float t)
+{
+	static const float mat[] = {
+		-1, 3, -3, 1,
+		3, -6, 0, 4,
+		-3, 3, 3, 1,
+		1, 0, 0, 0
+	};
+	cgm_vec4 tmp, qfact;
+	float tsq = t * t;
+
+	cgm_wcons(&qfact, tsq * t, tsq, t, 1.0f);
+	cgm_wcons(&tmp, a, b, c, d);
+	cgm_wmul_m4v4(&tmp, mat);
+	cgm_wscale(&tmp, 1.0f / 6.0f);
+	return cgm_wdot(&tmp, &qfact);
+}
+
+static inline float cgm_spline(float a, float b, float c, float d, float t)
+{
+	static const float mat[] = {
+		-1, 2, -1, 0,
+		3, -5, 0, 2,
+		-3, 4, 1, 0,
+		1, -1, 0, 0
+	};
+	cgm_vec4 tmp, qfact;
+	float tsq = t * t;
+
+	cgm_wcons(&qfact, tsq * t, tsq, t, 1.0f);
+	cgm_wcons(&tmp, a, b, c, d);
+	cgm_wmul_m4v4(&tmp, mat);
+	cgm_wscale(&tmp, 1.0f / 6.0f);
+	return cgm_wdot(&tmp, &qfact);
+}
+
 static inline void cgm_discrand(cgm_vec3 *pt, float rad)
 {
 	float theta = 2.0f * M_PI * (float)rand() / RAND_MAX;

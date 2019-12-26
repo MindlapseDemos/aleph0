@@ -155,8 +155,8 @@ static inline void cgm_vrotate_quat(cgm_vec3 *v, const cgm_quat *q)
 	cgm_qcons(&vq, v->x, v->y, v->z, 0.0f);
 	cgm_qinvert(&inv_q);
 	cgm_qmul(&tmp_q, &vq);
-	cgm_qmul(&vq, &inv_q);
-	cgm_vcons(v, vq.x, vq.y, vq.z);
+	cgm_qmul(&tmp_q, &inv_q);
+	cgm_vcons(v, tmp_q.x, tmp_q.y, tmp_q.z);
 }
 
 static inline void cgm_vrotate_axis(cgm_vec3 *v, int axis, float angle)

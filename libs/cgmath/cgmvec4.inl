@@ -104,6 +104,11 @@ static inline void cgm_wmul_v4m3(cgm_vec4 *v, const float *m)
 	v->y = y;
 }
 
+static inline float cgm_wdot(const cgm_vec4 *a, const cgm_vec4 *b)
+{
+	return a->x * b->x + a->y * b->y + a->z * b->z + a->w * b->w;
+}
+
 static inline float cgm_wlength(const cgm_vec4 *v)
 {
 	return sqrt(v->x * v->x + v->y * v->y + v->z * v->z + v->w * v->w);

@@ -20,9 +20,18 @@ float cam_theta, cam_phi, cam_dist = 10;
 int prev_mx, prev_my;
 int bnstate[8];
 
+long start_msec;
+
 struct cmesh *scn;
 struct cmesh *mesh_gout, *mesh_gin, *mesh_suz;
+
+cgm_vec3 gmove;
+/*cgm_quat grot = {0, 0, 0, 1};*/
+float grot_theta, grot_phi;
+float ginner_xform[16], gouter_xform[16];
 cgm_vec3 ganchor[4];
+
+cgm_vec3 dbgvec[4];
 
 int main(int argc, char **argv)
 {
@@ -46,6 +55,7 @@ int main(int argc, char **argv)
 	}
 	atexit(cleanup);
 
+	start_msec = glutGet(GLUT_ELAPSED_TIME);
 	glutMainLoop();
 	return 0;
 }
@@ -85,6 +95,13 @@ int init(void)
 		cmesh_remove_submesh(scn, idx);
 	}
 
+	/* anchor points on the inner gimbal */
+	for(i=0; i<4; i++) {
+		ganchor[i].x = (float)(((i & 1) << 1) - 1) * 1.5f;
+		ganchor[i].y = (float)((i & 2) - 1) * 1.5f;
+		ganchor[i].z = 0;
+	}
+
 	return 0;
 }
 
@@ -94,6 +111,31 @@ void cleanup(void)
 	cmesh_free(mesh_gout);
 	cmesh_free(mesh_gin);
 	cmesh_free(scn);
+}
+
+void update(long tmsec, float dt)
+{
+	int i;
+	cgm_vec3 apt0, apt1;
+	float theta, phi, brot;
+
+	/*
+	cgm_mrotation_quat(ginner_xform, &grot);
+	cgm_mtranslate(ginner_xform, gmove.x, gmove.y, gmove.z);
+	*/
+
+	theta = cgm_deg_to_rad(grot_theta);
+	phi = cgm_deg_to_rad(grot_phi);
+
+	cgm_mrotation_euler(ginner_xform, phi, theta, 0, CGM_EULER_XYZ);
+	cgm_mrotation_euler(gouter_xform, phi, 0, 0, CGM_EULER_XYZ);
+
+	for(i=0; i<4; i++) {
+		apt0 = ganchor[i];
+		cgm_vmul_m4v3(&apt0, ginner_xform);
+
+		dbgvec[i] = apt0;
+	}
 }
 
 void display(void)
@@ -109,6 +151,11 @@ void display(void)
 		{0.2, 0.3, 0.2, 1}
 	};
 	int i, count;
+	long tmsec = glutGet(GLUT_ELAPSED_TIME) - start_msec;
+	static long prev_tmsec;
+
+	update(tmsec, (float)(tmsec - prev_tmsec) / 1000.0f);
+	prev_tmsec = tmsec;
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -127,9 +174,25 @@ void display(void)
 	for(i=0; i<count; i++) {
 		cmesh_draw_submesh(scn, i);
 	}
+
+	glPushMatrix();
+	glMultMatrixf(gouter_xform);
 	cmesh_draw(mesh_gout);
+	glPopMatrix();
+
+	glPushMatrix();
+	glMultMatrixf(ginner_xform);
 	cmesh_draw(mesh_gin);
+	glPopMatrix();
+
 	cmesh_draw(mesh_suz);
+
+	glPointSize(7);
+	glBegin(GL_POINTS);
+	for(i=0; i<4; i++) {
+		glVertex3f(dbgvec[i].x, dbgvec[i].y, dbgvec[i].z);
+	}
+	glEnd();
 
 	glutSwapBuffers();
 }
@@ -177,6 +240,11 @@ void motion(int x, int y)
 		if(cam_phi > 90) cam_phi = 90;
 	}
 
+	if(bnstate[1]) {
+		grot_theta += dx * 0.5;
+		grot_phi += dy * 0.5;
+	}
+
 	if(bnstate[2]) {
 		cam_dist += dy * 0.1;
 		if(cam_dist < 0.0f) cam_dist = 0.0f;
@@ -185,12 +253,29 @@ void motion(int x, int y)
 
 void sball_motion(int x, int y, int z)
 {
+	gmove.x += x * 0.001f;
+	gmove.y += y * 0.001f;
+	gmove.z -= z * 0.001f;
 }
 
-void sball_rotate(int rx, int ry, int rz)
+void sball_rotate(int x, int y, int z)
 {
+	/*
+	float axis_len, s;
+	axis_len = (float)sqrt(x * x + y * y + z * z);
+	s = axis_len == 0.0f ? 1.0f : 1.0f / axis_len;
+	cgm_qrotate(&grot, axis_len * 0.001f, -x * s, -y * s, z * s);
+	*/
+
+	grot_theta += y * 0.03f;
+	grot_phi += x * 0.03f;
 }
 
 void sball_button(int bn, int st)
 {
+	if(st == GLUT_DOWN) {
+		/*cgm_qcons(&grot, 0, 0, 0, 1);*/
+		grot_theta = grot_phi = 0.0f;
+		cgm_vcons(&gmove, 0, 0, 0);
+	}
 }

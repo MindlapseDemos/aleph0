@@ -8,7 +8,7 @@ int rsim_init(struct rsim_world *rsim)
 {
 	rsim->ropes = 0;
 	cgm_vcons(&rsim->grav, 0, -9.807, 0);
-	rsim->damping = 0.995;
+	rsim->damping = 0.5;
 	return 0;
 }
 
@@ -34,33 +34,58 @@ int rsim_add_rope(struct rsim_world *rsim, struct rsim_rope *rope)
 static void step(struct rsim_world *rsim, struct rsim_rope *rope, float dt)
 {
 	int i;
-	cgm_vec3 npos, f, force;
-	float inv_damp = rsim->damping == 0.0f ? 1.0f : 1.0f / rsim->damping;
+	float len, fmag;
+	cgm_vec3 npos, force, dir;
+	float inv_damp = rsim->damping == 0.0f ? 1.0f : (1.0f - rsim->damping);
 	struct rsim_mass *mass = rope->masses;
+	struct rsim_spring *spr = rope->springs;
 
 	force.x = rsim->grav.x + rsim->extforce.x;
 	force.y = rsim->grav.y + rsim->extforce.y;
 	force.z = rsim->grav.z + rsim->extforce.z;
 
+	/* accumulate forces from springs */
+	for(i=0; i<rope->num_springs; i++) {
+		dir = spr->mass[1]->p;
+		cgm_vsub(&dir, &spr->mass[0]->p);
+
+		len = cgm_vlength(&dir);
+		if(len != 0.0f) {
+			float s = 1.0f / len;
+			dir.x *= s;
+			dir.y *= s;
+			dir.z *= s;
+		}
+		fmag = (len - spr->rest_len) * spr->k;
+
+		cgm_vscale(&dir, fmag);
+		cgm_vadd(&spr->mass[0]->f, &dir);
+		cgm_vsub(&spr->mass[1]->f, &dir);
+
+		spr++;
+	}
+
+	/* update masses */
 	for(i=0; i<rope->num_masses; i++) {
 		if(mass->fixed) {
 			mass++;
 			continue;
 		}
 
-		npos = mass->p;
+		/* add constant forces to accumulated mass force */
+		cgm_vadd(&mass->f, &force);
 
+		mass->v.x = (mass->v.x - mass->v.x * inv_damp * dt) + mass->f.x * dt;
+		mass->v.y = (mass->v.y - mass->v.y * inv_damp * dt) + mass->f.y * dt;
+		mass->v.z = (mass->v.z - mass->v.z * inv_damp * dt) + mass->f.z * dt;
+
+		/* zero out the accumulated forces for next iter */
+		mass->f.x = mass->f.y = mass->f.z = 0.0f;
+
+		npos = mass->p;
 		npos.x = mass->p.x + mass->v.x * dt;
 		npos.y = mass->p.y + mass->v.y * dt;
 		npos.z = mass->p.z + mass->v.z * dt;
-
-		f.x = force.x;/* + spring forces */
-		f.y = force.y;
-		f.z = force.z;
-
-		mass->v.x = ((mass->v.x - mass->v.x * inv_damp) + f.x) * dt;
-		mass->v.y = ((mass->v.y - mass->v.y * inv_damp) + f.y) * dt;
-		mass->v.z = ((mass->v.z - mass->v.z * inv_damp) + f.z) * dt;
 
 		/* TODO collisions */
 

@@ -6,6 +6,7 @@
 struct rsim_mass {
 	cgm_vec3 p;
 	cgm_vec3 v;
+	cgm_vec3 f;
 	float m;
 	int fixed;
 

@@ -68,7 +68,7 @@ int main(int argc, char **argv)
 #define ROPE_SPRINGS		(ROPE_MASSES - 1)
 #define ROPE_LEN			1.0f
 #define ROPE_MASSES_MASS	0.1f
-#define ROPE_K				0.5f
+#define ROPE_K				80.0f
 
 int init(void)
 {
@@ -180,6 +180,8 @@ void update(long tmsec, float dt)
 
 		dbgvec[i] = apt0;
 		rope->masses[0].p = apt0;
+
+		rope = rope->next;
 	}
 
 	rsim_step(&rsim, dt);
@@ -245,10 +247,19 @@ void display(void)
 	glPushAttrib(GL_ENABLE_BIT);
 	glDisable(GL_LIGHTING);
 	glLineWidth(2);
+	glPointSize(5);
 
 	rope = rsim.ropes;
 	while(rope) {
 		glBegin(GL_LINE_STRIP);
+		glColor3f(0.2, 1, 0.2);
+		for(i=0; i<rope->num_masses; i++) {
+			glVertex3f(rope->masses[i].p.x, rope->masses[i].p.y, rope->masses[i].p.z);
+		}
+		glEnd();
+
+		glBegin(GL_POINTS);
+		glColor3f(1, 0.2, 0.2);
 		for(i=0; i<rope->num_masses; i++) {
 			glVertex3f(rope->masses[i].p.x, rope->masses[i].p.y, rope->masses[i].p.z);
 		}

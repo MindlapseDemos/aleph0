@@ -3,6 +3,7 @@
 #include <GL/glut.h>
 #include "cmesh.h"
 #include "cgmath/cgmath.h"
+#include "ropesim.h"
 
 int init(void);
 void cleanup(void);
@@ -34,6 +35,8 @@ cgm_vec3 ganchor[4];
 
 cgm_vec3 dbgvec[4];
 
+struct rsim_world rsim;
+
 int main(int argc, char **argv)
 {
 	glutInit(&argc, argv);
@@ -61,13 +64,19 @@ int main(int argc, char **argv)
 	return 0;
 }
 
+#define ROPE_MASSES			4
+#define ROPE_SPRINGS		(ROPE_MASSES - 1)
+#define ROPE_LEN			1.0f
+#define ROPE_MASSES_MASS	0.1f
+#define ROPE_K				0.5f
 
 int init(void)
 {
 	static const char *meshnames[] = {"suzanne", "gimbal_outer", "gimbal_inner"};
 	static struct cmesh **meshes[] = {&mesh_suz, &mesh_gout, &mesh_gin};
 	static const float amb[] = {0.05, 0.05, 0.08, 1};
-	int i;
+	int i, j;
+	struct rsim_rope *rope, *ropes_tail;
 
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
@@ -96,11 +105,41 @@ int init(void)
 		cmesh_remove_submesh(scn, idx);
 	}
 
+	rsim_init(&rsim);
+	ropes_tail = 0;
+
 	/* anchor points on the inner gimbal */
 	for(i=0; i<4; i++) {
 		ganchor[i].x = (float)(((i & 1) << 1) - 1) * 1.5f;
 		ganchor[i].y = (float)((i & 2) - 1) * 1.5f;
 		ganchor[i].z = 0;
+
+		/* create a rope hanging from the anchor point */
+		if(!(rope = rsim_alloc_rope(ROPE_MASSES, ROPE_SPRINGS))) {
+			fprintf(stderr, "failed to allocate rope\n");
+			return -1;
+		}
+		for(j=0; j<ROPE_MASSES; j++) {
+			rope->masses[j].p = ganchor[i];
+			rope->masses[j].p.y = ganchor[i].y - j * ROPE_LEN / ROPE_SPRINGS;
+			rope->masses[j].m = 0.1f;
+
+			if(j < ROPE_SPRINGS) {
+				rope->springs[j].rest_len = ROPE_LEN / ROPE_SPRINGS;
+				rope->springs[j].k = ROPE_K;
+				rope->springs[j].mass[0] = rope->masses + j;
+				rope->springs[j].mass[1] = rope->masses + j + 1;
+			}
+		}
+		rsim_freeze_rope_mass(rope, rope->masses);	/* freeze first mass */
+
+		if(!ropes_tail) {
+			rsim.ropes = ropes_tail = rope;
+		} else {
+			ropes_tail->next = rope;
+			ropes_tail = rope;
+		}
+		rope->next = 0;
 	}
 
 	return 0;
@@ -112,6 +151,8 @@ void cleanup(void)
 	cmesh_free(mesh_gout);
 	cmesh_free(mesh_gin);
 	cmesh_free(scn);
+
+	rsim_destroy(&rsim);
 }
 
 void update(long tmsec, float dt)
@@ -119,6 +160,7 @@ void update(long tmsec, float dt)
 	int i;
 	cgm_vec3 apt0, apt1;
 	float theta, phi, brot;
+	struct rsim_rope *rope;
 
 	/*
 	cgm_mrotation_quat(ginner_xform, &grot);
@@ -131,12 +173,16 @@ void update(long tmsec, float dt)
 	cgm_mrotation_euler(ginner_xform, phi, theta, 0, CGM_EULER_XYZ);
 	cgm_mrotation_euler(gouter_xform, phi, 0, 0, CGM_EULER_XYZ);
 
+	rope = rsim.ropes;
 	for(i=0; i<4; i++) {
 		apt0 = ganchor[i];
 		cgm_vmul_m4v3(&apt0, ginner_xform);
 
 		dbgvec[i] = apt0;
+		rope->masses[0].p = apt0;
 	}
+
+	rsim_step(&rsim, dt);
 }
 
 void display(void)
@@ -154,6 +200,7 @@ void display(void)
 	int i, count;
 	long tmsec = glutGet(GLUT_ELAPSED_TIME) - start_msec;
 	static long prev_tmsec;
+	struct rsim_rope *rope;
 
 	update(tmsec, (float)(tmsec - prev_tmsec) / 1000.0f);
 	prev_tmsec = tmsec;
@@ -194,6 +241,21 @@ void display(void)
 		glVertex3f(dbgvec[i].x, dbgvec[i].y, dbgvec[i].z);
 	}
 	glEnd();
+
+	glPushAttrib(GL_ENABLE_BIT);
+	glDisable(GL_LIGHTING);
+	glLineWidth(2);
+
+	rope = rsim.ropes;
+	while(rope) {
+		glBegin(GL_LINE_STRIP);
+		for(i=0; i<rope->num_masses; i++) {
+			glVertex3f(rope->masses[i].p.x, rope->masses[i].p.y, rope->masses[i].p.z);
+		}
+		glEnd();
+		rope = rope->next;
+	}
+	glPopAttrib();
 
 	glutSwapBuffers();
 }

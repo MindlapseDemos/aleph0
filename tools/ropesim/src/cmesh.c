@@ -38,7 +38,7 @@ struct cmesh {
 	/* current value for each attribute for the immediate mode interface */
 	cgm_vec4 cur_val[CMESH_NUM_ATTR];
 
-	unsigned int buffer_objects[CMESH_NUM_ATTR + 1];
+	unsigned int vbuf[CMESH_NUM_ATTR + 1];
 	struct cmesh_vattrib vattr[CMESH_NUM_ATTR];
 
 	unsigned int *idata;
@@ -121,13 +121,13 @@ int cmesh_init(struct cmesh *cm)
 	memset(cm, 0, sizeof *cm);
 	cgm_wcons(cm->cur_val + CMESH_ATTR_COLOR, 1, 1, 1, 1);
 
-	glGenBuffers(CMESH_NUM_ATTR + 1, cm->buffer_objects);
+	glGenBuffers(CMESH_NUM_ATTR + 1, cm->vbuf);
 
 	for(i=0; i<CMESH_NUM_ATTR; i++) {
-		cm->vattr[i].vbo = cm->buffer_objects[i];
+		cm->vattr[i].vbo = cm->vbuf[i];
 	}
 
-	cm->ibo = cm->buffer_objects[CMESH_NUM_ATTR];
+	cm->ibo = cm->vbuf[CMESH_NUM_ATTR];
 	return 0;
 }
 
@@ -144,7 +144,7 @@ void cmesh_destroy(struct cmesh *cm)
 
 	cmesh_clear_submeshes(cm);
 
-	glDeleteBuffers(CMESH_NUM_ATTR + 1, cm->buffer_objects);
+	glDeleteBuffers(CMESH_NUM_ATTR + 1, cm->vbuf);
 	if(cm->wire_ibo) {
 		glDeleteBuffers(1, &cm->wire_ibo);
 	}

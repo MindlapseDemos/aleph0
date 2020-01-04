@@ -31,7 +31,7 @@ cgm_vec3 gmove;
 /*cgm_quat grot = {0, 0, 0, 1};*/
 float grot_theta, grot_phi;
 float ginner_xform[16], gouter_xform[16];
-cgm_vec3 ganchor[4];
+cgm_vec3 ganchor[4], manchor[4];
 
 cgm_vec3 dbgvec[4];
 
@@ -64,9 +64,9 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-#define ROPE_MASSES			4
+#define ROPE_MASSES			5
 #define ROPE_SPRINGS		(ROPE_MASSES - 1)
-#define ROPE_LEN			1.0f
+#define ROPE_LEN			0.6f
 #define ROPE_MASSES_MASS	0.1f
 #define ROPE_K				80.0f
 
@@ -114,14 +114,21 @@ int init(void)
 		ganchor[i].y = (float)((i & 2) - 1) * 1.5f;
 		ganchor[i].z = 0;
 
+		manchor[i] = ganchor[i];
+		cgm_vscale(manchor + i, 0.32);
+
+
+
+		manchor[i].y += 0.15;
+
 		/* create a rope hanging from the anchor point */
 		if(!(rope = rsim_alloc_rope(ROPE_MASSES, ROPE_SPRINGS))) {
 			fprintf(stderr, "failed to allocate rope\n");
 			return -1;
 		}
 		for(j=0; j<ROPE_MASSES; j++) {
-			rope->masses[j].p = ganchor[i];
-			rope->masses[j].p.y = ganchor[i].y - j * ROPE_LEN / ROPE_SPRINGS;
+			float t = (float)j / (float)(ROPE_MASSES - 1.0f);
+			cgm_vlerp(&rope->masses[j].p, ganchor + i, manchor + i, t);
 			rope->masses[j].m = 0.1f;
 
 			if(j < ROPE_SPRINGS) {
@@ -132,6 +139,7 @@ int init(void)
 			}
 		}
 		rsim_freeze_rope_mass(rope, rope->masses);	/* freeze first mass */
+		rsim_freeze_rope_mass(rope, rope->masses + j - 1);	/* freeze last mass */
 
 		if(!ropes_tail) {
 			rsim.ropes = ropes_tail = rope;

@@ -35,14 +35,10 @@ static void step(struct rsim_world *rsim, struct rsim_rope *rope, float dt)
 {
 	int i;
 	float len, fmag;
-	cgm_vec3 npos, force, dir;
+	cgm_vec3 npos, faccel, dir;
 	float inv_damp = rsim->damping == 0.0f ? 1.0f : (1.0f - rsim->damping);
 	struct rsim_mass *mass = rope->masses;
 	struct rsim_spring *spr = rope->springs;
-
-	force.x = rsim->grav.x + rsim->extforce.x;
-	force.y = rsim->grav.y + rsim->extforce.y;
-	force.z = rsim->grav.z + rsim->extforce.z;
 
 	/* accumulate forces from springs */
 	for(i=0; i<rope->num_springs; i++) {
@@ -58,9 +54,13 @@ static void step(struct rsim_world *rsim, struct rsim_rope *rope, float dt)
 		}
 		fmag = (len - spr->rest_len) * spr->k;
 
-		cgm_vscale(&dir, fmag);
-		cgm_vadd(&spr->mass[0]->f, &dir);
-		cgm_vsub(&spr->mass[1]->f, &dir);
+		spr->mass[0]->f.x += dir.x * fmag / spr->mass[0]->m;
+		spr->mass[0]->f.y += dir.y * fmag / spr->mass[0]->m;
+		spr->mass[0]->f.z += dir.z * fmag / spr->mass[0]->m;
+
+		spr->mass[1]->f.x -= dir.x * fmag / spr->mass[1]->m;
+		spr->mass[1]->f.y -= dir.y * fmag / spr->mass[1]->m;
+		spr->mass[1]->f.z -= dir.z * fmag / spr->mass[1]->m;
 
 		spr++;
 	}
@@ -73,7 +73,11 @@ static void step(struct rsim_world *rsim, struct rsim_rope *rope, float dt)
 		}
 
 		/* add constant forces to accumulated mass force */
-		cgm_vadd(&mass->f, &force);
+		cgm_vadd(&mass->f, &rsim->grav);
+
+		faccel = rsim->extforce;
+		cgm_vscale(&faccel, 1.0f / mass->m);
+		cgm_vadd(&mass->f, &rsim->extforce);
 
 		mass->v.x = (mass->v.x - mass->v.x * inv_damp * dt) + mass->f.x * dt;
 		mass->v.y = (mass->v.y - mass->v.y * inv_damp * dt) + mass->f.y * dt;

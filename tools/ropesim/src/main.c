@@ -64,11 +64,11 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-#define ROPE_MASSES			5
+#define ROPE_MASSES			10
 #define ROPE_SPRINGS		(ROPE_MASSES - 1)
-#define ROPE_LEN			0.6f
-#define ROPE_MASSES_MASS	0.1f
-#define ROPE_K				80.0f
+#define ROPE_LEN			0.8f
+#define ROPE_MASSES_MASS	0.01f
+#define ROPE_K				180.0f
 
 int init(void)
 {
@@ -106,6 +106,7 @@ int init(void)
 	}
 
 	rsim_init(&rsim);
+	rsim.damping = 0.3;
 	ropes_tail = 0;
 
 	/* anchor points on the inner gimbal */
@@ -243,7 +244,7 @@ void display(void)
 	cmesh_draw(mesh_gin);
 	glPopMatrix();
 
-	cmesh_draw(mesh_suz);
+	/*cmesh_draw(mesh_suz);*/
 
 	glPointSize(7);
 	glBegin(GL_POINTS);

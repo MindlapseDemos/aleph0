@@ -16,17 +16,12 @@ struct rsim_mass {
 
 struct rsim_spring {
 	float rest_len, k;
-	struct rsim_mass *mass[2];
 };
 
 struct rsim_rope {
 	struct rsim_mass *masses;
 	int num_masses;
-	struct rsim_spring *springs;
-	int num_springs;
-
-	/* elements of the masses array which are fixed */
-	struct rsim_mass *fixedlist;
+	struct rsim_spring *springs;	/* adjacency matrix */
 
 	struct rsim_rope *next;
 };
@@ -48,10 +43,14 @@ int rsim_add_rope(struct rsim_world *rsim, struct rsim_rope *rope);
 
 void rsim_step(struct rsim_world *rsim, float dt);
 
-struct rsim_rope *rsim_alloc_rope(int nmasses, int nsprings);
+struct rsim_rope *rsim_alloc_rope(int nmasses);
 void rsim_free_rope(struct rsim_rope *rope);
-int rsim_init_rope(struct rsim_rope *rope, int nmasses, int nsprings);
+int rsim_init_rope(struct rsim_rope *rope, int nmasses);
 void rsim_destroy_rope(struct rsim_rope *rope);
+
+#define RSIM_RLEN_DEFAULT	(-1.0f)
+int rsim_set_rope_spring(struct rsim_rope *rope, int ma, int mb, float k, float rlen);
+int rsim_have_spring(struct rsim_rope *rope, int ma, int mb);
 
 int rsim_freeze_rope_mass(struct rsim_rope *rope, struct rsim_mass *m);
 int rsim_unfreeze_rope_mass(struct rsim_rope *rope, struct rsim_mass *m);

@@ -76,7 +76,7 @@ int init(void)
 	static struct cmesh **meshes[] = {&mesh_suz, &mesh_gout, &mesh_gin};
 	static const float amb[] = {0.05, 0.05, 0.08, 1};
 	int i, j;
-	struct rsim_rope *rope, *ropes_tail;
+	struct rsim_rope *rope;
 
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
@@ -107,7 +107,12 @@ int init(void)
 
 	rsim_init(&rsim);
 	rsim.damping = 0.3;
-	ropes_tail = 0;
+
+	if(!(rope = rsim_alloc_rope(ROPE_MASSES * 4))) {
+		fprintf(stderr, "failed to allocate rope\n");
+		return -1;
+	}
+	rsim_add_rope(&rsim, rope);
 
 	/* anchor points on the inner gimbal */
 	for(i=0; i<4; i++) {
@@ -122,33 +127,20 @@ int init(void)
 
 		manchor[i].y += 0.15;
 
-		/* create a rope hanging from the anchor point */
-		if(!(rope = rsim_alloc_rope(ROPE_MASSES, ROPE_SPRINGS))) {
-			fprintf(stderr, "failed to allocate rope\n");
-			return -1;
-		}
 		for(j=0; j<ROPE_MASSES; j++) {
-			float t = (float)j / (float)(ROPE_MASSES - 1.0f);
-			cgm_vlerp(&rope->masses[j].p, ganchor + i, manchor + i, t);
-			rope->masses[j].m = 0.1f;
+			int midx = i * ROPE_MASSES + j;
+			struct rsim_mass *mass = rope->masses + midx;
 
-			if(j < ROPE_SPRINGS) {
-				rope->springs[j].rest_len = ROPE_LEN / ROPE_SPRINGS;
-				rope->springs[j].k = ROPE_K;
-				rope->springs[j].mass[0] = rope->masses + j;
-				rope->springs[j].mass[1] = rope->masses + j + 1;
+			float t = (float)j / (float)(ROPE_MASSES - 1.0f);
+			cgm_vlerp(&mass->p, ganchor + i, manchor + i, t);
+			mass->m = ROPE_MASSES_MASS;
+
+			if(j == 0) {
+				rsim_freeze_rope_mass(rope, rope->masses + i * ROPE_MASSES);	/* freeze first mass */
+			} else {
+				rsim_set_rope_spring(rope, midx, midx - 1, ROPE_K, RSIM_RLEN_DEFAULT);
 			}
 		}
-		rsim_freeze_rope_mass(rope, rope->masses);	/* freeze first mass */
-		rsim_freeze_rope_mass(rope, rope->masses + j - 1);	/* freeze last mass */
-
-		if(!ropes_tail) {
-			rsim.ropes = ropes_tail = rope;
-		} else {
-			ropes_tail->next = rope;
-			ropes_tail = rope;
-		}
-		rope->next = 0;
 	}
 
 	return 0;
@@ -188,9 +180,7 @@ void update(long tmsec, float dt)
 		cgm_vmul_m4v3(&apt0, ginner_xform);
 
 		dbgvec[i] = apt0;
-		rope->masses[0].p = apt0;
-
-		rope = rope->next;
+		rope->masses[i * ROPE_MASSES].p = apt0;
 	}
 
 	rsim_step(&rsim, dt);
@@ -208,7 +198,7 @@ void display(void)
 		{0.5, 0.3, 0.2, 1},
 		{0.2, 0.3, 0.2, 1}
 	};
-	int i, count;
+	int i, j, count;
 	long tmsec = glutGet(GLUT_ELAPSED_TIME) - start_msec;
 	static long prev_tmsec;
 	struct rsim_rope *rope;
@@ -260,10 +250,15 @@ void display(void)
 
 	rope = rsim.ropes;
 	while(rope) {
-		glBegin(GL_LINE_STRIP);
+		glBegin(GL_LINES);
 		glColor3f(0.2, 1, 0.2);
 		for(i=0; i<rope->num_masses; i++) {
-			glVertex3f(rope->masses[i].p.x, rope->masses[i].p.y, rope->masses[i].p.z);
+			for(j=i+1; j<rope->num_masses; j++) {
+				if(rsim_have_spring(rope, i, j)) {
+					glVertex3f(rope->masses[i].p.x, rope->masses[i].p.y, rope->masses[i].p.z);
+					glVertex3f(rope->masses[j].p.x, rope->masses[j].p.y, rope->masses[j].p.z);
+				}
+			}
 		}
 		glEnd();
 

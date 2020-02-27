@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include "ropesim.h"
 
 static void step(struct rsim_world *rsim, struct rsim_rope *rope, float dt);
@@ -28,44 +29,48 @@ int rsim_add_rope(struct rsim_world *rsim, struct rsim_rope *rope)
 	return 0;
 }
 
+static inline struct rsim_spring *getspring(struct rsim_rope *rope, int aidx, int bidx)
+{
+	struct rsim_spring *spr = rope->springs + aidx * rope->num_masses + bidx;
+	return *(uint32_t*)&spr->rest_len == 0xffffffff ? 0 : spr;
+}
+
 /* actual step function, called by rsim_step in a loop to microstep or once if
  * microstepping is disabled
  */
 static void step(struct rsim_world *rsim, struct rsim_rope *rope, float dt)
 {
-	int i;
+	int i, j;
 	float len, fmag;
 	cgm_vec3 npos, faccel, dir;
 	float inv_damp = rsim->damping == 0.0f ? 1.0f : (1.0f - rsim->damping);
-	struct rsim_mass *mass = rope->masses;
-	struct rsim_spring *spr = rope->springs;
+	struct rsim_mass *mass;
+	struct rsim_spring *spr;
 
-	/* accumulate forces from springs */
-	for(i=0; i<rope->num_springs; i++) {
-		dir = spr->mass[1]->p;
-		cgm_vsub(&dir, &spr->mass[0]->p);
+	/* for each mass, add spring forces to every other mass it's connected to */
+	for(i=0; i<rope->num_masses; i++) {
+		for(j=0; j<rope->num_masses; j++) {
+			if(i == j || !(spr = getspring(rope, i, j))) {
+				continue;
+			}
 
-		len = cgm_vlength(&dir);
-		if(len != 0.0f) {
-			float s = 1.0f / len;
-			dir.x *= s;
-			dir.y *= s;
-			dir.z *= s;
+			dir = rope->masses[i].p;
+			cgm_vsub(&dir, &rope->masses[j].p);
+
+			len = cgm_vlength(&dir);
+			if(len != 0.0f) {
+				float s = 1.0f / len;
+				cgm_vscale(&dir, s);
+			}
+			fmag = (len - spr->rest_len) * spr->k;
+
+			cgm_vscale(&dir, fmag / rope->masses[j].m);
+			cgm_vadd(&rope->masses[j].f, &dir);
 		}
-		fmag = (len - spr->rest_len) * spr->k;
-
-		spr->mass[0]->f.x += dir.x * fmag / spr->mass[0]->m;
-		spr->mass[0]->f.y += dir.y * fmag / spr->mass[0]->m;
-		spr->mass[0]->f.z += dir.z * fmag / spr->mass[0]->m;
-
-		spr->mass[1]->f.x -= dir.x * fmag / spr->mass[1]->m;
-		spr->mass[1]->f.y -= dir.y * fmag / spr->mass[1]->m;
-		spr->mass[1]->f.z -= dir.z * fmag / spr->mass[1]->m;
-
-		spr++;
 	}
 
 	/* update masses */
+	mass = rope->masses;
 	for(i=0; i<rope->num_masses; i++) {
 		if(mass->fixed) {
 			mass++;
@@ -122,14 +127,14 @@ void rsim_step(struct rsim_world *rsim, float dt)
 	}
 }
 
-struct rsim_rope *rsim_alloc_rope(int nmasses, int nsprings)
+struct rsim_rope *rsim_alloc_rope(int nmasses)
 {
 	struct rsim_rope *rope;
 
 	if(!(rope = malloc(sizeof *rope))) {
 		return 0;
 	}
-	if(rsim_init_rope(rope, nmasses, nsprings) == -1) {
+	if(rsim_init_rope(rope, nmasses) == -1) {
 		free(rope);
 		return 0;
 	}
@@ -142,19 +147,20 @@ void rsim_free_rope(struct rsim_rope *rope)
 	free(rope);
 }
 
-int rsim_init_rope(struct rsim_rope *rope, int nmasses, int nsprings)
+int rsim_init_rope(struct rsim_rope *rope, int nmasses)
 {
 	memset(rope, 0, sizeof *rope);
 
 	if(!(rope->masses = calloc(nmasses, sizeof *rope->masses))) {
 		return -1;
 	}
-	if(!(rope->springs = calloc(nsprings, sizeof *rope->springs))) {
+	rope->num_masses = nmasses;
+
+	if(!(rope->springs = malloc(nmasses * nmasses * sizeof *rope->springs))) {
 		free(rope->masses);
 		return -1;
 	}
-	rope->num_masses = nmasses;
-	rope->num_springs = nsprings;
+	memset(rope->springs, 0xff, nmasses * nmasses * sizeof *rope->springs);
 	return 0;
 }
 
@@ -164,34 +170,44 @@ void rsim_destroy_rope(struct rsim_rope *rope)
 	free(rope->springs);
 }
 
+int rsim_set_rope_spring(struct rsim_rope *rope, int ma, int mb, float k, float rlen)
+{
+	cgm_vec3 dir;
+	struct rsim_spring *spr;
+
+	if(ma == mb || ma < 0 || ma >= rope->num_masses || mb < 0 || mb >= rope->num_masses) {
+		return -1;
+	}
+
+	if(rlen == RSIM_RLEN_DEFAULT) {
+		dir = rope->masses[ma].p;
+		cgm_vsub(&dir, &rope->masses[mb].p);
+		rlen = cgm_vlength(&dir);
+	}
+
+	spr = rope->springs + ma * rope->num_masses + mb;
+	spr->k = fabs(k);
+	spr->rest_len = rlen;
+	return 0;
+}
+
+int rsim_have_spring(struct rsim_rope *rope, int ma, int mb)
+{
+	return getspring(rope, ma, mb) ? 1 : 0;
+}
+
 int rsim_freeze_rope_mass(struct rsim_rope *rope, struct rsim_mass *m)
 {
 	if(m->fixed) return -1;
 
 	m->fixed = 1;
-	m->next = rope->fixedlist;
-	rope->fixedlist = m;
 	return 0;
 }
 
 int rsim_unfreeze_rope_mass(struct rsim_rope *rope, struct rsim_mass *m)
 {
-	struct rsim_mass *it, dummy;
-
 	if(!m->fixed) return -1;
 
-	dummy.next = rope->fixedlist;
-	it = &dummy;
-	while(it->next) {
-		if(it->next == m) {
-			m->fixed = 0;
-			it->next = m->next;
-			m->next = 0;
-			break;
-		}
-		it = it->next;
-	}
-	rope->fixedlist = dummy.next;
-
-	return m->fixed ? -1 : 0;
+	m->fixed = 0;
+	return 0;
 }

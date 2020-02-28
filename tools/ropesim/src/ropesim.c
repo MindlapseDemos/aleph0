@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <assert.h>
 #include "ropesim.h"
 
 static void step(struct rsim_world *rsim, struct rsim_rope *rope, float dt);
@@ -58,12 +59,20 @@ static void step(struct rsim_world *rsim, struct rsim_rope *rope, float dt)
 			cgm_vsub(&dir, &rope->masses[j].p);
 
 			len = cgm_vlength(&dir);
+			if(len > 100.0f) {
+				abort();
+			}
 			if(len != 0.0f) {
 				float s = 1.0f / len;
 				cgm_vscale(&dir, s);
 			}
 			fmag = (len - spr->rest_len) * spr->k;
+			if(i == 5) {
+				printf("%d-%d fmag: %f\n", i, j, fmag);
+				if(fmag > 20) asm volatile("int $3");
+			}
 
+			assert(rope->masses[j].m != 0.0f);
 			cgm_vscale(&dir, fmag / rope->masses[j].m);
 			cgm_vadd(&rope->masses[j].f, &dir);
 		}
@@ -173,7 +182,7 @@ void rsim_destroy_rope(struct rsim_rope *rope)
 int rsim_set_rope_spring(struct rsim_rope *rope, int ma, int mb, float k, float rlen)
 {
 	cgm_vec3 dir;
-	struct rsim_spring *spr;
+	struct rsim_spring *spr, *rps;
 
 	if(ma == mb || ma < 0 || ma >= rope->num_masses || mb < 0 || mb >= rope->num_masses) {
 		return -1;
@@ -186,8 +195,9 @@ int rsim_set_rope_spring(struct rsim_rope *rope, int ma, int mb, float k, float 
 	}
 
 	spr = rope->springs + ma * rope->num_masses + mb;
-	spr->k = fabs(k);
-	spr->rest_len = rlen;
+	rps = rope->springs + mb * rope->num_masses + ma;
+	spr->k = rps->k = fabs(k);
+	spr->rest_len = rps->rest_len = rlen;
 	return 0;
 }
 

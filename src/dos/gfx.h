@@ -1,17 +1,38 @@
 #ifndef GFX_H_
 #define GFX_H_
 
+#include "inttypes.h"
+
+struct video_mode {
+	uint16_t mode;
+	short xsz, ysz, bpp, pitch;
+	short rbits, gbits, bbits;
+	short rshift, gshift, bshift;
+	uint32_t rmask, gmask, bmask;
+	uint32_t fb_addr;
+	short max_pages;
+	uint32_t bank_size;
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void *set_video_mode(int xsz, int ysz, int bpp, int nbuf);
-int set_text_mode(void);
+int init_video(void);
+void cleanup_video(void);
 
-int get_color_depth(void);
-int get_color_bits(int *rbits, int *gbits, int *bbits);
-int get_color_shift(int *rshift, int *gshift, int *bshift);
-int get_color_mask(unsigned int *rmask, unsigned int *gmask, unsigned int *bmask);
+struct video_mode *video_modes(void);
+int num_video_modes(void);
+
+#define VMODE_CURRENT	(-1)
+struct video_mode *get_video_mode(int idx);
+
+int match_video_mode(int xsz, int ysz, int bpp);
+int find_video_mode(int mode);
+
+/* argument is the mode list index [0, nmodes-1] */
+void *set_video_mode(int idx, int nbuf);
+int set_text_mode(void);
 
 void set_palette(int idx, int r, int g, int b);
 
@@ -21,6 +42,7 @@ enum {
 };
 /* page flip and return pointer to the start of the display area (front buffer) */
 void *page_flip(int vsync);
+extern void (*blit_frame)(void *pixels, int vsync);
 
 #ifdef __WATCOMC__
 void wait_vsync(void);

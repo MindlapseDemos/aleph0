@@ -1,62 +1,61 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <string.h>
-#include <limits.h>
-#include <assert.h>
-#include <conio.h>
 #include "demo.h"
 #include "keyb.h"
-#include "mouse.h"
 #include "timer.h"
 #include "gfx.h"
-#include "vmath.h"
-#include "sball.h"
-#include "cfgopt.h"
 #include "logger.h"
-#include "tinyfps.h"
 #include "cdpmi.h"
-
-#undef NOKEYB
+#include "audio.h"
 
 static int handle_sball_event(sball_event *ev);
 static void recalc_sball_matrix(float *xform);
 
 static int quit;
-static long fbsize;
+
+int force_snd_config;
 
 static int use_sball;
 static vec3_t pos = {0, 0, 0};
 static quat_t rot = {0, 0, 0, 1};
 
+
 int main(int argc, char **argv)
 {
+	int i;
+	int vmidx, status = 0;
+
+	for(i=1; i<argc; i++) {
+		if(strcmp(argv[i], "-setup") == 0) {
+			force_snd_config = 1;
+		}
+	}
+
 #ifdef __DJGPP__
 	__djgpp_nearptr_enable();
 #endif
 
-	fbsize = FB_WIDTH * FB_HEIGHT * FB_BPP / 8;
-
 	init_logger("demo.log");
 
-	init_timer(100);
-#ifndef NOKEYB
-	kb_init(32);
-#endif
-
-	/* now start_loadscr sets up fb_pixels to the space used by the loading image,
-	 * so no need to allocate another framebuffer
+	/* au_init needs to be called early, before init_timer, and also before
+	 * we enter graphics mode, to use the midas configuration tool if necessary
 	 */
-#if 0
-	/* allocate a couple extra rows as a guard band, until we fucking fix the rasterizer */
-	if(!(fb_pixels = malloc(fbsize + (FB_WIDTH * FB_BPP / 8) * 2))) {
-		fprintf(stderr, "failed to allocate backbuffer\n");
+	if(au_init() == -1) {
 		return 1;
 	}
-	fb_pixels += FB_WIDTH;
-#endif
 
-	if(!(vmem = set_video_mode(FB_WIDTH, FB_HEIGHT, FB_BPP, 1))) {
+	init_timer(100);
+	kb_init(32);
+
+	if(init_video() == -1) {
+		return 1;
+	}
+
+	if((vmidx = match_video_mode(640, 480, 16)) == -1) {
+		return 1;
+	}
+	if(!(vmem = set_video_mode(vmidx, 1))) {
 		return 1;
 	}
 
@@ -68,9 +67,9 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if(demo_init(argc, argv) == -1) {
-		set_text_mode();
-		return 1;
+	if(init(argc, argv) == -1) {
+		status = -1;
+		goto break_evloop;
 	}
 
 	if(opt.sball && sball_init() == 0) {
@@ -79,18 +78,12 @@ int main(int argc, char **argv)
 
 	reset_timer();
 
-	while(!quit) {
-#ifndef NOKEYB
+	for(;;) {
 		int key;
 		while((key = kb_getkey()) != -1) {
-			demo_keyboard(key, 1);
+			demo_key(key, 1);
+			if(quit) goto break_evloop;
 		}
-#else
-		if(kbhit()) {
-			demo_keyboard(getch(), 1);
-		}
-#endif
-		if(quit) goto break_evloop;
 
 		if(opt.mouse) {
 			mouse_bmask = read_mouse(&mouse_x, &mouse_y);
@@ -104,41 +97,25 @@ int main(int argc, char **argv)
 		}
 
 		time_msec = get_msec();
-		demo_draw();
+		draw();
 	}
 
 break_evloop:
+	cleanup();
 	set_text_mode();
-	demo_cleanup();
-#ifndef NOKEYB
+	cleanup_video();
 	kb_shutdown();
-#endif
+	au_shutdown();
 	if(use_sball) {
 		sball_shutdown();
 	}
-	return 0;
+	return status;
 }
 
 void demo_quit(void)
 {
 	quit = 1;
 }
-
-void swap_buffers(void *pixels)
-{
-	if(!pixels) {
-		pixels = fb_pixels;
-	}
-
-	demo_post_draw(pixels);
-
-	/* just memcpy to the front buffer */
-	if(opt.vsync) {
-		wait_vsync();
-	}
-	memcpy(vmem, pixels, fbsize);
-}
-
 
 #define TX(ev)	((ev)->motion.motion[0])
 #define TY(ev)	((ev)->motion.motion[1])

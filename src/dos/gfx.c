@@ -229,7 +229,7 @@ void *set_video_mode(int idx, int nbuf)
 	}
 
 	/* allocate main memory framebuffer */
-	if(resizefb(vm->xsz, vm->ysz, vm->bpp) == -1) {
+	if(demo_resizefb(vm->xsz, vm->ysz, vm->bpp) == -1) {
 		fprintf(stderr, "failed to allocate %dx%d (%d bpp) framebuffer\n", vm->xsz,
 				vm->ysz, vm->bpp);
 		set_text_mode();
@@ -269,7 +269,8 @@ void *page_flip(int vsync)
 
 static void blit_frame_lfb(void *pixels, int vsync)
 {
-	if(show_fps) dbg_fps(pixels);
+	demo_post_draw(pixels);
+
 	if(vsync) wait_vsync();
 	memcpy64(vpgaddr[frontidx], pixels, pgsize >> 3);
 }
@@ -280,7 +281,7 @@ static void blit_frame_banked(void *pixels, int vsync)
 	unsigned int pending;
 	unsigned char *pptr = pixels;
 
-	if(show_fps) dbg_fps(pixels);
+	demo_post_draw(pixels);
 
 	if(vsync) wait_vsync();
 

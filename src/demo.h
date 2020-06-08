@@ -2,13 +2,15 @@
 #define DEMO_H_
 
 #include "inttypes.h"
+#include "gfx.h"
+#include "cfgopt.h"
 
 /*extern int fb_width, fb_height, fb_bpp;*/
 #define FB_WIDTH	320
 #define FB_HEIGHT	240
 #define FB_BPP		16
-extern uint16_t *fb_pixels;	/* system-RAM pixel buffer: use swap_buffers(fb_pixels) */
-extern uint16_t *vmem;		/* visible video memory pointer */
+extern uint16_t *fb_pixels;
+extern uint16_t *vmem;
 
 extern unsigned long time_msec;
 extern int mouse_x, mouse_y;
@@ -22,8 +24,9 @@ enum {
 
 /* special keys */
 enum {
+	KB_BACKSP = 8,
 	KB_ESC = 27,
-	KB_BACKSP = 127,
+	KB_DEL = 127,
 
 	KB_NUM_0, KB_NUM_1, KB_NUM_2, KB_NUM_3, KB_NUM_4,
 	KB_NUM_5, KB_NUM_6, KB_NUM_7, KB_NUM_8, KB_NUM_9,
@@ -39,10 +42,20 @@ enum {
 	KB_HELP, KB_PRINT, KB_SYSRQ, KB_BREAK
 };
 
+#ifndef KB_ANY
+#define KB_ANY		(-1)
+#define KB_ALT		(-2)
+#define KB_CTRL		(-3)
+#define KB_SHIFT	(-4)
+#endif
+
+
 extern float sball_matrix[16];
 
 int demo_init(int argc, char **argv);
 void demo_cleanup(void);
+
+int demo_resizefb(int width, int height, int bpp);
 
 void demo_draw(void);
 void demo_post_draw(void *pixels);
@@ -55,8 +68,7 @@ void demo_quit(void);
 unsigned long get_msec(void);
 void set_palette(int idx, int r, int g, int b);
 
-/* if pixels is 0, it defaults to fb_pixels */
-void swap_buffers(void *pixels);
+#define swap_buffers(pix)	blit_frame(pix ? pix : fb_pixels, opt.vsync)
 
 void change_screen(int idx);
 

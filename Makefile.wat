@@ -1,25 +1,25 @@
 obj = 3dgfx.obj bsptree.obj bump.obj cfgopt.obj demo.obj djdpmi.obj dynarr.obj &
 fract.obj gfx.obj gfxutil.obj greets.obj grise.obj hairball.obj infcubes.obj &
 keyb.obj logger.obj main.obj mesh.obj meshload.obj metaball.obj metasurf.obj &
-mouse.obj music.obj noise.obj plasma.obj polyclip.obj polyfill.obj polytest.obj &
+mouse.obj audos.obj noise.obj plasma.obj polyclip.obj polyfill.obj polytest.obj &
 rbtree.obj sball.obj screen.obj smoketxt.obj thunder.obj tilemaze.obj timer.obj &
 tinyfps.obj treestor.obj ts_text.obj tunnel.obj util.obj vbe.obj vga.obj
 
 bin = demo.exe
 
-libs = imago.lib anim.lib
+libs = imago.lib anim.lib midas.lib
 
 def = -dM_PI=3.141592653589793 -dUSE_HLT
 opt = -5 -fp5 -otexan -oh -oi -ei
 dbg = -d2
 
 !ifdef __UNIX__
-incpath = -Isrc -Isrc/dos -Ilibs -Ilibs/imago/src -Ilibs/anim/src
-libpath = libpath libs/imago libpath libs/anim
+incpath = -Isrc -Isrc/dos -Ilibs -Ilibs/imago/src -Ilibs/anim/src -Ilibs/midas
+libpath = libpath libs/imago libpath libs/anim libpath libs/midas
 RM = rm -f
 !else
-incpath = -Isrc -Isrc\dos -Ilibs -Ilibs\imago\src -Ilibs\anim\src
-libpath = libpath libs\imago libpath libs\anim
+incpath = -Isrc -Isrc\dos -Ilibs -Ilibs\imago\src -Ilibs\anim\src -Ilibs\midas
+libpath = libpath libs\imago libpath libs\anim libpath libs\midas
 RM = del
 !endif
 

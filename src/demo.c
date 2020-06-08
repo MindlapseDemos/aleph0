@@ -8,7 +8,7 @@
 #include "demo.h"
 #include "screen.h"
 #include "3dgfx.h"
-#include "music.h"
+#include "audio.h"
 #include "cfgopt.h"
 #include "console.h"
 #include "tinyfps.h"
@@ -16,18 +16,20 @@
 
 #define MOUSE_TIMEOUT	1200
 
-/*
-#define FB_WIDTH	320
-#define FB_HEIGHT	240
+#define GUARD_XPAD	0
+#define GUARD_YPAD	32
 
-int fb_width = FB_WIDTH;
-int fb_height = FB_HEIGHT;
-int fb_bpp = 16;
-*/
+int fb_width, fb_height, fb_bpp, fb_scan_size;
+float fb_aspect;
+long fb_size, fb_buf_size;
 uint16_t *fb_pixels, *vmem;
+uint16_t *fb_buf;
+
 unsigned long time_msec;
 int mouse_x, mouse_y;
 unsigned int mouse_bmask;
+
+static struct au_module *mod;
 
 float sball_matrix[] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
 
@@ -71,7 +73,7 @@ int demo_init(int argc, char **argv)
 	g3d_framebuffer(FB_WIDTH, FB_HEIGHT, fb_pixels);
 
 	if(opt.music) {
-		if(music_open("data/test.mod") == -1) {
+		if(!(mod = au_load_module("data/test.mod"))) {
 			return -1;
 		}
 	}
@@ -94,7 +96,7 @@ int demo_init(int argc, char **argv)
 	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * FB_BPP / CHAR_BIT);
 
 	if(opt.music) {
-		music_play();
+		au_play_module(mod);
 	}
 	return 0;
 }
@@ -102,7 +104,7 @@ int demo_init(int argc, char **argv)
 void demo_cleanup(void)
 {
 	if(opt.music) {
-		music_close();
+		au_free_module(mod);
 	}
 	scr_shutdown();
 	g3d_destroy();
@@ -112,6 +114,43 @@ void demo_cleanup(void)
 		printf("average framerate: %.1f\n", fps);
 	}
 }
+
+int demo_resizefb(int width, int height, int bpp)
+{
+	int newsz, new_scansz;
+
+	if(!width || !height || !bpp) {
+		free(fb_buf);
+		fb_buf = fb_pixels = 0;
+		fb_size = fb_buf_size = fb_scan_size = 0;
+		fb_width = fb_height = fb_bpp = 0;
+		return 0;
+	}
+
+	new_scansz = ((width + GUARD_XPAD * 2) * bpp + 7) / 8;
+	newsz = (height + GUARD_YPAD * 2) * new_scansz;
+
+	if(!fb_buf || newsz > fb_buf_size) {
+		void *tmp = malloc(newsz);
+		if(!tmp) return -1;
+
+		free(fb_buf);
+		fb_buf = tmp;
+		fb_buf_size = newsz;
+	}
+
+	fb_scan_size = new_scansz;
+	fb_pixels = (uint16_t*)((char*)fb_buf + GUARD_YPAD * fb_scan_size + (GUARD_XPAD * bpp + 7) / 8);
+	fb_width = width;
+	fb_height = height;
+	fb_bpp = bpp;
+	fb_size = fb_scan_size * fb_height;
+
+	fb_aspect = (float)fb_width / (float)fb_height;
+
+	return 0;
+}
+
 
 void demo_draw(void)
 {
@@ -128,7 +167,7 @@ void demo_draw(void)
 	}
 
 	if(opt.music) {
-		music_update();
+		au_update();
 	}
 	scr_update();
 	scr_draw();

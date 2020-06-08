@@ -8,6 +8,8 @@
 #include "logger.h"
 #include "cdpmi.h"
 #include "audio.h"
+#include "sball.h"
+#include "vmath.h"
 
 static int handle_sball_event(sball_event *ev);
 static void recalc_sball_matrix(float *xform);

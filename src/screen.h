@@ -15,8 +15,8 @@ struct screen {
 	void (*keypress)(int key);
 };
 
-const char *dbg_curscr_name;
-int dbg_curscr_name_len, dbg_curscr_name_pos;
+extern const char *dbg_curscr_name;
+extern int dbg_curscr_name_len, dbg_curscr_name_pos;
 
 int scr_init(void);
 void scr_shutdown(void);

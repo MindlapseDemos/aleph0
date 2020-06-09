@@ -5,9 +5,13 @@
 #include "mesh.h"
 #include "dynarr.h"
 #include "rbtree.h"
-#include "vmath.h"
 #include "3dgfx.h"
 #include "util.h"
+
+typedef struct { float x, y; } vec2_t;
+typedef struct { float x, y, z; } vec3_t;
+typedef struct { float x, y, z, w; } vec4_t;
+
 
 struct vertex_pos_color {
 	float x, y, z;
@@ -108,6 +112,7 @@ int load_mesh(struct g3d_mesh *mesh, const char *fname)
 					fprintf(stderr, "%s:%d: invalid texcoord definition: \"%s\"\n", fname, line_num, line);
 					goto err;
 				}
+				tc.y = 1.0f - tc.y;
 				if(!(tarr = dynarr_push(tarr, &tc))) {
 					fprintf(stderr, "load_mesh: failed to resize texcoord buffer\n");
 					goto err;

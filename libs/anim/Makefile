@@ -1,30 +1,27 @@
-src = $(wildcard src/*.c)
-obj = $(src:.c=.odj)
-alib = anim.dja
+obj = anim.obj track.obj
+alib = anim.lib
 
-ifeq ($(findstring COMMAND.COM, $(SHELL)), COMMAND.COM)
-	hostsys = dos
-else
-	hostsys = unix
-	TOOLPREFIX = i586-pc-msdosdjgpp-
-endif
+def = -dM_PI=3.141592653589793
+opt = -5 -fp5 -otexan -I.. -I../../src $(def)
+dbg = -d1
 
-CC = $(TOOLPREFIX)gcc
-AR = $(TOOLPREFIX)ar
-CFLAGS = -Wno-main -march=pentium -O3 -ffast-math -I.. -I../../src
+!ifdef __UNIX__
+RM = rm -f
+!else
+RM = del
+!endif
+
+CC = wcc386
+CFLAGS = $(dbg) $(opt) $(def) -zq -bt=dos
 
 $(alib): $(obj)
-	$(AR) rcs $@ $(obj)
+	wlib -b -n $@ $(obj)
 
-%.odj: %.c
-	$(CC) $(CFLAGS) -o $@ -c $<
+.c: src
 
-.PHONY: clean
-ifeq ($(hostsys), dos)
-clean:
-	del src\*.odj
-	del $(alib)
-else
-clean:
-	rm -f $(obj) $(alib)
-endif
+.c.obj: .autodepend
+	$(CC) -fo=$@ $(CFLAGS) $[*
+
+clean: .symbolic
+	$(RM) *.obj
+	$(RM) $(alib)

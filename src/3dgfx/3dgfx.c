@@ -1,9 +1,10 @@
+#ifndef BUILD_OPENGL
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <assert.h>
-#if defined(__WATCOMC__) || defined(_MSC_VER) || defined(__DJGPP__)
+#if defined(__WATCOMC__) || defined(_WIN32) || defined(__DJGPP__)
 #include <malloc.h>
 #else
 #include <alloca.h>
@@ -89,12 +90,26 @@ static const float idmat[] = {
 
 int g3d_init(void)
 {
-	int i;
-
-	if(!(st = calloc(1, sizeof *st))) {
+	if(!(st = malloc(sizeof *st))) {
 		fprintf(stderr, "failed to allocate G3D context\n");
 		return -1;
 	}
+	g3d_reset();
+
+	return 0;
+}
+
+void g3d_destroy(void)
+{
+	free(st);
+}
+
+void g3d_reset(void)
+{
+	int i;
+
+	memset(st, 0, sizeof *st);
+
 	st->opt = G3D_CLIP_FRUSTUM;
 	st->polymode = POLYFILL_FLAT;
 
@@ -109,16 +124,16 @@ int g3d_init(void)
 	g3d_light_ambient(0.1, 0.1, 0.1);
 
 	g3d_mtl_diffuse(1, 1, 1);
-	return 0;
-}
-
-void g3d_destroy(void)
-{
-	free(st);
 }
 
 void g3d_framebuffer(int width, int height, void *pixels)
 {
+	static int prev_height;
+
+	if(height > prev_height) {
+		polyfill_fbheight(height);
+	}
+
 	st->width = width;
 	st->height = height;
 	st->pixels = pixels;
@@ -173,6 +188,11 @@ void g3d_front_face(unsigned int order)
 void g3d_polygon_mode(int pmode)
 {
 	st->polymode = pmode;
+}
+
+int g3d_get_polygon_mode(void)
+{
+	return st->polymode;
 }
 
 void g3d_matrix_mode(int mmode)
@@ -233,7 +253,7 @@ void g3d_pop_matrix(void)
 
 void g3d_translate(float x, float y, float z)
 {
-	float m[] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+	float m[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
 	m[12] = x;
 	m[13] = y;
 	m[14] = z;
@@ -242,7 +262,7 @@ void g3d_translate(float x, float y, float z)
 
 void g3d_rotate(float deg, float x, float y, float z)
 {
-	float m[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	float m[16] = {0};
 
 	float angle = M_PI * deg / 180.0f;
 	float sina = sin(angle);
@@ -268,7 +288,7 @@ void g3d_rotate(float deg, float x, float y, float z)
 
 void g3d_scale(float x, float y, float z)
 {
-	float m[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	float m[16] = {0};
 	m[0] = x;
 	m[5] = y;
 	m[10] = z;
@@ -278,7 +298,7 @@ void g3d_scale(float x, float y, float z)
 
 void g3d_ortho(float left, float right, float bottom, float top, float znear, float zfar)
 {
-	float m[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	float m[16] = {0};
 
 	float dx = right - left;
 	float dy = top - bottom;
@@ -290,13 +310,14 @@ void g3d_ortho(float left, float right, float bottom, float top, float znear, fl
 	m[12] = -(right + left) / dx;
 	m[13] = -(top + bottom) / dy;
 	m[14] = -(zfar + znear) / dz;
+	m[15] = 1.0f;
 
 	g3d_mult_matrix(m);
 }
 
 void g3d_frustum(float left, float right, float bottom, float top, float nr, float fr)
 {
-	float m[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	float m[16] = {0};
 
 	float dx = right - left;
 	float dy = top - bottom;
@@ -320,7 +341,7 @@ void g3d_frustum(float left, float right, float bottom, float top, float nr, flo
 
 void g3d_perspective(float vfov_deg, float aspect, float znear, float zfar)
 {
-	float m[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	float m[16] = {0};
 
 	float vfov = M_PI * vfov_deg / 180.0f;
 	float s = 1.0f / tan(vfov * 0.5f);
@@ -472,7 +493,7 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 			}
 			if(st->opt & G3D_TEXTURE_GEN) {
 				v[i].u = v[i].nx * 0.5 + 0.5;
-				v[i].v = v[i].ny * 0.5 + 0.5;
+				v[i].v = 0.5 - v[i].ny * 0.5;
 			}
 			if(st->opt & G3D_TEXTURE_MAT) {
 				float *mat = st->mat[G3D_TEXTURE][st->mtop[G3D_TEXTURE]];
@@ -540,13 +561,22 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 
 		switch(vnum) {
 		case 1:
-			if(st->opt & G3D_BLEND) {
-				int r, g, b;
-				int inv_alpha = 255 - pv[0].a;
+			if(st->opt & (G3D_ALPHA_BLEND | G3D_ADD_BLEND)) {
+				int r, g, b, inv_alpha;
 				g3d_pixel *dest = st->pixels + (pv[0].y >> 8) * st->width + (pv[0].x >> 8);
-				r = ((int)pv[0].r * pv[0].a + G3D_UNPACK_R(*dest) * inv_alpha) >> 8;
-				g = ((int)pv[0].g * pv[0].a + G3D_UNPACK_G(*dest) * inv_alpha) >> 8;
-				b = ((int)pv[0].b * pv[0].a + G3D_UNPACK_B(*dest) * inv_alpha) >> 8;
+				if(st->opt & G3D_ALPHA_BLEND) {
+					inv_alpha = 255 - pv[0].a;
+					r = ((int)pv[0].r * pv[0].a + G3D_UNPACK_R(*dest) * inv_alpha) >> 8;
+					g = ((int)pv[0].g * pv[0].a + G3D_UNPACK_G(*dest) * inv_alpha) >> 8;
+					b = ((int)pv[0].b * pv[0].a + G3D_UNPACK_B(*dest) * inv_alpha) >> 8;
+				} else {
+					r = (int)pv[0].r + G3D_UNPACK_R(*dest);
+					g = (int)pv[0].g + G3D_UNPACK_G(*dest);
+					b = (int)pv[0].b + G3D_UNPACK_B(*dest);
+					if(r > 255) r = 255;
+					if(g > 255) g = 255;
+					if(b > 255) b = 255;
+				}
 				*dest++ = G3D_PACK_RGB(r, g, b);
 			} else {
 				g3d_pixel *dest = st->pixels + (pv[0].y >> 8) * st->width + (pv[0].x >> 8);
@@ -566,8 +596,10 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 			if(st->opt & G3D_TEXTURE_2D) {
 				fill_mode |= POLYFILL_TEX_BIT;
 			}
-			if(st->opt & G3D_BLEND) {
-				fill_mode |= POLYFILL_BLEND_BIT;
+			if(st->opt & G3D_ALPHA_BLEND) {
+				fill_mode |= POLYFILL_ALPHA_BIT;
+			} else if(st->opt & G3D_ADD_BLEND) {
+				fill_mode |= POLYFILL_ADD_BIT;
 			}
 			polyfill(fill_mode, pv, vnum);
 		}
@@ -746,3 +778,5 @@ static void shade(struct g3d_vertex *v)
 	v->g = g > 255 ? 255 : g;
 	v->b = b > 255 ? 255 : b;
 }
+
+#endif	/* !def BUILD_OPENGL */

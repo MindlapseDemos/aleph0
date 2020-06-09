@@ -1,97 +1,97 @@
-src = $(wildcard src/*.c) $(wildcard src/scr/*.c) $(wildcard src/dos/*.c)
-asmsrc = $(wildcard src/*.asm) $(wildcard src/scr/*.asm) $(wildcard src/dos/*.asm)
-obj = $(src:.c=.odj) $(asmsrc:.asm=.odj)
-dep = $(obj:.odj=.dep)
+!ifdef __UNIX__
+dosobj = src/dos/audos.obj src/dos/djdpmi.obj src/dos/gfx.obj src/dos/keyb.obj &
+	src/dos/logger.obj src/dos/main.obj src/dos/sball.obj src/dos/timer.obj &
+	src/dos/vbe.obj src/dos/vga.obj src/dos/watdpmi.obj
+3dobj = src/3dgfx/3dgfx.obj src/3dgfx/mesh.obj src/3dgfx/meshload.obj &
+	src/3dgfx/polyclip.obj src/3dgfx/polyfill.obj
+srcobj = src/bsptree.obj src/cfgopt.obj src/console.obj &
+	src/demo.obj src/dynarr.obj src/gfxutil.obj &
+	src/metasurf.obj src/noise.obj &
+	src/rbtree.obj src/screen.obj src/tinyfps.obj src/treestor.obj &
+	src/ts_text.obj src/util.obj
+scrobj = src/scr/bump.obj src/scr/fract.obj src/scr/greets.obj &
+	src/scr/grise.obj src/scr/hairball.obj src/scr/infcubes.obj &
+	src/scr/metaball.obj src/scr/plasma.obj src/scr/polytest.obj &
+	src/scr/smoketxt.obj src/scr/thunder.obj src/scr/tilemaze.obj &
+	src/scr/tunnel.obj
+
+incpath = -Isrc -Isrc/dos -Isrc/3dgfx -Ilibs -Ilibs/imago/src -Ilibs/anim/src &
+	-Ilibs/midas
+libpath = libpath libs/imago libpath libs/anim libpath libs/midas
+!else
+
+dosobj = src\dos\audos.obj src\dos\djdpmi.obj src\dos\gfx.obj src\dos\keyb.obj &
+	src\dos\logger.obj src\dos\main.obj src\dos\sball.obj src\dos\timer.obj &
+	src\dos\vbe.obj src\dos\vga.obj src\dos\watdpmi.obj
+3dobj = src\3dgfx\3dgfx.obj src\3dgfx\mesh.obj src\3dgfx\meshload.obj &
+	src\3dgfx\polyclip.obj src\3dgfx\polyfill.obj
+srcobj = src\3dgfx.obj src\bsptree.obj src\cfgopt.obj src\console.obj &
+	src\demo.obj src\dynarr.obj src\gfxutil.obj src\mesh.obj src\meshload.obj &
+	src\metasurf.obj src\noise.obj src\polyclip.obj src\polyfill.obj &
+	src\rbtree.obj src\screen.obj src\tinyfps.obj src\treestor.obj &
+	src\ts_text.obj src\util.obj
+scrobj = src\scr\bump.obj src\scr\fract.obj src\scr\greets.obj &
+	src\scr\grise.obj src\scr\hairball.obj src\scr\infcubes.obj &
+	src\scr\metaball.obj src\scr\plasma.obj src\scr\polytest.obj &
+	src\scr\smoketxt.obj src\scr\thunder.obj src\scr\tilemaze.obj &
+	src\scr\tunnel.obj
+
+incpath = -Isrc -Isrc\dos -Isrc\3dgfx -Ilibs -Ilibs\imago\src -Ilibs\anim\src &
+	-Ilibs\midas
+libpath = libpath libs\imago libpath libs\anim libpath libs\midas
+!endif
+
+obj = $(dosobj) $(3dobj) $(scrobj) $(srcobj)
 bin = demo.exe
 
-asmsrc += cspr/dbgfont.asm cspr/confont.asm
-bindata = data/loading.img
+opt = -otexan
+#opt = -od
+def = -dM_PI=3.141592653589793 -dUSE_HLT
+libs = imago.lib anim.lib midas.lib
 
-ifeq ($(findstring COMMAND.COM, $(SHELL)), COMMAND.COM)
-	hostsys = dos
-else
-	hostsys = unix
-	TOOLPREFIX = i586-pc-msdosdjgpp-
-endif
+AS = nasm
+CC = wcc386
+LD = wlink
+ASFLAGS = -fobj
+CFLAGS = -d3 -5 -fp5 $(opt) $(def) -s -zq -bt=dos $(incpath)
+LDFLAGS = option map $(libpath) library { $(libs) }
 
-inc = -Isrc -Isrc/scr -Isrc/dos -Ilibs -Ilibs/imago/src -Ilibs/anim/src
-opt = -O3 -ffast-math -fno-strict-aliasing
-warn = -pedantic -Wall -Wno-unused-function -Wno-unused-variable
+$(bin): cflags.occ $(obj) libs/imago/imago.lib libs/anim/anim.lib
+	%write objects.lnk $(obj)
+	%write ldflags.lnk $(LDFLAGS)
+	$(LD) debug all name $@ system dos4g file { @objects } @ldflags
 
-ifdef RELEASE
-	dbg = -g
-	def = -DNDEBUG -DNO_MUSIC
-else
-	def = -DNO_MUSIC
-endif
-#prof = -pg
+.c: src;src/dos;src/3dgfx;src/scr
+.asm: src;src/dos;src/3dgfx;src/scr
 
-CC = $(TOOLPREFIX)gcc
-AR = $(TOOLPREFIX)ar
-CFLAGS = $(warn) -march=pentium $(dbg) $(opt) $(prof) $(inc) $(def)
-LDFLAGS = libs/imago/imago.dja libs/anim/anim.dja
+cflags.occ: Makefile
+	%write $@ $(CFLAGS)
 
-ifneq ($(hostsys), dos)
-.PHONY: all
-all: data $(bin)
-endif
+!ifdef __UNIX__
+src/dos/audos.obj: src/dos/audos.c
+!else
+src\dos\audos.obj: src\dos\audos.c
+!endif
+	$(CC) -fo=$@ @cflags.occ -zu $[*
 
-$(bin): $(obj) imago anim
-	$(CC) -o $@ -Wl,-Map=ld.map $(prof) $(obj) $(LDFLAGS)
+.c.obj: .autodepend
+	$(CC) -fo=$@ @cflags.occ $[*
 
-%.odj: %.asm
-	nasm -f coff -o $@ $<
+.asm.obj:
+	nasm -f obj -o $@ $[*.asm
 
-src/data.odj: src/data.asm $(bindata)
-
-ifneq ($(hostsys), dos)
--include $(dep)
-endif
-
-%.odj: %.c
-	$(CC) $(CFLAGS) -o $@ -c $<
-
-%.dep: %.c
-	@echo dep $@
-	@$(CPP) $(CFLAGS) $< -MM -MT $(@:.dep=.odj) >$@
-
-.PHONY: imago
-imago:
-	$(MAKE) -C libs/imago -f Makefile
-
-.PHONY: anim
-anim:
-	$(MAKE) -C libs/anim -f Makefile
-
-.PHONY: cleanlibs
-cleanlibs:
-	$(MAKE) -C libs/imago -f Makefile clean
-	$(MAKE) -C libs/anim -f Makefile clean
-
-.PHONY: clean
-.PHONY: cleandep
-
-ifeq ($(hostsys), dos)
-clean:
-	del src\*.odj
-	del src\dos\*.odj
+!ifdef __UNIX__
+clean: .symbolic
+	rm -f $(obj)
+	rm -f $(bin)
+	rm -f cflags.occ *.lnk
+!else
+clean: .symbolic
+	del src\*.obj
+	del src\dos\*.obj
+	del src\3dgfx\*.obj
+	del src\scr\*.obj
+	del *.lnk
+	del cflags.occ
 	del $(bin)
-
-cleandep:
-	del src\*.dep
-	del src\dos\*.dep
-else
-clean:
-	rm -f $(obj) $(bin)
-
-cleandep:
-	rm -f $(dep)
-
-.PHONY: data
-data:
-	@tools/procdata
-endif
-
-.PHONY: strip
-strip: $(bin)
-	$(TOOLPREFIX)strip $(bin)
+!endif

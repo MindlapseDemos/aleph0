@@ -37,6 +37,9 @@ static int num_screens;
 static struct screen *cur, *prev, *next;
 static long trans_start, trans_dur;
 
+const char *dbg_curscr_name;
+int dbg_curscr_name_len, dbg_curscr_name_pos;
+
 int scr_init(void)
 {
 	int i, idx = 0;

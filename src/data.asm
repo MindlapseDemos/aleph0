@@ -1,4 +1,4 @@
-	section .data
+	section .data USE32
 
 	global loading_pixels
 	global _loading_pixels

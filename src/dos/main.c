@@ -69,7 +69,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if(init(argc, argv) == -1) {
+	if(demo_init(argc, argv) == -1) {
 		status = -1;
 		goto break_evloop;
 	}
@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 	for(;;) {
 		int key;
 		while((key = kb_getkey()) != -1) {
-			demo_key(key, 1);
+			demo_keyboard(key, 1);
 			if(quit) goto break_evloop;
 		}
 
@@ -99,11 +99,11 @@ int main(int argc, char **argv)
 		}
 
 		time_msec = get_msec();
-		draw();
+		demo_draw();
 	}
 
 break_evloop:
-	cleanup();
+	demo_cleanup();
 	set_text_mode();
 	cleanup_video();
 	kb_shutdown();

@@ -147,6 +147,7 @@ const char *prefixfmt[] = {
 	"\tsection .text\n"
 	"\tglobal %s\n"
 	"\tglobal _%s\n"
+	"\tglobal %s_\n"
 	"%s:\n"
 	"_%s:\n"
 	"\tmov eax, [esp + 12]\n"
@@ -162,6 +163,17 @@ const char *prefixfmt[] = {
 	"\tmov edx, eax\n"
 	"\tmov eax, [esp + 16]\n"
 	"\tjmp [titletab + eax * 4]\n\n"
+	"%s_:\n"
+	"\tpush eax\n"
+	"\tmov eax, ebx\n"
+	"\tshl eax, 9\n"
+	"\tshl ebx, 7\n"
+	"\tadd eax, ebx\n"
+	"\tshl edx, 1\n"
+	"\tadd eax, edx\n"
+	"\tpop edx\n"
+	"\tadd edx, eax\n"
+	"\tjmp [titletab + ecx * 4]\n\n"
 	"titletab:\n"
 };
 
@@ -217,7 +229,7 @@ int proc_sheet(const char *fname)
 		ysz = tile_ysz;
 	}
 
-	printf(prefixfmt[asyntax], name, name, name, name, fbpitch);
+	printf(prefixfmt[asyntax], name, name, name, name, name, fbpitch, name);
 	for(i=0; i<num_ytiles*num_xtiles; i++) {
 		if(asyntax == AS_GNU) {
 			printf("\t.long tile%d\n", i);

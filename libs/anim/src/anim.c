@@ -617,11 +617,8 @@ void anm_set_rotation4f(struct anm_node *node, float x, float y, float z, float 
 void anm_set_rotation_axis(struct anm_node *node, float angle, float x, float y, float z, anm_time_t tm)
 {
 	cgm_quat q;
-	cgm_vec3 axis;
 
-	cgm_vcons(&axis, x, y, z);
-	cgm_qrotation(&q, &axis, angle);
-
+	cgm_qrotation(&q, angle, x, y, z);
 	anm_set_rotation(node, (float*)&q, tm);
 }
 

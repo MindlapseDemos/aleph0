@@ -204,7 +204,7 @@ void start_loadscr(void)
 void end_loadscr(void)
 {
 	blitfb(loading_pixels + SPLAT_Y * 320 + SPLAT_X, loading_pixels + 320 * 240, 32, 72, 32);
-	blitfb_key(loading_pixels + FING_Y * 320 + FING_LAST_X, loading_pixels + 247 * 320 + 64,
+	blit_key(loading_pixels + FING_Y * 320 + FING_LAST_X, 320, loading_pixels + 247 * 320 + 64,
 			FING_W, FING_H, FING_W, 0);
 	swap_buffers(loading_pixels);
 	sleep_msec(300);
@@ -220,7 +220,7 @@ void loadscr(int n, int count)
 	dptr = loading_pixels + FING_Y * 320 + FING_X + prev_xoffs;
 
 	while(prev_xoffs < xoffs) {
-		blitfb_key(dptr, sptr, FING_W, FING_H, FING_W, 0);
+		blit_key(dptr, 320, sptr, FING_W, FING_H, FING_W, 0);
 		dptr++;
 		prev_xoffs++;
 	}

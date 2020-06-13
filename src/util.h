@@ -16,6 +16,14 @@
 #define PACKED
 #endif
 
+#define BSWAP16(x)	((((x) >> 8) & 0xff) | (((x) & 0xff) << 8))
+#define BSWAP32(x)	\
+	((((x) >> 24) & 0xff) | \
+	 (((x) >> 8) & 0xff00) | \
+	 (((x) << 8) & 0xff0000) | \
+	 ((x) << 24))
+
+#if defined(__i386__) || defined(__x86_64__) || defined(__386__) || defined(MSDOS)
 /* fast conversion of double -> 32bit int
  * for details see:
  *  - http://chrishecker.com/images/f/fb/Gdmfp.pdf
@@ -26,10 +34,56 @@ static INLINE int32_t cround64(double val)
 	val += 6755399441055744.0;
 	return *(int32_t*)&val;
 }
+#else
+#define cround64(x)	((int32_t)(x))
+#endif
+
+static INLINE float rsqrt(float x)
+{
+	float xhalf = x * 0.5f;
+	int32_t i = *(int32_t*)&x;
+	i = 0x5f3759df - (i >> 1);
+	x = *(float*)&i;
+	x = x * (1.5f - xhalf * x * x);
+	return x;
+}
 
 extern uint32_t perf_start_count, perf_interval_count;
 
 #ifdef __WATCOMC__
+void memset16(void *dest, uint16_t val, int count);
+#pragma aux memset16 = \
+	"cld" \
+	"test ecx, 1" \
+	"jz memset16_dwords" \
+	"rep stosw" \
+	"jmp memset16_done" \
+	"memset16_dwords:" \
+	"shr ecx, 1" \
+	"push ax" \
+	"shl eax, 16" \
+	"pop ax" \
+	"rep stosd" \
+	"memset16_done:" \
+	parm[edi][ax][ecx];
+
+#ifdef USE_MMX
+void memcpy64(void *dest, void *src, int count);
+#pragma aux memcpy64 = \
+	"cploop:" \
+	"movq mm0, [edx]" \
+	"movq [ebx], mm0" \
+	"add edx, 8" \
+	"add ebx, 8" \
+	"dec ecx" \
+	"jnz cploop" \
+	"emms" \
+	parm[ebx][edx][ecx] \
+	modify[8087];
+#else
+#define memcpy64(dest, src, count)	memcpy(dest, src, (count) << 3)
+#endif
+
 void perf_start(void);
 #pragma aux perf_start = \
 	"xor eax, eax" \
@@ -52,14 +106,49 @@ void debug_break(void);
 
 void halt(void);
 #pragma aux halt = "hlt";
-
-void memset16(void *ptr, int val, int count);
-#pragma aux memset16 = \
-	"rep stosw" \
-	parm[edi][eax][ecx];
 #endif
 
 #ifdef __GNUC__
+#if defined(__i386__) || defined(__x86_64__)
+#define memset16(dest, val, count) asm volatile ( \
+	"cld\n\t" \
+	"test $1, %2\n\t" \
+	"jz 0f\n\t" \
+	"rep stosw\n\t" \
+	"jmp 1f\n\t" \
+	"0:\n\t" \
+	"shr $1, %2\n\t" \
+	"push %%ax\n\t" \
+	"shl $16, %%eax\n\t" \
+	"pop %%ax\n\t" \
+	"rep stosl\n\t" \
+	"1:\n\t"\
+	:: "D"(dest), "a"((uint16_t)(val)), "c"(count) \
+	: "memory")
+#else
+static void INLINE memset16(void *dest, uint16_t val, int count)
+{
+	uint16_t *ptr = dest;
+	while(count--) *ptr++ = val;
+}
+#endif
+
+#ifdef USE_MMX
+#define memcpy64(dest, src, count) asm volatile ( \
+	"0:\n\t" \
+	"movq (%1), %%mm0\n\t" \
+	"movq %%mm0, (%0)\n\t" \
+	"add $8, %1\n\t" \
+	"add $8, %0\n\t" \
+	"dec %2\n\t" \
+	"jnz 0b\n\t" \
+	"emms\n\t" \
+	:: "r"(dest), "r"(src), "r"(count) \
+	: "%mm0")
+#else
+#define memcpy64(dest, src, count)	memcpy(dest, src, (count) << 3)
+#endif
+
 #define perf_start()  asm volatile ( \
 	"xor %%eax, %%eax\n" \
 	"cpuid\n" \
@@ -83,13 +172,30 @@ void memset16(void *ptr, int val, int count);
 
 #define halt() \
 	asm volatile("hlt")
-
-#define memset16(ptr, val, count) asm volatile ( \
-	"rep stosw\n\t" \
-	:: "D"(ptr), "a"(val), "c"(count))
 #endif
 
 #ifdef _MSC_VER
+void __inline memset16(void *dest, uint16_t val, int count)
+{
+	__asm {
+		cld
+		mov ax, val
+		mov edi, dest
+		mov ecx, count
+		test ecx, 1
+		jz memset16_dwords
+		rep stosw
+		jmp memset16_done
+		memset16_dwords:
+		shr ecx, 1
+		push ax
+		shl eax, 16
+		pop ax
+		rep stosd
+		memset16_done:
+	}
+}
+
 #define perf_start() \
 	do { \
 		__asm { \
@@ -114,16 +220,6 @@ void memset16(void *ptr, int val, int count);
 #define debug_break() \
 	do { \
 		__asm { int 3 } \
-	} while(0)
-
-#define memset16(ptr, val, count) \
-	do { \
-		__asm { \
-			mov edi, ptr \
-			mov ecx, count \
-			mov eax, val \
-			rep stosw \
-		} \
 	} while(0)
 #endif
 

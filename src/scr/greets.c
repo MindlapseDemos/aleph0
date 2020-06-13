@@ -154,22 +154,15 @@ static void draw(void)
 	draw_smktxt(stx);
 	g3d_framebuffer(FB_WIDTH, FB_HEIGHT, fb_pixels);
 
-	dest = fb_pixels;
-	src = cur_smokebuf;
-	for(i=0; i<FB_HEIGHT; i++) {
-		for(j=0; j<FB_WIDTH; j++) {
-			unsigned int alpha = *src++;
-			*dest++ = PACK_RGB16(alpha, alpha, alpha);
-		}
-	}
+	memcpy(fb_pixels, cur_smokebuf, smokebuf_size);
 
 	/*perf_start();*/
-	blur_grey_horiz(prev_smokebuf, cur_smokebuf, FB_WIDTH, FB_HEIGHT, BLUR_RAD, 240);
+	blur_horiz(prev_smokebuf, cur_smokebuf, FB_WIDTH, FB_HEIGHT, BLUR_RAD, 240);
 	/*
 	perf_end();
 	printf("blur perf: %lu\n", (unsigned long)perf_interval_count);
 	*/
-	blur_grey_vert(cur_smokebuf, prev_smokebuf, FB_WIDTH, FB_HEIGHT, BLUR_RAD, 240);
+	blur_vert(cur_smokebuf, prev_smokebuf, FB_WIDTH, FB_HEIGHT, BLUR_RAD, 240);
 	swap_smoke_buffers();
 
 	msec = get_msec();

@@ -7,7 +7,7 @@ bin = demo
 asmsrc += cspr/dbgfont.asm cspr/confont.asm
 bindata = data/loading.img
 
-inc = -I/usr/local/include -Isrc -Isrc/scr -Isrc/sdl -Ilibs -Ilibs/imago/src -Ilibs/mikmod/include
+inc = -I/usr/local/include -Isrc -Isrc/3dgfx -Isrc/scr -Isrc/sdl -Ilibs -Ilibs/imago/src -Ilibs/mikmod/include
 warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function
 
 CFLAGS = $(arch) $(warn) -g $(inc) `sdl-config --cflags`

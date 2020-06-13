@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include "audio.h"
 #include "midasdll.h"
+#include "util.h"
 
 #define SET_MUS_VOL(vol) \
 	do { \
@@ -208,4 +209,14 @@ void reset_timer(void)
 unsigned long get_msec(void)
 {
 	return ticks * tick_interval;
+}
+
+void sleep_msec(unsigned long msec)
+{
+	unsigned long wakeup_time = ticks + msec / tick_interval;
+	while(ticks < wakeup_time) {
+#ifdef USE_HLT
+		halt();
+#endif
+	}
 }

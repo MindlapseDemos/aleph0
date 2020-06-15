@@ -53,6 +53,12 @@ int parse_args(int argc, char **argv)
 				opt.dbginfo = 1;
 			} else if(strcmp(argv[i], "-nodbg") == 0) {
 				opt.dbginfo = 0;
+#ifndef MSDOS
+			} else if(strcmp(argv[i], "-fs") == 0) {
+				opt.fullscreen = 1;
+			} else if(strcmp(argv[i], "-win") == 0) {
+				opt.fullscreen = 0;
+#endif
 			} else {
 				fprintf(stderr, "invalid option: %s\n", argv[i]);
 				return -1;
@@ -143,6 +149,10 @@ int load_config(const char *fname)
 			opt.vsync = bool_value(value);
 		} else if(strcmp(line, "debug") == 0) {
 			opt.dbginfo = bool_value(value);
+#ifndef MSDOS
+		} else if(strcmp(line, "fullscreen") == 0) {
+			opt.fullscreen = bool_value(value);
+#endif
 		} else {
 			fprintf(stderr, "%s:%d invalid option: %s\n", fname, nline, line);
 			return -1;

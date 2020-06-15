@@ -7,6 +7,9 @@ struct options {
 	int mouse, sball;
 	int vsync;
 	int dbginfo;
+#ifndef MSDOS
+	int fullscreen;
+#endif
 };
 
 extern struct options opt;

@@ -44,12 +44,14 @@ else
 	cp demo.exe $destdir
 	rm -f $destdir/data/*
 	cp data/* $destdir/data/
+	mkdir -p $destdir/libs/mikmod
+	cp libs/midas/midas.lib libs/midas/libmidas.a $destdir/libs/midas
 fi
 
 findsrc()
 {
 	find . -name '*.c' -o -name '*.h' -o -name '*.asm' -o -name '*.inc' \
-		-o -name '*.inl' -o -name Makefile.dj | sed 's/\.\///'
+		-o -name '*.inl' -o -name Makefile.dj -o -name Makefile | sed 's/\.\///'
 }
 for i in `findsrc`; do
 	dir=`dirname $i`

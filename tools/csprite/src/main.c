@@ -144,7 +144,7 @@ const char *prefixfmt[] = {
 	/* TODO hardcoding the 16bpp changes for now, generalize later
 	 *      and while we're at it, let's get rid of the mul too ...
 	 */
-	"\tsection .text\n"
+	"\tsection .text USE32\n"
 	"\tglobal %s\n"
 	"\tglobal _%s\n"
 	"\tglobal %s_\n"

@@ -54,7 +54,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if((vmidx = match_video_mode(640, 480, 16)) == -1) {
+	if((vmidx = match_video_mode(FB_WIDTH, FB_HEIGHT, FB_BPP)) == -1) {
 		return 1;
 	}
 	if(!(vmem = set_video_mode(vmidx, 1))) {

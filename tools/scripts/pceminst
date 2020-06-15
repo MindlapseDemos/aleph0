@@ -7,7 +7,7 @@
 mntpt=/pcem_dos
 do_umount=false
 
-if ! ( mount | grep pcem ); then
+if ! ( mount | grep pcem >/dev/null ); then
 	mount $mntpt || exit 1
 	do_umount=true
 fi

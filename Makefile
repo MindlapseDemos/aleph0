@@ -46,8 +46,9 @@ bin = demo.exe
 
 opt = -otexan
 #opt = -od
-def = -dM_PI=3.141592653589793 -dUSE_HLT
-libs = imago.lib anim.lib midas.lib
+def = -dM_PI=3.141592653589793 -dUSE_HLT -dNO_SOUND
+libs = imago.lib anim.lib
+# midas.lib
 
 AS = nasm
 CC = wcc386

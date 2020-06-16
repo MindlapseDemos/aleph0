@@ -232,6 +232,8 @@ void blit_frame(void *pixels, int vsync)
 		prev_vsync = vsync;
 	}
 
+	demo_post_draw(pixels);
+
 	for(i=0; i<FB_WIDTH * FB_HEIGHT; i++) {
 		int r = UNPACK_R16(*sptr);
 		int g = UNPACK_G16(*sptr);

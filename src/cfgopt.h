@@ -1,6 +1,15 @@
 #ifndef CFGOPT_H_
 #define CFGOPT_H_
 
+#ifndef MSDOS
+enum {
+	SCALER_NEAREST,
+	SCALER_LINEAR,
+
+	NUM_SCALERS
+};
+#endif
+
 struct options {
 	const char *start_scr;
 	int music;
@@ -9,6 +18,7 @@ struct options {
 	int dbginfo;
 #ifndef MSDOS
 	int fullscreen;
+	int scaler;
 #endif
 };
 

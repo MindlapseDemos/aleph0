@@ -8,6 +8,7 @@
 /*extern int fb_width, fb_height, fb_bpp;*/
 #define FB_WIDTH	320
 #define FB_HEIGHT	240
+#define FB_ASPECT	((float)FB_WIDTH / (float)FB_HEIGHT)
 #define FB_BPP		16
 extern uint16_t *fb_pixels;
 extern uint16_t *vmem;

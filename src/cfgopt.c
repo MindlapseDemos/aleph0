@@ -58,6 +58,10 @@ int parse_args(int argc, char **argv)
 				opt.fullscreen = 1;
 			} else if(strcmp(argv[i], "-win") == 0) {
 				opt.fullscreen = 0;
+			} else if(strcmp(argv[i], "-scaler-nearest") == 0) {
+				opt.scaler = SCALER_NEAREST;
+			} else if(strcmp(argv[i], "-scaler-linear") == 0) {
+				opt.scaler = SCALER_LINEAR;
 #endif
 			} else {
 				fprintf(stderr, "invalid option: %s\n", argv[i]);
@@ -152,6 +156,12 @@ int load_config(const char *fname)
 #ifndef MSDOS
 		} else if(strcmp(line, "fullscreen") == 0) {
 			opt.fullscreen = bool_value(value);
+		} else if(strcmp(line, "scaler") == 0) {
+			if(strcmp(value, "linear") == 0) {
+				opt.scaler = SCALER_LINEAR;
+			} else {
+				opt.scaler = SCALER_NEAREST;
+			}
 #endif
 		} else {
 			fprintf(stderr, "%s:%d invalid option: %s\n", fname, nline, line);

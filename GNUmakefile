@@ -15,7 +15,7 @@ warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function
 #opt = -O3 -ffast-math
 dbg = -g
 
-CFLAGS = $(arch) $(warn) $(opt) -fno-pie -fno-strict-aliasing $(dbg) $(inc)
+CFLAGS = $(arch) $(warn) -MMD $(opt) -fno-pie -fno-strict-aliasing $(dbg) $(inc)
 LDFLAGS = $(arch) -no-pie -Llibs/imago -Llibs/mikmod -limago -lmikmod \
 		  $(sndlib_$(sys)) -lm
 
@@ -56,10 +56,6 @@ $(bin): $(obj) imago mikmod
 	$(CC) -o $@ $(CFLAGS) -c $<
 
 src/data.o: src/data.asm $(bindata)
-
-%.d: %.c
-	@echo dep $@
-	@$(CPP) $(CFLAGS) $< -MM -MT $(@:.d=.o) >$@
 
 .PHONY: libs
 libs: imago anim mikmod

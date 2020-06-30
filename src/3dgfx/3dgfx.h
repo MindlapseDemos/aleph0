@@ -38,7 +38,7 @@ enum {
 /* g3d_enable/g3d_disable bits */
 enum {
 	G3D_CULL_FACE	= 0x000001,
-	G3D_DEPTH_TEST	= 0x000002,	/* XXX not implemented */
+	G3D_DEPTH_TEST	= 0x000002,
 	G3D_LIGHTING	= 0x000004,
 	G3D_LIGHT0		= 0x000008,
 	G3D_LIGHT1		= 0x000010,

@@ -17,6 +17,8 @@
 #include "demo.h"
 #include "util.h"
 
+#define ENABLE_ZBUFFER
+
 #define STACK_SIZE	8
 typedef float g3d_matrix[16];
 
@@ -90,7 +92,7 @@ static const float idmat[] = {
 
 int g3d_init(void)
 {
-	if(!(st = malloc(sizeof *st))) {
+	if(!(st = calloc(1, sizeof *st))) {
 		fprintf(stderr, "failed to allocate G3D context\n");
 		return -1;
 	}
@@ -101,6 +103,9 @@ int g3d_init(void)
 
 void g3d_destroy(void)
 {
+#ifdef ENABLE_ZBUFFER
+	free(pfill_zbuf);
+#endif
 	free(st);
 }
 
@@ -108,6 +113,9 @@ void g3d_reset(void)
 {
 	int i;
 
+#ifdef ENABLE_ZBUFFER
+	free(pfill_zbuf);
+#endif
 	memset(st, 0, sizeof *st);
 
 	st->opt = G3D_CLIP_FRUSTUM;
@@ -128,10 +136,22 @@ void g3d_reset(void)
 
 void g3d_framebuffer(int width, int height, void *pixels)
 {
-	static int prev_height;
+	static int max_height;
 
-	if(height > prev_height) {
+#ifdef ENABLE_ZBUFFER
+	static int max_npixels;
+	int npixels = width * height;
+
+	if(npixels > max_npixels) {
+		free(pfill_zbuf);
+		pfill_zbuf = malloc(npixels * sizeof *pfill_zbuf);
+		max_npixels = npixels;
+	}
+#endif
+
+	if(height > max_height) {
 		polyfill_fbheight(height);
+		max_height = height;
 	}
 
 	st->width = width;

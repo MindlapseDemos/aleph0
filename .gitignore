@@ -43,3 +43,10 @@ cspr/
 tools/img2bin/img2bin
 tools/ropesim/ropesim
 tools/gltest/test
+RUN
+*.dae
+*.mtl
+*.glb
+*.blend*
+*.ppm
+*.png

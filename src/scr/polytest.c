@@ -102,6 +102,8 @@ static void start(long trans_time)
 
 	g3d_polygon_mode(G3D_GOURAUD);
 	g3d_enable(G3D_TEXTURE_2D);
+
+	g3d_enable(G3D_DEPTH_TEST);
 }
 
 static void update(void)
@@ -117,7 +119,9 @@ static void draw(void)
 
 	update();
 
-	memset16(fb_pixels, PACK_RGB16(20, 30, 50), FB_WIDTH * FB_HEIGHT);
+	//memset16(fb_pixels, PACK_RGB16(20, 30, 50), FB_WIDTH * FB_HEIGHT);
+	g3d_clear_color(20, 30, 50);
+	g3d_clear(G3D_COLOR_BUFFER_BIT | G3D_DEPTH_BUFFER_BIT);
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
@@ -143,9 +147,17 @@ static void draw(void)
 
 		draw_bsp(&torus_bsp, vdir[0], vdir[1], vdir[2]);
 	} else {
-		zsort_mesh(&torus);
+		//zsort_mesh(&torus);
 		draw_mesh(&torus);
 	}
+
+	/*{
+		int i;
+		for(i=0; i<FB_WIDTH*FB_HEIGHT; i++) {
+			unsigned int z = pfill_zbuf[i];
+			fb_pixels[i] = z;
+		}
+	}*/
 
 	/*draw_mesh(&cube);*/
 	swap_buffers(fb_pixels);

@@ -80,6 +80,12 @@ enum {
 	G3D_NUM_MATRICES
 };
 
+/* clear bits */
+enum {
+	G3D_COLOR_BUFFER_BIT = 1,
+	G3D_DEPTH_BUFFER_BIT = 2
+};
+
 int g3d_init(void);
 void g3d_destroy(void);
 void g3d_reset(void);
@@ -87,6 +93,10 @@ void g3d_reset(void);
 void g3d_framebuffer(int width, int height, void *pixels);
 void g3d_framebuffer_addr(void *pixels);
 void g3d_viewport(int x, int y, int w, int h);
+
+void g3d_clear_color(unsigned char r, unsigned char g, unsigned char b);
+void g3d_clear_depth(uint16_t zval);
+void g3d_clear(unsigned int mask);
 
 void g3d_enable(unsigned int opt);
 void g3d_disable(unsigned int opt);

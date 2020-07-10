@@ -44,7 +44,7 @@ else
 	cp demo.exe $destdir
 	rm -f $destdir/data/*
 	cp data/* $destdir/data/
-	mkdir -p $destdir/libs/mikmod
+	mkdir -p $destdir/libs/midas
 	cp libs/midas/midas.lib libs/midas/libmidas.a $destdir/libs/midas
 fi
 

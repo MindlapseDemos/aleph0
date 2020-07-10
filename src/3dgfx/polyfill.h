@@ -66,7 +66,7 @@ struct pvertex {
 	int32_t x, y; /* 24.8 fixed point */
 	int32_t u, v; /* 16.16 fixed point */
 	int32_t r, g, b, a;  /* int 0-255 */
-	uint16_t z;	/* 0-65535 */
+	int32_t z;	/* 0-65535 */
 };
 
 struct pimage {

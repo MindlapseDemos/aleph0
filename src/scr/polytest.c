@@ -42,6 +42,9 @@ static int use_bsp = 0;
 static uint16_t *lowres_pixels;
 static int lowres_width, lowres_height;
 
+static int use_zbuf;
+
+
 struct screen *polytest_screen(void)
 {
 	return &scr;
@@ -94,7 +97,7 @@ static void start(long trans_time)
 {
 	g3d_matrix_mode(G3D_PROJECTION);
 	g3d_load_identity();
-	g3d_perspective(50.0, 1.3333333, 0.5, 100.0);
+	g3d_perspective(50.0, 1.3333333, 1.0, 10.0);
 
 	g3d_enable(G3D_CULL_FACE);
 	g3d_enable(G3D_LIGHTING);
@@ -103,7 +106,7 @@ static void start(long trans_time)
 	g3d_polygon_mode(G3D_GOURAUD);
 	g3d_enable(G3D_TEXTURE_2D);
 
-	g3d_enable(G3D_DEPTH_TEST);
+	g3d_clear_color(20, 30, 50);
 }
 
 static void update(void)
@@ -119,9 +122,14 @@ static void draw(void)
 
 	update();
 
-	//memset16(fb_pixels, PACK_RGB16(20, 30, 50), FB_WIDTH * FB_HEIGHT);
-	g3d_clear_color(20, 30, 50);
-	g3d_clear(G3D_COLOR_BUFFER_BIT | G3D_DEPTH_BUFFER_BIT);
+	if(use_zbuf) {
+		g3d_clear(G3D_COLOR_BUFFER_BIT | G3D_DEPTH_BUFFER_BIT);
+		g3d_enable(G3D_DEPTH_TEST);
+	} else {
+		g3d_clear(G3D_COLOR_BUFFER_BIT);
+		g3d_disable(G3D_DEPTH_TEST);
+	}
+
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
@@ -147,17 +155,22 @@ static void draw(void)
 
 		draw_bsp(&torus_bsp, vdir[0], vdir[1], vdir[2]);
 	} else {
-		//zsort_mesh(&torus);
+		if(!use_zbuf) {
+			zsort_mesh(&torus);
+		}
 		draw_mesh(&torus);
 	}
 
+	/* show zbuffer */
 	/*{
 		int i;
 		for(i=0; i<FB_WIDTH*FB_HEIGHT; i++) {
 			unsigned int z = pfill_zbuf[i];
-			fb_pixels[i] = z;
+			fb_pixels[i] = (z >> 5) & 0x7e0;
 		}
 	}*/
+
+	cs_dputs(fb_pixels, 140, 0, use_zbuf ? "zbuffer" : "zsort");
 
 	/*draw_mesh(&cube);*/
 	swap_buffers(fb_pixels);
@@ -226,6 +239,11 @@ static void keypress(int key)
 	case 'b':
 		use_bsp = !use_bsp;
 		printf("drawing with %s\n", use_bsp ? "BSP tree" : "z-sorting");
+		break;
+
+	case 'z':
+		use_zbuf = !use_zbuf;
+		printf("Z-buffer %s\n", use_zbuf ? "on" : "off");
 		break;
 	}
 }

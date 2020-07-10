@@ -13,7 +13,7 @@ static uint32_t SCANEDGE(struct pvertex *v0, struct pvertex *v1, struct pvertex 
 	int32_t u, v, du, dv, uslope, vslope;
 #endif
 #ifdef ZBUF
-	int z, dz, zslope;
+	int32_t z, dz, zslope;
 #endif
 	int32_t start_idx, end_idx;
 
@@ -115,7 +115,7 @@ void POLYFILL(struct pvertex *pv, int nverts)
 	int32_t u, v, du, dv, uslope, vslope;
 #endif
 #ifdef ZBUF
-	int z, dz, zslope;
+	int32_t z, dz, zslope;
 #endif
 
 	for(i=1; i<nverts; i++) {
@@ -300,6 +300,9 @@ void POLYFILL(struct pvertex *pv, int nverts)
 
 		/* go across the scanline interpolating if necessary */
 		while(x <= right[i].x) {
+			/*if(x == (180 << 8) && i == 174) {
+				asm("int $3");
+			}*/
 #if defined(GOURAUD) || defined(TEXMAP) || defined(BLEND_ALPHA) || defined(BLEND_ADD)
 			int cr, cg, cb;
 #endif
@@ -311,11 +314,11 @@ void POLYFILL(struct pvertex *pv, int nverts)
 #endif
 
 #ifdef ZBUF
-			int cz = z;
+			int32_t cz = z;
 			z += zslope;
 
 			if(z <= *zptr) {
-				*zptr = z;
+				*zptr++ = z;
 			} else {
 #ifdef GOURAUD
 				r += rslope;
@@ -329,9 +332,12 @@ void POLYFILL(struct pvertex *pv, int nverts)
 				u += uslope;
 				v += vslope;
 #endif
-				goto skip_pixel;
+				/* skip pixel */
+				pixptr++;
+				zptr++;
+				x += 256;
+				continue;
 			}
-			zptr++;
 #endif
 
 #ifdef GOURAUD
@@ -407,9 +413,6 @@ void POLYFILL(struct pvertex *pv, int nverts)
 			color = G3D_PACK_RGB(cr, cg, cb);
 #endif
 
-#ifdef ZBUF
-skip_pixel:
-#endif
 #ifdef DEBUG_OVERDRAW
 			*pixptr++ += DEBUG_OVERDRAW;
 #else

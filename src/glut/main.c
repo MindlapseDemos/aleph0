@@ -73,7 +73,7 @@ static cgm_quat rot = {0, 0, 0, 1};
 int main(int argc, char **argv)
 {
 	glutInit(&argc, argv);
-	glutInitWindowSize(800, 600);
+	glutInitWindowSize(1280, 960);
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
 	glutCreateWindow("Mindlapse");
 
@@ -428,14 +428,28 @@ static void map_mouse_pos(int *xp, int *yp)
 
 static void mouse_button(int bn, int st, int x, int y)
 {
+	int bit;
+
 	map_mouse_pos(&x, &y);
 	mouse_x = x;
 	mouse_y = y;
 
+	switch(bn) {
+	case GLUT_LEFT_BUTTON:
+		bit = 0;
+		break;
+	case GLUT_RIGHT_BUTTON:
+		bit = 1;
+		break;
+	case GLUT_MIDDLE_BUTTON:
+		bit = 2;
+		break;
+	}
+
 	if(st == GLUT_DOWN) {
-		mouse_bmask |= 1 << bn;
+		mouse_bmask |= 1 << bit;
 	} else {
-		mouse_bmask &= ~(1 << bn);
+		mouse_bmask &= ~(1 << bit);
 	}
 }
 

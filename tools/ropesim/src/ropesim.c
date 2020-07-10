@@ -67,12 +67,12 @@ static void step(struct rsim_world *rsim, struct rsim_rope *rope, float dt)
 				cgm_vscale(&dir, s);
 			}
 			fmag = (len - spr->rest_len) * spr->k;
-			if(i == 5) {
+			/*if(i == 5) {
 				printf("%d-%d fmag: %f\n", i, j, fmag);
 				if(fmag > 20) asm volatile("int $3");
-			}
+			}*/
 
-			assert(rope->masses[j].m != 0.0f);
+			//assert(rope->masses[j].m != 0.0f);
 			cgm_vscale(&dir, fmag / rope->masses[j].m);
 			cgm_vadd(&rope->masses[j].f, &dir);
 		}

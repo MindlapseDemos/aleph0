@@ -1,3 +1,5 @@
+-include ../../config.mk
+
 src = $(wildcard src/*.c) \
 	  $(wildcard zlib/*.c) \
 	  $(wildcard libpng/*.c) \
@@ -9,12 +11,18 @@ ifeq ($(findstring COMMAND.COM, $(SHELL)), COMMAND.COM)
 	hostsys = dos
 else
 	hostsys = unix
-	TOOLPREFIX = i586-pc-msdosdjgpp-
+	TCPREFIX = i586-pc-msdosdjgpp-
 endif
 
-CC = $(TOOLPREFIX)gcc
-AR = $(TOOLPREFIX)ar
-CFLAGS = -Wno-main -march=pentium -O3 -ffast-math -Izlib -Ilibpng -Ijpeglib
+ifeq ($(USE_MMX), false)
+	arch = -march=pentium
+else
+	arch = -march=pentium-mmx
+endif
+
+CC = $(TCPREFIX)gcc
+AR = $(TCPREFIX)ar
+CFLAGS = -Wno-main $(arch) -O3 -ffast-math -Izlib -Ilibpng -Ijpeglib
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

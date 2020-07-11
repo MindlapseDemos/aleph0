@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <string.h>
 #include "imago2.h"
-#include "inttypes.h"
+#include "types.h"
 
 /* pixel-format conversions are sub-optimal at the moment to avoid
  * writing a lot of code. optimize at some point ?

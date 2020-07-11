@@ -73,7 +73,12 @@ static cgm_quat rot = {0, 0, 0, 1};
 int main(int argc, char **argv)
 {
 	glutInit(&argc, argv);
-	glutInitWindowSize(1280, 960);
+
+	if(glutGet(GLUT_SCREEN_HEIGHT) <= 1024) {
+		glutInitWindowSize(640, 480);
+	} else {
+		glutInitWindowSize(1280, 960);
+	}
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
 	glutCreateWindow("Mindlapse");
 

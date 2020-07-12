@@ -247,6 +247,7 @@ void blitfb(uint16_t *dest, uint16_t *src, int width, int height, int pitch_pix)
 	for(i=0; i<height; i++) {
 		memcpy(dest, src, width << 1);
 		dest += 320;
+		src += pitch_pix;
 	}
 }
 

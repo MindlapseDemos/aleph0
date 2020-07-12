@@ -10,6 +10,8 @@ struct g3d_mesh {
 	int vcount, icount;
 };
 
+int init_mesh(struct g3d_mesh *mesh, int prim, int num_verts, int num_idx);
+
 void free_mesh(struct g3d_mesh *mesh);
 void destroy_mesh(struct g3d_mesh *mesh);
 

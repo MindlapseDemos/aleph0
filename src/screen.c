@@ -25,6 +25,7 @@ struct screen *metaballs_screen(void);
 struct screen *greets_screen(void);
 struct screen *infcubes_screen(void);
 struct screen *hairball_screen(void);
+struct screen *cybersun_screen(void);
 
 void start_loadscr(void);
 void end_loadscr(void);
@@ -77,6 +78,9 @@ int scr_init(void)
 		return -1;
 	}
 	if(!(scr[idx++] = hairball_screen())) {
+		return -1;
+	}
+	if(!(scr[idx++] = cybersun_screen())) {
 		return -1;
 	}
 	num_screens = idx;

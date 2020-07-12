@@ -364,8 +364,8 @@ int gen_plane_mesh(struct g3d_mesh *m, float width, float height, int usub, int 
 	nfaces = usub * vsub;
 	uverts = usub + 1;
 	vverts = vsub + 1;
-	du = (float)width / (float)usub;
-	dv = (float)height / (float)vsub;
+	du = 1.0f / (float)usub;
+	dv = 1.0f / (float)vsub;
 
 	nverts = uverts * vverts;
 	nidx = nfaces * 4;

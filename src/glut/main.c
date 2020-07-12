@@ -118,20 +118,25 @@ int main(int argc, char **argv)
 	wgl_swap_interval_ext = wglGetProcAddress("wglSwapIntervalEXT");
 #endif
 
-	reshape(glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
-
 	if(au_init() == -1) {
 		return 1;
 	}
 	time_msec = 0;
-	if(demo_init(argc, argv) == -1) {
+	if(demo_init1(argc, argv) == -1) {
 		return 1;
 	}
-	atexit(demo_cleanup);
 
 	if(opt.fullscreen) {
 		set_fullscreen(opt.fullscreen);
+		reshape(glutGet(GLUT_SCREEN_WIDTH), glutGet(GLUT_SCREEN_HEIGHT));
+	} else {
+		reshape(glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
 	}
+
+	if(demo_init2() == -1) {
+		return 1;
+	}
+	atexit(demo_cleanup);
 
 	reset_timer();
 

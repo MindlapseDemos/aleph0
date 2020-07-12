@@ -42,10 +42,21 @@ static int con_active;
 
 extern uint16_t loading_pixels[];	/* data.asm */
 
-
 int demo_init(int argc, char **argv)
 {
-	struct screen *scr;
+	if(demo_init1(argc, argv) == -1) {
+		return -1;
+	}
+	if(demo_init2() == -1) {
+		return -1;
+	}
+	return 0;
+}
+
+static struct screen *scr;
+
+int demo_init1(int argc, char **argv)
+{
 	char *env;
 
 	if(load_config("demo.cfg") == -1) {
@@ -57,7 +68,11 @@ int demo_init(int argc, char **argv)
 	if(parse_args(argc, argv) == -1) {
 		return -1;
 	}
+	return 0;
+}
 
+int demo_init2(void)
+{
 	/* reuse the loading image as our back buffer.
 	 * adjust fb_pixels to leave 4 pixels guard band top/bottom. We have enough
 	 * space since the loading image is 8 pixels taller.

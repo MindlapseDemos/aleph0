@@ -54,6 +54,8 @@ enum {
 extern float sball_matrix[16];
 
 int demo_init(int argc, char **argv);
+int demo_init1(int argc, char **argv);
+int demo_init2(void);
 void demo_cleanup(void);
 
 int demo_resizefb(int width, int height, int bpp);

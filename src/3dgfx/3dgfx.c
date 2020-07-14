@@ -503,6 +503,8 @@ void g3d_draw(int prim, const struct g3d_vertex *varr, int varr_size)
 	g3d_draw_indexed(prim, varr, varr_size, 0, 0);
 }
 
+#define NEED_NORMALS	(st->opt & (G3D_LIGHTING | G3D_TEXTURE_GEN))
+
 void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 		const uint16_t *iarr, int iarr_size)
 {
@@ -516,8 +518,10 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 	tmpv = alloca(prim * 6 * sizeof *tmpv);
 
 	/* calc the normal matrix */
-	memcpy(st->norm_mat, st->mat[G3D_MODELVIEW][mvtop], 16 * sizeof(float));
-	st->norm_mat[12] = st->norm_mat[13] = st->norm_mat[14] = 0.0f;
+	if(NEED_NORMALS) {
+		memcpy(st->norm_mat, st->mat[G3D_MODELVIEW][mvtop], 16 * sizeof(float));
+		st->norm_mat[12] = st->norm_mat[13] = st->norm_mat[14] = 0.0f;
+	}
 
 	nfaces = (iarr ? iarr_size : varr_size) / prim;
 
@@ -528,14 +532,16 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 			v[i] = iarr ? varr[*iarr++] : *varr++;
 
 			xform4_vec3(st->mat[G3D_MODELVIEW][mvtop], &v[i].x);
-			xform3_vec3(st->norm_mat, &v[i].nx);
 
-			if(st->opt & G3D_LIGHTING) {
-				shade(v + i);
-			}
-			if(st->opt & G3D_TEXTURE_GEN) {
-				v[i].u = v[i].nx * 0.5 + 0.5;
-				v[i].v = 0.5 - v[i].ny * 0.5;
+			if(NEED_NORMALS) {
+				xform3_vec3(st->norm_mat, &v[i].nx);
+				if(st->opt & G3D_LIGHTING) {
+					shade(v + i);
+				}
+				if(st->opt & G3D_TEXTURE_GEN) {
+					v[i].u = v[i].nx * 0.5 + 0.5;
+					v[i].v = 0.5 - v[i].ny * 0.5;
+				}
 			}
 			if(st->opt & G3D_TEXTURE_MAT) {
 				float *mat = st->mat[G3D_TEXTURE][st->mtop[G3D_TEXTURE]];

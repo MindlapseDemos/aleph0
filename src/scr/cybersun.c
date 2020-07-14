@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 #include "demo.h"
 #include "3dgfx.h"
 #include "screen.h"
@@ -21,11 +22,11 @@ static struct screen scr = {
 };
 
 static float cam_theta = 0, cam_phi = 10;
-static float cam_dist = 6;
+static float cam_dist = 0;
 
 static struct g3d_mesh gmesh;
-#define GMESH_GRIDSZ	20
-#define GMESH_SIZE		50
+#define GMESH_GRIDSZ	25
+#define GMESH_SIZE		128
 static struct image gtex;
 
 struct screen *cybersun_screen(void)
@@ -68,15 +69,42 @@ static void start(long trans_time)
 	g3d_clear_color(0, 0, 0);
 }
 
+static void update(void)
+{
+	int i, j;
+	float t = time_msec / 1000.0f;
+	struct g3d_vertex *vptr;
+
+	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
+
+	/* update mesh */
+	vptr = gmesh.varr;
+	for(i=0; i<GMESH_GRIDSZ + 1; i++) {
+		for(j=0; j<GMESH_GRIDSZ + 1; j++) {
+			float u = (float)j / GMESH_GRIDSZ - 0.5f;
+			float v = (float)i / GMESH_GRIDSZ - 0.5f;
+			float x = u * 32.0f;
+			float y = v * 32.0f;
+			float r = sqrt(x * x + y * y);
+
+			vptr->z = sin(x * 0.5 + t) + cos(x * 0.8f) * 0.5f;
+			vptr->z += cos(y * 0.5 + t);
+			vptr->z += sin(r + t) * 0.5f;
+			vptr->z *= r * 0.1f > 1.0f ? 1.0f : r * 0.1f;
+			vptr++;
+		}
+	}
+}
+
 static void draw(void)
 {
 	int i;
 
-	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
+	update();
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
-	g3d_translate(0, 0, -cam_dist);
+	g3d_translate(0, -2, -cam_dist);
 	g3d_rotate(cam_phi, 1, 0, 0);
 	g3d_rotate(cam_theta, 0, 1, 0);
 	if(opt.sball) {
@@ -87,12 +115,14 @@ static void draw(void)
 
 	g3d_set_texture(gtex.width, gtex.height, gtex.pixels);
 	g3d_enable(G3D_TEXTURE_2D);
+	g3d_enable(G3D_DEPTH_TEST);
 
 	g3d_push_matrix();
 	g3d_rotate(-90, 1, 0, 0);
 	draw_mesh(&gmesh);
 	g3d_pop_matrix();
 
+	g3d_disable(G3D_DEPTH_TEST);
 	g3d_disable(G3D_TEXTURE_2D);
 
 	swap_buffers(fb_pixels);

@@ -4,9 +4,10 @@
 #include "tinyfps.h"
 #include "demo.h"
 
-/* TinyFPS, just a minimal fraps like font to show FPS during the demo and not just after.
- * I'll be using it in my effects for my performance test purposes, just adding it here.
- * Maybe it would be nice if initFpsFonts would be called in demo.c once but I avoided touching that code.
+/* TinyFPS, just a minimal fraps like font to show FPS during the demo and not
+ * just after.  I'll be using it in my effects for my performance test
+ * purposes, just adding it here.  Maybe it would be nice if initFpsFonts would
+ * be called in demo.c once but I avoided touching that code.
  */
 
 /*

@@ -15,8 +15,8 @@ warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function
 #opt = -O3 -ffast-math
 dbg = -g
 
-CFLAGS = $(arch) $(warn) -MMD $(opt) -fno-strict-aliasing $(dbg) $(inc)
-LDFLAGS = $(arch) -Llibs/imago -Llibs/mikmod -limago -lmikmod \
+CFLAGS = $(arch) $(warn) -MMD $(opt) -fno-pie -fno-strict-aliasing $(dbg) $(inc)
+LDFLAGS = $(arch) -no-pie -Llibs/imago -Llibs/mikmod -limago -lmikmod \
 		  $(sndlib_$(sys)) -lm
 
 cpu ?= $(shell uname -m | sed 's/i.86/i386/')

@@ -162,7 +162,8 @@ static void draw_mountains(void)
 	int32_t x, xstart, xend, dx;
 	uint16_t *dptr, *sptr;
 
-	xstart = cround64(cam_theta * (256.0 * 512.0 / 90.0));	/* 24.8 fixed point, 512 width */
+	/* 24.8 fixed point, 512 width, 90deg arc */
+	xstart = cround64(cam_theta * (256.0 * 512.0 / 90.0));
 	xend = cround64((cam_theta + HFOV) * (256.0 * 512.0 / 90.0));
 	dx = (xend - xstart) / FB_WIDTH;
 	x = xstart;

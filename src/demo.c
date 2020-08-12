@@ -17,7 +17,7 @@
 #define MOUSE_TIMEOUT	1200
 
 #define GUARD_XPAD	0
-#define GUARD_YPAD	32
+#define GUARD_YPAD	64
 
 int fb_width, fb_height, fb_bpp, fb_scan_size;
 float fb_aspect;
@@ -73,12 +73,6 @@ int demo_init1(int argc, char **argv)
 
 int demo_init2(void)
 {
-	/* reuse the loading image as our back buffer.
-	 * adjust fb_pixels to leave 4 pixels guard band top/bottom. We have enough
-	 * space since the loading image is 8 pixels taller.
-	 */
-	fb_pixels = loading_pixels + 320 * 4;
-
 	con_init();
 	initFpsFonts();
 
@@ -96,6 +90,7 @@ int demo_init2(void)
 	if(scr_init() == -1) {
 		return -1;
 	}
+
 	if(opt.start_scr) {
 		scr = scr_lookup(opt.start_scr);
 	} else {

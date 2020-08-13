@@ -39,7 +39,10 @@ static struct g3d_mesh gmesh;
 #define GMESH_SIZE		128
 static struct image gtex;
 
-static struct image mounttex;
+#define MOUNTIMG_WIDTH	512
+#define MOUNTIMG_HEIGHT	64
+static struct image mountimg;
+static int mountimg_skip[MOUNTIMG_WIDTH];
 
 static long part_start;
 
@@ -63,11 +66,24 @@ static int init(void)
 	if(load_image(&gtex, "data/pgrid.png") == -1) {
 		return -1;
 	}
-	if(load_image(&mounttex, "data/cybmount.png") == -1) {
+	if(load_image(&mountimg, "data/cybmount.png") == -1) {
 		return -1;
 	}
-	assert(mounttex.width == 512);
-	assert(mounttex.height == 64);
+	assert(mountimg.width == MOUNTIMG_WIDTH);
+	assert(mountimg.height == MOUNTIMG_HEIGHT);
+
+	for(i=0; i<MOUNTIMG_WIDTH; i++) {
+		uint16_t *pptr = mountimg.pixels + i;
+		for(j=0; j<MOUNTIMG_HEIGHT; j++) {
+			if(*pptr != 0x7e0) {
+				mountimg_skip[i] = j;
+				break;
+			}
+			pptr += MOUNTIMG_WIDTH;
+		}
+	}
+	destroy_image(&mountimg);
+	mountimg.pixels = 0;
 
 	return 0;
 }
@@ -76,7 +92,6 @@ static void destroy(void)
 {
 	destroy_mesh(&gmesh);
 	destroy_image(&gtex);
-	destroy_image(&mounttex);
 }
 
 static void start(long trans_time)
@@ -155,47 +170,46 @@ static void draw(void)
 	swap_buffers(fb_pixels);
 }
 
-/* XXX all the sptr calculations assume mounttex.width == 512 */
+/* XXX all the sptr calculations assume mountimg.width == 512 */
 static void draw_mountains(void)
 {
-	int i, j, y;
+	int i, j, horizon_y, y;
 	int32_t x, xstart, xend, dx;
 	uint16_t *dptr, *sptr;
 
 	/* 24.8 fixed point, 512 width, 90deg arc */
-	xstart = cround64(cam_theta * (256.0 * 512.0 / 90.0));
-	xend = cround64((cam_theta + HFOV) * (256.0 * 512.0 / 90.0));
+	xstart = cround64(cam_theta * (256.0 * MOUNTIMG_WIDTH / 90.0));
+	xend = cround64((cam_theta + HFOV) * (256.0 * MOUNTIMG_WIDTH / 90.0));
 	dx = (xend - xstart) / FB_WIDTH;
 	x = xstart;
 
-	y = cround64(-cam_phi * (FB_HEIGHT / 45.0)) + (FB_HEIGHT / 2 - 64);
+	horizon_y = cround64(-cam_phi * (FB_HEIGHT / 45.0)) + FB_HEIGHT / 2;
+	y = horizon_y - MOUNTIMG_HEIGHT;
 
-	dptr = fb_pixels + y * FB_WIDTH;
+	if(y >= FB_HEIGHT) {
+		/* TODO draw gradient for the sky */
+		return;
+	}
+	if(horizon_y < 0) {
+		memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
+		return;
+	}
 
 	for(i=0; i<FB_WIDTH; i++) {
-		sptr = mounttex.pixels + ((x >> 8) & 0x1ff);
+		int skip = mountimg_skip[(x >> 8) & 0x1ff];
+		int vspan = MOUNTIMG_HEIGHT - skip;
 
-		for(j=0; j<64; j++) {
-			if(j + y >= FB_HEIGHT) break;
-			if(j + y >= 0) {
-				int32_t col = sptr[j << 9];
-				if(col != 0x7e0) {
-					dptr[j * FB_WIDTH] = col;
-				}
-			}
+		dptr = fb_pixels + (y + skip) * FB_WIDTH + i;
+
+		for(j=0; j<vspan; j++) {
+			*dptr = 0;	/* black mountains */
+			dptr += FB_WIDTH;
 		}
-		dptr++;
 
 		x += dx;
 	}
 
-	y += 64;
-	if(y < 0) {
-		memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
-	} else {
-		if(y < FB_HEIGHT) {
-			dptr = fb_pixels + y * FB_WIDTH;
-			memset(dptr, 0, (FB_HEIGHT - y) * FB_WIDTH * 2);
-		}
+	if(horizon_y < FB_HEIGHT) {
+		memset(fb_pixels + horizon_y * FB_WIDTH, 0, (FB_HEIGHT - horizon_y) * FB_WIDTH * 2);
 	}
 }

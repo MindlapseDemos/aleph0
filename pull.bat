@@ -1,4 +1,10 @@
-ssh2dos -g -i c:\prog\ssh2dos\doskey -S -B nuclear 192.168.0.4 cd code/demoscene/dosdemo && git archive -o dd.zip master
-scp2dos -r -g -i c:\prog\ssh2dos\doskey nuclear@192.168.0.4:code/demoscene/dosdemo/dd.zip .
-unzip32 -o dd.zip
-del dd.zip
+rsync -uv 192.168.0.4::dosdemo/Makefile Makefile
+rsync -uv 192.168.0.4::dosdemo/src/*.c src
+rsync -uv 192.168.0.4::dosdemo/src/*.h src
+rsync -uv 192.168.0.4::dosdemo/src/dos/*.c src/dos
+rsync -uv 192.168.0.4::dosdemo/src/dos/*.h src/dos
+rsync -uv 192.168.0.4::dosdemo/src/dos/*.asm src/dos
+rsync -uv 192.168.0.4::dosdemo/src/scr/*.c src/scr
+rsync -uv 192.168.0.4::dosdemo/src/scr/*.h src/scr
+rsync -uv 192.168.0.4::dosdemo/src/3dgfx/*.c src/3dgfx
+rsync -uv 192.168.0.4::dosdemo/src/3dgfx/*.h src/3dgfx

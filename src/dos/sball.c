@@ -16,6 +16,7 @@
 
 #include "sball.h"
 #include "inttypes.h"
+#include "dosutil.h"
 
 struct motion {
 	int x, y, z;
@@ -142,9 +143,6 @@ static void (INTERRUPT *prev_recv_intr)(void);
 #define INTERRUPT
 
 static _go32_dpmi_seginfo intr, prev_intr;
-
-#define outp(port, val)	outportb(port, val)
-#define inp(port) inportb(port)
 #endif
 
 static void INTERRUPT recv_intr(void);

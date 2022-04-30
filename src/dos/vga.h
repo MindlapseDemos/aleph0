@@ -2,8 +2,17 @@
 #define VGA_H_
 
 #include "inttypes.h"
+#include "dosutil.h"
+#include "cdpmi.h"
+#include "vgaregs.h"
+
+#define VGA_FBADDR	((void*)phys_to_virt(0xa0000))
 
 int vga_setmode(int mode);
+int vga_setmodex(void);
+
+#define vga_planemask(mask) \
+	outpw(VGA_SC_ADDR_PORT, VGA_SC_MAPMASK_REG | ((unsigned short)(mask) << 8))
 
 #ifdef __WATCOMC__
 void vga_setpal(int16_t idx, uint8_t r, uint8_t g, uint8_t b);

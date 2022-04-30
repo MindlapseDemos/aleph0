@@ -48,7 +48,7 @@ typedef __int32 intptr_t;
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199900
 #include <stdint.h>
 #else
-#include <inttypes.h>
+#include <sys/types.h>
 #endif
 
 #endif	/* end !msvc */

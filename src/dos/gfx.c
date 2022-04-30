@@ -290,8 +290,7 @@ static void blit_frame_banked(void *pixels, int vsync)
 	pending = pgsize;
 	while(pending > 0) {
 		sz = pending > curmode->bank_size ? curmode->bank_size : pending;
-		//memcpy64((void*)0xa0000, pptr, sz >> 3);
-		memcpy((void*)0xa0000, pptr, sz);
+		memcpy((void*)phys_to_virt(0xa0000), pptr, sz);
 		pptr += sz;
 		pending -= sz;
 		vbe_setwin(0, ++offs);

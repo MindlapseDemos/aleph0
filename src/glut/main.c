@@ -11,6 +11,7 @@
 #include "cfgopt.h"
 #include "cgmath/cgmath.h"
 #include "util.h"
+#include "cpuid.h"
 
 static void display(void);
 static void idle(void);
@@ -101,6 +102,9 @@ int main(int argc, char **argv)
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_CULL_FACE);
 
+	if(read_cpuid(&cpuid) == 0) {
+		print_cpuid(&cpuid);
+	}
 
 	if(!set_video_mode(match_video_mode(FB_WIDTH, FB_HEIGHT, FB_BPP), 1)) {
 		return 1;

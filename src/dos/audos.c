@@ -1,5 +1,6 @@
-#ifndef NO_SOUND
 #include <stdio.h>
+
+#ifndef NO_SOUND
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>

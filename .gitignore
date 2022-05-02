@@ -21,6 +21,7 @@ Release
 *sdf
 demo
 *.zip
+*.ZIP
 data
 *.a
 *.dll

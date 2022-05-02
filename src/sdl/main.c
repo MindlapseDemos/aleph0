@@ -9,6 +9,7 @@
 #include "cfgopt.h"
 #include "sball.h"
 #include "vmath.h"
+#include "cpuid.h"
 
 static void handle_event(SDL_Event *ev);
 static void toggle_fullscreen(void);
@@ -64,6 +65,10 @@ int main(int argc, char **argv)
 	}
 	SDL_WM_SetCaption("dosdemo/SDL", 0);
 	SDL_ShowCursor(0);
+
+	if(read_cpuid(&cpuid) == 0) {
+		print_cpuid(&cpuid);
+	}
 
 	time_msec = 0;
 	if(demo_init(argc, argv) == -1) {

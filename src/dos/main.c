@@ -10,6 +10,7 @@
 #include "audio.h"
 #include "sball.h"
 #include "vmath.h"
+#include "cpuid.h"
 
 static int handle_sball_event(sball_event *ev);
 static void recalc_sball_matrix(float *xform);
@@ -37,6 +38,10 @@ int main(int argc, char **argv)
 #ifdef __DJGPP__
 	__djgpp_nearptr_enable();
 #endif
+
+	if(read_cpuid(&cpuid) == 0) {
+		print_cpuid(&cpuid);
+	}
 
 	init_logger("demo.log");
 

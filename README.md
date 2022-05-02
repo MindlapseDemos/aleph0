@@ -1,13 +1,17 @@
-Unnamed Mindlapse DOS demo for Pentium 133
-------------------------------------------
-The demo requires VESA Bios Extensions (VBE) 2.0. If your graphics card doesn't
-support VBE 2.0 or greater, then make sure to load the `univbe` TSR first.
+Unnamed Mindlapse DOS demo for Pentium-era PCs
+----------------------------------------------
+The demo uses VBE 320x240 16bpp. Some VBE implementations do not expose
+double-scan video modes (240 lines), but can be made to work with a third-party
+VBE TSR like `univbe` or `s3vbe`. Linear framebuffer (VBE 2.0) support is
+recommended, but not necessary. The demo will fallback to VBE 1.2 banked modes
+if LFB modes are not available.
 
 Source structure
 ----------------
  - src/          cross-platform demo framework and miscellaneous utility code
  - src/scr/      demo screens (parts) and effects support code
  - src/dos/      DOS platform code
+ - src/glut/     GLUT platform code (windows/UNIX version)
  - src/sdl/      SDL 1.x platform code (windows/UNIX version)
  - libs/cgmath/  math library, header-file only
  - libs/imago/   image loading library (includes libpng, zlib, libjpeg)
@@ -15,12 +19,6 @@ Source structure
 
 Building on DOS with Watcom
 ---------------------------
-NOTE: Don't. Watcom produces significantly worse code than GCC, and at the
-moment watcom-compiled version of the demo crashes on 3D scenes for some reason
-which I need to investigate at some point. Suspect either inline assembly with
-missing "modify" part, or more likely some FPU optimization which fucks up the
-clipper.
-
 Make sure you have Watcom or OpenWatcom installed, and the appropriate env-vars
 set (the watcom installer automatically adds them to autoexec.bat by default).
 

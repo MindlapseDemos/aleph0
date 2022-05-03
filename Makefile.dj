@@ -22,16 +22,17 @@ warn = -pedantic -Wall -Wno-unused-function -Wno-unused-variable
 
 ifdef RELEASE
 	dbg = -g
-	def = -DNDEBUG -DNO_MUSIC
+	def = -DNDEBUG -DNO_SOUND
 else
-	def = -DNO_MUSIC
+	def = -DNO_SOUND
 endif
 #prof = -pg
 
 CC = $(TOOLPREFIX)gcc
 AR = $(TOOLPREFIX)ar
 CFLAGS = -march=pentium $(warn) -MMD $(dbg) $(opt) $(prof) $(inc) $(def)
-LDFLAGS = libs/imago/imago.dja libs/anim/anim.dja libs/midas/libmidas.a
+LDFLAGS = libs/imago/imago.dja libs/anim/anim.dja
+#libs/midas/libmidas.a
 
 ifneq ($(hostsys), dos)
 .PHONY: all

@@ -106,12 +106,6 @@ void debug_break(void);
 
 void halt(void);
 #pragma aux halt = "hlt";
-
-unsigned int get_cs(void);
-#pragma aux get_cs = \
-	"xor eax, eax" \
-	"mov ax, cs" \
-	value[eax];
 #endif
 
 #ifdef __GNUC__
@@ -178,17 +172,6 @@ static void INLINE memset16(void *dest, uint16_t val, int count)
 
 #define halt() \
 	asm volatile("hlt")
-
-static unsigned int INLINE get_cs(void)
-{
-	unsigned int res;
-	asm volatile (
-		"xor %%eax, %%eax\n\t"
-		"mov %%cs, %0\n\t"
-		: "=a"(res)
-	);
-	return res;
-}
 #endif
 
 #ifdef _MSC_VER
@@ -251,6 +234,10 @@ static unsigned int __inline get_cs(void)
 }
 #endif
 
+unsigned int get_cs(void);
 #define get_cpl()	((int)(get_cs() & 7))
+
+void get_msr(uint32_t msr, uint32_t *low, uint32_t *high);
+void set_msr(uint32_t msr, uint32_t low, uint32_t high);
 
 #endif	/* UTIL_H_ */

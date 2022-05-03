@@ -7,7 +7,8 @@ dosobj = src/dos/audos.obj src/dos/djdpmi.obj src/dos/gfx.obj src/dos/keyb.obj &
 srcobj = src/bsptree.obj src/cfgopt.obj src/console.obj src/demo.obj &
 	src/dynarr.obj src/gfxutil.obj src/metasurf.obj src/noise.obj &
 	src/rbtree.obj src/screen.obj src/tinyfps.obj src/treestor.obj &
-	src/image.obj src/ts_text.obj src/util.obj src/data.obj
+	src/image.obj src/ts_text.obj src/util.obj src/util_s.obj src/cpuid.obj &
+	src/cpuid_s.obj src/data.obj
 scrobj = src/scr/bump.obj src/scr/fract.obj src/scr/greets.obj &
 	src/scr/grise.obj src/scr/hairball.obj src/scr/infcubes.obj &
 	src/scr/metaball.obj src/scr/plasma.obj src/scr/polytest.obj &
@@ -28,7 +29,8 @@ dosobj = src\dos\audos.obj src\dos\djdpmi.obj src\dos\gfx.obj src\dos\keyb.obj &
 srcobj = src\bsptree.obj src\cfgopt.obj src\console.obj src\demo.obj &
 	src\dynarr.obj src\gfxutil.obj src\metasurf.obj src\noise.obj &
 	src\rbtree.obj src\screen.obj src\tinyfps.obj src\treestor.obj &
-	src\image.obj src\ts_text.obj src\util.obj src\data.obj
+	src\image.obj src\ts_text.obj src\util.obj src\util_s.obj src\cpuid.obj &
+	src\cpuid_s.obj src\data.obj
 scrobj = src\scr\bump.obj src\scr\fract.obj src\scr\greets.obj &
 	src\scr\grise.obj src\scr\hairball.obj src\scr\infcubes.obj &
 	src\scr\metaball.obj src\scr\plasma.obj src\scr\polytest.obj &

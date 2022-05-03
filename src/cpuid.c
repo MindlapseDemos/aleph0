@@ -67,7 +67,7 @@ static const char *cpuname(struct cpuid_info *cpu)
 	int model, family;
 	char *rd, *wr;
 
-	if(cpu->brandstr) {
+	if(*cpu->brandstr) {
 		/* unwank the string */
 		rd = wr = cpu->brandstr;
 		while(*rd) {

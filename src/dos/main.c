@@ -8,6 +8,7 @@
 #include "logger.h"
 #include "cdpmi.h"
 #include "audio.h"
+#include "mouse.h"
 #include "sball.h"
 #include "vmath.h"
 #include "cpuid.h"
@@ -39,11 +40,17 @@ int main(int argc, char **argv)
 	__djgpp_nearptr_enable();
 #endif
 
+	init_logger("demo.log");
+
+#ifdef __WATCOMC__
+	printf("watcom build\n");
+#elif defined(__DJGPP__)
+	printf("djgpp build\n");
+#endif
+
 	if(read_cpuid(&cpuid) == 0) {
 		print_cpuid(&cpuid);
 	}
-
-	init_logger("demo.log");
 
 	/* au_init needs to be called early, before init_timer, and also before
 	 * we enter graphics mode, to use the midas configuration tool if necessary

@@ -1,3 +1,4 @@
+#include <string.h>
 #include "vga.h"
 #include "vgaregs.h"
 #include "cdpmi.h"

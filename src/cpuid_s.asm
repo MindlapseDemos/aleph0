@@ -1,4 +1,5 @@
 	section .text
+	bits 32
 ; foo_ are watcom functions, _foo are djgpp functions
 
 F_ID equ 0x200000

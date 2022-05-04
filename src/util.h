@@ -235,7 +235,7 @@ static unsigned int __inline get_cs(void)
 #endif
 
 unsigned int get_cs(void);
-#define get_cpl()	((int)(get_cs() & 7))
+#define get_cpl()	((int)(get_cs() & 3))
 
 void get_msr(uint32_t msr, uint32_t *low, uint32_t *high);
 void set_msr(uint32_t msr, uint32_t low, uint32_t high);

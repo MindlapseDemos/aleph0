@@ -145,3 +145,71 @@ defined in `cdpmi.h`:
 
     #define virt_to_phys(v)	((v) + __djgpp_base_address)
     #define phys_to_virt(p)	((p) - __djgpp_base_address)
+
+Notes about moving code to/from a DOS computer
+----------------------------------------------
+The easiest way to move code back and forth to a DOS computer, is to connect it
+to the local network. For this you need a DOS packet driver for your NIC, which
+thankfully most NIC vendors seem to provide, and a number of useful network
+utilities which come with their own TCP/IP stack (mTCP and WATTCP). The
+following are recommended:
+
+    - [http://www.brutman.com/mTCP](mTCP)
+    - [http://www.watt-32.net](WATTCP)
+    - [http://sshdos.sourceforge.net](ssh2dos)
+    - [http://www.2net.co.uk/rsync.html](rsync)
+
+Here's an example batch file I'm using to set up the network:
+
+    @echo off
+    c:\net\rtspkt\rtspkt 0x61
+    set MTCPCFG=c:\net\mtcp\mtcp.cfg
+    set WATT_ROOT=c:\net\watt
+    set WATTCP.CFG=c:\net\watt\bin
+    set ETC=c:\net\watt\bin
+    set PATH=%PATH%;c:\net\mtcp;c:\net\watt\bin
+
+The rtspkt program is the packet driver for my realtek NIC, and I'm instructing
+it to use interrupt 61h. The rest are environment variables needed by mTCP and
+WATTCP. If you run out of environment space you might need to increase it with
+`SHELL=C:\DOS\COMMAND.COM /e:1024 /p` in `config.sys`, or just put all binaries
+in a single place instead of adding multiple directories to the `PATH`.
+
+### mTCP configuration
+The `mtcp.cfg` file configures the mTCP TCP/IP stack. Go through the file, which
+comes with mTCP, and make any necessary changes. For instance I've set
+`packetint 0x61` to match the packet driver interrupt, and I'm using static IP
+assignments, so I've set it up like this:
+
+    ipaddr 192.168.0.21
+    netmask 255.255.0.0
+    gateway 192.168.1.1
+    nameserver 1.1.1.1
+
+### WATTCP configuration
+The `wattcp.cfg` file is in the wattcp bin directory, and includes similar
+configuration options:
+
+    my_ip = 192.168.0.21
+    hostname = "retrop1"
+    netmask = 255.255.0.0
+    nameserver = 1.1.1.1
+    gateway = 192.168.1.1
+    domain.suffix = localdomain
+    pkt.vector = 0x61
+    hosts = $(ETC)\hosts
+
+### Server-side configuration
+The `pull.bat` file in the demo repo uses rsync to get the source code from the
+git repo on my main GNU/Linux computer. To avoid having to type passwords all
+the time, I've configures rsyncd to allow access to the demo directory in the
+`/etc/rsyncd.conf` file:
+
+    [dosdemo]
+    path = /home/nuclear/code/demoscene/dosdemo
+    comment = DOS demo project
+
+Since the DOS rsync utility is unfortunately read-only, the `push.bat` relies on
+ssh2dos instead, which does require a password. The sshd on the server might
+need to be configured to allow older encryption algorithms, depending on your
+current setup.

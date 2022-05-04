@@ -154,10 +154,10 @@ thankfully most NIC vendors seem to provide, and a number of useful network
 utilities which come with their own TCP/IP stack (mTCP and WATTCP). The
 following are recommended:
 
-    - [mTCP](http://www.brutman.com/mTCP)
-    - [WATTCP](http://www.watt-32.net)
-    - [ssh2dos](http://sshdos.sourceforge.net)
-    - [rsync](http://www.2net.co.uk/rsync.html)
+    - mTCP: http://www.brutman.com/mTCP
+    - WATTCP: http://www.watt-32.net
+    - ssh2dos: http://sshdos.sourceforge.net
+    - rsync: http://www.2net.co.uk/rsync.html
 
 Here's an example batch file I'm using to set up the network:
 

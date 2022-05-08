@@ -248,7 +248,9 @@ static int choose_poly(struct bsppoly *polyarr, int num_polys)
 		struct cplane *plane = &polyarr[i].plane;
 		int num_splits = 0;
 
+#ifdef USE_OPENMP
 #pragma omp parallel for reduction(+:num_splits)
+#endif
 		for(j=0; j<num_polys; j++) {
 			if(i == j) continue;
 

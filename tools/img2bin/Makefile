@@ -3,11 +3,17 @@ bin = img2bin
 
 root = ../..
 
-CFLAGS = -pedantic -Wall -g -I$(root)/libs/imago/src
-LDFLAGS = -L$(root)/libs/imago -limago -lpng -ljpeg -lz -L/usr/local/lib -lm
+imagodir = $(root)/libs/imago
+libimago = $(imagodir)/libimago.a
 
-$(bin): $(obj)
+CFLAGS = -pedantic -Wall -g -I$(imagodir)/src
+LDFLAGS = -L$(imagodir) -limago -lm
+
+$(bin): $(obj) $(libimago)
 	$(CC) -o $@ $(obj) $(LDFLAGS)
+
+$(libimago):
+	$(MAKE) -C $(imagodir)
 
 .PHONY: clean
 clean:

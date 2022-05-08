@@ -11,7 +11,7 @@ bindata = data/loading.img
 inc = -I/usr/local/include -Isrc -Isrc/3dgfx -Isrc/scr -Isrc/glut -Ilibs \
 	  -Ilibs/imago/src -Ilibs/mikmod/include
 def = -DMINIGLUT_USE_LIBC -DMIKMOD_STATIC
-warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function
+warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function -Wno-address
 #opt = -O3 -ffast-math
 dbg = -g
 

@@ -3,6 +3,7 @@
 #include <string.h>
 #include <errno.h>
 #include "util.h"
+#include "demo.h"
 
 uint32_t perf_start_count, perf_interval_count;
 

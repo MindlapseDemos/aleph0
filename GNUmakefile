@@ -27,7 +27,7 @@ endif
 
 sys ?= $(shell uname -s | sed 's/MINGW.*/mingw/; s/IRIX.*/IRIX/')
 ifeq ($(sys), mingw)
-	obj = $(src:.c=.w32.o)
+	obj = $(src:.c=.w32.o) $(asmsrc:.asm=.w32.o)
 
 	bin = demo_win32.exe
 

@@ -3,7 +3,11 @@
 #include <string.h>
 #include <stdint.h>
 #include <assert.h>
+#ifdef WIN32
+#include <malloc.h>
+#else
 #include <alloca.h>
+#endif
 #include "image.h"
 
 struct rect {

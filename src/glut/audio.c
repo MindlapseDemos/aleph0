@@ -63,7 +63,7 @@ int au_init(void)
 	{
 #ifdef _WIN32
 		HANDLE thr;
-		if((thr = CreateThread(0, 0, update, 0, 0, 0))) {
+		if((thr = CreateThread(0, 0, upd_thread, 0, 0, 0))) {
 			CloseHandle(thr);
 		}
 #else
@@ -169,7 +169,7 @@ void au_update(void)
 }
 
 #ifdef _WIN32
-static DWORD WINAPI upd_thread(void *cls);
+static DWORD WINAPI upd_thread(void *cls)
 #else
 static void *update(void *cls)
 #endif

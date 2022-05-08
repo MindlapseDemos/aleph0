@@ -6,7 +6,11 @@
 #if defined(__WATCOMC__) || defined(_MSC_VER) || defined(__DJGPP__)
 #include <malloc.h>
 #else
+#ifdef WIN32
+#include <malloc.h>
+#else
 #include <alloca.h>
+#endif
 #endif
 #include "bsptree.h"
 #include "dynarr.h"

@@ -1,6 +1,7 @@
 rsync -uv 192.168.0.4::dosdemo/Makefile Makefile
 rsync -uv 192.168.0.4::dosdemo/src/*.c src
 rsync -uv 192.168.0.4::dosdemo/src/*.h src
+rsync -uv 192.168.0.4::dosdemo/src/*.asm src
 rsync -uv 192.168.0.4::dosdemo/src/dos/*.c src/dos
 rsync -uv 192.168.0.4::dosdemo/src/dos/*.h src/dos
 rsync -uv 192.168.0.4::dosdemo/src/dos/*.asm src/dos

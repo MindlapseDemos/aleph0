@@ -131,6 +131,15 @@ void demo_quit(void)
 	quit = 1;
 }
 
+void demo_abort(void)
+{
+	set_text_mode();
+	stop_logger();
+	printf("demo_abort called. see demo.log for details. Last lines:\n\n");
+	print_tail("demo.log");
+	abort();
+}
+
 #define TX(ev)	((ev)->motion.motion[0])
 #define TY(ev)	((ev)->motion.motion[1])
 #define TZ(ev)	((ev)->motion.motion[2])

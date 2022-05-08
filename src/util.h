@@ -1,6 +1,7 @@
 #ifndef UTIL_H_
 #define UTIL_H_
 
+#include <stdlib.h>
 #include "inttypes.h"
 
 #ifdef __GNUC__
@@ -239,5 +240,18 @@ unsigned int get_cs(void);
 
 void get_msr(uint32_t msr, uint32_t *low, uint32_t *high);
 void set_msr(uint32_t msr, uint32_t low, uint32_t high);
+
+
+/* Non-failing versions of malloc/calloc/realloc. They never return 0, they call
+ * demo_abort on failure. Use the macros, don't call the *_impl functions.
+ */
+#define malloc_nf(sz)	malloc_nf_impl(sz, __FILE__, __LINE__)
+void *malloc_nf_impl(size_t sz, const char *file, int line);
+#define calloc_nf(n, sz)	calloc_nf_impl(n, sz, __FILE__, __LINE__)
+void *calloc_nf_impl(size_t num, size_t sz, const char *file, int line);
+#define realloc_nf(p, sz)	realloc_nf_impl(p, sz, __FILE__, __LINE__)
+void *realloc_nf_impl(void *p, size_t sz, const char *file, int line);
+
+
 
 #endif	/* UTIL_H_ */

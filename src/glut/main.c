@@ -153,6 +153,11 @@ void demo_quit(void)
 	exit(0);
 }
 
+void demo_abort(void)
+{
+	abort();
+}
+
 struct video_mode *video_modes(void)
 {
 	return vmodes;

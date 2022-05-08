@@ -1,0 +1,7 @@
+#!/bin/sh
+
+for i in `find . -name 'makefile*'`; do
+	name=`echo $i | sed 's/makefile/Makefile/'`
+	echo "$i -> $name"
+	mv $i $name
+done

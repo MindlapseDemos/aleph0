@@ -68,6 +68,7 @@ void demo_keyboard(int key, int press);
 
 /* defined in main_*.c */
 void demo_quit(void);
+void demo_abort(void);
 unsigned long get_msec(void);
 void set_palette(int idx, int r, int g, int b);
 

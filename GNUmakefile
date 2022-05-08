@@ -52,6 +52,9 @@ $(bin): $(obj) imago mikmod
 %.o: %.asm
 	nasm -f elf -o $@ $<
 
+%.w32.o: %.asm
+	nasm -f coff -o $@ $<
+
 %.w32.o: %.c
 	$(CC) -o $@ $(CFLAGS) -c $<
 

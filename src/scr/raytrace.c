@@ -84,9 +84,9 @@ static void draw(void)
 			cgm_vcons(&ray.origin, 0, 0, -5);
 
 			if(ray_trace(&ray, &scn, 0, &col)) {
-				r = cround64(col.x * 255.0f) & 0xff;
-				g = cround64(col.y * 255.0f) & 0xff;
-				b = cround64(col.z * 255.0f) & 0xff;
+				r = cround64(col.x * 255.0f);
+				g = cround64(col.y * 255.0f);
+				b = cround64(col.z * 255.0f);
 				if(r > 255) r = 255;
 				if(g > 255) g = 255;
 				if(b > 255) b = 255;

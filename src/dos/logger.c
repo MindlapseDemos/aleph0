@@ -49,6 +49,7 @@ int print_tail(const char *fname)
 	if(!(fp = fopen(fname, "r"))) {
 		return -1;
 	}
+	wr = rd = 0;
 	lineoffs[wr++] = 0;
 	while(fgets(buf, sizeof buf, fp)) {
 		lineoffs[wr] = ftell(fp);

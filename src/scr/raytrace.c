@@ -119,7 +119,7 @@ static void rend_tile(uint16_t *fbptr, int x0, int y0, int tsz, unsigned int val
 
 	if(tsz <= 1) {
 		if(!valid) {
-			*fbptr = rend_pixel(x0, y0);
+			*fbptr = 0xffff;//rend_pixel(x0, y0);
 		}
 		return;
 	}
@@ -150,20 +150,36 @@ static void rend_tile(uint16_t *fbptr, int x0, int y0, int tsz, unsigned int val
 	fb32 = (uint32_t*)fbptr;
 
 	switch(tsz) {
+	case 2:
+#ifdef SUBDBG
+		pp0 = 0x18ff;
+#endif
+		fb32[0] = fb32[160] = pp0;
+		break;
 	case 4:
+#ifdef SUBDBG
+		pp0 = pp1 = pp2 = pp3 = 0x03800380;
+#endif
+		fb32[0] = fb32[160] = pp0;
 		fb32[1] = fb32[161] = pp1;
 		fb32[320] = fb32[480] = pp2;
 		fb32[321] = fb32[481] = pp3;
-	case 2:
-		fb32[0] = fb32[160] = pp0;
 		break;
 	case 8:
+#ifdef SUBDBG
+		pp1 = pp0 = pp2 = pp3 = 0xe00fe00f;
+#endif
 		fb32[0] = fb32[1] = pp0; fb32[2] = fb32[3] = pp1;
 		fb32[160] = fb32[161] = pp0; fb32[162] = fb32[163] = pp1;
-		fb32[320] = fb32[321] = pp2; fb32[322] = fb32[323] = pp3;
-		fb32[480] = fb32[481] = pp2; fb32[482] = fb32[483] = pp3;
+		fb32[320] = fb32[321] = pp0; fb32[322] = fb32[323] = pp1;
+		fb32[480] = fb32[481] = pp0; fb32[482] = fb32[483] = pp1;
+		fb32[640] = fb32[641] = pp2; fb32[642] = fb32[643] = pp3;
+		fb32[800] = fb32[801] = pp2; fb32[802] = fb32[803] = pp3;
+		fb32[960] = fb32[961] = pp2; fb32[962] = fb32[963] = pp3;
+		fb32[1120] = fb32[1121] = pp2; fb32[1122] = fb32[1123] = pp3;
 		break;
 	}
+	return;
 
 subdiv:
 	*cptr[0] = cpix[0];
@@ -177,7 +193,7 @@ subdiv:
 	fbptr += (tsz << 8) + (tsz << 6);
 	y0 += tsz;
 	rend_tile(fbptr, x0, y0, tsz, 4);
-	rend_tile(fbptr, x0 + tsz, y0, tsz, 8);
+	rend_tile(fbptr + tsz, x0 + tsz, y0, tsz, 8);
 }
 
 static void draw(void)

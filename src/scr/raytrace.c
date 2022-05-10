@@ -21,7 +21,20 @@ static struct screen scr = {
 	draw
 };
 
-static cgm_vec3 raydir[120][160];
+enum {LASTX = 1, LASTY = 2};
+
+struct tile {
+	int sz;
+	unsigned int flags;
+	struct { int x, y; } cpos[4];	/* corner coordinates */
+	uint16_t *cptr[4];	/* corner pixels */
+};
+
+#define TILESZ		8
+#define NUM_TILES	((320 / TILESZ) * (240 / TILESZ))
+
+static cgm_vec3 raydir[240][320];
+static struct tile tiles[NUM_TILES];
 static struct rtscene scn;
 
 struct screen *raytrace_screen(void)
@@ -31,17 +44,39 @@ struct screen *raytrace_screen(void)
 
 static int init(void)
 {
-	int i, j;
+	int i, j, k;
 	float z = 1.0f / tan(cgm_deg_to_rad(25.0f));
+	struct tile *tptr = tiles;
 
-	for(i=0; i<120; i++) {
+	for(i=0; i<240; i++) {
 		cgm_vec3 *vptr = raydir[i];
-		float y = 1.0f - (float)i / 60.0f;
-		for(j=0; j<160; j++) {
-			vptr->x = ((float)j / 80.0f - 1.0f) * 1.333333f;
+		float y = 1.0f - (float)i / 120.0f;
+		for(j=0; j<320; j++) {
+			vptr->x = ((float)j / 160.0f - 1.0f) * 1.333333f;
 			vptr->y = y;
 			vptr->z = z;
 			vptr++;
+
+			if(((j & (TILESZ-1)) | (i & (TILESZ-1))) == 0) {
+				tptr->sz = TILESZ;
+				tptr->flags = 0;
+				if(j + TILESZ >= 320) tptr->flags |= LASTX;
+				if(i + TILESZ >= 240) tptr->flags |= LASTY;
+
+				tptr->cpos[0].x = j;
+				tptr->cpos[0].y = i;
+				tptr->cpos[1].x = j + (tptr->flags & LASTX ? TILESZ - 1 : TILESZ);
+				tptr->cpos[1].y = i;
+				tptr->cpos[2].x = j;
+				tptr->cpos[2].y = i + (tptr->flags & LASTY ? TILESZ - 1 : TILESZ);
+				tptr->cpos[3].x = tptr->cpos[1].x;
+				tptr->cpos[3].y = tptr->cpos[2].y;
+
+				for(k=0; k<4; k++) {
+					tptr->cptr[k] = fb_pixels + tptr->cpos[k].y * 320 + tptr->cpos[k].x;
+				}
+				tptr++;
+			}
 		}
 	}
 
@@ -71,33 +106,48 @@ static void start(long start_time)
 {
 }
 
+static uint16_t INLINE rend_pixel(int x, int y)
+{
+	int r, g, b;
+	cgm_ray ray;
+	cgm_vec3 col;
+
+	ray.dir = raydir[y][x];
+	cgm_vcons(&ray.origin, 0, 0, -5);
+
+	if(ray_trace(&ray, &scn, 0, &col)) {
+		r = cround64(col.x * 255.0f);
+		g = cround64(col.y * 255.0f);
+		b = cround64(col.z * 255.0f);
+		if(r > 255) r = 255;
+		if(g > 255) g = 255;
+		if(b > 255) b = 255;
+		return PACK_RGB16(r, g, b);
+	}
+	return 0;
+}
+
+#define FBPTR(x, y)	(fb_pixels + ((y) << 8) + ((y) << 6) + (x))
+
 static void draw(void)
 {
-	int i, j, r, g, b;
-	uint16_t pix, *fbptr = fb_pixels;
+	int i, j, xbound, ybound;
+	uint16_t *fbptr;
+	struct tile *tptr;
 
-	for(i=0; i<120; i++) {
-		for(j=0; j<160; j++) {
-			cgm_ray ray;
-			cgm_vec3 col;
-			ray.dir = raydir[i][j];
-			cgm_vcons(&ray.origin, 0, 0, -5);
-
-			if(ray_trace(&ray, &scn, 0, &col)) {
-				r = cround64(col.x * 255.0f);
-				g = cround64(col.y * 255.0f);
-				b = cround64(col.z * 255.0f);
-				if(r > 255) r = 255;
-				if(g > 255) g = 255;
-				if(b > 255) b = 255;
-				pix = PACK_RGB16(r, g, b);
-			} else {
-				pix = 0;
+	tptr = tiles;
+	for(i=0; i<NUM_TILES; i++) {
+		*tptr->cptr[0] = rend_pixel(tptr->cpos[0].x, tptr->cpos[0].y);
+		if(tptr->flags & LASTX) {
+			*tptr->cptr[1] = rend_pixel(tptr->cpos[1].x, tptr->cpos[1].y);
+			if(tptr->flags & LASTY) {
+				*tptr->cptr[3] = rend_pixel(tptr->cpos[3].x, tptr->cpos[3].y);
 			}
-			fbptr[0] = fbptr[1] = fbptr[320] = fbptr[321] = pix;
-			fbptr += 2;
 		}
-		fbptr += 320;
+		if(tptr->flags & LASTY) {
+			*tptr->cptr[2] = rend_pixel(tptr->cpos[2].x, tptr->cpos[2].y);
+		}
+		tptr++;
 	}
 
 	swap_buffers(0);

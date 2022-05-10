@@ -21,13 +21,9 @@ static struct screen scr = {
 	draw
 };
 
-enum {LASTX = 1, LASTY = 2};
-
 struct tile {
-	int sz;
-	unsigned int flags;
-	struct { int x, y; } cpos[4];	/* corner coordinates */
-	uint16_t *cptr[4];	/* corner pixels */
+	int x, y;
+	uint16_t *fbptr;
 };
 
 #define TILESZ		8
@@ -58,23 +54,9 @@ static int init(void)
 			vptr++;
 
 			if(((j & (TILESZ-1)) | (i & (TILESZ-1))) == 0) {
-				tptr->sz = TILESZ;
-				tptr->flags = 0;
-				if(j + TILESZ >= 320) tptr->flags |= LASTX;
-				if(i + TILESZ >= 240) tptr->flags |= LASTY;
-
-				tptr->cpos[0].x = j;
-				tptr->cpos[0].y = i;
-				tptr->cpos[1].x = j + (tptr->flags & LASTX ? TILESZ - 1 : TILESZ);
-				tptr->cpos[1].y = i;
-				tptr->cpos[2].x = j;
-				tptr->cpos[2].y = i + (tptr->flags & LASTY ? TILESZ - 1 : TILESZ);
-				tptr->cpos[3].x = tptr->cpos[1].x;
-				tptr->cpos[3].y = tptr->cpos[2].y;
-
-				for(k=0; k<4; k++) {
-					tptr->cptr[k] = fb_pixels + tptr->cpos[k].y * 320 + tptr->cpos[k].x;
-				}
+				tptr->x = j;
+				tptr->y = i;
+				tptr->fbptr = fb_pixels + i * 320 + j;
 				tptr++;
 			}
 		}
@@ -127,27 +109,87 @@ static uint16_t INLINE rend_pixel(int x, int y)
 	return 0;
 }
 
-#define FBPTR(x, y)	(fb_pixels + ((y) << 8) + ((y) << 6) + (x))
+#define CMPMASK		0xe79c
+static void rend_tile(uint16_t *fbptr, int x0, int y0, int tsz, unsigned int valid)
+{
+	uint16_t *cptr[4];
+	uint16_t cpix[4], tmp;
+	uint32_t pp0, pp1, pp2, pp3, *fb32;
+	int x1, y1, offs;
+
+	if(tsz <= 1) {
+		if(!valid) {
+			*fbptr = rend_pixel(x0, y0);
+		}
+		return;
+	}
+
+	offs = tsz - 1;
+	x1 = x0 + offs;
+	y1 = y0 + offs;
+
+	cptr[0] = fbptr;
+	cptr[1] = fbptr + tsz - 1;
+	cptr[2] = fbptr + (offs << 8) + (offs << 6);
+	cptr[3] = cptr[2] + tsz - 1;
+
+	cpix[0] = valid & 1 ? *cptr[0] : rend_pixel(x0, y0);
+	cpix[1] = valid & 2 ? *cptr[1] : rend_pixel(x1, y0);
+	cpix[2] = valid & 4 ? *cptr[2] : rend_pixel(x0, y1);
+	cpix[3] = valid & 8 ? *cptr[3] : rend_pixel(x1, y1);
+
+	tmp = cpix[0] & CMPMASK;
+	if((cpix[1] & CMPMASK) != tmp) goto subdiv;
+	if((cpix[2] & CMPMASK) != tmp) goto subdiv;
+	if((cpix[3] & CMPMASK) != tmp) goto subdiv;
+
+	pp0 = cpix[0] | ((uint32_t)cpix[0] << 16);
+	pp1 = cpix[1] | ((uint32_t)cpix[1] << 16);
+	pp2 = cpix[2] | ((uint32_t)cpix[2] << 16);
+	pp3 = cpix[3] | ((uint32_t)cpix[3] << 16);
+	fb32 = (uint32_t*)fbptr;
+
+	switch(tsz) {
+	case 4:
+		fb32[1] = fb32[161] = pp1;
+		fb32[320] = fb32[480] = pp2;
+		fb32[321] = fb32[481] = pp3;
+	case 2:
+		fb32[0] = fb32[160] = pp0;
+		break;
+	case 8:
+		fb32[0] = fb32[1] = pp0; fb32[2] = fb32[3] = pp1;
+		fb32[160] = fb32[161] = pp0; fb32[162] = fb32[163] = pp1;
+		fb32[320] = fb32[321] = pp2; fb32[322] = fb32[323] = pp3;
+		fb32[480] = fb32[481] = pp2; fb32[482] = fb32[483] = pp3;
+		break;
+	}
+
+subdiv:
+	*cptr[0] = cpix[0];
+	*cptr[1] = cpix[1];
+	*cptr[2] = cpix[2];
+	*cptr[3] = cpix[3];
+
+	tsz >>= 1;
+	rend_tile(fbptr, x0, y0, tsz, 1);
+	rend_tile(fbptr + tsz, x0 + tsz, y0, tsz, 2);
+	fbptr += (tsz << 8) + (tsz << 6);
+	y0 += tsz;
+	rend_tile(fbptr, x0, y0, tsz, 4);
+	rend_tile(fbptr, x0 + tsz, y0, tsz, 8);
+}
 
 static void draw(void)
 {
 	int i, j, xbound, ybound;
 	uint16_t *fbptr;
-	struct tile *tptr;
+	struct tile *tile;
 
-	tptr = tiles;
+	tile = tiles;
 	for(i=0; i<NUM_TILES; i++) {
-		*tptr->cptr[0] = rend_pixel(tptr->cpos[0].x, tptr->cpos[0].y);
-		if(tptr->flags & LASTX) {
-			*tptr->cptr[1] = rend_pixel(tptr->cpos[1].x, tptr->cpos[1].y);
-			if(tptr->flags & LASTY) {
-				*tptr->cptr[3] = rend_pixel(tptr->cpos[3].x, tptr->cpos[3].y);
-			}
-		}
-		if(tptr->flags & LASTY) {
-			*tptr->cptr[2] = rend_pixel(tptr->cpos[2].x, tptr->cpos[2].y);
-		}
-		tptr++;
+		rend_tile(tile->fbptr, tile->x, tile->y, TILESZ, 0);
+		tile++;
 	}
 
 	swap_buffers(0);

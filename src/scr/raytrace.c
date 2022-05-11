@@ -26,7 +26,7 @@ struct tile {
 	uint16_t *fbptr;
 };
 
-#define TILESZ		8
+#define TILESZ		16
 #define NUM_TILES	((320 / TILESZ) * (240 / TILESZ))
 
 static cgm_vec3 raydir[240][320];
@@ -110,16 +110,32 @@ static uint16_t INLINE rend_pixel(int x, int y)
 }
 
 #define CMPMASK		0xe79c
-static void rend_tile(uint16_t *fbptr, int x0, int y0, int tsz, unsigned int valid)
+static void rend_tile(uint16_t *fbptr, int x0, int y0, int tsz, int valid)
 {
 	uint16_t *cptr[4];
 	uint16_t cpix[4], tmp;
 	uint32_t pp0, pp1, pp2, pp3, *fb32;
-	int x1, y1, offs;
+	int i, x1, y1, offs;
 
-	if(tsz <= 1) {
-		if(!valid) {
-			*fbptr = 0xffff;//rend_pixel(x0, y0);
+	fb32 = (uint32_t*)fbptr;
+
+	if(tsz <= 2) {
+		switch(valid) {
+		case 0:
+			fbptr[1] = fbptr[320] = fbptr[321] = *fbptr;
+			break;
+		case 1:
+			fbptr[0] = fbptr[320] = fbptr[321] = fbptr[1];
+			break;
+		case 2:
+			fbptr[0] = fbptr[1] = fbptr[321] = fbptr[320];
+			break;
+		case 3:
+			fbptr[0] = fbptr[1] = fbptr[320] = fbptr[321];
+			break;
+		default:
+			printf("valid = %d\n", valid);
+			fbptr[0] = fbptr[1] = fbptr[320] = fbptr[321] = 0xff00;
 		}
 		return;
 	}
@@ -133,10 +149,10 @@ static void rend_tile(uint16_t *fbptr, int x0, int y0, int tsz, unsigned int val
 	cptr[2] = fbptr + (offs << 8) + (offs << 6);
 	cptr[3] = cptr[2] + tsz - 1;
 
-	cpix[0] = valid & 1 ? *cptr[0] : rend_pixel(x0, y0);
-	cpix[1] = valid & 2 ? *cptr[1] : rend_pixel(x1, y0);
-	cpix[2] = valid & 4 ? *cptr[2] : rend_pixel(x0, y1);
-	cpix[3] = valid & 8 ? *cptr[3] : rend_pixel(x1, y1);
+	cpix[0] = valid == 0 ? *cptr[0] : rend_pixel(x0, y0);
+	cpix[1] = valid == 1 ? *cptr[1] : rend_pixel(x1, y0);
+	cpix[2] = valid == 2 ? *cptr[2] : rend_pixel(x0, y1);
+	cpix[3] = valid == 3 ? *cptr[3] : rend_pixel(x1, y1);
 
 	tmp = cpix[0] & CMPMASK;
 	if((cpix[1] & CMPMASK) != tmp) goto subdiv;
@@ -147,7 +163,6 @@ static void rend_tile(uint16_t *fbptr, int x0, int y0, int tsz, unsigned int val
 	pp1 = cpix[1] | ((uint32_t)cpix[1] << 16);
 	pp2 = cpix[2] | ((uint32_t)cpix[2] << 16);
 	pp3 = cpix[3] | ((uint32_t)cpix[3] << 16);
-	fb32 = (uint32_t*)fbptr;
 
 	switch(tsz) {
 	case 2:
@@ -178,6 +193,18 @@ static void rend_tile(uint16_t *fbptr, int x0, int y0, int tsz, unsigned int val
 		fb32[960] = fb32[961] = pp2; fb32[962] = fb32[963] = pp3;
 		fb32[1120] = fb32[1121] = pp2; fb32[1122] = fb32[1123] = pp3;
 		break;
+
+	case 16:
+#ifdef SUBDBG
+		pp0 = 0xff00ff00;
+#endif
+		for(i=0; i<4; i++) {
+			memset16(fbptr, pp0, 16); fbptr += 320;
+			memset16(fbptr, pp0, 16); fbptr += 320;
+			memset16(fbptr, pp0, 16); fbptr += 320;
+			memset16(fbptr, pp0, 16); fbptr += 320;
+		}
+		break;
 	}
 	return;
 
@@ -188,12 +215,12 @@ subdiv:
 	*cptr[3] = cpix[3];
 
 	tsz >>= 1;
-	rend_tile(fbptr, x0, y0, tsz, 1);
-	rend_tile(fbptr + tsz, x0 + tsz, y0, tsz, 2);
+	rend_tile(fbptr, x0, y0, tsz, 0);
+	rend_tile(fbptr + tsz, x0 + tsz, y0, tsz, 1);
 	fbptr += (tsz << 8) + (tsz << 6);
 	y0 += tsz;
-	rend_tile(fbptr, x0, y0, tsz, 4);
-	rend_tile(fbptr + tsz, x0 + tsz, y0, tsz, 8);
+	rend_tile(fbptr, x0, y0, tsz, 2);
+	rend_tile(fbptr + tsz, x0 + tsz, y0, tsz, 3);
 }
 
 static void draw(void)
@@ -204,7 +231,7 @@ static void draw(void)
 
 	tile = tiles;
 	for(i=0; i<NUM_TILES; i++) {
-		rend_tile(tile->fbptr, tile->x, tile->y, TILESZ, 0);
+		rend_tile(tile->fbptr, tile->x, tile->y, TILESZ, -1);
 		tile++;
 	}
 

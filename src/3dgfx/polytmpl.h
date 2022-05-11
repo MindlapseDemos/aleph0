@@ -102,10 +102,6 @@ void POLYFILL(struct pvertex *pv, int nverts)
 	int mid;
 	int32_t dx, tmp;
 #endif
-#if !defined(GOURAUD) && !defined(TEXMAP)
-	/* flat version, just pack the color now */
-	color = G3D_PACK_RGB(pv[0].r, pv[0].g, pv[0].b);
-#endif
 #ifdef GOURAUD
 	int32_t r, g, b, dr, dg, db, rslope, gslope, bslope;
 #ifdef BLEND_ALPHA
@@ -117,6 +113,11 @@ void POLYFILL(struct pvertex *pv, int nverts)
 #endif
 #ifdef ZBUF
 	int32_t z, dz, zslope;
+#endif
+
+#if !defined(GOURAUD) && !defined(TEXMAP)
+	/* flat version, just pack the color now */
+	color = G3D_PACK_RGB(pv[0].r, pv[0].g, pv[0].b);
 #endif
 
 	for(i=1; i<nverts; i++) {

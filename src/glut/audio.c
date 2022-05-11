@@ -9,6 +9,7 @@
 #endif
 #include "mikmod.h"
 #include "audio.h"
+#include "cfgopt.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -36,6 +37,8 @@ int au_init(void)
 {
 	curmod = 0;
 	vol_master = vol_mus = vol_sfx = 255;
+
+	if(!opt.music) return 0;
 
 #if defined(__linux__)
 	MikMod_RegisterDriver(&drv_alsa);
@@ -78,8 +81,10 @@ int au_init(void)
 
 void au_shutdown(void)
 {
-	curmod = 0;
-	MikMod_Exit();
+	if(opt.music) {
+		curmod = 0;
+		MikMod_Exit();
+	}
 }
 
 struct au_module *au_load_module(const char *fname)

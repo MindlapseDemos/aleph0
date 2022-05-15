@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <RleBitmap.h>
+#include "rlebmap.h"
 
 /* APPROX. 170 FPS Minimum */
 
@@ -33,7 +33,7 @@ struct screen *minifx_screen(void) {
 
 static int init(void) {
 	/* Allocate back buffer */
-	backBuffer = (unsigned short *)calloc(FB_WIDTH * FB_HEIGHT, sizeof(unsigned short));
+	backBuffer = calloc(FB_WIDTH * FB_HEIGHT, sizeof(unsigned short));
 
 	return 0;
 }
@@ -46,34 +46,41 @@ static void destroy(void) {
 static void start(long trans_time) { lastFrameTime = time_msec; }
 
 static void draw(void) {
-	long lastFrameDuration = (time_msec - lastFrameTime) / 1000.0f;
+	long lastFrameDuration;
+	int i, stride;
+	RleBitmap *rle;
+	int clearColor;
+	unsigned short clearColor16;
+
+	lastFrameDuration = (time_msec - lastFrameTime) / 1000.0f;
 	lastFrameTime = time_msec;
-    
-    int clearColor = 0x888888;
-    unsigned short clearColor16 = ((clearColor << 8) & 0xF800)	   /* R */
+
+	clearColor = 0x888888;
+	clearColor16 = ((clearColor << 8) & 0xF800)	/* R */
 			   | ((clearColor >> 5) & 0x07E0)   /* G */
 			   | ((clearColor >> 19) & 0x001F); /* B */
-    for (int i=0; i<FB_WIDTH * FB_HEIGHT; i++) {
-        backBuffer[i] = clearColor16;
-    }
 
-    /* For now create / destroy in each frame. We will manage these later */
-    RleBitmap *rle = rleCreate(32, 32);
-    
-    updatePropeller(time_msec / 1000.0f, rle);
-    int stride = FB_WIDTH;
-    /*
-    rleBlit(rle, backBuffer, FB_WIDTH, FB_HEIGHT, stride,
+	for (i=0; i<FB_WIDTH * FB_HEIGHT; i++) {
+		backBuffer[i] = clearColor16;
+	}
+
+	/* For now create / destroy in each frame. We will manage these later */
+	rle = rleCreate(32, 32);
+
+	updatePropeller(time_msec / 1000.0f, rle);
+	stride = FB_WIDTH;
+	/*
+	rleBlit(rle, backBuffer, FB_WIDTH, FB_HEIGHT, stride,
 			100, 100);
-    */
-    
-    rleBlitScale(rle, backBuffer, FB_WIDTH, FB_HEIGHT, stride, 50,
+	*/
+
+	rleBlitScale(rle, backBuffer, FB_WIDTH, FB_HEIGHT, stride, 50,
 		  50, 3.0, 3.0);
-    
-    rleDestroy(rle);
+
+	rleDestroy(rle);
 
 	/* Blit effect to framebuffer */
-    memcpy(fb_pixels, backBuffer, FB_WIDTH * FB_HEIGHT * sizeof(unsigned short));
+	memcpy(fb_pixels, backBuffer, FB_WIDTH * FB_HEIGHT * sizeof(unsigned short));
 	swap_buffers(0);
 }
 
@@ -87,8 +94,7 @@ static struct {
 } propellerState;
 
 static void updatePropeller(float t, RleBitmap *rle) {
-    
-    t *= 0.1; /* Slow-mo to see what happens */
+
 	int i, j;
 	int cx, cy, count = 0;
 	unsigned char *dst;
@@ -98,6 +104,8 @@ static void updatePropeller(float t, RleBitmap *rle) {
 	float cost, sint;
 	static float sin120 = 0.86602540378f;
 	static float cos120 = -0.5f;
+
+	t *= 0.1; /* Slow-mo to see what happens */
 
 	/* Rotate */
 	sint = sin(t);

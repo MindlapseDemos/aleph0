@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <RleBitmap.h>
+#include "rlebmap.h"
 
 /* APPROX. 170 FPS Minimum */
 

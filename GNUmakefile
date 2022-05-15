@@ -1,4 +1,4 @@
-src = $(wildcard src/*.c) $(wildcard src/3dgfx/*.c) $(wildcard src/scr/*.c) $(wildcard src/utils/*.c) \
+src = $(wildcard src/*.c) $(wildcard src/3dgfx/*.c) $(wildcard src/scr/*.c) \
 	  $(wildcard src/glut/*.c)
 asmsrc = $(wildcard src/*.asm)
 obj = $(src:.c=.o) $(asmsrc:.asm=.o)

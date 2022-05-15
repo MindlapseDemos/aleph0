@@ -1,6 +1,6 @@
-#include "RleBitmap.h"
-#include <malloc.h>
+#include <stdlib.h>
 #include <string.h>
+#include "rlebmap.h"
 
 /* Number of numbers per scanline. Each streak has 2 numbers (start, length) */
 #define RLE_ELEMENTS_PER_SCANLINE RLE_STREAKS_PER_SCANLINE * 2
@@ -21,12 +21,12 @@ static int rleScansByteCount(RleBitmap *rle) {
 }
 
 RleBitmap *rleCreate(unsigned int w, unsigned int h) {
-	RleBitmap *ret = (RleBitmap *)malloc(sizeof(RleBitmap));
+	RleBitmap *ret = malloc(sizeof(RleBitmap));
 	ret->w = w;
 	ret->h = h;
 
 	/* Allocate scans */
-	ret->scans = (RLE_TYPE *)calloc(rleWorstCaseElementCount(w, h), sizeof(RLE_TYPE));
+	ret->scans = calloc(rleWorstCaseElementCount(w, h), sizeof(RLE_TYPE));
 
 	return ret;
 }

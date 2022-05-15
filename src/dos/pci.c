@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <string.h>
 #include <conio.h>
-#include <i86.h>
+#include "dosutil.h"
 #include "inttypes.h"
 #include "pci.h"
 #include "cdpmi.h"

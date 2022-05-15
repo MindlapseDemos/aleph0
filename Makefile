@@ -1,7 +1,8 @@
 !ifdef __UNIX__
 dosobj = src/dos/audos.obj src/dos/djdpmi.obj src/dos/gfx.obj src/dos/keyb.obj &
 	src/dos/logger.obj src/dos/main.obj src/dos/sball.obj src/dos/timer.obj &
-	src/dos/vbe.obj src/dos/vga.obj src/dos/watdpmi.obj src/dos/mouse.obj
+	src/dos/vbe.obj src/dos/vga.obj src/dos/watdpmi.obj src/dos/mouse.obj &
+	src/dos/pci.obj
 3dobj = src/3dgfx/3dgfx.obj src/3dgfx/mesh.obj src/3dgfx/meshload.obj &
 	src/3dgfx/polyclip.obj src/3dgfx/polyfill.obj
 srcobj = src/bsptree.obj src/cfgopt.obj src/console.obj src/demo.obj &
@@ -23,7 +24,8 @@ libpath = libpath libs/imago libpath libs/anim libpath libs/midas
 
 dosobj = src\dos\audos.obj src\dos\djdpmi.obj src\dos\gfx.obj src\dos\keyb.obj &
 	src\dos\logger.obj src\dos\main.obj src\dos\sball.obj src\dos\timer.obj &
-	src\dos\vbe.obj src\dos\vga.obj src\dos\watdpmi.obj src\dos\mouse.obj
+	src\dos\vbe.obj src\dos\vga.obj src\dos\watdpmi.obj src\dos\mouse.obj &
+	src\dos\pci.obj
 3dobj = src\3dgfx\3dgfx.obj src\3dgfx\mesh.obj src\3dgfx\meshload.obj &
 	src\3dgfx\polyclip.obj src\3dgfx\polyfill.obj
 srcobj = src\bsptree.obj src\cfgopt.obj src\console.obj src\demo.obj &

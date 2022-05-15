@@ -9,9 +9,11 @@
 
 #define outp(p, v)	outportb(p, v)
 #define outpw(p, v)	outportw(p, v)
+#define outpd(p, v)	outportd(p, v)
 
 #define inp(p)		inportb(p)
 #define inpw(p)		inportw(p)
+#define inpd(p)		inportd(p)
 #endif
 
 #endif	/* DOSUTIL_H_ */

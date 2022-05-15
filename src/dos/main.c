@@ -62,6 +62,10 @@ int main(int argc, char **argv)
 	init_timer(100);
 	kb_init(32);
 
+	if(init_pci() != -1) {
+		/* TODO detect and initialize S3 virge */
+	}
+
 	if(init_video() == -1) {
 		return 1;
 	}

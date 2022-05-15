@@ -17,6 +17,31 @@ Source structure
  - libs/imago/   image loading library (includes libpng, zlib, libjpeg)
  - libs/anim/    keyframe animation library
 
+Coding style conventions
+------------------------
+Very few style issues are mandated:
+
+  - All filenames should be lowercase unless convention says otherwise
+    (`Makefile`, `README`, etc).
+  - All filenames under `src/` and of any tools necessary to build from MS-DOS
+    will have to use maximum 8.3 characters.
+  - Source code should be C89-compliant. Any compiler-specific features beyond
+    that will have to be ifdefed.
+  - Use tabs for indentation, where each tab is equivalent to 4 spaces.
+
+Everything else is left to the discretion of each individual, but also if
+you're editing an existing file, try to match the style of the surrounding code.
+
+Some general style suggestions, which will not be enforced:
+
+  - Don't use overly long names, abbreviate wherever it makes sense.
+  - Don't cast the return value of malloc. `void*` are converted implicitly, and
+    the cast hides forgetting to include `stdlib.h`.
+  - Preferably use lowercase with underscores for everything.
+  - Preferably use the K&R brace style if possible.
+
+This section will be expanded as necessary.
+
 Building on DOS with Watcom
 ---------------------------
 Make sure you have Watcom or OpenWatcom installed, and the appropriate env-vars

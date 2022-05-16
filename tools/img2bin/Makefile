@@ -1,19 +1,12 @@
-obj = img2bin.o
+src = $(wildcard *.c) $(wildcard imago/*.c)
+obj = $(src:.c=.o)
 bin = img2bin
 
-root = ../..
+CFLAGS = -Iimago
+LDFLAGS = -lpng -lz -ljpeg
 
-imagodir = $(root)/libs/imago
-libimago = $(imagodir)/libimago.a
-
-CFLAGS = -pedantic -Wall -g -I$(imagodir)/src
-LDFLAGS = -L$(imagodir) -limago -lm
-
-$(bin): $(obj) $(libimago)
+$(bin): $(obj)
 	$(CC) -o $@ $(obj) $(LDFLAGS)
-
-$(libimago):
-	$(MAKE) -C $(imagodir)
 
 .PHONY: clean
 clean:

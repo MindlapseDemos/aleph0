@@ -1,3 +1,33 @@
+UseCRLF: false
 UseTab: Always
+TabWidth: 4
 IndentWidth: 4
-ColumnLimit: 90
+ColumnLimit: 95
+SortIncludes: Never
+SpaceBeforeParens: Never
+BreakBeforeBraces: Custom
+BraceWrapping:
+	AfterFunction: true
+AlignAfterOpenBracket: DontAlign
+AlignConsecutiveAssignments: None
+AlignConsecutiveMacros: AcrossEmptyLines
+AlignEscapedNewlines: DontAlign
+AlignOperands: DontAlign
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortEnumsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: true
+BinPackArguments: true
+BinPackParameters: true
+BreakBeforeBinaryOperators: NonAssignment
+BreakStringLiterals: true
+SpaceInEmptyParentheses: false
+IndentCaseLabels: false
+ReflowComments: true
+PointerAlignment: Right
+SpacesInCStyleCastParentheses: false
+SpaceAfterCStyleCast: false
+PenaltyBreakAssignment: 1000
+SpaceBeforeParens: Never
+SpaceAfterLogicalNot: false

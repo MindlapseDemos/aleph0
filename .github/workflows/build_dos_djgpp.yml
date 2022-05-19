@@ -1,4 +1,4 @@
-name: DOS build (Watcom)
+name: DOS build (DJGPP)
 
 on:
   push:
@@ -17,8 +17,8 @@ jobs:
       id: cache-tc
       uses: actions/cache@v3
       with:
-        path: ow
-        key: openwatcom-cache1
+        path: djgpp
+        key: djgpp-cache1
 
     - name: install dependencies
       run: |
@@ -28,34 +28,25 @@ jobs:
     - name: install toolchain
       if: steps.cache-tc.outputs.cache-hit != 'true'
       run: |
-        wget http://mutantstargoat.com/~nuclear/ow_bundle.tar.gz
-        tar xzvf ow_bundle.tar.gz
-        sed -i 's/HOME/GITHUB_WORKSPACE/g' ow/owsetenv-dos.sh
+        wget http://mutantstargoat.com/~nuclear/djgpp_bundle.tar.gz
+        tar xzvf djgpp_bundle.tar.gz
+        sed -i 's/HOME/GITHUB_WORKSPACE/g' djgpp/setenv
 
     - name: prepare datafiles
       run: |
         svn export svn://mutantstargoat.com/datadirs/dosdemo data
         tools/procdata
-    - name: build libs/imago
-      run: |
-        source ow/owsetenv-dos.sh
-        cd libs/imago
-        wmake
-    - name: build libs/anim
-      run: |
-        source ow/owsetenv-dos.sh
-        cd libs/anim
-        wmake
+
     - name: build demo
       run: |
-        source ow/owsetenv-dos.sh
-        wmake
-        cp ow/binw/dos4gw.exe .
+        source djgpp/setenv
+        make -f Makefile.dj
+        cp djgpp/i586-pc-msdosdjgpp/bin/cwsdpmi.exe .
 
     - uses: actions/upload-artifact@v3
       with:
-        name: watdemo
+        name: djdemo
         path: |
           data/
           demo.exe
-          dos4gw.exe
+          cwsdpmi.exe

@@ -1,4 +1,4 @@
-name: DOS build (OpenWatcom)
+name: DOS build (Watcom)
 
 on:
   push:

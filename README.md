@@ -1,5 +1,8 @@
 Unnamed Mindlapse DOS demo for Pentium-era PCs
 ----------------------------------------------
+
+![dos/watcom build status](https://github.com/MindlapseDemos/wip-dosdemo/actions/workflows/build_dos_watcom.yml/badge.svg)
+
 The demo uses VBE 320x240 16bpp. Some VBE implementations do not expose
 double-scan video modes (240 lines), but can be made to work with a third-party
 VBE TSR like `univbe` or `s3vbe`. Linear framebuffer (VBE 2.0) support is

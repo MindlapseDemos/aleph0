@@ -1,0 +1,39 @@
+name: GNU/Linux build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: install dependencies
+      run: |
+        sudo dpkg --add-architecture i386
+        sudo apt-get update
+        sudo apt-get install gcc-multilib libgl-dev:i386 libpng-dev libjpeg-dev libasound2-dev:i386 nasm
+
+    - name: prepare datafiles
+      run: |
+        svn export svn://mutantstargoat.com/datadirs/dosdemo data
+        tools/procdata
+
+    - name: build demo
+      run: |
+        make
+        ln demo demo-gnulinux
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: demo-gnulinux
+        path: |
+          data/
+          demo-gnulinux
+
+# vi:ts=2 sts=2 sw=2 expandtab:

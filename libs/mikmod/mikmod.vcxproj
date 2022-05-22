@@ -38,9 +38,7 @@
     <ClCompile Include="playercode\virtch.c" />
     <ClCompile Include="playercode\virtch2.c" />
     <ClCompile Include="playercode\virtch_common.c" />
-    <ClCompile Include="posix\memcmp.c" />
     <ClCompile Include="posix\strccmp.c" />
-    <ClCompile Include="posix\strstr.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="config.h" />

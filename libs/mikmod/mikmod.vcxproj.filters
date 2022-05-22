@@ -103,13 +103,7 @@
     <ClCompile Include="drivers\drv_ds.c">
       <Filter>drivers</Filter>
     </ClCompile>
-    <ClCompile Include="posix\memcmp.c">
-      <Filter>posix</Filter>
-    </ClCompile>
     <ClCompile Include="posix\strccmp.c">
-      <Filter>posix</Filter>
-    </ClCompile>
-    <ClCompile Include="posix\strstr.c">
       <Filter>posix</Filter>
     </ClCompile>
     <ClCompile Include="drivers\drv_nos.c">

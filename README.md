@@ -1,8 +1,10 @@
 Unnamed Mindlapse DOS demo for Pentium-era PCs
 ----------------------------------------------
 
-![dos/watcom build status](https://github.com/MindlapseDemos/wip-dosdemo/actions/workflows/build_dos_watcom.yml/badge.svg)
-![dos/djgpp build status](https://github.com/MindlapseDemos/wip-dosdemo/actions/workflows/build_dos_djgpp.yml/badge.svg)
+![dos (watcom) build status](https://github.com/MindlapseDemos/wip-dosdemo/actions/workflows/build_dos_watcom.yml/badge.svg)
+![dos (djgpp) build status](https://github.com/MindlapseDemos/wip-dosdemo/actions/workflows/build_dos_djgpp.yml/badge.svg)
+![GNU/Linux build status](https://github.com/MindlapseDemos/wip-dosdemo/actions/workflows/build_gnulinux32.yml/badge.svg)
+![win32 (msvc) build status](https://github.com/MindlapseDemos/wip-dosdemo/actions/workflows/build_win_msvc.yml/badge.svg)
 
 The demo uses VBE 320x240 16bpp. Some VBE implementations do not expose
 double-scan video modes (240 lines), but can be made to work with a third-party

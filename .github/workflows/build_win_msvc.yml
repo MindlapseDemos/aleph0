@@ -1,0 +1,45 @@
+name: Win32 build (MSVC)
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: ilammy/setup-nasm@v1
+    
+    - name: prepare environment
+      uses: microsoft/setup-msbuild@v1.0.2
+
+    - name: build tools
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: |
+        msbuild -m -p:Configuration=Release -t:img2bin .
+        msbuild -m -p:Configuration=Release -t:csprite .
+
+    - name: prepare datafiles
+      run: |
+        svn export svn://mutantstargoat.com/datadirs/dosdemo data
+        tools/procdata.bat
+      
+    - name: build demo
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: |
+        msbuild -m -p:Configuration=Release -t:dosdemo .
+        copy Release\dosdemo.exe demo-win32.exe
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: demo-win32
+        path: |
+          data/
+          demo-win32.exe
+
+# vi:ts=2 sts=2 sw=2 expandtab:

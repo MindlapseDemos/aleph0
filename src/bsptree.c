@@ -281,7 +281,6 @@ static struct bspnode *build_tree(struct bsppoly *polyarr, int num_polys)
 	struct bsppoly *front_polys, *back_polys;
 	struct bspnode *node;
 
-	struct bspnode *nres;
 	int clipres, clipres_neg, clipped_vnum, clipped_neg_vnum, max_clipped_vnum = 0;
 	struct g3d_vertex *v, *clipped = 0, *clipped_neg = 0;
 	struct cplane negplane;

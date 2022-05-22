@@ -139,8 +139,6 @@ static void update(void)
 
 static void draw(void)
 {
-	int i;
-
 	update();
 
 	g3d_matrix_mode(G3D_MODELVIEW);
@@ -175,7 +173,7 @@ static void draw_mountains(void)
 {
 	int i, j, horizon_y, y;
 	int32_t x, xstart, xend, dx;
-	uint16_t *dptr, *sptr;
+	uint16_t *dptr;
 
 	/* 24.8 fixed point, 512 width, 90deg arc */
 	xstart = cround64(cam_theta * (256.0 * MOUNTIMG_WIDTH / 90.0));

@@ -18,7 +18,7 @@ static int cmd_help(const char *args);
 #define SBUF_SIZE	4
 
 static char cbuf[CBUF_SIZE];
-static char inp[CBUF_SIZE + 1], *dptr;
+static char inpbuf[CBUF_SIZE + 1], *dptr;
 static int rd, wr;
 
 static char hist[HIST_SIZE][CBUF_SIZE + 1];
@@ -84,15 +84,15 @@ int con_input(int key)
 
 	case '\n':
 	case '\r':
-		dptr = inp;
+		dptr = inpbuf;
 		while(rd != wr) {
 			*dptr++ = cbuf[rd];
 			rd = (rd + 1) & CBUF_MASK;
 		}
 		*dptr = 0;
-		if(inp[0]) {
+		if(inpbuf[0]) {
 			/* add to history */
-			memcpy(hist[hist_tail], inp, dptr - inp + 1);
+			memcpy(hist[hist_tail], inpbuf, dptr - inpbuf + 1);
 			hist_tail = (hist_tail + 1) & (HIST_SIZE - 1);
 			if(hist_tail == hist_head) {	/* ovf */
 				hist_head = (hist_head + 1) & (HIST_SIZE - 1);
@@ -105,7 +105,7 @@ int con_input(int key)
 	case KB_UP:
 		if(hist_head == hist_tail) break;
 		hist_tail = (hist_tail + HIST_SIZE - 1) & (HIST_SIZE - 1);
-		strcpy(inp, hist[hist_tail]);
+		strcpy(inpbuf, hist[hist_tail]);
 		break;
 
 	default:
@@ -155,21 +155,21 @@ static int runcmd(void)
 	int i, nscr;
 	char *endp, *args;
 
-	switch(inp[0]) {
+	switch(inpbuf[0]) {
 	case '/':
 		nscr = scr_num_screens();
 		for(i=0; i<nscr; i++) {
-			if(strstr(scr_screen(i)->name, inp + 1)) {
+			if(strstr(scr_screen(i)->name, inpbuf + 1)) {
 				change_screen(i);
 				return 0;
 			}
 		}
-		con_printf("no such screen: %s\n", inp + 1);
+		con_printf("no such screen: %s\n", inpbuf + 1);
 		break;
 
 	case '#':
-		i = strtol(inp + 1, &endp, 10);
-		if(endp == inp + 1) {
+		i = strtol(inpbuf + 1, &endp, 10);
+		if(endp == inpbuf + 1) {
 			con_printf("usage: #<screen number>\n");
 			break;
 		}
@@ -182,7 +182,7 @@ static int runcmd(void)
 		return 0;
 
 	default:
-		endp = inp;
+		endp = inpbuf;
 		while(*endp && isspace(*endp)) endp++;
 		while(*endp && !isspace(*endp)) endp++;
 
@@ -190,13 +190,13 @@ static int runcmd(void)
 		*endp = 0;
 
 		for(i=0; cmd[i].name; i++) {
-			if(strcmp(inp, cmd[i].name) == 0) {
+			if(strcmp(inpbuf, cmd[i].name) == 0) {
 				cmd[i].func(args);
 				return 1;
 			}
 		}
 
-		con_printf("?%s\n", inp);
+		con_printf("?%s\n", inpbuf);
 	}
 
 	return 1;

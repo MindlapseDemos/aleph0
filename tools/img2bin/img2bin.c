@@ -3,6 +3,11 @@
 #include <string.h>
 #include <stdint.h>
 #include <errno.h>
+#ifdef WIN32
+#include <malloc.h>
+#else
+#include <alloca.h>
+#endif
 #include "imago2.h"
 
 int proc_image(const char *fname);

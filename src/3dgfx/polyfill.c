@@ -88,7 +88,6 @@ static int fbheight;
 
 void polyfill_fbheight(int height)
 {
-	void *tmp;
 	int newsz = (height * 2 + EDGEPAD * 3) * sizeof *edgebuf;
 
 	if(newsz > edgebuf_size) {

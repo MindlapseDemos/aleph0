@@ -234,7 +234,7 @@ static unsigned int __inline get_cs(void)
 	__asm {
 		xor eax, eax
 		mov ax, cs
-		mov [res], ax
+		mov [res], eax
 	}
 	return res;
 }

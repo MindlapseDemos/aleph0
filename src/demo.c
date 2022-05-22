@@ -188,7 +188,6 @@ void demo_draw(void)
 /* called by swap_buffers just before the actual swap */
 void demo_post_draw(void *pixels)
 {
-	char buf[32];
 	if(opt.dbginfo) {
 		drawFps(pixels);
 		if(dbg_curscr_name) {
@@ -225,8 +224,6 @@ void change_screen(int idx)
 
 void demo_keyboard(int key, int press)
 {
-	int nscr;
-
 	if(press) {
 		switch(key) {
 		case 27:

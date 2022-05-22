@@ -19,13 +19,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -52,13 +52,13 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_USE_MATH_DEFINES;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\src\sdl;$(ProjectDir)\libs\imago\src;$(ProjectDir)\libs\mikmod\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <DisableSpecificWarnings>4996;4244</DisableSpecificWarnings>
+      <AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\src\3dgfx;$(ProjectDir)\src\glut;$(ProjectDir)\libs;$(ProjectDir)\libs\imago\src;$(ProjectDir)\libs\mikmod\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4996;4244;4305</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL.lib;SDLmain.lib;imago.lib;mikmod.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dsound.lib;imago.lib;mikmod.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(IntDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -71,57 +71,148 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;_USE_MATH_DEFINES;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\src\sdl;$(ProjectDir)\libs\imago\src;$(ProjectDir)\libs\mikmod\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <DisableSpecificWarnings>4996;4244</DisableSpecificWarnings>
+      <AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\src\3dgfx;$(ProjectDir)\src\glut;$(ProjectDir)\libs;$(ProjectDir)\libs\imago\src;$(ProjectDir)\libs\mikmod\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4996;4244;4305</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>SDL.lib;SDLmain.lib;imago.lib;mikmod.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dsound.lib;imago.lib;mikmod.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(IntDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\3dgfx.c" />
-    <ClCompile Include="src\bump.c" />
+    <ClCompile Include="src\3dgfx\3dgfx.c" />
+    <ClCompile Include="src\3dgfx\mesh.c" />
+    <ClCompile Include="src\3dgfx\meshload.c" />
+    <ClCompile Include="src\3dgfx\polyclip.c" />
+    <ClCompile Include="src\3dgfx\polyfill.c" />
+    <ClCompile Include="src\bsptree.c" />
     <ClCompile Include="src\cfgopt.c" />
+    <ClCompile Include="src\console.c" />
+    <ClCompile Include="src\cpuid.c" />
+    <ClCompile Include="src\darray.c" />
     <ClCompile Include="src\demo.c" />
     <ClCompile Include="src\dynarr.c" />
-    <ClCompile Include="src\fract.c" />
     <ClCompile Include="src\gfxutil.c" />
-    <ClCompile Include="src\grise.c" />
-    <ClCompile Include="src\metaball.c" />
+    <ClCompile Include="src\glut\audio.c" />
+    <ClCompile Include="src\glut\main.c" />
+    <ClCompile Include="src\glut\miniglut.c" />
+    <ClCompile Include="src\glut\w32dir.c" />
+    <ClCompile Include="src\image.c" />
     <ClCompile Include="src\metasurf.c" />
-    <ClCompile Include="src\plasma.c" />
-    <ClCompile Include="src\polyclip.c" />
-    <ClCompile Include="src\polyfill.c" />
-    <ClCompile Include="src\polytest.c" />
+    <ClCompile Include="src\noise.c" />
+    <ClCompile Include="src\rbtree.c" />
+    <ClCompile Include="src\rlebmap.c" />
     <ClCompile Include="src\screen.c" />
-    <ClCompile Include="src\sdl\main.c" />
-    <ClCompile Include="src\sdl\music.c" />
-    <ClCompile Include="src\thunder.c" />
+    <ClCompile Include="src\scr\bump.c" />
+    <ClCompile Include="src\scr\cybersun.c" />
+    <ClCompile Include="src\scr\fract.c" />
+    <ClCompile Include="src\scr\greets.c" />
+    <ClCompile Include="src\scr\grise.c" />
+    <ClCompile Include="src\scr\hairball.c" />
+    <ClCompile Include="src\scr\infcubes.c" />
+    <ClCompile Include="src\scr\metaball.c" />
+    <ClCompile Include="src\scr\minifx.c" />
+    <ClCompile Include="src\scr\plasma.c" />
+    <ClCompile Include="src\scr\polytest.c" />
+    <ClCompile Include="src\scr\raytrace.c" />
+    <ClCompile Include="src\scr\rt.c" />
+    <ClCompile Include="src\scr\smoketxt.c" />
+    <ClCompile Include="src\scr\thunder.c" />
+    <ClCompile Include="src\scr\tilemaze.c" />
+    <ClCompile Include="src\scr\tunnel.c" />
     <ClCompile Include="src\tinyfps.c" />
-    <ClCompile Include="src\tunnel.c" />
+    <ClCompile Include="src\treestor.c" />
+    <ClCompile Include="src\ts_text.c" />
+    <ClCompile Include="src\util.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\3dgfx.h" />
+    <ClInclude Include="src\3dgfx\3dgfx.h" />
+    <ClInclude Include="src\3dgfx\mesh.h" />
+    <ClInclude Include="src\3dgfx\polyclip.h" />
+    <ClInclude Include="src\3dgfx\polyfill.h" />
+    <ClInclude Include="src\3dgfx\polytmpl.h" />
+    <ClInclude Include="src\audio.h" />
+    <ClInclude Include="src\bsptree.h" />
     <ClInclude Include="src\cfgopt.h" />
+    <ClInclude Include="src\console.h" />
+    <ClInclude Include="src\cpuid.h" />
+    <ClInclude Include="src\darray.h" />
     <ClInclude Include="src\demo.h" />
     <ClInclude Include="src\dynarr.h" />
     <ClInclude Include="src\gfxutil.h" />
+    <ClInclude Include="src\glut\gfx.h" />
+    <ClInclude Include="src\glut\miniglut.h" />
+    <ClInclude Include="src\glut\w32dir.h" />
+    <ClInclude Include="src\image.h" />
     <ClInclude Include="src\mcubes.h" />
     <ClInclude Include="src\metasurf.h" />
-    <ClInclude Include="src\music.h" />
-    <ClInclude Include="src\polyclip.h" />
-    <ClInclude Include="src\polyfill.h" />
-    <ClInclude Include="src\polytmpl.h" />
+    <ClInclude Include="src\noise.h" />
+    <ClInclude Include="src\rbtree.h" />
+    <ClInclude Include="src\rlebmap.h" />
     <ClInclude Include="src\sball.h" />
+    <ClInclude Include="src\scene.h" />
     <ClInclude Include="src\screen.h" />
+    <ClInclude Include="src\scr\rt.h" />
+    <ClInclude Include="src\scr\smoketxt.h" />
+    <ClInclude Include="src\scr\tilemaze.h" />
+    <ClInclude Include="src\timer.h" />
     <ClInclude Include="src\tinyfps.h" />
+    <ClInclude Include="src\treestor.h" />
     <ClInclude Include="src\util.h" />
     <ClInclude Include="src\vmath.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="src\cpuid_s.asm">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <FileType>Document</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">nasm -o .%(Filename).obj -f win32 %(FullPath)</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.%(Filename).obj</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">nasm -o .%(Filename).obj -f win32 %(FullPath)</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.%(Filename).obj</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="src\data.asm">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <FileType>Document</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">nasm -o .%(Filename).obj -f win32 %(FullPath)</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.%(Filename).obj</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">nasm -o .%(Filename).obj -f win32 %(FullPath)</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.%(Filename).obj</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="src\util_s.asm">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <FileType>Document</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">nasm -o .%(Filename).obj -f win32 %(FullPath)</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.%(Filename).obj</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">nasm -o .%(Filename).obj -f win32 %(FullPath)</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.%(Filename).obj</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="cspr\confont.asm">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <FileType>Document</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">nasm -o .%(Filename).obj -f win32 %(FullPath)</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.%(Filename).obj</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">nasm -o .%(Filename).obj -f win32 %(FullPath)</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.%(Filename).obj</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="cspr\dbgfont.asm">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <FileType>Document</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">nasm -o .%(Filename).obj -f win32 %(FullPath)</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.%(Filename).obj</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">nasm -o .%(Filename).obj -f win32 %(FullPath)</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.%(Filename).obj</Outputs>
+    </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -132,8 +132,6 @@ static void update(void)
 
 static void draw(void)
 {
-	int i, j;
-	uint16_t *dest, *src;
 	unsigned long msec;
 	static unsigned long last_swap;
 

@@ -36,7 +36,7 @@ int alloc_image(struct image *img, int x, int y, int bpp)
 
 int load_image(struct image *img, const char *fname)
 {
-	int i;
+	unsigned int i;
 	FILE *fp;
 	png_struct *png;
 	png_info *info;

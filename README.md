@@ -97,15 +97,34 @@ comes with Windows 9x (DOS >= 7). Here's a copy in case you need it:
 http://mutantstargoat.com/~nuclear/tmp/d7himem.sys
 
 
-Building and running with the SDL backend
------------------------------------------
-Run make to build (assuming make on your system is GNU make), or use the visual
-studio 2013 project on Windows.
+Building the modern PC cross-platform version
+---------------------------------------------
+The cross-platform version for modern PCs uses OpenGL textures to present the
+demo framebuffer.
 
-The SDL backend will scale the framebuffer up, by the factor specified in the
-`FBSCALE` environment variable. So run the demo as: `FBSCALE=3 ./demo` for
-a 3x scale factor, or just export the `FBSCALE` env var in the shell you are
-going to use for running the demo. The default scale factor is 2x.
+On UNIX, or windows with msys2, just run `make` to build.
+
+Alternatively on windows you can also use the included visual studio 2022
+project files. In this case you'll have to do some steps manually, at least the
+first time:
+  - Build the `img2bin` and `csprite` tool subprojects first (or just do a full
+    build and let it fail the first time).
+  - Run the `procdata.bat` batch file in the `tools` directory to run the tools
+    on the data files.
+  - Build the demo project as usual.
+
+### Assembly source files in visual studio
+If you're using the visual studio project, and you need to add a new assembly
+file to the project, you'll have to set a "custom build tool" for it to let
+visual studio know to use nasm to assemble it:
+  - Right click on the new assembly file and go to "properties".
+  - Change "Item Type" to "Custom Build Tool", and set "Exclude From Build" to
+    "No".
+  - Apply the changes, for the "Custom Build Tool" dropdown to appear under
+    "Configuration Properties".
+  - Under "Custom Build Tool" "General" settings:
+    * Set "Command Line" to: `nasm -o .%(Filename).obj -f win32 %(FullPath)`.
+    * Set "Outputs" to: `.%(Filename).obj`.
 
 Datafiles
 ---------

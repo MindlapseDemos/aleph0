@@ -1,3 +1,7 @@
+#ifdef _MSC_VER
+#pragma warning (disable: 4101)
+#endif
+
 static uint32_t SCANEDGE(struct pvertex *v0, struct pvertex *v1, struct pvertex *edge)
 {
 	int i;
@@ -189,8 +193,8 @@ void POLYFILL(struct pvertex *pv, int nverts)
 			}
 			res = SCANEDGE(pv + i, pv + next, edge);
 			tmp = (res >> 16) & 0xffff;
-			if(tmp > slbot) slbot = tmp;
-			if((tmp = res & 0xffff) < sltop) {
+			if((int)tmp > slbot) slbot = tmp;
+			if((int)(tmp = res & 0xffff) < sltop) {
 				sltop = tmp;
 			}
 		}

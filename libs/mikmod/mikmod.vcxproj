@@ -15,12 +15,8 @@
     <ClCompile Include="depackers\pp20.c" />
     <ClCompile Include="depackers\s404.c" />
     <ClCompile Include="depackers\xpk.c" />
+    <ClCompile Include="drivers\drv_ds.c" />
     <ClCompile Include="drivers\drv_nos.c" />
-    <ClCompile Include="drivers\drv_oss.c" />
-    <ClCompile Include="drivers\drv_sb.c" />
-    <ClCompile Include="drivers\drv_sdl.c" />
-    <ClCompile Include="drivers\drv_ultra.c" />
-    <ClCompile Include="drivers\drv_wss.c" />
     <ClCompile Include="loaders\load_it.c" />
     <ClCompile Include="loaders\load_mod.c" />
     <ClCompile Include="loaders\load_s3m.c" />
@@ -42,7 +38,9 @@
     <ClCompile Include="playercode\virtch.c" />
     <ClCompile Include="playercode\virtch2.c" />
     <ClCompile Include="playercode\virtch_common.c" />
-    <ClCompile Include="posix\strcasecmp.c" />
+    <ClCompile Include="posix\memcmp.c" />
+    <ClCompile Include="posix\strccmp.c" />
+    <ClCompile Include="posix\strstr.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="config.h" />
@@ -59,13 +57,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>

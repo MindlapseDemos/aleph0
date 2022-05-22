@@ -5,92 +5,191 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx;h;inl</Extensions>
     </Filter>
-    <Filter Include="src\sdl">
-      <UniqueIdentifier>{75ea1193-5afc-4dfe-ad41-ee85b47b7d35}</UniqueIdentifier>
+    <Filter Include="src\glut">
+      <UniqueIdentifier>{c3dfaf1b-9906-4023-9597-3fb4a0fc4471}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\screens">
+      <UniqueIdentifier>{48de7f9c-10d2-4394-9a7c-804cb8734336}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\3dgfx">
+      <UniqueIdentifier>{247ad6d6-b2d8-49b0-8c2e-811152c9d487}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="compiled_sprites">
+      <UniqueIdentifier>{e144806a-dd28-4127-b341-45bfdc482559}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\demo.c">
+    <ClCompile Include="src\glut\audio.c">
+      <Filter>src\glut</Filter>
+    </ClCompile>
+    <ClCompile Include="src\glut\main.c">
+      <Filter>src\glut</Filter>
+    </ClCompile>
+    <ClCompile Include="src\glut\miniglut.c">
+      <Filter>src\glut</Filter>
+    </ClCompile>
+    <ClCompile Include="src\glut\w32dir.c">
+      <Filter>src\glut</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bsptree.c">
       <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\screen.c">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\tunnel.c">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\sdl\main.c">
-      <Filter>src\sdl</Filter>
-    </ClCompile>
-    <ClCompile Include="src\gfxutil.c">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\3dgfx.c">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\polyfill.c">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\polytest.c">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\plasma.c">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\tinyfps.c">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\sdl\music.c">
-      <Filter>src\sdl</Filter>
     </ClCompile>
     <ClCompile Include="src\cfgopt.c">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\thunder.c">
+    <ClCompile Include="src\console.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\cpuid.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\darray.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\demo.c">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\dynarr.c">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\metaball.c">
+    <ClCompile Include="src\gfxutil.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\image.c">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\metasurf.c">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\polyclip.c">
+    <ClCompile Include="src\noise.c">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\bump.c">
+    <ClCompile Include="src\rbtree.c">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\fract.c">
+    <ClCompile Include="src\rlebmap.c">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\grise.c">
+    <ClCompile Include="src\screen.c">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tinyfps.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\treestor.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ts_text.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\util.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3dgfx\3dgfx.c">
+      <Filter>src\3dgfx</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3dgfx\mesh.c">
+      <Filter>src\3dgfx</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3dgfx\meshload.c">
+      <Filter>src\3dgfx</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3dgfx\polyclip.c">
+      <Filter>src\3dgfx</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3dgfx\polyfill.c">
+      <Filter>src\3dgfx</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\bump.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\cybersun.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\fract.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\greets.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\grise.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\hairball.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\infcubes.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\metaball.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\minifx.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\plasma.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\polytest.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\raytrace.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\rt.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\smoketxt.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\thunder.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\tilemaze.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\tunnel.c">
+      <Filter>src\screens</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\demo.h">
+    <ClInclude Include="src\glut\gfx.h">
+      <Filter>src\glut</Filter>
+    </ClInclude>
+    <ClInclude Include="src\glut\miniglut.h">
+      <Filter>src\glut</Filter>
+    </ClInclude>
+    <ClInclude Include="src\glut\w32dir.h">
+      <Filter>src\glut</Filter>
+    </ClInclude>
+    <ClInclude Include="src\audio.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\screen.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\gfxutil.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\tinyfps.h">
+    <ClInclude Include="src\bsptree.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\cfgopt.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\3dgfx.h">
+    <ClInclude Include="src\console.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\cpuid.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\darray.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\demo.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\dynarr.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gfxutil.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\image.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\mcubes.h">
@@ -99,19 +198,31 @@
     <ClInclude Include="src\metasurf.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\music.h">
+    <ClInclude Include="src\noise.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\polyclip.h">
+    <ClInclude Include="src\rbtree.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\polyfill.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\polytmpl.h">
+    <ClInclude Include="src\rlebmap.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\sball.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scene.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\screen.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\timer.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tinyfps.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\treestor.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\util.h">
@@ -120,5 +231,46 @@
     <ClInclude Include="src\vmath.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\3dgfx\3dgfx.h">
+      <Filter>src\3dgfx</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3dgfx\mesh.h">
+      <Filter>src\3dgfx</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3dgfx\polyclip.h">
+      <Filter>src\3dgfx</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3dgfx\polyfill.h">
+      <Filter>src\3dgfx</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3dgfx\polytmpl.h">
+      <Filter>src\3dgfx</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scr\rt.h">
+      <Filter>src\screens</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scr\smoketxt.h">
+      <Filter>src\screens</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scr\tilemaze.h">
+      <Filter>src\screens</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="src\data.asm">
+      <Filter>src</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\cpuid_s.asm">
+      <Filter>src</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\util_s.asm">
+      <Filter>src</Filter>
+    </CustomBuild>
+    <CustomBuild Include="cspr\confont.asm">
+      <Filter>compiled_sprites</Filter>
+    </CustomBuild>
+    <CustomBuild Include="cspr\dbgfont.asm">
+      <Filter>compiled_sprites</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

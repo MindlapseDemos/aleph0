@@ -10,7 +10,6 @@ struct cpuid_info cpuid;
 void print_cpuid(struct cpuid_info *cpu)
 {
 	int i, col, len;
-	char buf[64];
 	static const char *featstr[32] = {
 		"fpu", "vme", "dbgext", "pse", "tsc", "msr", "pae", "mce",
 		"cx8", "apic", "?", "sep", "mtrr", "pge", "mca", "cmov",

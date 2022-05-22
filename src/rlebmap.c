@@ -55,11 +55,11 @@ RleBitmap *rleEncode(RleBitmap *rle, unsigned char *pixels, unsigned int pixelsW
 	else
 		rleClear(rle); /* The following code assumes cleared array */
 
-	for (y = 0; y < pixelsH; y++) {
+	for (y = 0; y < (int)pixelsH; y++) {
 		/* Go to the beginning of the RLE scan */
 		output = rle->scans + y * RLE_ELEMENTS_PER_SCANLINE;
 
-		for (x = 0; x < pixelsW; x++) {
+		for (x = 0; x < (int)pixelsW; x++) {
 			if (*currentInputPixel++) {
 				if (streakActive) {
 					if (currentStreakLength >= RLE_MAX_STREAK_LENGTH) {
@@ -108,7 +108,7 @@ void rleDistributeStreaks(RleBitmap *rle) {
 #define LAST_STREAK RLE_STREAKS_PER_SCANLINE
 
 	ptr = rle->scans;
-	for (scanline = 0; scanline < rle->h; scanline++) {
+	for (scanline = 0; scanline < (int)rle->h; scanline++) {
 		if (ptr[0] >= halfW) {
 			/* Exchange first with last streak */
 			tmp = ptr[0];
@@ -135,7 +135,7 @@ void rleBlit(RleBitmap *rle, unsigned short *dst, int dstW, int dstH, int dstStr
 
 	dst += blitX + blitY * dstStride;
 
-	for (scanline = blitY; scanline < blitY + rle->h; scanline++) {
+	for (scanline = blitY; scanline < blitY + (int)rle->h; scanline++) {
 		if (scanline < 0 || scanline >= dstH)
 			continue;
 		for (streak = 0; streak < RLE_STREAKS_PER_SCANLINE; streak++) {

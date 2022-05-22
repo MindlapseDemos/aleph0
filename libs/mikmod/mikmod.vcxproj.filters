@@ -25,24 +25,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="drivers\drv_nos.c">
-      <Filter>drivers</Filter>
-    </ClCompile>
-    <ClCompile Include="drivers\drv_oss.c">
-      <Filter>drivers</Filter>
-    </ClCompile>
-    <ClCompile Include="drivers\drv_sb.c">
-      <Filter>drivers</Filter>
-    </ClCompile>
-    <ClCompile Include="drivers\drv_sdl.c">
-      <Filter>drivers</Filter>
-    </ClCompile>
-    <ClCompile Include="drivers\drv_ultra.c">
-      <Filter>drivers</Filter>
-    </ClCompile>
-    <ClCompile Include="drivers\drv_wss.c">
-      <Filter>drivers</Filter>
-    </ClCompile>
     <ClCompile Include="loaders\load_it.c">
       <Filter>loaders</Filter>
     </ClCompile>
@@ -75,9 +57,6 @@
     </ClCompile>
     <ClCompile Include="mmio\mmio.c">
       <Filter>mmio</Filter>
-    </ClCompile>
-    <ClCompile Include="posix\strcasecmp.c">
-      <Filter>posix</Filter>
     </ClCompile>
     <ClCompile Include="playercode\mdreg.c">
       <Filter>playercode</Filter>
@@ -120,6 +99,21 @@
     </ClCompile>
     <ClCompile Include="playercode\virtch2.c">
       <Filter>playercode</Filter>
+    </ClCompile>
+    <ClCompile Include="drivers\drv_ds.c">
+      <Filter>drivers</Filter>
+    </ClCompile>
+    <ClCompile Include="posix\memcmp.c">
+      <Filter>posix</Filter>
+    </ClCompile>
+    <ClCompile Include="posix\strccmp.c">
+      <Filter>posix</Filter>
+    </ClCompile>
+    <ClCompile Include="posix\strstr.c">
+      <Filter>posix</Filter>
+    </ClCompile>
+    <ClCompile Include="drivers\drv_nos.c">
+      <Filter>drivers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

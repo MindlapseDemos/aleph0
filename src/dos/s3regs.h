@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef S3REGS_H_
 #define S3REGS_H_
 
-#include <conio.h>		/* inp/outp */
+#include "dosutil.h"
 #include "inttypes.h"
 
 #define PCI_VENDOR_S3		0x5333
@@ -29,30 +29,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define DEVID_TRIO64		PCI_DEVICE_TRIO
 #define DEVID_VIRGE			PCI_DEVICE_VIRGE
 
-/* standard VGA ports */
-#define SC_ADDR_PORT	0x3c4
-#define SC_DATA_PORT	0x3c5
-#define SC_PORT			SC_ADDR_PORT
-#define CRTC_ADDR_PORT	0x3d4
-#define CRTC_DATA_PORT	0x3d5
-#define CRTC_PORT		CRTC_ADDR_PORT
-
-#define sc_write(reg, data)		outpw(SC_PORT, (uint16_t)(reg) | ((uint16_t)(data) << 8))
-#define sc_read(reg)			(outp(SC_ADDR_PORT, reg), inp(SC_DATA_PORT))
-#define crtc_write(reg, data)	outpw(CRTC_PORT, (uint16_t)(reg) | ((uint16_t)(data) << 8))
-#define crtc_read(reg)			(outp(CRTC_ADDR_PORT, reg), inp(CRTC_DATA_PORT))
-#define crtc_wrmask(reg, data, mask) \
-	outp(CRTC_DATA_PORT, (crtc_read(reg) & ~(mask)) | (data))
-
 /* extended sequence controller registers */
 #define REG_SCX_UNLOCK	0x08
 #define REG_SCX_MMIO	0x09
 
 #define SCX_MMIO_ONLY	0x80
-
-/* CRTC registers */
-#define REG_CRTC_STA_H		0x0c
-#define REG_CRTC_STA_L		0x0d
 
 /* extended CRTC registers */
 #define REG_CRTCX_DEVID_H	0x2d

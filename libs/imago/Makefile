@@ -63,7 +63,8 @@ $(alib): $(obj)
 .c: src;libpng;jpeglib;zlib
 
 .c.obj: .autodepend
-	$(CC) -fo=$@ $(CFLAGS) $[*
+	%write cflags.occ $(CFLAGS)
+	$(CC) -fo=$@ @cflags.occ $[*
 
 !ifdef __UNIX__
 clean: .symbolic
@@ -76,5 +77,6 @@ clean: .symbolic
 	del libpng\*.obj
 	del jpeglib\*.obj
 	del objects.lbc
+	del cflags.occ
 	del $(alib)
 !endif

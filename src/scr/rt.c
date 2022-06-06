@@ -137,9 +137,17 @@ static void shade(struct rayhit *hit, struct rtscene *scn, int lvl, cgm_vec3 *co
 	struct rtlight *lt;
 	struct rtmaterial *mtl = &hit->obj->x.mtl;
 
+	if(cgm_vdot(&hit->n, &hit->ray->dir) > 0.0f) {
+		cgm_vneg(&hit->n);	/* faceforward */
+	}
+
 	sray.origin = hit->p;
 	cgm_vnormalize(&hit->n);
 	cgm_vnormalize(&hit->ray->dir);
+
+	color->x = mtl->kd.x * ambient.x;
+	color->y = mtl->kd.y * ambient.y;
+	color->z = mtl->kd.z * ambient.z;
 
 	for(i=0; i<scn->num_lt; i++) {
 		lt = scn->lt[i];
@@ -168,7 +176,6 @@ int ray_trace(cgm_ray *ray, struct rtscene *scn, int lvl, cgm_vec3 *color)
 {
 	struct rayhit hit;
 
-	*color = ambient;
 	if(!ray_scene(ray, scn, FLT_MAX, &hit)) {
 		return 0;
 	}
@@ -418,8 +425,34 @@ int ray_csg_object(cgm_ray *ray, union rtobject *obj, float maxt, struct rayival
 				memcpy(ivlist, iva, numa * sizeof *ivlist);
 				return numa;
 			}
-			/* TODO */
-			break;
+
+			num = 0;
+			for(i=0; i<numa; i++) {
+				/* A is current ... */
+				*ivlist = iva[i];
+
+				bptr = ivb;
+				for(j=0; j<numb; j++) {
+					/* if disjoint, continue */
+					if(ivlist->b.t <= bptr->a.t || ivlist->a.t >= bptr->b.t) {
+						continue;
+					}
+					if(ivlist->a.t > bptr->a.t) ivlist->a = bptr->b;
+					if(ivlist->b.t < bptr->b.t) ivlist->b = bptr->a;
+					bptr++;
+
+					if(ivlist->a.t >= ivlist->b.t) break;
+				}
+
+				if(ivlist->a.t < ivlist->b.t) {
+					/* ended up with a valid interval, keep it */
+					ivlist++;
+					if(++num >= RT_CSG_MAX_IVAL) {
+						break;
+					}
+				}
+			}
+			return num;
 
 		default:
 			break;

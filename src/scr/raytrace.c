@@ -7,7 +7,7 @@
 #include "cgmath/cgmath.h"
 #include "rt.h"
 
-#define FULLRES
+#undef FULLRES
 
 static int init(void);
 static void destroy(void);
@@ -36,8 +36,10 @@ static struct tile tiles[NUM_TILES];
 static struct rtscene scn;
 
 static float cam_theta = 0, cam_phi = 0;
-static float cam_dist = 0;
+static float cam_dist = 5;
 static float cam_xform[16];
+
+static struct rtsphere *subsph;
 
 struct screen *raytrace_screen(void)
 {
@@ -70,7 +72,7 @@ static int init(void)
 	}
 
 	rt_init(&scn);
-	rt_ambient(0.08, 0.08, 0.08);
+	rt_ambient(0.15, 0.15, 0.15);
 
 	rt_color(1, 0, 0);
 	rt_specular(0.8f, 0.8f, 0.8f);
@@ -78,9 +80,10 @@ static int init(void)
 	obja = rt_add_sphere(&scn, 0, 0, 0, 1);	/* x,y,z, rad */
 
 	rt_color(0.2, 0.4, 1);
-	objb = rt_add_sphere(&scn, 0, 0.9, 0, 0.7);
+	objb = rt_add_sphere(&scn, 0, 0, 0, 0.7);
+	subsph = &objb->s;
 
-	rt_add_csg(&scn, RT_ISECT, obja, objb);
+	rt_add_csg(&scn, RT_DIFF, obja, objb);
 
 	rt_color(0.4, 0.4, 0.4);
 	rt_specular(0, 0, 0);
@@ -109,7 +112,7 @@ static uint16_t INLINE rend_pixel(int x, int y)
 	cgm_vec3 col;
 
 	ray.dir = raydir[y][x];
-	cgm_vcons(&ray.origin, 0, 0, -5);
+	ray.origin.x = ray.origin.y = ray.origin.z = 0.0f;
 
 	cgm_rmul_mr(&ray, cam_xform);
 
@@ -245,12 +248,19 @@ subdiv:
 
 static void update(void)
 {
+	float t;
+
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
 
 	cgm_midentity(cam_xform);
 	cgm_mtranslate(cam_xform, 0, 0, -cam_dist);
 	cgm_mrotate_x(cam_xform, cgm_deg_to_rad(cam_phi));
 	cgm_mrotate_y(cam_xform, cgm_deg_to_rad(cam_theta));
+
+	t = (float)time_msec / 1000.0f;
+	subsph->p.x = (float)cos(t) * 0.5f;
+	subsph->p.y = (float)sin(t) * 0.5f;
+	subsph->p.z = -0.5f;
 }
 
 static void draw(void)

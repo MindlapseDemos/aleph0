@@ -41,6 +41,13 @@ static inline void cgm_vscale(cgm_vec3 *v, float s)
 	v->z *= s;
 }
 
+static inline void cgm_vneg(cgm_vec3 *v)
+{
+	v->x = -v->x;
+	v->y = -v->y;
+	v->z = -v->z;
+}
+
 static inline void cgm_vmul_m4v3(cgm_vec3 *v, const float *m)
 {
 	float x = v->x * m[0] + v->y * m[4] + v->z * m[8] + m[12];

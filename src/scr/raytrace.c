@@ -7,6 +7,8 @@
 #include "cgmath/cgmath.h"
 #include "rt.h"
 
+#define FULLRES
+
 static int init(void);
 static void destroy(void);
 static void start(long trans_time);
@@ -33,6 +35,10 @@ static cgm_vec3 raydir[240][320];
 static struct tile tiles[NUM_TILES];
 static struct rtscene scn;
 
+static float cam_theta = 0, cam_phi = 0;
+static float cam_dist = 0;
+static float cam_xform[16];
+
 struct screen *raytrace_screen(void)
 {
 	return &scr;
@@ -43,6 +49,7 @@ static int init(void)
 	int i, j, k;
 	float z = 1.0f / tan(cgm_deg_to_rad(25.0f));
 	struct tile *tptr = tiles;
+	union rtobject *obja, *objb;
 
 	for(i=0; i<240; i++) {
 		cgm_vec3 *vptr = raydir[i];
@@ -63,11 +70,17 @@ static int init(void)
 	}
 
 	rt_init(&scn);
+	rt_ambient(0.08, 0.08, 0.08);
 
 	rt_color(1, 0, 0);
 	rt_specular(0.8f, 0.8f, 0.8f);
 	rt_shininess(30.0f);
-	rt_add_sphere(&scn, 0, 0, 0, 1);	/* x,y,z, rad */
+	obja = rt_add_sphere(&scn, 0, 0, 0, 1);	/* x,y,z, rad */
+
+	rt_color(0.2, 0.4, 1);
+	objb = rt_add_sphere(&scn, 0, 0.9, 0, 0.7);
+
+	rt_add_csg(&scn, RT_ISECT, obja, objb);
 
 	rt_color(0.4, 0.4, 0.4);
 	rt_specular(0, 0, 0);
@@ -76,6 +89,7 @@ static int init(void)
 
 	rt_color(1, 1, 1);
 	rt_add_light(&scn, -8, 15, -10);
+
 	return 0;
 }
 
@@ -96,6 +110,8 @@ static uint16_t INLINE rend_pixel(int x, int y)
 
 	ray.dir = raydir[y][x];
 	cgm_vcons(&ray.origin, 0, 0, -5);
+
+	cgm_rmul_mr(&ray, cam_xform);
 
 	if(ray_trace(&ray, &scn, 0, &col)) {
 		r = cround64(col.x * 255.0f);
@@ -119,6 +135,9 @@ static void rend_tile(uint16_t *fbptr, int x0, int y0, int tsz, int valid)
 
 	fb32 = (uint32_t*)fbptr;
 
+#ifdef FULLRES
+	if(tsz <= 1) return;
+#else
 	if(tsz <= 2) {
 		switch(valid) {
 		case 0:
@@ -139,6 +158,7 @@ static void rend_tile(uint16_t *fbptr, int x0, int y0, int tsz, int valid)
 		}
 		return;
 	}
+#endif
 
 	offs = tsz - 1;
 	x1 = x0 + offs;
@@ -223,11 +243,23 @@ subdiv:
 	rend_tile(fbptr + tsz, x0 + tsz, y0, tsz, 3);
 }
 
+static void update(void)
+{
+	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
+
+	cgm_midentity(cam_xform);
+	cgm_mtranslate(cam_xform, 0, 0, -cam_dist);
+	cgm_mrotate_x(cam_xform, cgm_deg_to_rad(cam_phi));
+	cgm_mrotate_y(cam_xform, cgm_deg_to_rad(cam_theta));
+}
+
 static void draw(void)
 {
 	int i, j, xbound, ybound;
 	uint16_t *fbptr;
 	struct tile *tile;
+
+	update();
 
 	tile = tiles;
 	for(i=0; i<NUM_TILES; i++) {

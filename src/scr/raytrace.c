@@ -7,7 +7,7 @@
 #include "cgmath/cgmath.h"
 #include "rt.h"
 
-#undef FULLRES
+#define FULLRES
 
 static int init(void);
 static void destroy(void);
@@ -35,11 +35,12 @@ static cgm_vec3 raydir[240][320];
 static struct tile tiles[NUM_TILES];
 static struct rtscene scn;
 
-static float cam_theta = 0, cam_phi = 0;
+static float cam_theta = 10, cam_phi = 10;
 static float cam_dist = 5;
 static float cam_xform[16];
 
 static struct rtsphere *subsph;
+static struct rtbox *box;
 
 struct screen *raytrace_screen(void)
 {
@@ -51,7 +52,7 @@ static int init(void)
 	int i, j, k;
 	float z = 1.0f / tan(cgm_deg_to_rad(25.0f));
 	struct tile *tptr = tiles;
-	union rtobject *obja, *objb;
+	union rtobject *obja, *objb, *objc, *csga;
 
 	for(i=0; i<240; i++) {
 		cgm_vec3 *vptr = raydir[i];
@@ -83,12 +84,20 @@ static int init(void)
 	objb = rt_add_sphere(&scn, 0, 0, 0, 0.7);
 	subsph = &objb->s;
 
-	rt_add_csg(&scn, RT_DIFF, obja, objb);
+	csga = rt_add_csg(&scn, RT_DIFF, obja, objb);
 
 	rt_color(0.4, 0.4, 0.4);
 	rt_specular(0, 0, 0);
 	rt_shininess(1);
 	rt_add_plane(&scn, 0, 1, 0, -1);		/* nx,ny,nz, dist */
+
+	rt_color(1, 0.2, 1);
+	rt_specular(0.4, 0.4, 0.4);
+	rt_shininess(30);
+	objc = rt_add_box(&scn, 0, 0, 0, 0.8, 3, 3);
+	box = &objc->b;
+
+	rt_add_csg(&scn, RT_DIFF, csga, objc);
 
 	rt_color(1, 1, 1);
 	rt_add_light(&scn, -8, 15, -10);
@@ -248,7 +257,7 @@ subdiv:
 
 static void update(void)
 {
-	float t;
+	float t, px;
 
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
 
@@ -261,6 +270,10 @@ static void update(void)
 	subsph->p.x = (float)cos(t) * 0.5f;
 	subsph->p.y = (float)sin(t) * 0.5f;
 	subsph->p.z = -0.5f;
+
+	px = (float)sin(t) * 1.5;
+	box->min.x = px - 0.3f;
+	box->max.x = px + 0.3f;
 }
 
 static void draw(void)

@@ -101,6 +101,19 @@ union rtobject *rt_add_plane(struct rtscene *scn, float nx, float ny, float nz, 
 	return obj;
 }
 
+union rtobject *rt_add_box(struct rtscene *scn, float x, float y, float z, float dx, float dy, float dz)
+{
+	union rtobject *obj = add_object(scn, RT_BOX);
+
+	dx /= 2;
+	dy /= 2;
+	dz /= 2;
+
+	cgm_vcons(&obj->b.min, x - dx, y - dy, z - dz);
+	cgm_vcons(&obj->b.max, x + dx, y + dy, z + dz);
+	return obj;
+}
+
 union rtobject *rt_add_csg(struct rtscene *scn, enum rt_csg_op op, union rtobject *a, union rtobject *b)
 {
 	union rtobject *obj = add_object(scn, RT_CSG);
@@ -225,6 +238,8 @@ int ray_object(cgm_ray *ray, union rtobject *obj, float maxt, struct rayhit *hit
 		return ray_sphere(ray, &obj->s, maxt, hit);
 	case RT_PLANE:
 		return ray_plane(ray, &obj->p, maxt, hit);
+	case RT_BOX:
+		return ray_box(ray, &obj->b, maxt, hit);
 	case RT_CSG:
 		if(!(numiv = ray_csg_object(ray, obj, maxt, ivlist))) {
 			return 0;
@@ -322,6 +337,91 @@ int ray_plane(cgm_ray *ray, struct rtplane *plane, float maxt, struct rayhit *hi
 	return 1;
 }
 
+int ray_box(cgm_ray *ray, struct rtbox *box, float maxt, struct rayhit *hit)
+{
+	int i, axis[2], sign[3];
+	float param[2][3];
+	float inv_dir[3];
+	float tmin, tmax, tymin, tymax, tzmin, tzmax;
+	cgm_vec3 p;
+
+	for(i=0; i<3; i++) {
+		param[0][i] = (&box->min.x)[i];
+		param[1][i] = (&box->max.x)[i];
+
+		inv_dir[i] = 1.0f / (&ray->dir.x)[i];
+		sign[i] = inv_dir[i] < 0;
+	}
+
+	tmin = (param[sign[0]][0] - ray->origin.x) * inv_dir[0];
+	tmax = (param[1 - sign[0]][0] - ray->origin.x) * inv_dir[0];
+	tymin = (param[sign[1]][1] - ray->origin.y) * inv_dir[1];
+	tymax = (param[1 - sign[1]][1] - ray->origin.y) * inv_dir[1];
+
+	axis[0] = axis[1] = 0;
+
+	if(tmin > tymax || tymin > tmax) {
+		return 0;
+	}
+	if(tymin > tmin) {
+		tmin = tymin;
+		axis[0] = 1;
+	}
+	if(tymax < tmax) {
+		tmax = tymax;
+		axis[1] = 1;
+	}
+
+	tzmin = (param[sign[2]][2] - ray->origin.z) * inv_dir[2];
+	tzmax = (param[1 - sign[2]][2] - ray->origin.z) * inv_dir[2];
+
+	if(tmin > tzmax || tzmin > tmax) {
+		return 0;
+	}
+	if(tzmin > tmin) {
+		tmin = tzmin;
+		axis[0] = 2;
+	}
+	if(tzmax < tmax) {
+		tmax = tzmax;
+		axis[1] = 2;
+	}
+
+	if((tmin < 1e-5 && tmax < 1e-5) || (tmin > maxt && tmax > maxt)) {
+		return 0;
+	}
+
+	if(hit) {
+		int ax;
+		if(tmin < 0) {
+			hit->t = tmax;
+			ax = axis[1];
+		} else {
+			hit->t = tmin;
+			ax = axis[0];
+		}
+		cgm_raypos(&p, ray, hit->t);
+		hit->p = p;
+		switch(ax) {
+		case 0:
+			hit->n.x = p.x > (box->min.x + box->max.x) / 2.0f ? 1.0f : -1.0f;
+			hit->n.y = hit->n.z = 0.0f;
+			break;
+		case 1:
+			hit->n.y = p.y > (box->min.y + box->max.y) / 2.0f ? 1.0f : -1.0f;
+			hit->n.x = hit->n.z = 0.0f;
+			break;
+		case 2:
+		default:
+			hit->n.z = p.z > (box->min.z + box->max.z) / 2.0f ? 1.0f : -1.0f;
+			hit->n.x = hit->n.y = 0.0f;
+		}
+		hit->ray = ray;
+		hit->obj = (union rtobject*)box;
+	}
+	return 1;
+}
+
 int ray_csg_object(cgm_ray *ray, union rtobject *obj, float maxt, struct rayival *ivlist)
 {
 	int i, j, numa, numb, num;
@@ -333,6 +433,9 @@ int ray_csg_object(cgm_ray *ray, union rtobject *obj, float maxt, struct rayival
 
 	case RT_PLANE:
 		return ray_csg_plane(ray, &obj->p, maxt, ivlist);
+
+	case RT_BOX:
+		return ray_csg_box(ray, &obj->b, maxt, ivlist);
 
 	case RT_CSG:
 		switch(obj->csg.op) {
@@ -540,5 +643,87 @@ int ray_csg_plane(cgm_ray *ray, struct rtplane *plane, float maxt, struct rayiva
 	ival->b.n.y = -ray->dir.y;
 	ival->b.n.z = -ray->dir.z;
 	ival->b.obj = ival->a.obj;
+	return 1;
+}
+
+int ray_csg_box(cgm_ray *ray, struct rtbox *box, float maxt, struct rayival *ival)
+{
+	int i, axis[2], sign[3];
+	float param[2][3];
+	float inv_dir[3];
+	float tmin, tmax, tymin, tymax, tzmin, tzmax;
+	cgm_vec3 p;
+	struct rayhit *hit;
+
+	for(i=0; i<3; i++) {
+		param[0][i] = (&box->min.x)[i];
+		param[1][i] = (&box->max.x)[i];
+
+		inv_dir[i] = 1.0f / (&ray->dir.x)[i];
+		sign[i] = inv_dir[i] < 0;
+	}
+
+	tmin = (param[sign[0]][0] - ray->origin.x) * inv_dir[0];
+	tmax = (param[1 - sign[0]][0] - ray->origin.x) * inv_dir[0];
+	tymin = (param[sign[1]][1] - ray->origin.y) * inv_dir[1];
+	tymax = (param[1 - sign[1]][1] - ray->origin.y) * inv_dir[1];
+
+	axis[0] = axis[1] = 0;
+
+	if(tmin > tymax || tymin > tmax) {
+		return 0;
+	}
+	if(tymin > tmin) {
+		tmin = tymin;
+		axis[0] = 1;
+	}
+	if(tymax < tmax) {
+		tmax = tymax;
+		axis[1] = 1;
+	}
+
+	tzmin = (param[sign[2]][2] - ray->origin.z) * inv_dir[2];
+	tzmax = (param[1 - sign[2]][2] - ray->origin.z) * inv_dir[2];
+
+	if(tmin > tzmax || tzmin > tmax) {
+		return 0;
+	}
+	if(tzmin > tmin) {
+		tmin = tzmin;
+		axis[0] = 2;
+	}
+	if(tzmax < tmax) {
+		tmax = tzmax;
+		axis[1] = 2;
+	}
+
+	if((tmin < 1e-5 && tmax < 1e-5) || (tmin > maxt && tmax > maxt)) {
+		return 0;
+	}
+
+	ival->a.t = tmin;
+	ival->b.t = tmax;
+	hit = &ival->a;
+	for(i=0; i<2; i++) {
+		cgm_raypos(&p, ray, hit->t);
+		hit->p = p;
+		switch(axis[i]) {
+		case 0:
+			hit->n.x = p.x > (box->min.x + box->max.x) / 2.0f ? 1.0f : -1.0f;
+			hit->n.y = hit->n.z = 0.0f;
+			break;
+		case 1:
+			hit->n.y = p.y > (box->min.y + box->max.y) / 2.0f ? 1.0f : -1.0f;
+			hit->n.x = hit->n.z = 0.0f;
+			break;
+		case 2:
+		default:
+			hit->n.z = p.z > (box->min.z + box->max.z) / 2.0f ? 1.0f : -1.0f;
+			hit->n.x = hit->n.y = 0.0f;
+		}
+		hit->ray = ray;
+		hit->obj = (union rtobject*)box;
+		hit = &ival->b;
+	}
 	return 1;
 }

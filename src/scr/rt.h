@@ -77,6 +77,8 @@ struct rtscene {
 	int num_obj;
 	struct rtlight **lt;
 	int num_lt;
+
+	union rtobject **disobj;		/* disabled objects */
 };
 
 /* scene management */
@@ -94,6 +96,7 @@ void rt_shininess(float s);
 
 union rtobject *rt_find_object(struct rtscene *scn, const char *name);
 int rt_remove_object(struct rtscene *scn, union rtobject *obj);
+int rt_disable_object(struct rtscene *scn, union rtobject *obj);
 
 union rtobject *rt_add_sphere(struct rtscene *scn, float x, float y, float z, float r);
 union rtobject *rt_add_plane(struct rtscene *scn, float nx, float ny, float nz, float d);

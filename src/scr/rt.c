@@ -23,6 +23,7 @@ void rt_init(struct rtscene *scn)
 	scn->num_obj = 0;
 	scn->lt = darr_alloc(0, sizeof *scn->lt);
 	scn->num_lt = 0;
+	scn->disobj = darr_alloc(0, sizeof *scn->disobj);
 
 	cgm_vcons(&cur_col, 1, 1, 1);
 	cgm_vcons(&cur_spec, 0, 0, 0);
@@ -44,6 +45,7 @@ void rt_destroy(struct rtscene *scn)
 		free(scn->lt[i]);
 	}
 	darr_free(scn->lt);
+	darr_free(scn->disobj);
 
 	memset(scn, 0, sizeof *scn);
 }
@@ -120,6 +122,13 @@ static union rtobject *load_object(struct rtscene *scn, struct ts_node *node)
 	} else if(strcmp(node->name, "difference") == 0) {
 		obj = load_csg(scn, node, RT_DIFF);
 
+	} else if(strcmp(node->name, "light") == 0) {
+		float *pos = ts_get_attr_vec(node, "pos", zerovec);
+
+		rt_add_light(scn, pos[0], pos[1], pos[2]);
+
+	} else {
+		fprintf(stderr, "raytrace: ignoring unknown node: %s\n", node->name);
 	}
 
 	return obj;
@@ -137,6 +146,7 @@ static union rtobject *load_csg(struct rtscene *scn, struct ts_node *node, int o
 			continue;
 		}
 		if(++num_obj >= 2) {
+			rt_name(0);
 			if(!(otmp = rt_add_csg(scn, op, obj[0], obj[1]))) {
 				demo_abort();
 			}
@@ -200,11 +210,18 @@ static union rtobject *add_object(struct rtscene *scn, enum rt_obj_type type)
 
 union rtobject *rt_find_object(struct rtscene *scn, const char *name)
 {
-	int i;
+	int i, sz;
 
 	for(i=0; i<scn->num_obj; i++) {
 		if(scn->obj[i]->x.name && strcmp(scn->obj[i]->x.name, name) == 0) {
 			return scn->obj[i];
+		}
+	}
+
+	sz = darr_size(scn->disobj);
+	for(i=0; i<sz; i++) {
+		if(scn->disobj[i]->x.name && strcmp(scn->disobj[i]->x.name, name) == 0) {
+			return scn->disobj[i];
 		}
 	}
 	return 0;
@@ -224,7 +241,27 @@ int rt_remove_object(struct rtscene *scn, union rtobject *obj)
 			return 0;
 		}
 	}
+
+	last = darr_size(scn->disobj) - 1;
+	for(i=0; i<darr_size(scn->disobj); i++) {
+		if(scn->disobj[i] == obj) {
+			if(i < last) {
+				scn->disobj[i] = scn->disobj[last];
+			}
+			darr_pop(scn->disobj);
+			return 0;
+		}
+	}
 	return -1;
+}
+
+int rt_disable_object(struct rtscene *scn, union rtobject *obj)
+{
+	if(rt_remove_object(scn, obj) == -1) {
+		return -1;
+	}
+	darr_push(scn->disobj, &obj);
+	return 0;
 }
 
 union rtobject *rt_add_sphere(struct rtscene *scn, float x, float y, float z, float r)
@@ -263,8 +300,8 @@ union rtobject *rt_add_csg(struct rtscene *scn, enum rt_csg_op op, union rtobjec
 	obj->csg.a = a;
 	obj->csg.b = b;
 
-	rt_remove_object(scn, a);
-	rt_remove_object(scn, b);
+	rt_disable_object(scn, a);
+	rt_disable_object(scn, b);
 
 	return obj;
 }

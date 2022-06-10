@@ -73,6 +73,10 @@ static int init(void)
 	}
 
 	rt_init(&scn);
+	if(rt_load(&scn, "data/rayscn.rt") == -1) {
+		return -1;
+	}
+#if 0
 	rt_ambient(0.15, 0.15, 0.15);
 
 	rt_color(1, 0, 0);
@@ -101,6 +105,9 @@ static int init(void)
 
 	rt_color(1, 1, 1);
 	rt_add_light(&scn, -8, 15, -10);
+#endif
+	subsph = (struct rtsphere*)rt_find_object(&scn, "subsph");
+	box = (struct rtbox*)rt_find_object(&scn, "box");
 
 	return 0;
 }

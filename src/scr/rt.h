@@ -15,6 +15,7 @@ enum rt_csg_op { RT_UNION, RT_ISECT, RT_DIFF };
 
 #define OBJ_COMMON	\
 	enum rt_obj_type type; \
+	char *name; \
 	struct rtmaterial mtl
 
 struct rtany {
@@ -85,10 +86,13 @@ void rt_destroy(struct rtscene *scn);
 int rt_load(struct rtscene *scn, const char *fname);
 
 void rt_ambient(float r, float g, float b);
+
+void rt_name(const char *name);
 void rt_color(float r, float g, float b);
 void rt_specular(float r, float g, float b);
 void rt_shininess(float s);
 
+union rtobject *rt_find_object(struct rtscene *scn, const char *name);
 int rt_remove_object(struct rtscene *scn, union rtobject *obj);
 
 union rtobject *rt_add_sphere(struct rtscene *scn, float x, float y, float z, float r);

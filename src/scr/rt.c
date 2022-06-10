@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <float.h>
+#include "demo.h"
 #include "rt.h"
 #include "util.h"
 #include "darray.h"
@@ -11,8 +12,10 @@ static cgm_vec3 ambient;
 static cgm_vec3 cur_col, cur_spec;
 static float cur_shin;
 static struct image *cur_tex;
+static char *cur_name;
 
 static union rtobject *load_object(struct rtscene *scn, struct ts_node *node);
+static union rtobject *load_csg(struct rtscene *scn, struct ts_node *node, int op);
 
 void rt_init(struct rtscene *scn)
 {
@@ -29,14 +32,27 @@ void rt_init(struct rtscene *scn)
 
 void rt_destroy(struct rtscene *scn)
 {
+	int i;
+
+	for(i=0; i<darr_size(scn->obj); i++) {
+		free(scn->obj[i]->x.name);
+		free(scn->obj[i]);
+	}
 	darr_free(scn->obj);
+
+	for(i=0; i<darr_size(scn->lt); i++) {
+		free(scn->lt[i]);
+	}
 	darr_free(scn->lt);
+
 	memset(scn, 0, sizeof *scn);
 }
 
 int rt_load(struct rtscene *scn, const char *fname)
 {
+	static float defamb[] = {0.15, 0.15, 0.15};
 	struct ts_node *root, *c;
+	float *vec;
 
 	if(!(root = ts_load(fname))) {
 		fprintf(stderr, "failed to open %s\n", fname);
@@ -47,6 +63,9 @@ int rt_load(struct rtscene *scn, const char *fname)
 		ts_free_tree(root);
 		return -1;
 	}
+
+	vec = ts_get_attr_vec(root, "ambient", defamb);
+	rt_ambient(vec[0], vec[1], vec[2]);
 
 	c = root->child_list;
 	while(c) {
@@ -63,13 +82,16 @@ static union rtobject *load_object(struct rtscene *scn, struct ts_node *node)
 	static float zerovec[3], defnorm[] = {0, 1, 0}, defsize[] = {1, 1, 1};
 	float *kd, *ks, defkd[] = {1, 1, 1};
 	union rtobject *obj = 0;
+	struct ts_node *c;
 
-	kd = ts_get_attr_vec(node, "kd", defkd);
-	ks = ts_get_attr_vec(node, "ks", zerovec);
+	rt_name(ts_get_attr_str(node, "name", 0));
+
+	kd = ts_get_attr_vec(node, "color", defkd);
+	ks = ts_get_attr_vec(node, "specular", zerovec);
 
 	rt_color(kd[0], kd[1], kd[2]);
 	rt_specular(ks[0], ks[1], ks[2]);
-	rt_shininess(ts_get_attr_num(node, "spow", 60.0f));
+	rt_shininess(ts_get_attr_num(node, "shininess", 60.0f));
 
 	if(strcmp(node->name, "sphere") == 0) {
 		float rad = ts_get_attr_num(node, "r", 1.0f);
@@ -90,19 +112,56 @@ static union rtobject *load_object(struct rtscene *scn, struct ts_node *node)
 		obj = rt_add_box(scn, pos[0], pos[1], pos[2], size[0], size[1], size[2]);
 
 	} else if(strcmp(node->name, "union") == 0) {
+		obj = load_csg(scn, node, RT_UNION);
 
 	} else if(strcmp(node->name, "intersection") == 0) {
+		obj = load_csg(scn, node, RT_ISECT);
 
 	} else if(strcmp(node->name, "difference") == 0) {
+		obj = load_csg(scn, node, RT_DIFF);
 
 	}
 
 	return obj;
 }
 
+static union rtobject *load_csg(struct rtscene *scn, struct ts_node *node, int op)
+{
+	union rtobject *root = 0, *obj[2], *otmp;
+	int num_obj = 0;
+	struct ts_node *cn = node->child_list;
+
+	while(cn) {
+		if(!(obj[num_obj] = load_object(scn, cn))) {
+			cn = cn->next;
+			continue;
+		}
+		if(++num_obj >= 2) {
+			if(!(otmp = rt_add_csg(scn, op, obj[0], obj[1]))) {
+				demo_abort();
+			}
+			if(!root) root = otmp;
+			obj[0] = otmp;
+			num_obj = 1;
+		}
+		cn = cn->next;
+	}
+	return root;
+}
+
 void rt_ambient(float r, float g, float b)
 {
 	cgm_vcons(&ambient, r, g, b);
+}
+
+void rt_name(const char *name)
+{
+	free(cur_name);
+	if(name) {
+		cur_name = strdup_nf(name);
+	} else {
+		cur_name = 0;
+	}
 }
 
 void rt_color(float r, float g, float b)
@@ -127,6 +186,8 @@ static union rtobject *add_object(struct rtscene *scn, enum rt_obj_type type)
 	obj = calloc_nf(1, sizeof *obj);
 	obj->type = type;
 
+	if(cur_name) obj->x.name = strdup_nf(cur_name);
+
 	obj->x.mtl.kd = cur_col;
 	obj->x.mtl.ks = cur_spec;
 	obj->x.mtl.shin = cur_shin;
@@ -135,6 +196,18 @@ static union rtobject *add_object(struct rtscene *scn, enum rt_obj_type type)
 	darr_push(scn->obj, &obj);
 	scn->num_obj = darr_size(scn->obj);
 	return obj;
+}
+
+union rtobject *rt_find_object(struct rtscene *scn, const char *name)
+{
+	int i;
+
+	for(i=0; i<scn->num_obj; i++) {
+		if(scn->obj[i]->x.name && strcmp(scn->obj[i]->x.name, name) == 0) {
+			return scn->obj[i];
+		}
+	}
+	return 0;
 }
 
 int rt_remove_object(struct rtscene *scn, union rtobject *obj)

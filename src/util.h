@@ -256,7 +256,7 @@ void *malloc_nf_impl(size_t sz, const char *file, int line);
 void *calloc_nf_impl(size_t num, size_t sz, const char *file, int line);
 #define realloc_nf(p, sz)	realloc_nf_impl(p, sz, __FILE__, __LINE__)
 void *realloc_nf_impl(void *p, size_t sz, const char *file, int line);
-
-
+#define strdup_nf(s)	strdup_nf_impl(s, __FILE__, __LINE__)
+char *strdup_nf_impl(const char *s, const char *file, int line);
 
 #endif	/* UTIL_H_ */

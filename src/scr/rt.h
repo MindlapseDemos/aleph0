@@ -82,6 +82,8 @@ struct rtscene {
 void rt_init(struct rtscene *scn);
 void rt_destroy(struct rtscene *scn);
 
+int rt_load(struct rtscene *scn, const char *fname);
+
 void rt_ambient(float r, float g, float b);
 void rt_color(float r, float g, float b);
 void rt_specular(float r, float g, float b);

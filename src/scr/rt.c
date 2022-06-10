@@ -5,11 +5,14 @@
 #include "rt.h"
 #include "util.h"
 #include "darray.h"
+#include "treestor.h"
 
 static cgm_vec3 ambient;
 static cgm_vec3 cur_col, cur_spec;
 static float cur_shin;
 static struct image *cur_tex;
+
+static union rtobject *load_object(struct rtscene *scn, struct ts_node *node);
 
 void rt_init(struct rtscene *scn)
 {
@@ -29,6 +32,72 @@ void rt_destroy(struct rtscene *scn)
 	darr_free(scn->obj);
 	darr_free(scn->lt);
 	memset(scn, 0, sizeof *scn);
+}
+
+int rt_load(struct rtscene *scn, const char *fname)
+{
+	struct ts_node *root, *c;
+
+	if(!(root = ts_load(fname))) {
+		fprintf(stderr, "failed to open %s\n", fname);
+		return -1;
+	}
+	if(strcmp(root->name, "rtscene") != 0) {
+		fprintf(stderr, "invalid scene file: %s\n", fname);
+		ts_free_tree(root);
+		return -1;
+	}
+
+	c = root->child_list;
+	while(c) {
+		load_object(scn, c);
+		c = c->next;
+	}
+
+	ts_free_tree(root);
+	return 0;
+}
+
+static union rtobject *load_object(struct rtscene *scn, struct ts_node *node)
+{
+	static float zerovec[3], defnorm[] = {0, 1, 0}, defsize[] = {1, 1, 1};
+	float *kd, *ks, defkd[] = {1, 1, 1};
+	union rtobject *obj = 0;
+
+	kd = ts_get_attr_vec(node, "kd", defkd);
+	ks = ts_get_attr_vec(node, "ks", zerovec);
+
+	rt_color(kd[0], kd[1], kd[2]);
+	rt_specular(ks[0], ks[1], ks[2]);
+	rt_shininess(ts_get_attr_num(node, "spow", 60.0f));
+
+	if(strcmp(node->name, "sphere") == 0) {
+		float rad = ts_get_attr_num(node, "r", 1.0f);
+		float *pos = ts_get_attr_vec(node, "pos", zerovec);
+
+		obj = rt_add_sphere(scn, pos[0], pos[1], pos[2], rad);
+
+	} else if(strcmp(node->name, "plane") == 0) {
+		float *n = ts_get_attr_vec(node, "n", defnorm);
+		float d = ts_get_attr_num(node, "d", 0);
+
+		obj = rt_add_plane(scn, n[0], n[1], n[2], d);
+
+	} else if(strcmp(node->name, "box") == 0) {
+		float *pos = ts_get_attr_vec(node, "pos", zerovec);
+		float *size = ts_get_attr_vec(node, "size", defsize);
+
+		obj = rt_add_box(scn, pos[0], pos[1], pos[2], size[0], size[1], size[2]);
+
+	} else if(strcmp(node->name, "union") == 0) {
+
+	} else if(strcmp(node->name, "intersection") == 0) {
+
+	} else if(strcmp(node->name, "difference") == 0) {
+
+	}
+
+	return obj;
 }
 
 void rt_ambient(float r, float g, float b)

@@ -8,14 +8,24 @@
 #include "darray.h"
 #include "treestor.h"
 
+struct mtlentry {
+	char *name;
+	struct rtmaterial mtl;
+	char *texfile;
+};
+static struct mtlentry *mtllist;
+static struct rtmaterial defmtl = {{1, 1, 1}, {0, 0, 0}, 60.0f, 0, 0};
+
 static cgm_vec3 ambient;
 static cgm_vec3 cur_col, cur_spec;
-static float cur_shin;
+static float cur_shin, cur_refl;
 static struct image *cur_tex;
 static char *cur_name;
 
 static union rtobject *load_object(struct rtscene *scn, struct ts_node *node);
 static union rtobject *load_csg(struct rtscene *scn, struct ts_node *node, int op);
+static int load_material(struct ts_node *node);
+static void print_tree_rec(union rtobject *tree, int lvl, const char *prefix);
 
 void rt_init(struct rtscene *scn)
 {
@@ -53,8 +63,11 @@ void rt_destroy(struct rtscene *scn)
 int rt_load(struct rtscene *scn, const char *fname)
 {
 	static float defamb[] = {0.15, 0.15, 0.15};
+	int i;
 	struct ts_node *root, *c;
 	float *vec;
+
+	mtllist = darr_alloc(0, sizeof *mtllist);
 
 	if(!(root = ts_load(fname))) {
 		fprintf(stderr, "failed to open %s\n", fname);
@@ -71,92 +84,26 @@ int rt_load(struct rtscene *scn, const char *fname)
 
 	c = root->child_list;
 	while(c) {
-		load_object(scn, c);
+		if(strcmp(c->name, "material") == 0) {
+			load_material(c);
+		} else {
+			load_object(scn, c);
+		}
 		c = c->next;
 	}
 
+	for(i=0; i<darr_size(mtllist); i++) {
+		free(mtllist[i].name);
+		free(mtllist[i].texfile);
+	}
+	darr_free(mtllist);
 	ts_free_tree(root);
+
+	printf("rt_load(%s): %d objects (%d top-level), %d lights\n", fname,
+			scn->num_obj + darr_size(scn->disobj), scn->num_obj, scn->num_lt);
+	rt_print_tree(scn);
+
 	return 0;
-}
-
-static union rtobject *load_object(struct rtscene *scn, struct ts_node *node)
-{
-	static float zerovec[3], defnorm[] = {0, 1, 0}, defsize[] = {1, 1, 1};
-	float *kd, *ks, defkd[] = {1, 1, 1};
-	union rtobject *obj = 0;
-	struct ts_node *c;
-
-	rt_name(ts_get_attr_str(node, "name", 0));
-
-	kd = ts_get_attr_vec(node, "color", defkd);
-	ks = ts_get_attr_vec(node, "specular", zerovec);
-
-	rt_color(kd[0], kd[1], kd[2]);
-	rt_specular(ks[0], ks[1], ks[2]);
-	rt_shininess(ts_get_attr_num(node, "shininess", 60.0f));
-
-	if(strcmp(node->name, "sphere") == 0) {
-		float rad = ts_get_attr_num(node, "r", 1.0f);
-		float *pos = ts_get_attr_vec(node, "pos", zerovec);
-
-		obj = rt_add_sphere(scn, pos[0], pos[1], pos[2], rad);
-
-	} else if(strcmp(node->name, "plane") == 0) {
-		float *n = ts_get_attr_vec(node, "n", defnorm);
-		float d = ts_get_attr_num(node, "d", 0);
-
-		obj = rt_add_plane(scn, n[0], n[1], n[2], d);
-
-	} else if(strcmp(node->name, "box") == 0) {
-		float *pos = ts_get_attr_vec(node, "pos", zerovec);
-		float *size = ts_get_attr_vec(node, "size", defsize);
-
-		obj = rt_add_box(scn, pos[0], pos[1], pos[2], size[0], size[1], size[2]);
-
-	} else if(strcmp(node->name, "union") == 0) {
-		obj = load_csg(scn, node, RT_UNION);
-
-	} else if(strcmp(node->name, "intersection") == 0) {
-		obj = load_csg(scn, node, RT_ISECT);
-
-	} else if(strcmp(node->name, "difference") == 0) {
-		obj = load_csg(scn, node, RT_DIFF);
-
-	} else if(strcmp(node->name, "light") == 0) {
-		float *pos = ts_get_attr_vec(node, "pos", zerovec);
-
-		rt_add_light(scn, pos[0], pos[1], pos[2]);
-
-	} else {
-		fprintf(stderr, "raytrace: ignoring unknown node: %s\n", node->name);
-	}
-
-	return obj;
-}
-
-static union rtobject *load_csg(struct rtscene *scn, struct ts_node *node, int op)
-{
-	union rtobject *root = 0, *obj[2], *otmp;
-	int num_obj = 0;
-	struct ts_node *cn = node->child_list;
-
-	while(cn) {
-		if(!(obj[num_obj] = load_object(scn, cn))) {
-			cn = cn->next;
-			continue;
-		}
-		if(++num_obj >= 2) {
-			rt_name(0);
-			if(!(otmp = rt_add_csg(scn, op, obj[0], obj[1]))) {
-				demo_abort();
-			}
-			if(!root) root = otmp;
-			obj[0] = otmp;
-			num_obj = 1;
-		}
-		cn = cn->next;
-	}
-	return root;
 }
 
 void rt_ambient(float r, float g, float b)
@@ -189,6 +136,11 @@ void rt_shininess(float s)
 	cur_shin = s;
 }
 
+void rt_reflect(float refl)
+{
+	cur_refl = refl;
+}
+
 static union rtobject *add_object(struct rtscene *scn, enum rt_obj_type type)
 {
 	union rtobject *obj;
@@ -201,6 +153,7 @@ static union rtobject *add_object(struct rtscene *scn, enum rt_obj_type type)
 	obj->x.mtl.kd = cur_col;
 	obj->x.mtl.ks = cur_spec;
 	obj->x.mtl.shin = cur_shin;
+	obj->x.mtl.refl = cur_refl;
 	obj->x.mtl.tex = cur_tex;
 
 	darr_push(scn->obj, &obj);
@@ -324,7 +277,7 @@ static void shade(struct rayhit *hit, struct rtscene *scn, int lvl, cgm_vec3 *co
 {
 	int i;
 	float ndotl, vdotr, spec;
-	cgm_ray sray;
+	cgm_ray ray;
 	cgm_vec3 col, rdir;
 	struct rtlight *lt;
 	struct rtmaterial *mtl = &hit->obj->x.mtl;
@@ -333,7 +286,7 @@ static void shade(struct rayhit *hit, struct rtscene *scn, int lvl, cgm_vec3 *co
 		cgm_vneg(&hit->n);	/* faceforward */
 	}
 
-	sray.origin = hit->p;
+	ray.origin = hit->p;
 	cgm_vnormalize(&hit->n);
 	cgm_vnormalize(&hit->ray->dir);
 
@@ -343,24 +296,35 @@ static void shade(struct rayhit *hit, struct rtscene *scn, int lvl, cgm_vec3 *co
 
 	for(i=0; i<scn->num_lt; i++) {
 		lt = scn->lt[i];
-		sray.dir = lt->p;
-		cgm_vsub(&sray.dir, &sray.origin);
+		ray.dir = lt->p;
+		cgm_vsub(&ray.dir, &ray.origin);
 
-		if(ray_scene(&sray, scn, 1.0f, 0)) continue;
+		if(ray_scene(&ray, scn, 1.0f, 0)) continue;
 
-		cgm_vnormalize(&sray.dir);
-		ndotl = cgm_vdot(&sray.dir, &hit->n);
+		cgm_vnormalize(&ray.dir);
+		ndotl = cgm_vdot(&ray.dir, &hit->n);
 		if(ndotl < 0.0f) ndotl = 0.0f;
 
 		rdir = hit->ray->dir;
 		cgm_vreflect(&rdir, &hit->n);
-		vdotr = cgm_vdot(&sray.dir, &rdir);
+		vdotr = cgm_vdot(&ray.dir, &rdir);
 		if(vdotr < 0.0f) vdotr = 0.0f;
 		spec = pow(vdotr, mtl->shin);
 
 		color->x += (mtl->kd.x * ndotl + mtl->ks.x * spec) * lt->color.x;
 		color->y += (mtl->kd.y * ndotl + mtl->ks.y * spec) * lt->color.y;
 		color->z += (mtl->kd.z * ndotl + mtl->ks.z * spec) * lt->color.z;
+	}
+
+	if(mtl->refl > 0 && lvl < RT_MAX_ITER) {
+		ray.dir = hit->ray->dir;
+		cgm_vreflect(&ray.dir, &hit->n);
+
+		if(ray_trace(&ray, scn, lvl + 1, &col)) {
+			color->x += col.x * mtl->refl;
+			color->y += col.y * mtl->refl;
+			color->z += col.z * mtl->refl;
+		}
 	}
 }
 
@@ -905,4 +869,194 @@ int ray_csg_box(cgm_ray *ray, struct rtbox *box, float maxt, struct rayival *iva
 		hit = &ival->b;
 	}
 	return 1;
+}
+
+void rt_print_tree(struct rtscene *scn)
+{
+	int i;
+	for(i=0; i<scn->num_obj; i++) {
+		print_tree_rec(scn->obj[i], 1, i == scn->num_obj - 1 ? "\\-" : "+-");
+	}
+}
+
+static union rtobject *load_object(struct rtscene *scn, struct ts_node *node)
+{
+	static float zerovec[3], defnorm[] = {0, 1, 0}, defsize[] = {1, 1, 1};
+	int i, num;
+	float *kd, *ks;
+	union rtobject *obj = 0;
+	struct ts_node *c;
+	const char *mtlname;
+	struct rtmaterial *mtl = &defmtl;
+
+	rt_name(ts_get_attr_str(node, "name", 0));
+
+	if((mtlname = ts_get_attr_str(node, "material", 0))) {
+		num = darr_size(mtllist);
+		for(i=0; i<num; i++) {
+			if(strcmp(mtllist[i].name, mtlname) == 0) {
+				mtl = &mtllist[i].mtl;
+				break;
+			}
+		}
+	}
+
+	kd = ts_get_attr_vec(node, "color", &mtl->kd.x);
+	ks = ts_get_attr_vec(node, "specular", &mtl->ks.x);
+
+	rt_color(kd[0], kd[1], kd[2]);
+	rt_specular(ks[0], ks[1], ks[2]);
+	rt_shininess(ts_get_attr_num(node, "shininess", mtl->shin));
+	rt_reflect(ts_get_attr_num(node, "reflect", mtl->refl));
+
+	if(strcmp(node->name, "sphere") == 0) {
+		float rad = ts_get_attr_num(node, "r", 1.0f);
+		float *pos = ts_get_attr_vec(node, "pos", zerovec);
+
+		obj = rt_add_sphere(scn, pos[0], pos[1], pos[2], rad);
+
+	} else if(strcmp(node->name, "plane") == 0) {
+		float *n = ts_get_attr_vec(node, "n", defnorm);
+		float d = ts_get_attr_num(node, "d", 0);
+
+		obj = rt_add_plane(scn, n[0], n[1], n[2], d);
+
+	} else if(strcmp(node->name, "box") == 0) {
+		float *pos = ts_get_attr_vec(node, "pos", zerovec);
+		float *size = ts_get_attr_vec(node, "size", defsize);
+
+		obj = rt_add_box(scn, pos[0], pos[1], pos[2], size[0], size[1], size[2]);
+
+	} else if(strcmp(node->name, "union") == 0) {
+		obj = load_csg(scn, node, RT_UNION);
+
+	} else if(strcmp(node->name, "intersection") == 0) {
+		obj = load_csg(scn, node, RT_ISECT);
+
+	} else if(strcmp(node->name, "difference") == 0) {
+		obj = load_csg(scn, node, RT_DIFF);
+
+	} else if(strcmp(node->name, "light") == 0) {
+		float *pos = ts_get_attr_vec(node, "pos", zerovec);
+
+		rt_add_light(scn, pos[0], pos[1], pos[2]);
+
+	} else {
+		fprintf(stderr, "raytrace: ignoring unknown node: %s\n", node->name);
+	}
+
+	return obj;
+}
+
+static union rtobject *load_csg(struct rtscene *scn, struct ts_node *node, int op)
+{
+	union rtobject *root = 0, *obj[2], *otmp;
+	int num_obj = 0;
+	struct ts_node *cn = node->child_list;
+	const char *name;
+
+	name = ts_get_attr_str(node, "name", 0);
+
+	while(cn) {
+		if(!(obj[num_obj] = load_object(scn, cn))) {
+			cn = cn->next;
+			continue;
+		}
+		if(++num_obj >= 2) {
+			rt_name(0);
+			if(!(otmp = rt_add_csg(scn, op, obj[0], obj[1]))) {
+				demo_abort();
+			}
+			root = otmp;
+			obj[0] = otmp;
+			num_obj = 1;
+		}
+		cn = cn->next;
+	}
+
+	if(name) {
+		root->csg.name = strdup_nf(name);
+	}
+	return root;
+}
+
+static int load_material(struct ts_node *node)
+{
+	const char *name, *texfname;
+	struct mtlentry m;
+	float *vec;
+
+	if(!(name = ts_get_attr_str(node, "name", 0))) {
+		return -1;
+	}
+	m.name = strdup_nf(name);
+	m.mtl = defmtl;
+
+	if((vec = ts_get_attr_vec(node, "color", 0))) {
+		cgm_vcons(&m.mtl.kd, vec[0], vec[1], vec[2]);
+	}
+	if((vec = ts_get_attr_vec(node, "specular", 0))) {
+		cgm_vcons(&m.mtl.ks, vec[0], vec[1], vec[2]);
+	}
+	m.mtl.shin = ts_get_attr_num(node, "shininess", defmtl.shin);
+	m.mtl.refl = ts_get_attr_num(node, "reflect", defmtl.refl);
+
+	if((texfname = ts_get_attr_str(node, "texmap", 0))) {
+		m.texfile = strdup_nf(texfname);
+	} else {
+		m.texfile = 0;
+	}
+
+	darr_push(mtllist, &m);
+	return 0;
+}
+
+static void ind(int lvl)
+{
+	int i;
+	if(lvl > 35) lvl = 35;
+	for(i=0; i<lvl; i++) {
+		if(!i) {
+			fputs("   ", stdout);
+		} else {
+			fputs("|  ", stdout);
+		}
+	}
+}
+
+static const char *typename(int type, int op)
+{
+	switch(type) {
+	case RT_SPH: return "sphere";
+	case RT_PLANE: return "plane";
+	case RT_BOX: return "box";
+	case RT_CSG:
+		switch(op) {
+		case RT_UNION: return "union";
+		case RT_ISECT: return "intersection";
+		case RT_DIFF: return "difference";
+		default: return "unknown-csg";
+		}
+	default:
+		break;
+	}
+	return "unknown";
+}
+
+static void print_tree_rec(union rtobject *tree, int lvl, const char *prefix)
+{
+	if(!tree) return;
+
+	ind(lvl);
+	printf("%s %s", prefix, typename(tree->x.type, tree->csg.op));
+	if(tree->x.name) {
+		printf("(\"%s\")\n", tree->x.name);
+	} else {
+		printf("(%p)\n", (void*)tree);
+	}
+
+	if(tree->x.type == RT_CSG) {
+		print_tree_rec(tree->csg.a, lvl + 1, "+-");
+		print_tree_rec(tree->csg.b, lvl + 1, "\\-");
+	}
 }

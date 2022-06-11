@@ -4,9 +4,12 @@
 #include "image.h"
 #include "cgmath/cgmath.h"
 
+#define RT_MAX_ITER	4
+
 struct rtmaterial {
 	cgm_vec3 kd, ks;
 	float shin;
+	float refl;
 	struct image *tex;
 };
 
@@ -93,6 +96,7 @@ void rt_name(const char *name);
 void rt_color(float r, float g, float b);
 void rt_specular(float r, float g, float b);
 void rt_shininess(float s);
+void rt_reflect(float refl);
 
 union rtobject *rt_find_object(struct rtscene *scn, const char *name);
 int rt_remove_object(struct rtscene *scn, union rtobject *obj);
@@ -121,5 +125,7 @@ int ray_csg_object(cgm_ray *ray, union rtobject *obj, float maxt, struct rayival
 int ray_csg_sphere(cgm_ray *ray, struct rtsphere *sph, float maxt, struct rayival *ivlist);
 int ray_csg_plane(cgm_ray *ray, struct rtplane *plane, float maxt, struct rayival *ivlist);
 int ray_csg_box(cgm_ray *ray, struct rtbox *box, float maxt, struct rayival *ivlist);
+
+void rt_print_tree(struct rtscene *scn);
 
 #endif	/* RT_H_ */

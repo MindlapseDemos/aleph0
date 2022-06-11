@@ -41,6 +41,7 @@ static float cam_xform[16];
 
 static struct rtsphere *subsph;
 static struct rtbox *box;
+static union rtobject *obj;
 
 struct screen *raytrace_screen(void)
 {
@@ -52,7 +53,6 @@ static int init(void)
 	int i, j, k;
 	float z = 1.0f / tan(cgm_deg_to_rad(25.0f));
 	struct tile *tptr = tiles;
-	union rtobject *obja, *objb, *objc, *csga;
 
 	for(i=0; i<240; i++) {
 		cgm_vec3 *vptr = raydir[i];
@@ -76,38 +76,10 @@ static int init(void)
 	if(rt_load(&scn, "data/rayscn.rt") == -1) {
 		return -1;
 	}
-#if 0
-	rt_ambient(0.15, 0.15, 0.15);
 
-	rt_color(1, 0, 0);
-	rt_specular(0.8f, 0.8f, 0.8f);
-	rt_shininess(30.0f);
-	obja = rt_add_sphere(&scn, 0, 0, 0, 1);	/* x,y,z, rad */
-
-	rt_color(0.2, 0.4, 1);
-	objb = rt_add_sphere(&scn, 0, 0, 0, 0.7);
-	subsph = &objb->s;
-
-	csga = rt_add_csg(&scn, RT_DIFF, obja, objb);
-
-	rt_color(0.4, 0.4, 0.4);
-	rt_specular(0, 0, 0);
-	rt_shininess(1);
-	rt_add_plane(&scn, 0, 1, 0, -1);		/* nx,ny,nz, dist */
-
-	rt_color(1, 0.2, 1);
-	rt_specular(0.4, 0.4, 0.4);
-	rt_shininess(30);
-	objc = rt_add_box(&scn, 0, 0, 0, 0.8, 3, 3);
-	box = &objc->b;
-
-	rt_add_csg(&scn, RT_DIFF, csga, objc);
-
-	rt_color(1, 1, 1);
-	rt_add_light(&scn, -8, 15, -10);
-#endif
 	subsph = (struct rtsphere*)rt_find_object(&scn, "subsph");
 	box = (struct rtbox*)rt_find_object(&scn, "box");
+	obj = rt_find_object(&scn, "rootdiff");
 
 	return 0;
 }

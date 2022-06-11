@@ -5,8 +5,15 @@
 #include "demo.h"
 #include "rt.h"
 #include "util.h"
+#include "gfxutil.h"
 #include "darray.h"
 #include "treestor.h"
+
+struct texture {
+	char *name;
+	struct image *img;
+};
+static struct texture *texlist;
 
 struct mtlentry {
 	char *name;
@@ -20,11 +27,15 @@ static cgm_vec3 ambient;
 static cgm_vec3 cur_col, cur_spec;
 static float cur_shin, cur_refl;
 static struct image *cur_tex;
+static cgm_vec2 cur_uvscale;
 static char *cur_name;
+
+static char *dirname;
 
 static union rtobject *load_object(struct rtscene *scn, struct ts_node *node);
 static union rtobject *load_csg(struct rtscene *scn, struct ts_node *node, int op);
 static int load_material(struct ts_node *node);
+static struct image *get_texture(const char *fname);
 static void print_tree_rec(union rtobject *tree, int lvl, const char *prefix);
 
 void rt_init(struct rtscene *scn)
@@ -39,6 +50,7 @@ void rt_init(struct rtscene *scn)
 	cgm_vcons(&cur_spec, 0, 0, 0);
 	cur_shin = 1;
 	cur_tex = 0;
+	cur_uvscale.x = cur_uvscale.y = 1;
 }
 
 void rt_destroy(struct rtscene *scn)
@@ -63,9 +75,23 @@ void rt_destroy(struct rtscene *scn)
 int rt_load(struct rtscene *scn, const char *fname)
 {
 	static float defamb[] = {0.15, 0.15, 0.15};
-	int i;
+	int i, len;
 	struct ts_node *root, *c;
 	float *vec;
+	char *dirend;
+
+	if((dirend = strrchr(fname, '/'))) {
+		len = dirend - fname;
+		dirname = alloca(len + 1);
+		memcpy(dirname, fname, len);
+		dirname[len] = 0;
+	} else {
+		dirname = 0;
+	}
+
+	if(!texlist) {
+		texlist = darr_alloc(0, sizeof *texlist);
+	}
 
 	mtllist = darr_alloc(0, sizeof *mtllist);
 
@@ -141,6 +167,17 @@ void rt_reflect(float refl)
 	cur_refl = refl;
 }
 
+void rt_texmap(struct image *img)
+{
+	cur_tex = img;
+}
+
+void rt_uvscale(float su, float sv)
+{
+	cur_uvscale.x = su;
+	cur_uvscale.y = sv;
+}
+
 static union rtobject *add_object(struct rtscene *scn, enum rt_obj_type type)
 {
 	union rtobject *obj;
@@ -155,6 +192,7 @@ static union rtobject *add_object(struct rtscene *scn, enum rt_obj_type type)
 	obj->x.mtl.shin = cur_shin;
 	obj->x.mtl.refl = cur_refl;
 	obj->x.mtl.tex = cur_tex;
+	obj->x.mtl.uvscale = cur_uvscale;
 
 	darr_push(scn->obj, &obj);
 	scn->num_obj = darr_size(scn->obj);
@@ -275,12 +313,25 @@ struct rtlight *rt_add_light(struct rtscene *scn, float x, float y, float z)
 /* color is initialized to black */
 static void shade(struct rayhit *hit, struct rtscene *scn, int lvl, cgm_vec3 *color)
 {
-	int i;
+	int i, tx, ty;
+	uint16_t texel;
 	float ndotl, vdotr, spec;
 	cgm_ray ray;
 	cgm_vec3 col, rdir;
 	struct rtlight *lt;
 	struct rtmaterial *mtl = &hit->obj->x.mtl;
+	struct image *tex;
+
+	col = mtl->kd;
+	if(mtl->tex) {
+		tex = mtl->tex;
+		tx = cround64(hit->u * mtl->uvscale.x * (float)tex->width) & tex->xmask;
+		ty = cround64(hit->v * mtl->uvscale.y * (float)tex->height) & tex->ymask;
+		texel = tex->pixels[(ty << tex->xshift) + tx];
+		col.x *= UNPACK_R16(texel) / 255.0f;
+		col.y *= UNPACK_G16(texel) / 255.0f;
+		col.z *= UNPACK_B16(texel) / 255.0f;
+	}
 
 	if(cgm_vdot(&hit->n, &hit->ray->dir) > 0.0f) {
 		cgm_vneg(&hit->n);	/* faceforward */
@@ -290,9 +341,9 @@ static void shade(struct rayhit *hit, struct rtscene *scn, int lvl, cgm_vec3 *co
 	cgm_vnormalize(&hit->n);
 	cgm_vnormalize(&hit->ray->dir);
 
-	color->x = mtl->kd.x * ambient.x;
-	color->y = mtl->kd.y * ambient.y;
-	color->z = mtl->kd.z * ambient.z;
+	color->x = col.x * ambient.x;
+	color->y = col.y * ambient.y;
+	color->z = col.z * ambient.z;
 
 	for(i=0; i<scn->num_lt; i++) {
 		lt = scn->lt[i];
@@ -311,9 +362,9 @@ static void shade(struct rayhit *hit, struct rtscene *scn, int lvl, cgm_vec3 *co
 		if(vdotr < 0.0f) vdotr = 0.0f;
 		spec = pow(vdotr, mtl->shin);
 
-		color->x += (mtl->kd.x * ndotl + mtl->ks.x * spec) * lt->color.x;
-		color->y += (mtl->kd.y * ndotl + mtl->ks.y * spec) * lt->color.y;
-		color->z += (mtl->kd.z * ndotl + mtl->ks.z * spec) * lt->color.z;
+		color->x += (col.x * ndotl + mtl->ks.x * spec) * lt->color.x;
+		color->y += (col.y * ndotl + mtl->ks.y * spec) * lt->color.y;
+		color->z += (col.z * ndotl + mtl->ks.z * spec) * lt->color.z;
 	}
 
 	if(mtl->refl > 0 && lvl < RT_MAX_ITER) {
@@ -448,6 +499,11 @@ int ray_sphere(cgm_ray *ray, struct rtsphere *sph, float maxt, struct rayhit *hi
 		hit->n.y = hit->p.y - sph->p.y;
 		hit->n.z = hit->p.z - sph->p.z;
 
+		if(sph->mtl.tex) {
+			hit->u = atan2(hit->n.z, hit->n.x);
+			hit->v = acos(hit->n.y);
+		}
+
 		hit->obj = (union rtobject*)sph;
 	}
 	return 1;
@@ -474,6 +530,12 @@ int ray_plane(cgm_ray *ray, struct rtplane *plane, float maxt, struct rayhit *hi
 		hit->t = t;
 		cgm_raypos(&hit->p, ray, t);
 		hit->n = plane->n;
+
+		if(plane->mtl.tex) {
+			/* XXX: generalize if needed */
+			hit->u = hit->p.x;
+			hit->v = hit->p.z;
+		}
 
 		hit->obj = (union rtobject*)plane;
 	}
@@ -883,10 +945,10 @@ static union rtobject *load_object(struct rtscene *scn, struct ts_node *node)
 {
 	static float zerovec[3], defnorm[] = {0, 1, 0}, defsize[] = {1, 1, 1};
 	int i, num;
-	float *kd, *ks;
+	float *kd, *ks, *uvs;
 	union rtobject *obj = 0;
 	struct ts_node *c;
-	const char *mtlname;
+	const char *mtlname, *texfile = 0;
 	struct rtmaterial *mtl = &defmtl;
 
 	rt_name(ts_get_attr_str(node, "name", 0));
@@ -896,6 +958,7 @@ static union rtobject *load_object(struct rtscene *scn, struct ts_node *node)
 		for(i=0; i<num; i++) {
 			if(strcmp(mtllist[i].name, mtlname) == 0) {
 				mtl = &mtllist[i].mtl;
+				texfile = mtllist[i].texfile;
 				break;
 			}
 		}
@@ -908,6 +971,15 @@ static union rtobject *load_object(struct rtscene *scn, struct ts_node *node)
 	rt_specular(ks[0], ks[1], ks[2]);
 	rt_shininess(ts_get_attr_num(node, "shininess", mtl->shin));
 	rt_reflect(ts_get_attr_num(node, "reflect", mtl->refl));
+
+	if((texfile = ts_get_attr_str(node, "texmap", texfile))) {
+		rt_texmap(get_texture(texfile));
+	} else {
+		rt_texmap(0);
+	}
+	uvs = ts_get_attr_vec(node, "uvscale", defsize);
+	rt_uvscale(uvs[0], uvs[1]);
+
 
 	if(strcmp(node->name, "sphere") == 0) {
 		float rad = ts_get_attr_num(node, "r", 1.0f);
@@ -1007,8 +1079,47 @@ static int load_material(struct ts_node *node)
 		m.texfile = 0;
 	}
 
+	if((vec = ts_get_attr_vec(node, "uvscale", 0))) {
+		m.mtl.uvscale.x = vec[0];
+		m.mtl.uvscale.y = vec[1];
+	} else {
+		m.mtl.uvscale.x = m.mtl.uvscale.y = 1;
+	}
+
 	darr_push(mtllist, &m);
 	return 0;
+}
+
+static struct image *get_texture(const char *fname)
+{
+	int i, num;
+	struct texture tex;
+	struct image img;
+	char *path;
+
+	if(dirname) {
+		path = alloca(strlen(fname) + strlen(dirname) + 2);
+		sprintf(path, "%s/%s", dirname, fname);
+	} else {
+		path = (char*)fname;
+	}
+
+	num = darr_size(texlist);
+	for(i=0; i<num; i++) {
+		if(strcmp(texlist[i].name, path) == 0) {
+			return texlist[i].img;
+		}
+	}
+
+	if(load_image(&img, path) == -1) {
+		return 0;
+	}
+
+	tex.name = strdup_nf(path);
+	tex.img = malloc_nf(sizeof *tex.img);
+	*tex.img = img;
+	darr_push(texlist, &tex);
+	return tex.img;
 }
 
 static void ind(int lvl)

@@ -11,6 +11,7 @@ struct rtmaterial {
 	float shin;
 	float refl;
 	struct image *tex;
+	cgm_vec2 uvscale;
 };
 
 enum rt_obj_type { RT_SPH, RT_PLANE, RT_BOX, RT_CSG };
@@ -97,6 +98,8 @@ void rt_color(float r, float g, float b);
 void rt_specular(float r, float g, float b);
 void rt_shininess(float s);
 void rt_reflect(float refl);
+void rt_texmap(struct image *img);
+void rt_uvscale(float su, float sv);
 
 union rtobject *rt_find_object(struct rtscene *scn, const char *name);
 int rt_remove_object(struct rtscene *scn, union rtobject *obj);

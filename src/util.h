@@ -4,6 +4,12 @@
 #include <stdlib.h>
 #include "inttypes.h"
 
+#if defined(__WATCOMC__) || defined(_WIN32) || defined(__DJGPP__)
+#include <malloc.h>
+#else
+#include <alloca.h>
+#endif
+
 #ifdef __GNUC__
 #define INLINE __inline
 #define PACKED __attribute__((packed))

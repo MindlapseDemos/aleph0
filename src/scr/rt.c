@@ -37,6 +37,7 @@ static union rtobject *load_csg(struct rtscene *scn, struct ts_node *node, int o
 static int load_material(struct ts_node *node);
 static struct image *get_texture(const char *fname);
 static void print_tree_rec(union rtobject *tree, int lvl, const char *prefix);
+static INLINE void normalize(cgm_vec3 *v);
 
 void rt_init(struct rtscene *scn)
 {
@@ -338,8 +339,8 @@ static void shade(struct rayhit *hit, struct rtscene *scn, int lvl, cgm_vec3 *co
 	}
 
 	ray.origin = hit->p;
-	cgm_vnormalize(&hit->n);
-	cgm_vnormalize(&hit->ray->dir);
+	normalize(&hit->n);
+	normalize(&hit->ray->dir);
 
 	color->x = col.x * ambient.x;
 	color->y = col.y * ambient.y;
@@ -352,7 +353,7 @@ static void shade(struct rayhit *hit, struct rtscene *scn, int lvl, cgm_vec3 *co
 
 		if(ray_scene(&ray, scn, 1.0f, 0)) continue;
 
-		cgm_vnormalize(&ray.dir);
+		normalize(&ray.dir);
 		ndotl = cgm_vdot(&ray.dir, &hit->n);
 		if(ndotl < 0.0f) ndotl = 0.0f;
 
@@ -1170,4 +1171,12 @@ static void print_tree_rec(union rtobject *tree, int lvl, const char *prefix)
 		print_tree_rec(tree->csg.a, lvl + 1, "+-");
 		print_tree_rec(tree->csg.b, lvl + 1, "\\-");
 	}
+}
+
+static INLINE void normalize(cgm_vec3 *v)
+{
+	float s = rsqrt(v->x * v->x + v->y * v->y + v->z * v->z);
+	v->x *= s;
+	v->y *= s;
+	v->z *= s;
 }

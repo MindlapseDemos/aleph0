@@ -7,7 +7,7 @@
 #include "cgmath/cgmath.h"
 #include "rt.h"
 
-#define FULLRES
+#undef FULLRES
 
 static int init(void);
 static void destroy(void);

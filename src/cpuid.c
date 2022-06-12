@@ -78,6 +78,7 @@ static const char *cpuname(struct cpuid_info *cpu)
 			wr++;
 			rd++;
 		}
+		*wr = 0;
 		return cpu->brandstr;
 	}
 

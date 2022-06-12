@@ -12,6 +12,7 @@
 #include "sball.h"
 #include "vmath.h"
 #include "cpuid.h"
+#include "pci.h"
 
 static int handle_sball_event(sball_event *ev);
 static void recalc_sball_matrix(float *xform);

@@ -72,7 +72,7 @@ int clip_line(int *x0, int *y0, int *x1, int *y1, int xmin, int ymin, int xmax, 
 			t = FIXDIV(fxmin - fx0, fx1 - fx0);
 			x = fxmin;
 			y = LERP(fy0, fy1, t);
-		} else if(oc_out & RIGHT) {
+		} else /*if(oc_out & RIGHT)*/ {
 			t = FIXDIV(fxmax - fx0, fx1 - fx0);
 			x = fxmax;
 			y = LERP(fy0, fy1, t);

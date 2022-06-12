@@ -14,12 +14,14 @@ struct rtmaterial {
 	cgm_vec2 uvscale;
 };
 
-enum rt_obj_type { RT_SPH, RT_PLANE, RT_BOX, RT_CSG };
+enum rt_obj_type { RT_SPH, RT_CYL, RT_PLANE, RT_BOX, RT_CSG };
 enum rt_csg_op { RT_UNION, RT_ISECT, RT_DIFF };
 
 #define OBJ_COMMON	\
 	enum rt_obj_type type; \
 	char *name; \
+	float xform[16], inv_xform[16]; \
+	int xform_valid; \
 	struct rtmaterial mtl
 
 struct rtany {
@@ -30,6 +32,12 @@ struct rtsphere {
 	OBJ_COMMON;
 	cgm_vec3 p;
 	float r;
+};
+
+struct rtcylinder {
+	OBJ_COMMON;
+	cgm_vec3 p;
+	float r, y0, y1;
 };
 
 struct rtplane {
@@ -53,6 +61,7 @@ union rtobject {
 	enum rt_obj_type type;
 	struct rtany x;
 	struct rtsphere s;
+	struct rtcylinder c;
 	struct rtplane p;
 	struct rtbox b;
 	struct rtcsg csg;
@@ -106,6 +115,7 @@ int rt_remove_object(struct rtscene *scn, union rtobject *obj);
 int rt_disable_object(struct rtscene *scn, union rtobject *obj);
 
 union rtobject *rt_add_sphere(struct rtscene *scn, float x, float y, float z, float r);
+union rtobject *rt_add_cylinder(struct rtscene *scn, float x, float y, float z, float r, float y0, float y1);
 union rtobject *rt_add_plane(struct rtscene *scn, float nx, float ny, float nz, float d);
 union rtobject *rt_add_box(struct rtscene *scn, float x, float y, float z, float dx, float dy, float dz);
 union rtobject *rt_add_csg(struct rtscene *scn, enum rt_csg_op op, union rtobject *a, union rtobject *b);
@@ -118,6 +128,7 @@ int ray_scene(cgm_ray *ray, struct rtscene *scn, float maxt, struct rayhit *hit)
 
 int ray_object(cgm_ray *ray, union rtobject *obj, float maxt, struct rayhit *hit);
 int ray_sphere(cgm_ray *ray, struct rtsphere *sph, float maxt, struct rayhit *hit);
+int ray_cylinder(cgm_ray *ray, struct rtcylinder *cyl, float maxt, struct rayhit *hit);
 int ray_plane(cgm_ray *ray, struct rtplane *plane, float maxt, struct rayhit *hit);
 int ray_box(cgm_ray *ray, struct rtbox *box, float maxt, struct rayhit *hit);
 

@@ -91,7 +91,7 @@ int scr_init(void)
     if (!(scr[idx++] = minifx_screen())) {
 		return -1;
     }
-    
+
 	num_screens = idx;
 
 	assert(num_screens <= NUM_SCR);
@@ -205,12 +205,14 @@ static long load_delay;
 void start_loadscr(void)
 {
 	char *env;
+	void *pixels = loading_pixels;
+
 	if((env = getenv("MLAPSE_LOADDELAY"))) {
 		load_delay = atoi(env);
 		printf("load delay: %ld ms\n", load_delay);
 	}
 
-	swap_buffers(loading_pixels);
+	swap_buffers(pixels);
 	if(load_delay) {
 		sleep_msec(load_delay * 2);
 	}
@@ -228,9 +230,11 @@ void start_loadscr(void)
 
 void end_loadscr(void)
 {
+	void *pixels = loading_pixels;
+
 	blitfb(loading_pixels + SPLAT_Y * 320 + SPLAT_X, loading_pixels + 320 * 240, 32, 72, 32);
 	blit_key(loading_pixels + FING_Y * 320 + FING_LAST_X, 320, loading_pixels + 247 * 320 + 64, FING_W, FING_H, FING_W, 0);
-	swap_buffers(loading_pixels);
+	swap_buffers(pixels);
 	if(load_delay) {
 		sleep_msec(load_delay * 3);
 	}
@@ -242,6 +246,7 @@ void loadscr(int n, int count)
 	static int prev_xoffs;
 	uint16_t *sptr, *dptr;
 	long delta;
+	void *pixels = loading_pixels;
 
 	sptr = loading_pixels + 247 * 320 + 64;
 	dptr = loading_pixels + FING_Y * 320 + FING_X + prev_xoffs;
@@ -252,7 +257,7 @@ void loadscr(int n, int count)
 		prev_xoffs++;
 	}
 
-	swap_buffers(loading_pixels);
+	swap_buffers(pixels);
 
 	delta = get_msec() - prev_load_msec;
 	if(delta < load_delay) {

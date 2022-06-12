@@ -23,9 +23,6 @@ static void calc_pow2(struct image *img)
 		img->xshift++;
 		mask >>= 1;
 	}
-
-	printf("calc_pow2(%d, %d): mask %x,%x  shift: %d\n", img->width, img->height,
-			img->xmask, img->ymask, img->xshift);
 }
 
 int load_image(struct image *img, const char *fname)

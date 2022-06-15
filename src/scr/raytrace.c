@@ -246,13 +246,17 @@ static void update(void)
 	cgm_mrotate_y(cam_xform, cgm_deg_to_rad(cam_theta));
 
 	t = (float)time_msec / 1000.0f;
-	subsph->p.x = (float)cos(t) * 0.5f;
-	subsph->p.y = (float)sin(t) * 0.5f;
-	subsph->p.z = -0.5f;
+	if(subsph) {
+		subsph->p.x = (float)cos(t) * 0.5f;
+		subsph->p.y = (float)sin(t) * 0.5f;
+		subsph->p.z = -0.5f;
+	}
 
-	px = (float)sin(t) * 1.5;
-	box->min.x = px - 0.3f;
-	box->max.x = px + 0.3f;
+	if(box) {
+		px = (float)sin(t) * 1.5;
+		box->min.x = px - 0.3f;
+		box->max.x = px + 0.3f;
+	}
 }
 
 static void draw(void)

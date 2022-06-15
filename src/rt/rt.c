@@ -361,7 +361,7 @@ static void shade(struct rayhit *hit, struct rtscene *scn, int lvl, cgm_vec3 *co
 		ray.dir = lt->p;
 		cgm_vsub(&ray.dir, &ray.origin);
 
-		if(ray_scene(&ray, scn, 1.0f, 0)) continue;
+		//if(ray_scene(&ray, scn, 1.0f, 0)) continue;
 
 		normalize(&ray.dir);
 		ndotl = cgm_vdot(&ray.dir, &hit->n);
@@ -647,6 +647,7 @@ static const char *typename(int type, int op)
 {
 	switch(type) {
 	case RT_SPH: return "sphere";
+	case RT_CYL: return "cylinder";
 	case RT_PLANE: return "plane";
 	case RT_BOX: return "box";
 	case RT_CSG:

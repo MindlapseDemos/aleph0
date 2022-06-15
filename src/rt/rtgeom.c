@@ -1,4 +1,5 @@
 #include "rt.h"
+#include "util.h"
 
 int ray_object(cgm_ray *ray, union rtobject *obj, float maxt, struct rayhit *hit)
 {
@@ -89,10 +90,72 @@ int ray_sphere(cgm_ray *ray, struct rtsphere *sph, float maxt, struct rayhit *hi
 	return 1;
 }
 
+static INLINE int ray_cylcaps(cgm_ray *ray, struct rtcylinder *cyl, float maxt, struct rayhit *hit)
+{
+	int res = 0;
+	float t, ttop, ndotdir, x, z, dx, dz;
+
+	ndotdir = ray->dir.y;
+	if(fabs(ndotdir) < 1e-5f) {
+		return 0;
+	}
+
+	ttop = maxt;
+
+	/* top cap */
+	ttop = (cyl->y1 - ray->origin.y) / ndotdir;
+	if(ttop >= 1e-5f && ttop < maxt) {
+		x = ray->origin.x + ray->dir.x * ttop;
+		z = ray->origin.z + ray->dir.z * ttop;
+		dx = x - cyl->p.x;
+		dz = z - cyl->p.z;
+		if(dx * dx + dz * dz < cyl->r * cyl->r) {
+			if(!hit) return 1;
+			res = 1;
+			hit->t = ttop;
+			cgm_vcons(&hit->p, x, ray->origin.y + ray->dir.y * ttop, z);
+			hit->n.x = hit->n.z = 0;
+			hit->n.y = 1;
+			hit->u = x / cyl->r;
+			hit->v = z / cyl->r;
+			hit->obj = (union rtobject*)cyl;
+		}
+	}
+	/* bottom cap */
+	t = -(cyl->y0 - ray->origin.y) / -ndotdir;
+	if(t >= 1e-5f && t < ttop) {
+		x = ray->origin.x + ray->dir.x * t;
+		z = ray->origin.z + ray->dir.z * t;
+		dx = x - cyl->p.x;
+		dz = z - cyl->p.z;
+		if(dx * dx + dz * dz < cyl->r * cyl->r) {
+			if(!hit) return 1;
+			hit->t = t;
+			cgm_vcons(&hit->p, x, ray->origin.y + ray->dir.y * t, z);
+			hit->n.x = hit->n.z = 0;
+			hit->n.y = -1;
+			hit->u = x / cyl->r;
+			hit->v = z / cyl->r;
+			hit->obj = (union rtobject*)cyl;
+			return 1;
+		}
+	}
+	return res;
+}
+
 int ray_cylinder(cgm_ray *ray, struct rtcylinder *cyl, float maxt, struct rayhit *hit)
 {
-	float a, a2, b, c, d, sqrt_d, t, t1, t2;
+	int res = 0;
+	float a, a2, b, c, d, sqrt_d, t, tcaps, t1, t2;
 	cgm_vec3 p;
+
+	if(ray_cylcaps(ray, cyl, maxt, hit)) {
+		if(!hit) return 1;
+		tcaps = hit->t;
+		res = 1;
+	} else {
+		tcaps = maxt;
+	}
 
 	a = SQ(ray->dir.x) + SQ(ray->dir.z);
 	b = 2.0f * ray->dir.x * (ray->origin.x - cyl->p.x) +
@@ -101,7 +164,7 @@ int ray_cylinder(cgm_ray *ray, struct rtcylinder *cyl, float maxt, struct rayhit
 		SQ(ray->origin.x) + SQ(ray->origin.z) +
 		2.0f * (-cyl->p.x * ray->origin.x - cyl->p.z * ray->origin.z) - SQ(cyl->r);
 
-	if((d = SQ(b) - 4.0f * a * c) < 0.0f) return 0;
+	if((d = SQ(b) - 4.0f * a * c) < 0.0f) return res;
 
 	sqrt_d = sqrt(d);
 	a2 = 2.0f * a;
@@ -109,7 +172,7 @@ int ray_cylinder(cgm_ray *ray, struct rtcylinder *cyl, float maxt, struct rayhit
 	t2 = (-b - sqrt_d) / a2;
 
 	if((t1 < 1e-5f && t2 < 1e-5f) || (t1 > maxt && t2 > maxt)) {
-		return 0;
+		return res;
 	}
 
 	if(t1 < 1e-5f) {
@@ -124,19 +187,21 @@ int ray_cylinder(cgm_ray *ray, struct rtcylinder *cyl, float maxt, struct rayhit
 		}
 	}
 
+
 	cgm_raypos(&p, ray, t1);
 	if(p.y >= cyl->y0 && p.y <= cyl->y1) {
 		t = t1;
 	} else {
-		if(t1 == t2) return 0;
+		if(t1 == t2) return res;
 		t = t2;
 		cgm_raypos(&p, ray, t2);
 		if(p.y < cyl->y0 || p.y > cyl->y1) {
-			return 0;
+			return res;
 		}
 	}
+	res = 1;
 
-	if(hit) {
+	if(hit && t < tcaps) {
 		hit->t = t;
 		hit->p = p;
 
@@ -151,7 +216,7 @@ int ray_cylinder(cgm_ray *ray, struct rtcylinder *cyl, float maxt, struct rayhit
 
 		hit->obj = (union rtobject*)cyl;
 	}
-	return 1;
+	return res;
 }
 
 int ray_plane(cgm_ray *ray, struct rtplane *plane, float maxt, struct rayhit *hit)

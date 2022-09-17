@@ -28,8 +28,6 @@ static unsigned long startingTime;
 static unsigned char *psin1, *psin2, *psin3;
 static unsigned short *plasmaPal;
 
-static unsigned short myBuffer[320 * 240];
-
 
 struct screen *plasma_screen(void)
 {

@@ -52,7 +52,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_USE_MATH_DEFINES;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\src\3dgfx;$(ProjectDir)\src\glut;$(ProjectDir)\libs;$(ProjectDir)\libs\imago\src;$(ProjectDir)\libs\mikmod\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\src\3dgfx;$(ProjectDir)\src\rt;$(ProjectDir)\src\glut;$(ProjectDir)\libs;$(ProjectDir)\libs\imago\src;$(ProjectDir)\libs\mikmod\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4996;4244;4305</DisableSpecificWarnings>
     </ClCompile>
     <Link>
@@ -71,7 +71,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;_USE_MATH_DEFINES;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\src\3dgfx;$(ProjectDir)\src\glut;$(ProjectDir)\libs;$(ProjectDir)\libs\imago\src;$(ProjectDir)\libs\mikmod\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\src\3dgfx;$(ProjectDir)\src\rt;$(ProjectDir)\src\glut;$(ProjectDir)\libs;$(ProjectDir)\libs\imago\src;$(ProjectDir)\libs\mikmod\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4996;4244;4305</DisableSpecificWarnings>
     </ClCompile>
     <Link>
@@ -89,6 +89,8 @@
     <ClCompile Include="src\3dgfx\meshload.c" />
     <ClCompile Include="src\3dgfx\polyclip.c" />
     <ClCompile Include="src\3dgfx\polyfill.c" />
+    <ClCompile Include="src\rt\rt.c" />
+    <ClCompile Include="src\rt\rtgeom.c" />
     <ClCompile Include="src\bsptree.c" />
     <ClCompile Include="src\cfgopt.c" />
     <ClCompile Include="src\console.c" />
@@ -119,7 +121,6 @@
     <ClCompile Include="src\scr\plasma.c" />
     <ClCompile Include="src\scr\polytest.c" />
     <ClCompile Include="src\scr\raytrace.c" />
-    <ClCompile Include="src\scr\rt.c" />
     <ClCompile Include="src\scr\smoketxt.c" />
     <ClCompile Include="src\scr\thunder.c" />
     <ClCompile Include="src\scr\tilemaze.c" />
@@ -135,6 +136,7 @@
     <ClInclude Include="src\3dgfx\polyclip.h" />
     <ClInclude Include="src\3dgfx\polyfill.h" />
     <ClInclude Include="src\3dgfx\polytmpl.h" />
+    <ClInclude Include="src\rt\rt.h" />
     <ClInclude Include="src\audio.h" />
     <ClInclude Include="src\bsptree.h" />
     <ClInclude Include="src\cfgopt.h" />
@@ -156,7 +158,6 @@
     <ClInclude Include="src\sball.h" />
     <ClInclude Include="src\scene.h" />
     <ClInclude Include="src\screen.h" />
-    <ClInclude Include="src\scr\rt.h" />
     <ClInclude Include="src\scr\smoketxt.h" />
     <ClInclude Include="src\scr\tilemaze.h" />
     <ClInclude Include="src\timer.h" />

@@ -1,5 +1,5 @@
-src = $(wildcard src/*.c) $(wildcard src/3dgfx/*.c) $(wildcard src/scr/*.c) \
-	  $(wildcard src/dos/*.c)
+src = $(wildcard src/*.c) $(wildcard src/3dgfx/*.c) $(wildcard src/rt/*.c) \
+	  $(wildcard src/scr/*.c) $(wildcard src/dos/*.c)
 asmsrc = $(wildcard src/*.asm) $(wildcard src/scr/*.asm) $(wildcard src/dos/*.asm)
 obj = $(src:.c=.odj) $(asmsrc:.asm=.odj)
 dep = $(src:.c=.d)
@@ -15,10 +15,10 @@ else
 	TOOLPREFIX = i586-pc-msdosdjgpp-
 endif
 
-inc = -Isrc -Isrc/3dgfx -Isrc/scr -Isrc/dos -Ilibs \
+inc = -Isrc -Isrc/3dgfx -Isrc/rt -Isrc/scr -Isrc/dos -Ilibs \
 	  -Ilibs/imago/src -Ilibs/anim/src -Ilibs/midas
 opt = -O3 -ffast-math -fno-strict-aliasing
-warn = -pedantic -Wall -Wno-unused-function -Wno-unused-variable
+warn = -pedantic -Wall -Wno-unused-function -Wno-unused-variable -Wno-unknown-pragmas
 
 ifdef RELEASE
 	dbg = -g
@@ -72,12 +72,14 @@ ifeq ($(hostsys), dos)
 clean:
 	del src\*.odj
 	del src\3dgfx\*.odj
+	del src\rt\*.odj
 	del src\dos\*.odj
 	del $(bin)
 
 cleandep:
 	del src\*.d
 	del src\3dgfx\*.d
+	del src\rt\*.d
 	del src\dos\*.d
 else
 clean:

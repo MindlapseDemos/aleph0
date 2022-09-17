@@ -46,13 +46,13 @@ static void destroy(void) {
 static void start(long trans_time) { lastFrameTime = time_msec; }
 
 static void draw(void) {
-	long lastFrameDuration;
+	/*long lastFrameDuration;*/
 	int i, stride;
 	RleBitmap *rle;
 	int clearColor;
 	unsigned short clearColor16;
 
-	lastFrameDuration = (time_msec - lastFrameTime) / 1000.0f;
+	/*lastFrameDuration = (time_msec - lastFrameTime) / 1000.0f;*/
 	lastFrameTime = time_msec;
 
 	clearColor = 0x888888;

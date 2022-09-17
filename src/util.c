@@ -35,3 +35,17 @@ void *realloc_nf_impl(void *p, size_t sz, const char *file, int line)
 	}
 	return p;
 }
+
+char *strdup_nf_impl(const char *s, const char *file, int line)
+{
+	int len;
+	char *res;
+
+	len = strlen(s);
+	if(!(res = malloc(len + 1))) {
+		fprintf(stderr, "%s:%d failed to duplicate string\n", file, line);
+		demo_abort();
+	}
+	memcpy(res, s, len + 1);
+	return res;
+}

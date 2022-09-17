@@ -1,5 +1,5 @@
-src = $(wildcard src/*.c) $(wildcard src/3dgfx/*.c) $(wildcard src/scr/*.c) \
-	  $(wildcard src/glut/*.c)
+src = $(wildcard src/*.c) $(wildcard src/3dgfx/*.c) $(wildcard src/rt/*.c) \
+	  $(wildcard src/scr/*.c) $(wildcard src/glut/*.c)
 asmsrc = $(wildcard src/*.asm)
 obj = $(src:.c=.o) $(asmsrc:.asm=.o)
 dep = $(obj:.o=.d)
@@ -8,8 +8,8 @@ bin = demo
 asmsrc += cspr/dbgfont.asm cspr/confont.asm
 bindata = data/loading.img
 
-inc = -I/usr/local/include -Isrc -Isrc/3dgfx -Isrc/scr -Isrc/utils -Isrc/glut -Ilibs \
-	  -Ilibs/imago/src -Ilibs/mikmod/include
+inc = -I/usr/local/include -Isrc -Isrc/3dgfx -Isrc/rt -Isrc/scr -Isrc/utils \
+	  -Isrc/glut -Ilibs -Ilibs/imago/src -Ilibs/mikmod/include
 def = -DMINIGLUT_USE_LIBC -DMIKMOD_STATIC
 warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function -Wno-address
 #opt = -O3 -ffast-math

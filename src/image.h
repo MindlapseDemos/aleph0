@@ -7,6 +7,8 @@ struct image {
 	int width, height;
 	uint16_t *pixels;
 
+	unsigned int xmask, ymask, xshift;
+
 	/* optional animation data */
 	float cur_dur, frame_interval;
 	int cur_frame, num_frames;

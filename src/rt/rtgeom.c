@@ -1,219 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <float.h>
 #include "rt.h"
 #include "util.h"
-#include "darray.h"
-
-static cgm_vec3 ambient;
-static cgm_vec3 cur_col, cur_spec;
-static float cur_shin;
-static struct image *cur_tex;
-
-void rt_init(struct rtscene *scn)
-{
-	scn->obj = darr_alloc(0, sizeof *scn->obj);
-	scn->num_obj = 0;
-	scn->lt = darr_alloc(0, sizeof *scn->lt);
-	scn->num_lt = 0;
-
-	cgm_vcons(&cur_col, 1, 1, 1);
-	cgm_vcons(&cur_spec, 0, 0, 0);
-	cur_shin = 1;
-	cur_tex = 0;
-}
-
-void rt_destroy(struct rtscene *scn)
-{
-	darr_free(scn->obj);
-	darr_free(scn->lt);
-	memset(scn, 0, sizeof *scn);
-}
-
-void rt_ambient(float r, float g, float b)
-{
-	cgm_vcons(&ambient, r, g, b);
-}
-
-void rt_color(float r, float g, float b)
-{
-	cgm_vcons(&cur_col, r, g, b);
-}
-
-void rt_specular(float r, float g, float b)
-{
-	cgm_vcons(&cur_spec, r, g, b);
-}
-
-void rt_shininess(float s)
-{
-	cur_shin = s;
-}
-
-static union rtobject *add_object(struct rtscene *scn, enum rt_obj_type type)
-{
-	union rtobject *obj;
-
-	obj = calloc_nf(1, sizeof *obj);
-	obj->type = type;
-
-	obj->x.mtl.kd = cur_col;
-	obj->x.mtl.ks = cur_spec;
-	obj->x.mtl.shin = cur_shin;
-	obj->x.mtl.tex = cur_tex;
-
-	darr_push(scn->obj, &obj);
-	scn->num_obj = darr_size(scn->obj);
-	return obj;
-}
-
-int rt_remove_object(struct rtscene *scn, union rtobject *obj)
-{
-	int i, last = scn->num_obj - 1;
-
-	for(i=0; i<scn->num_obj; i++) {
-		if(scn->obj[i] == obj) {
-			if(i < last) {
-				scn->obj[i] = scn->obj[last];
-			}
-			darr_pop(scn->obj);
-			scn->num_obj--;
-			return 0;
-		}
-	}
-	return -1;
-}
-
-union rtobject *rt_add_sphere(struct rtscene *scn, float x, float y, float z, float r)
-{
-	union rtobject *obj = add_object(scn, RT_SPH);
-	cgm_vcons(&obj->s.p, x, y, z);
-	obj->s.r = r;
-	return obj;
-}
-
-union rtobject *rt_add_plane(struct rtscene *scn, float nx, float ny, float nz, float d)
-{
-	union rtobject *obj = add_object(scn, RT_PLANE);
-	cgm_vcons(&obj->p.n, nx, ny, nz);
-	obj->p.d = d;
-	return obj;
-}
-
-union rtobject *rt_add_csg(struct rtscene *scn, enum rt_csg_op op, union rtobject *a, union rtobject *b)
-{
-	union rtobject *obj = add_object(scn, RT_CSG);
-	obj->csg.op = op;
-	obj->csg.a = a;
-	obj->csg.b = b;
-
-	rt_remove_object(scn, a);
-	rt_remove_object(scn, b);
-
-	return obj;
-}
-
-struct rtlight *rt_add_light(struct rtscene *scn, float x, float y, float z)
-{
-	struct rtlight *lt = calloc_nf(1, sizeof *lt);
-
-	cgm_vcons(&lt->p, x, y, z);
-	lt->color = cur_col;
-
-	darr_push(scn->lt, &lt);
-	scn->num_lt = darr_size(scn->lt);
-	return lt;
-}
-
-
-/* color is initialized to black */
-static void shade(struct rayhit *hit, struct rtscene *scn, int lvl, cgm_vec3 *color)
-{
-	int i;
-	float ndotl, vdotr, spec;
-	cgm_ray sray;
-	cgm_vec3 col, rdir;
-	struct rtlight *lt;
-	struct rtmaterial *mtl = &hit->obj->x.mtl;
-
-	if(cgm_vdot(&hit->n, &hit->ray->dir) > 0.0f) {
-		cgm_vneg(&hit->n);	/* faceforward */
-	}
-
-	sray.origin = hit->p;
-	cgm_vnormalize(&hit->n);
-	cgm_vnormalize(&hit->ray->dir);
-
-	color->x = mtl->kd.x * ambient.x;
-	color->y = mtl->kd.y * ambient.y;
-	color->z = mtl->kd.z * ambient.z;
-
-	for(i=0; i<scn->num_lt; i++) {
-		lt = scn->lt[i];
-		sray.dir = lt->p;
-		cgm_vsub(&sray.dir, &sray.origin);
-
-		if(ray_scene(&sray, scn, 1.0f, 0)) continue;
-
-		cgm_vnormalize(&sray.dir);
-		ndotl = cgm_vdot(&sray.dir, &hit->n);
-		if(ndotl < 0.0f) ndotl = 0.0f;
-
-		rdir = hit->ray->dir;
-		cgm_vreflect(&rdir, &hit->n);
-		vdotr = cgm_vdot(&sray.dir, &rdir);
-		if(vdotr < 0.0f) vdotr = 0.0f;
-		spec = pow(vdotr, mtl->shin);
-
-		color->x += (mtl->kd.x * ndotl + mtl->ks.x * spec) * lt->color.x;
-		color->y += (mtl->kd.y * ndotl + mtl->ks.y * spec) * lt->color.y;
-		color->z += (mtl->kd.z * ndotl + mtl->ks.z * spec) * lt->color.z;
-	}
-}
-
-int ray_trace(cgm_ray *ray, struct rtscene *scn, int lvl, cgm_vec3 *color)
-{
-	struct rayhit hit;
-
-	if(!ray_scene(ray, scn, FLT_MAX, &hit)) {
-		return 0;
-	}
-	hit.ray = ray;
-	shade(&hit, scn, lvl, color);
-	return 1;
-}
-
-
-int ray_scene(cgm_ray *ray, struct rtscene *scn, float maxt, struct rayhit *hit)
-{
-	int i;
-
-	if(hit) {
-		struct rayhit hit0 = {FLT_MAX};
-
-		/* find nearest hit */
-		for(i=0; i<scn->num_obj; i++) {
-			if(ray_object(ray, scn->obj[i], maxt, hit) && hit->t < hit0.t) {
-				hit0 = *hit;
-			}
-		}
-
-		if(hit0.obj) {
-			*hit = hit0;
-			return 1;
-		}
-	} else {
-		/* find any hit */
-		for(i=0; i<scn->num_obj; i++) {
-			if(ray_object(ray, scn->obj[i], maxt, 0)) {
-				return 1;
-			}
-		}
-	}
-
-	return 0;
-}
 
 int ray_object(cgm_ray *ray, union rtobject *obj, float maxt, struct rayhit *hit)
 {
@@ -223,8 +9,12 @@ int ray_object(cgm_ray *ray, union rtobject *obj, float maxt, struct rayhit *hit
 	switch(obj->type) {
 	case RT_SPH:
 		return ray_sphere(ray, &obj->s, maxt, hit);
+	case RT_CYL:
+		return ray_cylinder(ray, &obj->c, maxt, hit);
 	case RT_PLANE:
 		return ray_plane(ray, &obj->p, maxt, hit);
+	case RT_BOX:
+		return ray_box(ray, &obj->b, maxt, hit);
 	case RT_CSG:
 		if(!(numiv = ray_csg_object(ray, obj, maxt, ivlist))) {
 			return 0;
@@ -290,9 +80,143 @@ int ray_sphere(cgm_ray *ray, struct rtsphere *sph, float maxt, struct rayhit *hi
 		hit->n.y = hit->p.y - sph->p.y;
 		hit->n.z = hit->p.z - sph->p.z;
 
+		if(sph->mtl.tex) {
+			hit->u = atan2(hit->n.z, hit->n.x);
+			hit->v = acos(hit->n.y);
+		}
+
 		hit->obj = (union rtobject*)sph;
 	}
 	return 1;
+}
+
+static INLINE int ray_cylcaps(cgm_ray *ray, struct rtcylinder *cyl, float maxt, struct rayhit *hit)
+{
+	int res = 0;
+	float t, ttop, ndotdir, x, z, dx, dz;
+
+	ndotdir = ray->dir.y;
+	if(fabs(ndotdir) < 1e-5f) {
+		return 0;
+	}
+
+	ttop = maxt;
+
+	/* top cap */
+	ttop = (cyl->y1 - ray->origin.y) / ndotdir;
+	if(ttop >= 1e-5f && ttop < maxt) {
+		x = ray->origin.x + ray->dir.x * ttop;
+		z = ray->origin.z + ray->dir.z * ttop;
+		dx = x - cyl->p.x;
+		dz = z - cyl->p.z;
+		if(dx * dx + dz * dz < cyl->r * cyl->r) {
+			if(!hit) return 1;
+			res = 1;
+			hit->t = ttop;
+			cgm_vcons(&hit->p, x, ray->origin.y + ray->dir.y * ttop, z);
+			hit->n.x = hit->n.z = 0;
+			hit->n.y = 1;
+			hit->u = x / cyl->r;
+			hit->v = z / cyl->r;
+			hit->obj = (union rtobject*)cyl;
+		}
+	}
+	/* bottom cap */
+	t = -(cyl->y0 - ray->origin.y) / -ndotdir;
+	if(t >= 1e-5f && t < ttop) {
+		x = ray->origin.x + ray->dir.x * t;
+		z = ray->origin.z + ray->dir.z * t;
+		dx = x - cyl->p.x;
+		dz = z - cyl->p.z;
+		if(dx * dx + dz * dz < cyl->r * cyl->r) {
+			if(!hit) return 1;
+			hit->t = t;
+			cgm_vcons(&hit->p, x, ray->origin.y + ray->dir.y * t, z);
+			hit->n.x = hit->n.z = 0;
+			hit->n.y = -1;
+			hit->u = x / cyl->r;
+			hit->v = z / cyl->r;
+			hit->obj = (union rtobject*)cyl;
+			return 1;
+		}
+	}
+	return res;
+}
+
+int ray_cylinder(cgm_ray *ray, struct rtcylinder *cyl, float maxt, struct rayhit *hit)
+{
+	int res = 0;
+	float a, a2, b, c, d, sqrt_d, t, tcaps, t1, t2;
+	cgm_vec3 p;
+
+	if(ray_cylcaps(ray, cyl, maxt, hit)) {
+		if(!hit) return 1;
+		tcaps = hit->t;
+		res = 1;
+	} else {
+		tcaps = maxt;
+	}
+
+	a = SQ(ray->dir.x) + SQ(ray->dir.z);
+	b = 2.0f * ray->dir.x * (ray->origin.x - cyl->p.x) +
+		2.0f * ray->dir.z * (ray->origin.z - cyl->p.z);
+	c = SQ(cyl->p.x) + SQ(cyl->p.z) +
+		SQ(ray->origin.x) + SQ(ray->origin.z) +
+		2.0f * (-cyl->p.x * ray->origin.x - cyl->p.z * ray->origin.z) - SQ(cyl->r);
+
+	if((d = SQ(b) - 4.0f * a * c) < 0.0f) return res;
+
+	sqrt_d = sqrt(d);
+	a2 = 2.0f * a;
+	t1 = (-b + sqrt_d) / a2;
+	t2 = (-b - sqrt_d) / a2;
+
+	if((t1 < 1e-5f && t2 < 1e-5f) || (t1 > maxt && t2 > maxt)) {
+		return res;
+	}
+
+	if(t1 < 1e-5f) {
+		t1 = t2;
+	} else if(t2 < 1e-5f) {
+		t2 = t1;
+	} else {
+		if(t2 < t1) {
+			float tmp = t1;
+			t1 = t2;
+			t2 = tmp;
+		}
+	}
+
+
+	cgm_raypos(&p, ray, t1);
+	if(p.y >= cyl->y0 && p.y <= cyl->y1) {
+		t = t1;
+	} else {
+		if(t1 == t2) return res;
+		t = t2;
+		cgm_raypos(&p, ray, t2);
+		if(p.y < cyl->y0 || p.y > cyl->y1) {
+			return res;
+		}
+	}
+	res = 1;
+
+	if(hit && t < tcaps) {
+		hit->t = t;
+		hit->p = p;
+
+		hit->n.x = hit->p.x - cyl->p.x;
+		hit->n.y = 0;
+		hit->n.z = hit->p.z - cyl->p.z;
+
+		if(cyl->mtl.tex) {
+			hit->u = atan2(hit->n.z, hit->n.x);
+			hit->v = (hit->n.y - cyl->y0) / (cyl->y1 - cyl->y0);
+		}
+
+		hit->obj = (union rtobject*)cyl;
+	}
+	return res;
 }
 
 int ray_plane(cgm_ray *ray, struct rtplane *plane, float maxt, struct rayhit *hit)
@@ -317,7 +241,98 @@ int ray_plane(cgm_ray *ray, struct rtplane *plane, float maxt, struct rayhit *hi
 		cgm_raypos(&hit->p, ray, t);
 		hit->n = plane->n;
 
+		if(plane->mtl.tex) {
+			/* XXX: generalize if needed */
+			hit->u = hit->p.x;
+			hit->v = hit->p.z;
+		}
+
 		hit->obj = (union rtobject*)plane;
+	}
+	return 1;
+}
+
+int ray_box(cgm_ray *ray, struct rtbox *box, float maxt, struct rayhit *hit)
+{
+	int i, axis[2], sign[3];
+	float param[2][3];
+	float inv_dir[3];
+	float tmin, tmax, tymin, tymax, tzmin, tzmax;
+	cgm_vec3 p;
+
+	for(i=0; i<3; i++) {
+		param[0][i] = (&box->min.x)[i];
+		param[1][i] = (&box->max.x)[i];
+
+		inv_dir[i] = 1.0f / (&ray->dir.x)[i];
+		sign[i] = inv_dir[i] < 0;
+	}
+
+	tmin = (param[sign[0]][0] - ray->origin.x) * inv_dir[0];
+	tmax = (param[1 - sign[0]][0] - ray->origin.x) * inv_dir[0];
+	tymin = (param[sign[1]][1] - ray->origin.y) * inv_dir[1];
+	tymax = (param[1 - sign[1]][1] - ray->origin.y) * inv_dir[1];
+
+	axis[0] = axis[1] = 0;
+
+	if(tmin > tymax || tymin > tmax) {
+		return 0;
+	}
+	if(tymin > tmin) {
+		tmin = tymin;
+		axis[0] = 1;
+	}
+	if(tymax < tmax) {
+		tmax = tymax;
+		axis[1] = 1;
+	}
+
+	tzmin = (param[sign[2]][2] - ray->origin.z) * inv_dir[2];
+	tzmax = (param[1 - sign[2]][2] - ray->origin.z) * inv_dir[2];
+
+	if(tmin > tzmax || tzmin > tmax) {
+		return 0;
+	}
+	if(tzmin > tmin) {
+		tmin = tzmin;
+		axis[0] = 2;
+	}
+	if(tzmax < tmax) {
+		tmax = tzmax;
+		axis[1] = 2;
+	}
+
+	if((tmin < 1e-5 && tmax < 1e-5) || (tmin > maxt && tmax > maxt)) {
+		return 0;
+	}
+
+	if(hit) {
+		int ax;
+		if(tmin < 0) {
+			hit->t = tmax;
+			ax = axis[1];
+		} else {
+			hit->t = tmin;
+			ax = axis[0];
+		}
+		cgm_raypos(&p, ray, hit->t);
+		hit->p = p;
+		switch(ax) {
+		case 0:
+			hit->n.x = p.x > (box->min.x + box->max.x) / 2.0f ? 1.0f : -1.0f;
+			hit->n.y = hit->n.z = 0.0f;
+			break;
+		case 1:
+			hit->n.y = p.y > (box->min.y + box->max.y) / 2.0f ? 1.0f : -1.0f;
+			hit->n.x = hit->n.z = 0.0f;
+			break;
+		case 2:
+		default:
+			hit->n.z = p.z > (box->min.z + box->max.z) / 2.0f ? 1.0f : -1.0f;
+			hit->n.x = hit->n.y = 0.0f;
+		}
+		hit->ray = ray;
+		hit->obj = (union rtobject*)box;
 	}
 	return 1;
 }
@@ -333,6 +348,9 @@ int ray_csg_object(cgm_ray *ray, union rtobject *obj, float maxt, struct rayival
 
 	case RT_PLANE:
 		return ray_csg_plane(ray, &obj->p, maxt, ivlist);
+
+	case RT_BOX:
+		return ray_csg_box(ray, &obj->b, maxt, ivlist);
 
 	case RT_CSG:
 		switch(obj->csg.op) {
@@ -540,5 +558,87 @@ int ray_csg_plane(cgm_ray *ray, struct rtplane *plane, float maxt, struct rayiva
 	ival->b.n.y = -ray->dir.y;
 	ival->b.n.z = -ray->dir.z;
 	ival->b.obj = ival->a.obj;
+	return 1;
+}
+
+int ray_csg_box(cgm_ray *ray, struct rtbox *box, float maxt, struct rayival *ival)
+{
+	int i, axis[2], sign[3];
+	float param[2][3];
+	float inv_dir[3];
+	float tmin, tmax, tymin, tymax, tzmin, tzmax;
+	cgm_vec3 p;
+	struct rayhit *hit;
+
+	for(i=0; i<3; i++) {
+		param[0][i] = (&box->min.x)[i];
+		param[1][i] = (&box->max.x)[i];
+
+		inv_dir[i] = 1.0f / (&ray->dir.x)[i];
+		sign[i] = inv_dir[i] < 0;
+	}
+
+	tmin = (param[sign[0]][0] - ray->origin.x) * inv_dir[0];
+	tmax = (param[1 - sign[0]][0] - ray->origin.x) * inv_dir[0];
+	tymin = (param[sign[1]][1] - ray->origin.y) * inv_dir[1];
+	tymax = (param[1 - sign[1]][1] - ray->origin.y) * inv_dir[1];
+
+	axis[0] = axis[1] = 0;
+
+	if(tmin > tymax || tymin > tmax) {
+		return 0;
+	}
+	if(tymin > tmin) {
+		tmin = tymin;
+		axis[0] = 1;
+	}
+	if(tymax < tmax) {
+		tmax = tymax;
+		axis[1] = 1;
+	}
+
+	tzmin = (param[sign[2]][2] - ray->origin.z) * inv_dir[2];
+	tzmax = (param[1 - sign[2]][2] - ray->origin.z) * inv_dir[2];
+
+	if(tmin > tzmax || tzmin > tmax) {
+		return 0;
+	}
+	if(tzmin > tmin) {
+		tmin = tzmin;
+		axis[0] = 2;
+	}
+	if(tzmax < tmax) {
+		tmax = tzmax;
+		axis[1] = 2;
+	}
+
+	if((tmin < 1e-5 && tmax < 1e-5) || (tmin > maxt && tmax > maxt)) {
+		return 0;
+	}
+
+	ival->a.t = tmin;
+	ival->b.t = tmax;
+	hit = &ival->a;
+	for(i=0; i<2; i++) {
+		cgm_raypos(&p, ray, hit->t);
+		hit->p = p;
+		switch(axis[i]) {
+		case 0:
+			hit->n.x = p.x > (box->min.x + box->max.x) / 2.0f ? 1.0f : -1.0f;
+			hit->n.y = hit->n.z = 0.0f;
+			break;
+		case 1:
+			hit->n.y = p.y > (box->min.y + box->max.y) / 2.0f ? 1.0f : -1.0f;
+			hit->n.x = hit->n.z = 0.0f;
+			break;
+		case 2:
+		default:
+			hit->n.z = p.z > (box->min.z + box->max.z) / 2.0f ? 1.0f : -1.0f;
+			hit->n.x = hit->n.y = 0.0f;
+		}
+		hit->ray = ray;
+		hit->obj = (union rtobject*)box;
+		hit = &ival->b;
+	}
 	return 1;
 }

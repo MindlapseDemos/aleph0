@@ -7,6 +7,24 @@
 #include "treestor.h"
 #include "util.h"
 
+static void calc_pow2(struct image *img)
+{
+	int mask;
+	if(img->width <= 0 || img->height <= 0) {
+		return;
+	}
+
+	img->xmask = img->width - 1;
+	img->ymask = img->height - 1;
+
+	img->xshift = 0;
+	mask = img->xmask;
+	while(mask) {
+		img->xshift++;
+		mask >>= 1;
+	}
+}
+
 int load_image(struct image *img, const char *fname)
 {
 	FILE *fp;
@@ -66,6 +84,7 @@ int load_image(struct image *img, const char *fname)
 	fclose(fp);
 	img->width = width;
 	img->height = height;
+	calc_pow2(img);
 	return 0;
 not565:
 	fclose(fp);
@@ -142,6 +161,7 @@ not565:
 		fprintf(stderr, "failed to load image: %s\n", fname);
 		return -1;
 	}
+	calc_pow2(img);
 	return 0;
 }
 

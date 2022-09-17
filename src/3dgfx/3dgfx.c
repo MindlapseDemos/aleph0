@@ -4,11 +4,6 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
-#if defined(__WATCOMC__) || defined(_WIN32) || defined(__DJGPP__)
-#include <malloc.h>
-#else
-#include <alloca.h>
-#endif
 #include "3dgfx.h"
 #include "gfxutil.h"
 #include "polyfill.h"

@@ -33,8 +33,8 @@ check_cpuid:
 	popf
 	pushf
 	pop eax
-	clc
 	cmp eax, edx
+	clc
 	jnz .noerr
 	stc
 .noerr:	ret

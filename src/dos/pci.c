@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "inttypes.h"
 #include "pci.h"
 #include "cdpmi.h"
+#include "demo.h"
 
 #define CONFIG_ADDR_PORT	0xcf8
 #define CONFIG_DATA_PORT	0xcfc
@@ -73,7 +74,8 @@ int init_pci(void)
 		return -1;
 	}
 
-	printf("PCI BIOS v%x.%x found\n", (regs.ebx & 0xff00) >> 8, regs.ebx & 0xff);
+	printf("PCI BIOS v%x.%x found\n", (unsigned int)((regs.ebx & 0xff00) >> 8),
+			(unsigned int)(regs.ebx & 0xff));
 	if(regs.eax & 1) {
 		cfg_read32 = cfg_read32_m1;
 	} else {

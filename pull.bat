@@ -19,6 +19,10 @@ mkdir src\3dgfx
 rsync -v 192.168.0.4::dosdemo/src/3dgfx/*.c src/3dgfx
 rsync -v 192.168.0.4::dosdemo/src/3dgfx/*.h src/3dgfx
 
+mkdir libs\cgmath
+rsync -v 192.168.0.4::dosdemo/libs/cgmath/*.h libs/cgmath
+rsync -v 192.168.0.4::dosdemo/libs/cgmath/*.inl libs/cgmath
+
 mkdir tools
 mkdir tools\csprite
 rsync -v 192.168.0.4::dosdemo/tools/csprite/Makefile tools/csprite/Makefile

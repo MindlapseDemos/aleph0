@@ -3,12 +3,7 @@
 #include <string.h>
 #include <errno.h>
 #include "treestor.h"
-
-#if defined(__WATCOMC__) || defined(WIN32) || defined(__DJGPP__)
-#include <malloc.h>
-#else
-#include <alloca.h>
-#endif
+#include "util.h"
 
 struct ts_node *ts_text_load(FILE *fp);
 int ts_text_save(struct ts_node *tree, FILE *fp);

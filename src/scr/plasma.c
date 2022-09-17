@@ -83,26 +83,46 @@ static void draw(void)
 {
 	int x, y;
 	unsigned char c;
-	unsigned char s1, s2;
 
 	float dt = (float)(time_msec - startingTime) / 1000.0f;
-	int t1 = sin(0.1f * dt) * 132 + 132;
-	int t2 = sin(0.2f * dt) * 248 + 248;
-	int t3 = sin(0.5f * dt) * 380 + 380;
+	const int t1 = sin(0.1f * dt) * 132 + 132;
+	const int t2 = sin(0.2f * dt) * 248 + 248;
+	const int t3 = sin(0.5f * dt) * 380 + 380;
 
+	unsigned char *psin1_a = (unsigned char*)&psin1[t1];
+	unsigned char *psin2_a = (unsigned char*)&psin2[t2];
 	unsigned int *vram32 = (unsigned int*)fb_pixels;
-	unsigned int p0, p1;
 	for (y = 0; y < FB_HEIGHT; y++)
 	{
-		s1 = psin2[y + t2];
-		s2 = psin3[y + t1];
-		for (x = 0; x < FB_WIDTH; x+=2)
+		const unsigned char s1 = psin2[y + t2];
+		unsigned char *psin1_b = (unsigned char*)&psin1[psin3[y + t1]+t3];
+		unsigned char *psin3_a = (unsigned char*)&psin3[y+t3];
+		for (x = 0; x < FB_WIDTH; x+=8)
 		{
-			c = psin1[x + t1] + s1 + psin3[x + y + t3] + psin1[psin2[x + t2] + s2 + t3];
+			unsigned int p0, p1;
+	
+			c = psin1_a[x] + s1 + psin3_a[x] + psin1_b[psin2_a[x]];
 			p0 = plasmaPal[c];
-			c = psin1[x + 1 + t1] + s1 + psin3[x + 1 + y + t3] + psin1[psin2[x + 1 + t2] + s2 + t3];
+			c = psin1_a[x + 1] + s1 + psin3_a[x + 1] + psin1_b[psin2_a[x + 1]];
 			p1 = plasmaPal[c];
+			*vram32++ = (p1 << 16) | p0;
 
+			c = psin1_a[x + 2] + s1 + psin3_a[x + 2] + psin1_b[psin2_a[x + 2]];
+			p0 = plasmaPal[c];
+			c = psin1_a[x + 3] + s1 + psin3_a[x + 3] + psin1_b[psin2_a[x + 3]];
+			p1 = plasmaPal[c];
+			*vram32++ = (p1 << 16) | p0;
+
+			c = psin1_a[x + 4] + s1 + psin3_a[x + 4] + psin1_b[psin2_a[x + 4]];
+			p0 = plasmaPal[c];
+			c = psin1_a[x + 5] + s1 + psin3_a[x + 5] + psin1_b[psin2_a[x + 5]];
+			p1 = plasmaPal[c];
+			*vram32++ = (p1 << 16) | p0;
+
+			c = psin1_a[x + 6] + s1 + psin3_a[x + 6] + psin1_b[psin2_a[x + 6]];
+			p0 = plasmaPal[c];
+			c = psin1_a[x + 7] + s1 + psin3_a[x + 7] + psin1_b[psin2_a[x + 7]];
+			p1 = plasmaPal[c];
 			*vram32++ = (p1 << 16) | p0;
 		}
 	}

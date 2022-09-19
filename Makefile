@@ -16,7 +16,7 @@ scrobj = src/scr/bump.obj src/scr/fract.obj src/scr/greets.obj &
 	src/scr/metaball.obj src/scr/plasma.obj src/scr/polytest.obj &
 	src/scr/smoketxt.obj src/scr/thunder.obj src/scr/tilemaze.obj &
 	src/scr/tunnel.obj src/scr/cybersun.obj src/scr/raytrace.obj &
-	src/scr/minifx.obj
+	src/scr/minifx.obj src/scr/voxscape.obj
 csprobj = cspr/dbgfont.obj cspr/confont.obj
 
 incpath = -Isrc -Isrc/dos -Isrc/3dgfx -Isrc/rt -Ilibs -Ilibs/imago/src -Ilibs/anim/src &
@@ -41,7 +41,7 @@ scrobj = src\scr\bump.obj src\scr\fract.obj src\scr\greets.obj &
 	src\scr\metaball.obj src\scr\plasma.obj src\scr\polytest.obj &
 	src\scr\smoketxt.obj src\scr\thunder.obj src\scr\tilemaze.obj &
 	src\scr\tunnel.obj src\scr\cybersun.obj src\scr\raytrace.obj &
-	src\scr\minifx.obj
+	src\scr\minifx.obj src/scr/voxscape.obj
 csprobj = cspr\dbgfont.obj cspr\confont.obj
 
 incpath = -Isrc -Isrc\dos -Isrc\3dgfx -Isrc\rt -Ilibs -Ilibs\imago\src &

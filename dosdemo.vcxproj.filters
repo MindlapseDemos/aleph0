@@ -156,6 +156,9 @@
     <ClCompile Include="src\scr\tunnel.c">
       <Filter>src\screens</Filter>
     </ClCompile>
+    <ClCompile Include="src\scr\voxscape.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\glut\gfx.h">

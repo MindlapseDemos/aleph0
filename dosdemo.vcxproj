@@ -125,6 +125,7 @@
     <ClCompile Include="src\scr\thunder.c" />
     <ClCompile Include="src\scr\tilemaze.c" />
     <ClCompile Include="src\scr\tunnel.c" />
+    <ClCompile Include="src\scr\voxscape.c" />
     <ClCompile Include="src\tinyfps.c" />
     <ClCompile Include="src\treestor.c" />
     <ClCompile Include="src\ts_text.c" />

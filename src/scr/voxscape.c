@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <math.h>
 
 #include "demo.h"
@@ -108,13 +109,18 @@ static void createHeightScaleTab()
 	}
 }
 
-static void readMapFile(const char *path, int count, void *dst)
+static int readMapFile(const char *path, int count, void *dst)
 {
 	FILE *f = fopen(path, "rb");
+	if(!f) {
+		fprintf(stderr, "voxscape: failed to open %s: %s\n", path, strerror(errno));
+		return -1;
+	}
 
 	fread(dst, 1, count, f);
 
 	fclose(f);
+	return 0;
 }
 
 static void initPalShades()
@@ -136,17 +142,18 @@ static void initPalShades()
 	}
 }
 
-static void initHeightmapAndColormap()
+static int initHeightmapAndColormap()
 {
 	const int cmapSize = HMAP_SIZE + 512 * PAL_SHADES;
 
 	if (!hmap) hmap = malloc(HMAP_SIZE);
 	if (!cmap) cmap = malloc(cmapSize);
 
-	readMapFile("data/hmap1.bin", HMAP_SIZE, hmap);
-	readMapFile("data/cmap1.bin", cmapSize, cmap);
+	if(readMapFile("data/hmap1.bin", HMAP_SIZE, hmap) == -1) return -1;
+	if(readMapFile("data/cmap1.bin", cmapSize, cmap) == -1) return -1;
 
 	initPalShades();
+	return 0;
 }
 
 
@@ -161,7 +168,9 @@ static int init(void)
 	viewNearPosVec = malloc(VIS_HOR_STEPS * sizeof(Point2D));
 	viewNearStepVec = malloc(VIS_HOR_STEPS * sizeof(Point2D));
 
-	initHeightmapAndColormap();
+	if(initHeightmapAndColormap() == -1) {
+		return -1;
+	}
 
 	return 0;
 }

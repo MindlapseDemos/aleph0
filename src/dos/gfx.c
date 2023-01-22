@@ -22,8 +22,12 @@
 
 void (*blit_frame)(void*, int);
 
+extern int dblsize;
+
 static void blit_frame_lfb(void *pixels, int vsync);
 static void blit_frame_banked(void *pixels, int vsync);
+static void blit_frame_lfb_2x(void *pixels, int vsync);
+static void blit_frame_banked_2x(void *pixels, int vsync);
 static uint32_t calc_mask(int sz, int pos);
 
 static void enable_wrcomb(uint32_t addr, int len);
@@ -234,7 +238,7 @@ void *set_video_mode(int idx, int nbuf)
 			vpgaddr[1] = 0;
 		}
 
-		blit_frame = blit_frame_lfb;
+		blit_frame = dblsize ? blit_frame_lfb_2x : blit_frame_lfb;
 
 		/* only attempt to set up write combining if the CPU we're running on
 		 * supports memory type range registers, and we're running on ring 0
@@ -263,7 +267,7 @@ void *set_video_mode(int idx, int nbuf)
 		vpgaddr[0] = VMEM_PTR;
 		vpgaddr[1] = 0;
 
-		blit_frame = blit_frame_banked;
+		blit_frame = dblsize ? blit_frame_banked_2x : blit_frame_banked;
 
 		/* calculate window granularity shift */
 		vm->win_gran_shift = 0;
@@ -329,6 +333,38 @@ static void blit_frame_lfb(void *pixels, int vsync)
 }
 
 static void blit_frame_banked(void *pixels, int vsync)
+{
+	int sz, offs, pending;
+	unsigned char *pptr = pixels;
+
+	demo_post_draw(pixels);
+
+	if(vsync) wait_vsync();
+
+	/* assume initial window offset at 0 */
+	offs = 0;
+	pending = pgsize;
+	while(pending > 0) {
+		sz = pending > 65536 ? 65536 : pending;
+		/*memcpy64(VMEM_PTR, pptr, sz >> 3);*/
+		memcpy(VMEM_PTR, pptr, sz);
+		pptr += sz;
+		pending -= sz;
+		offs += curmode->win_64k_step;
+		vbe_setwin(0, offs);
+	}
+	vbe_setwin(0, 0);
+}
+
+static void blit_frame_lfb_2x(void *pixels, int vsync)
+{
+	demo_post_draw(pixels);
+
+	if(vsync) wait_vsync();
+	memcpy64(vpgaddr[frontidx], pixels, pgsize >> 3);
+}
+
+static void blit_frame_banked_2x(void *pixels, int vsync)
 {
 	int sz, offs, pending;
 	unsigned char *pptr = pixels;

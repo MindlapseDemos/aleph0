@@ -29,6 +29,7 @@ struct screen *cybersun_screen(void);
 struct screen *raytrace_screen(void);
 struct screen *minifx_screen(void);
 struct screen *voxscape_screen(void);
+struct screen *hexfloor_screen(void);
 
 void start_loadscr(void);
 void end_loadscr(void);
@@ -95,6 +96,9 @@ int scr_init(void)
     if (!(scr[idx++] = voxscape_screen())) {
 		return -1;
     }
+	if(!(scr[idx++] = hexfloor_screen())) {
+		return -1;
+	}
 
 	num_screens = idx;
 

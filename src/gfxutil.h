@@ -46,4 +46,6 @@ void blitfb(uint16_t *dest, uint16_t *src, int width, int height, int pitch_pix)
 void blit(uint16_t *dest, int destwidth, uint16_t *src, int xsz, int ysz, int pitch_pix);
 void blit_key(uint16_t *dest, int destwidth, uint16_t *src, int xsz, int ysz, int pitch_pix, uint16_t key);
 
+void overlay_add_full(uint16_t *dest, uint16_t *src);
+
 #endif	/* GFXUTIL_H_ */

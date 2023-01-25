@@ -15,6 +15,10 @@
 #define FP_SCAPE 10
 #define FP_REC 18
 
+#define SIN_SHIFT 12
+#define SIN_LENGTH (1 << SIN_SHIFT)
+#define SIN_TO_COS (SIN_LENGTH / 4)
+
 #define FOV 48
 #define VIS_NEAR 16
 #define VIS_FAR 224
@@ -161,7 +165,7 @@ static int init(void)
 {
 	memset(fb_pixels, 0, (FB_WIDTH * FB_HEIGHT * FB_BPP) / 8);
 
-	initSinTab(256, 1, 65536);
+	initSinTab(SIN_LENGTH, 1, 65536);
 	createHeightScaleTab();
 
 	hmap = malloc(HMAP_SIZE);
@@ -197,17 +201,17 @@ static void updateRaySamplePosAndStep()
 	int i;
 	Point2D pl, pr, dHor;
 	
-	const int halfFov = FOV / 2;
-	const int yaw = viewAngle.y & 255;
-	const int yawL = (yaw - halfFov) & 255;
-	const int yawR = (yaw + halfFov) & 255;
-	const int length = (1 << (FP_BASE + FP_SCAPE)) / isin[halfFov + 64];
+	const int halfFov = (FOV / 2) << (SIN_SHIFT-8);
+	const int yaw = viewAngle.y & (SIN_LENGTH-1);
+	const int yawL = (yaw - halfFov) & (SIN_LENGTH-1);
+	const int yawR = (yaw + halfFov) & (SIN_LENGTH-1);
+	const int length = (1 << (FP_BASE + FP_SCAPE)) / isin[halfFov + SIN_TO_COS];
 
 	Point2D *viewPosVec = viewNearPosVec;
 	Point2D *viewStepVec = viewNearStepVec;
 
-	setPoint2D(&pl, isin[(yawL+64)&255]*length, isin[yawL]*length);
-	setPoint2D(&pr, isin[(yawR+64)&255]*length, isin[yawR]*length);
+	setPoint2D(&pl, isin[(yawL+SIN_TO_COS)&(SIN_LENGTH-1)]*length, isin[yawL]*length);
+	setPoint2D(&pr, isin[(yawR+SIN_TO_COS)&(SIN_LENGTH-1)]*length, isin[yawR]*length);
 	setPoint2D(&dHor, (pr.x - pl.x) / (VIS_HOR_STEPS - 1), (pr.y - pl.y) / (VIS_HOR_STEPS - 1));
 
 	for (i=0; i<VIS_HOR_STEPS; ++i) {
@@ -295,9 +299,9 @@ static void setViewPos(int px, int py, int pz)
 
 static void setViewAngle(int rx, int ry, int rz)
 {
-	viewAngle.x = rx & 255;
-	viewAngle.y = ry & 255;
-	viewAngle.z = rz & 255;
+	viewAngle.x = rx & (SIN_LENGTH-1);
+	viewAngle.y = ry & (SIN_LENGTH-1);
+	viewAngle.z = rz & (SIN_LENGTH-1);
 }
 
 static void start(long trans_time)
@@ -315,14 +319,14 @@ static void move()
 	const int speedX = (dt << FP_VIEWER) >> 8;
 	const int speedZ = (dt << FP_VIEWER) >> 8;
 
-	const int velX = (speedX * isin[(viewAngle.y + 64) & 255]) >> FP_BASE;
+	const int velX = (speedX * isin[(viewAngle.y + SIN_TO_COS) & (SIN_LENGTH-1)]) >> FP_BASE;
 	const int velZ = (speedZ * isin[viewAngle.y]) >> FP_BASE;
 
 	viewPos.x += velX;
 	viewPos.z += velZ;
 
 	if(mouse_bmask & MOUSE_BN_LEFT) {
-		viewAngle.y = mouse_x & 255;
+		viewAngle.y = (4*mouse_x) & (SIN_LENGTH-1);
 	}
 	if(mouse_bmask & MOUSE_BN_RIGHT) {
 		viewPos.y = mouse_y << FP_VIEWER;

@@ -43,7 +43,11 @@
 
 #define FRAC_ITER_TIMES_2 FRAC_ITER_BLOCX FRAC_ITER_BLOCX
 #define FRAC_ITER_TIMES_4 FRAC_ITER_TIMES_2 FRAC_ITER_TIMES_2
+#define FRAC_ITER_TIMES_6 FRAC_ITER_TIMES_4 FRAC_ITER_TIMES_2
 #define FRAC_ITER_TIMES_8 FRAC_ITER_TIMES_4 FRAC_ITER_TIMES_4
+#define FRAC_ITER_TIMES_10 FRAC_ITER_TIMES_8 FRAC_ITER_TIMES_2
+#define FRAC_ITER_TIMES_12 FRAC_ITER_TIMES_8 FRAC_ITER_TIMES_4
+#define FRAC_ITER_TIMES_14 FRAC_ITER_TIMES_12 FRAC_ITER_TIMES_2
 #define FRAC_ITER_TIMES_16 FRAC_ITER_TIMES_8 FRAC_ITER_TIMES_8
 
 static int init(void);
@@ -164,19 +168,19 @@ static unsigned char renderJuliaPixel(int xk, int yk, int layer_iter)
 	int xp, yp;
 
 	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk; y0 = yk;
-	FRAC_ITER_TIMES_16
+	FRAC_ITER_TIMES_14
 
 	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<1; y0 = yk<<1;
-	FRAC_ITER_TIMES_16
+	FRAC_ITER_TIMES_12
 
 	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<2; y0 = yk<<2;
-	FRAC_ITER_TIMES_16
+	FRAC_ITER_TIMES_10
 
 	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<3; y0 = yk<<3;
-	FRAC_ITER_TIMES_16
+	FRAC_ITER_TIMES_8
 
 	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<4; y0 = yk<<4;
-	FRAC_ITER_TIMES_8
+	FRAC_ITER_TIMES_6
 
 	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<5; y0 = yk<<5;
 	FRAC_ITER_TIMES_4

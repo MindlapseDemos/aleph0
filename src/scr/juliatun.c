@@ -1,5 +1,6 @@
 /* Julia Tunnel idea */
 
+#include <string.h>
 #include <stdlib.h>
 #include <math.h>
 
@@ -64,6 +65,7 @@ static unsigned short *juliaTunnelPal;
 static int xp_l[JULIA_LAYERS];
 static int yp_l[JULIA_LAYERS];
 
+unsigned char *juliaQuarterBuffer;
 
 struct screen *juliatunnel_screen(void)
 {
@@ -78,9 +80,13 @@ static int init(void)
 	float sg = 0.5f;
 	float sb = 1.0f;
 
-	float dr = (1.0f - sr) / JULIA_LAYERS;
-	float dg = (0.6f - sg) / JULIA_LAYERS;
-	float db = (0.2f - sb) / JULIA_LAYERS;
+	const float dr = (1.0f - sr) / JULIA_LAYERS;
+	const float dg = (0.6f - sg) / JULIA_LAYERS;
+	const float db = (0.2f - sb) / JULIA_LAYERS;
+
+	const int juliaQuarterSize = (FB_WIDTH / 2) * (FB_HEIGHT / 2);
+	juliaQuarterBuffer = (unsigned char*)malloc(juliaQuarterSize);
+	memset(juliaQuarterBuffer, 0, juliaQuarterSize);
 
 	juliaTunnelPal = (unsigned short*)malloc(sizeof(unsigned short) * JULIA_PAL_COLORS);
 
@@ -113,6 +119,8 @@ static int init(void)
 
 static void destroy(void)
 {
+	free(juliaTunnelPal);
+	free(juliaQuarterBuffer);
 }
 
 static void start(long trans_time)
@@ -174,7 +182,7 @@ static unsigned char renderJuliaPixel(int xk, int yk, int layer_iter)
 	return c + layer_iter * JULIA_COLORS;
 }
 
-static void renderJulia(float scale, int palAnimOffset)
+/*static void renderJulia(float scale, int palAnimOffset)
 {
 	int x, y;
 
@@ -208,6 +216,157 @@ static void renderJulia(float scale, int palAnimOffset)
 		}
         yk-=di;
 	}
+}*/
+
+static void calcJuliaQuarter(float scale, int palAnimOffset)
+{
+	int x, y;
+
+	const int screenWidthHalf = FB_WIDTH / 2;
+	const int screenHeightHalf = FB_HEIGHT / 2;
+	const int screenWidthQuarter = screenWidthHalf;
+	const int screenHeightQuarter = screenHeightHalf / 2;
+
+	unsigned char *dst = juliaQuarterBuffer;
+
+	int di = (int)((FP_MUL << DI_BITS) / (screenHeightHalf * scale)) / 2;
+	int yk = -di * -screenHeightHalf;
+	int xl = di * -screenWidthHalf;
+
+	di *= 2;
+	for (y=0; y<screenHeightQuarter; ++y)
+	{
+		int xk = xl;
+		for (x=0; x<screenWidthQuarter; ++x)
+		{
+			const int xki = xk >> DI_BITS;
+			const int yki = yk >> DI_BITS;
+
+			*dst++ = renderJuliaPixel(xki, yki, JULIA_LAYERS);
+
+			xk+=di;
+		}
+        yk-=di;
+	}
+}
+
+static void renderJuliaQuarter(float scale, int palAnimOffset)
+{
+	int x, y;
+	static int funOffIndex = 0;
+	static int funOff = 0;
+
+	const int screenWidthHalf = FB_WIDTH / 2;
+	const int screenHeightHalf = FB_HEIGHT / 2;
+	const int screenWidthQuarter = screenWidthHalf;
+	const int screenHeightQuarter = screenHeightHalf / 2;
+
+	unsigned char *src = juliaQuarterBuffer;
+	unsigned short *vramUp = (unsigned short*)fb_pixels + funOff;
+	unsigned short *vramDown = vramUp + FB_WIDTH * (FB_HEIGHT - 1) - 2;
+	unsigned short *pal = &juliaTunnelPal[JULIA_COLORS * JULIA_LAYERS * palAnimOffset];
+
+	int di = (int)((FP_MUL << DI_BITS) / (screenHeightHalf * scale)) / 2;
+	int yk = -di * -screenHeightHalf;
+	int xl = di * -screenWidthHalf;
+
+	switch(funOffIndex) {
+		case 0:
+			funOff = 0;
+		break;
+		
+		case 1:
+			funOff = 1;
+		break;
+		
+		case 2:
+			funOff = FB_WIDTH + 1;
+		break;
+		
+		case 3:
+			funOff = FB_WIDTH;
+		break;
+	}
+	funOffIndex = (funOffIndex+1) & 3;
+
+	di *= 2;
+	for (y=0; y<screenHeightQuarter; ++y)
+	{
+		int xk = xl;
+		for (x=0; x<screenWidthQuarter; ++x)
+		{
+			/*const int xki = xk >> DI_BITS;
+			const int yki = yk >> DI_BITS;
+			const unsigned char c = renderJuliaPixel(xki, yki, JULIA_LAYERS);*/
+
+			const unsigned char c = *src++;
+			const unsigned short cc = pal[c];
+
+			*vramUp = cc;
+			//*(vramUp+1) = cc;
+			//*(vramUp+FB_WIDTH) = cc;
+			//*(vramUp+FB_WIDTH+1) = cc;
+			*vramDown = cc;
+			//*(vramDown+1) = cc;
+			//*(vramDown+FB_WIDTH) = cc;
+			//*(vramDown+FB_WIDTH+1) = cc;
+			
+			vramUp += 2;
+			vramDown -= 2;
+
+			xk+=di;
+		}
+		vramUp += FB_WIDTH;
+		vramDown -= FB_WIDTH;
+        yk-=di;
+	}
+}
+
+static void renderJulia(float scale, int palAnimOffset)
+{
+	int x, y;
+
+	const int screenWidthHalf = FB_WIDTH / 2;
+	const int screenHeightHalf = FB_HEIGHT / 2;
+
+	const int di = (int)((FP_MUL << DI_BITS) / (screenHeightHalf * scale)) / 2;
+
+	unsigned short *vramUp = (unsigned short*)fb_pixels;
+	unsigned short *vramDown = vramUp + FB_WIDTH * (FB_HEIGHT - 1) - 2;
+
+	unsigned short *pal = &juliaTunnelPal[JULIA_COLORS * JULIA_LAYERS * palAnimOffset];
+
+	int yk = -di * -screenHeightHalf;
+	int xl = di * -screenWidthHalf;
+
+	for (y=0; y<screenHeightHalf; y+=2)
+	{
+		int xk = xl;
+		for (x=0; x<FB_WIDTH; x+=2)
+		{
+			const int xki = xk >> DI_BITS;
+			const int yki = yk >> DI_BITS;
+			const unsigned char c = renderJuliaPixel(xki, yki, JULIA_LAYERS);
+			const unsigned short cc = pal[c];
+
+			*vramUp = cc;
+			*(vramUp+1) = cc;
+			*(vramUp+FB_WIDTH) = cc;
+			*(vramUp+FB_WIDTH+1) = cc;
+			*vramDown = cc;
+			*(vramDown+1) = cc;
+			*(vramDown+FB_WIDTH) = cc;
+			*(vramDown+FB_WIDTH+1) = cc;
+			
+			vramUp += 2;
+			vramDown -= 2;
+
+			xk+=2*di;
+		}
+		vramUp += FB_WIDTH;
+		vramDown -= FB_WIDTH;
+        yk-=2*di;
+	}
 }
 
 static void draw(void)
@@ -232,7 +391,10 @@ static void draw(void)
 		//yp_l[i] = 1280;
 	}
 
-	renderJulia(scale, palAnimOffset);
+	calcJuliaQuarter(scale, palAnimOffset);
+	renderJuliaQuarter(scale, palAnimOffset);
+
+	//renderJulia(scale, palAnimOffset);
 
 	swap_buffers(0);
 }

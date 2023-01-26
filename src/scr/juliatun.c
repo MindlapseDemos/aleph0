@@ -7,12 +7,13 @@
 #include "screen.h"
 
 
-#define JULIA_LAYERS 4
+#define JULIA_LAYERS 7
 #define JULIA_COLORS 16
 #define JULIA_PAL_COLORS (JULIA_COLORS * JULIA_LAYERS)
 
 #define FP_SHR 12
 #define FP_MUL (1 << FP_SHR)
+#define DI_BITS 8
 
 #define ESCAPE ((4 * FP_MUL) << FP_SHR)
 
@@ -59,6 +60,14 @@ static int init(void)
 {
 	int i,j,k=0;
 
+	float sr = 0.0f;
+	float sg = 0.5f;
+	float sb = 1.0f;
+
+	float dr = (1.0f - sr) / JULIA_LAYERS;
+	float dg = (0.6f - sg) / JULIA_LAYERS;
+	float db = (0.2f - sb) / JULIA_LAYERS;
+
 	juliaTunelPal = (unsigned short*)malloc(sizeof(unsigned short) * JULIA_PAL_COLORS);
 
 	for (j=0; j<JULIA_LAYERS; ++j) {
@@ -68,12 +77,15 @@ static int init(void)
 			if (c >= JULIA_COLORS / 2) c = JULIA_COLORS / 2 - 1;
 			c = JULIA_COLORS / 2 - c - 1;
 
-			r = (c << 2) >> j;
-			g = (c << 2) >> j;
-			b = (c << 1);
+			r = (int)((c << 2) * sr);
+			g = (int)((c << 3) * sg);
+			b = (int)((c << 2) * sb);
 
 			juliaTunelPal[k++] = (r<<11) | (g<<5) | b;
 		}
+		sr += dr;
+		sg += dg;
+		sb += db;
 	}
 
 	return 0;
@@ -107,14 +119,14 @@ static unsigned char renderJuliaPixel(int xk, int yk, int layer_iter)
 	return c + (layer_iter - 1) * JULIA_COLORS;
 }
 
-static void renderJulia()
+static void renderJulia(float scale)
 {
 	int x, y;
 
 	const int screenWidthHalf = FB_WIDTH / 2;
 	const int screenHeightHalf = FB_HEIGHT / 2;
 
-	const int di = (int)(FP_MUL / (screenHeightHalf * 1.5));
+	const int di = (int)((FP_MUL << DI_BITS) / (screenHeightHalf * scale)) / 2;
 
 	unsigned short *vramUp = (unsigned short*)fb_pixels;
 	unsigned short *vramDown = vramUp + FB_WIDTH * FB_HEIGHT - 1;
@@ -127,7 +139,9 @@ static void renderJulia()
 		int xk = xl;
 		for (x=0; x<FB_WIDTH; x++)
 		{
-			const unsigned char c = renderJuliaPixel(xk, yk, JULIA_LAYERS);
+			const int xki = xk >> DI_BITS;
+			const int yki = yk >> DI_BITS;
+			const unsigned char c = renderJuliaPixel(xki, yki, JULIA_LAYERS);
 			const unsigned short cc = juliaTunelPal[c];
 
 			*vramUp++ = cc;
@@ -143,13 +157,15 @@ static void draw(void)
 {
 	int i;
 
+	const float scale = 1.2f + (float)((time_msec & 2047) / 2048.0f) * 1.2f;
+
 	for (i=0; i<JULIA_LAYERS; ++i) {
 		const int t = i << 9;
 		xp_l[i] = (int)(sin((time_msec + t)/812.0) * FP_MUL) >> 1;
 		yp_l[i] = (int)(sin((time_msec + t)/1482.0) * FP_MUL) >> 1;
 	}
 
-	renderJulia();
+	renderJulia(scale);
 
 	swap_buffers(0);
 }

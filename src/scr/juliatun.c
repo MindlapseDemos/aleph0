@@ -7,7 +7,7 @@
 #include "screen.h"
 
 
-#define JULIA_LAYERS 7
+#define JULIA_LAYERS 8
 #define JULIA_COLORS 16
 #define JULIA_PAL_COLORS (JULIA_COLORS * JULIA_LAYERS)
 
@@ -22,13 +22,21 @@
 						y1 = ((x0 * y0)>>(FP_SHR-1)) + yp; \
 						mj2 = x1 * x1 + y1 * y1; \
 						x0 = x1; y0 = y1; c++; \
+						if (mj2 > ESCAPE) goto endr1;
+
+#define FRAC_ITER_BLOCX \
+						x1 = ((x0 * x0 - y0 * y0)>>FP_SHR) + xp; \
+						y1 = ((x0 * y0)>>(FP_SHR-1)) + yp; \
+						mj2 = x1 * x1 + y1 * y1; \
+						x0 = x1; y0 = y1; c++; \
 						if (mj2 > ESCAPE) goto end1;
 
-#define FRAC_ITER_TIMES_2 FRAC_ITER_BLOCK FRAC_ITER_BLOCK
+
+#define FRAC_ITER_TIMES_2 FRAC_ITER_BLOCX FRAC_ITER_BLOCX
 #define FRAC_ITER_TIMES_4 FRAC_ITER_TIMES_2 FRAC_ITER_TIMES_2
 #define FRAC_ITER_TIMES_8 FRAC_ITER_TIMES_4 FRAC_ITER_TIMES_4
 #define FRAC_ITER_TIMES_16 FRAC_ITER_TIMES_8 FRAC_ITER_TIMES_8
-
+#define FRAC_ITER_TIMES_32 FRAC_ITER_TIMES_16 FRAC_ITER_TIMES_16
 
 static int init(void);
 static void destroy(void);
@@ -44,6 +52,7 @@ static struct screen scr = {
 	draw
 };
 
+static unsigned long startingTime;
 
 static unsigned short *juliaTunelPal;
 
@@ -97,9 +106,10 @@ static void destroy(void)
 
 static void start(long trans_time)
 {
+	startingTime = time_msec;
 }
 
-static unsigned char renderJuliaPixel(int xk, int yk, int layer_iter)
+/*static unsigned char renderJuliaPixelRec(int xk, int yk, int layer_iter)
 {
 	int x1,y1,mj2;
 
@@ -112,11 +122,45 @@ static unsigned char renderJuliaPixel(int xk, int yk, int layer_iter)
 
 	FRAC_ITER_TIMES_16
 
-	end1:
+	endr1:
 	
 	if (c>=15 && --layer_iter != 0) return renderJuliaPixel(xk<<1, yk<<1, layer_iter);
 
 	return c + (layer_iter - 1) * JULIA_COLORS;
+}*/
+
+static unsigned char renderJuliaPixel(int xk, int yk, int layer_iter)
+{
+	unsigned char c;
+	int x0, y0;
+	int x1, y1, mj2;
+	int xp, yp;
+
+	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk; y0 = yk;
+	FRAC_ITER_TIMES_16
+
+	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<1; y0 = yk<<1;
+	FRAC_ITER_TIMES_16
+
+	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<2; y0 = yk<<2;
+	FRAC_ITER_TIMES_16
+
+	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<3; y0 = yk<<3;
+	FRAC_ITER_TIMES_16
+
+	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<4; y0 = yk<<4;
+	FRAC_ITER_TIMES_8
+
+	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<5; y0 = yk<<5;
+	FRAC_ITER_TIMES_4
+
+	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<6; y0 = yk<<6;
+	FRAC_ITER_TIMES_2
+
+	return 0;
+	end1:
+	
+	return c + layer_iter * JULIA_COLORS;
 }
 
 static void renderJulia(float scale)
@@ -152,17 +196,24 @@ static void renderJulia(float scale)
         yk-=di;
 	}
 }
-
+//13
 static void draw(void)
 {
 	int i;
 
-	const float scale = 1.2f + (float)((time_msec & 2047) / 2048.0f) * 1.2f;
+	//const int t = 2500;
+	//const int layerAdv = 0;
+
+	const int t = time_msec - startingTime;
+	const int layerAdv = t >> 11;
+
+	const float tr = 1.0f;
+	const float scale = tr + (float)((t & 2047) / 2047.0f) * tr;
 
 	for (i=0; i<JULIA_LAYERS; ++i) {
-		const int t = i << 9;
-		xp_l[i] = (int)(sin((time_msec + t)/812.0) * FP_MUL) / 3;
-		yp_l[i] = (int)(sin((time_msec + t)/1482.0) * FP_MUL) / 2;
+		const int ti = (i - layerAdv) << 9;
+		xp_l[i] = (int)(sin((t + ti)/812.0) * FP_MUL) / 3;
+		yp_l[i] = (int)(sin((t + ti)/1482.0) * FP_MUL) / 2;
 	}
 
 	renderJulia(scale);

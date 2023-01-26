@@ -45,7 +45,6 @@
 #define FRAC_ITER_TIMES_4 FRAC_ITER_TIMES_2 FRAC_ITER_TIMES_2
 #define FRAC_ITER_TIMES_8 FRAC_ITER_TIMES_4 FRAC_ITER_TIMES_4
 #define FRAC_ITER_TIMES_16 FRAC_ITER_TIMES_8 FRAC_ITER_TIMES_8
-#define FRAC_ITER_TIMES_32 FRAC_ITER_TIMES_16 FRAC_ITER_TIMES_16
 
 static int init(void);
 static void destroy(void);
@@ -64,6 +63,7 @@ static struct screen scr = {
 static unsigned long startingTime;
 
 static unsigned short *juliaTunnelPal;
+static unsigned int *juliaTunnelPal32;
 
 static int xp_l[JULIA_LAYERS];
 static int yp_l[JULIA_LAYERS];
@@ -92,6 +92,7 @@ static int init(void)
 	memset(juliaQuarterBuffer, 0, juliaQuarterSize);
 
 	juliaTunnelPal = (unsigned short*)malloc(sizeof(unsigned short) * JULIA_PAL_COLORS);
+	juliaTunnelPal32 = (unsigned int*)malloc(sizeof(unsigned int) * JULIA_PAL_COLORS);
 
 	for (k=0; k<JULIA_PAL_TRANSITIONS; ++k) {
 		float d = (float)k / JULIA_PAL_TRANSITIONS;
@@ -109,7 +110,10 @@ static int init(void)
 				g = (int)((c << 3) * cg);
 				b = (int)((c << 2) * cb);
 
-				juliaTunnelPal[n++] = (r<<11) | (g<<5) | b;
+				c = (r<<11) | (g<<5) | b;
+				juliaTunnelPal[n] = c;
+				juliaTunnelPal32[n] = (c << 16) | c;
+				++n;
 			}
 			cr += dr;
 			cg += dg;
@@ -123,6 +127,7 @@ static int init(void)
 static void destroy(void)
 {
 	free(juliaTunnelPal);
+	free(juliaTunnelPal32);
 	free(juliaQuarterBuffer);
 }
 
@@ -251,7 +256,7 @@ static void calcJuliaQuarter(float scale, int palAnimOffset)
 	}
 }
 
-static void renderJuliaQuarter(float scale, int palAnimOffset)
+/*static void renderJuliaQuarter(float scale, int palAnimOffset)
 {
 	int x, y;
 
@@ -315,51 +320,59 @@ static void renderJuliaQuarter(float scale, int palAnimOffset)
 		vramDown -= FB_WIDTH;
         yk-=2*di;
 	}
-}
+}*/
 
-static void renderJulia(float scale, int palAnimOffset)
+static void renderJuliaQuarter(float scale, int palAnimOffset)
 {
 	int x, y;
 
 	const int screenWidthHalf = FB_WIDTH / 2;
 	const int screenHeightHalf = FB_HEIGHT / 2;
 
-	const int di = (int)((FP_MUL << DI_BITS) / (screenHeightHalf * scale)) / 2;
-
+	unsigned char *src = juliaQuarterBuffer;
 	unsigned short *vramUp = (unsigned short*)fb_pixels;
 	unsigned short *vramDown = vramUp + FB_WIDTH * (FB_HEIGHT - 1) - 2;
 
-	unsigned short *pal = &juliaTunnelPal[JULIA_COLORS * JULIA_LAYERS * palAnimOffset];
+	unsigned int *vramUp32 = (unsigned int*)vramUp;
+	unsigned int *vramDown32 = (unsigned int*)vramDown;
+	unsigned int *pal32 = &juliaTunnelPal32[JULIA_COLORS * JULIA_LAYERS * palAnimOffset];
 
+	const int di = (int)((FP_MUL << DI_BITS) / (screenHeightHalf * scale)) / 2;
+	const int xl = di * -screenWidthHalf;
 	int yk = -di * -screenHeightHalf;
-	int xl = di * -screenWidthHalf;
 
-	for (y=0; y<screenHeightHalf; y+=2)
+	for (y=0; y<JULIA_QUARTER_HEIGHT/2; ++y)
 	{
 		int xk = xl;
-		for (x=0; x<FB_WIDTH; x+=2)
+		for (x=0; x<JULIA_QUARTER_WIDTH; ++x)
 		{
-			const int xki = xk >> DI_BITS;
-			const int yki = yk >> DI_BITS;
-			const unsigned char c = renderJuliaPixel(xki, yki, JULIA_LAYERS);
-			const unsigned short cc = pal[c];
+			unsigned short *src16 = (unsigned short*)src;
+			const unsigned short c0 = *src16;
+			const unsigned short c1 = *(src16 + (JULIA_QUARTER_WIDTH / 2));
 
-			*vramUp = cc;
-			*(vramUp+1) = cc;
-			*(vramUp+FB_WIDTH) = cc;
-			*(vramUp+FB_WIDTH+1) = cc;
-			*vramDown = cc;
-			*(vramDown+1) = cc;
-			*(vramDown+FB_WIDTH) = cc;
-			*(vramDown+FB_WIDTH+1) = cc;
-			
-			vramUp += 2;
-			vramDown -= 2;
+			unsigned int cc = pal32[c0 & 255];
+			*vramUp32 = cc;
+			*(vramDown32+FB_WIDTH/2) = cc;
+			if (c0==c1) {
+				*(vramUp32+FB_WIDTH/2) = cc;
+				*vramDown32 = cc;
+			} else {
+				const int xki = xk >> DI_BITS;
+				const int yki1 = (yk-di) >> DI_BITS;
+
+				cc = pal32[renderJuliaPixel(xki, yki1, JULIA_LAYERS)];
+				*(vramUp32+FB_WIDTH/2) = cc;
+				*(vramDown32) = cc;
+			}
+
+			src++;
+			vramUp32++;
+			vramDown32--;
 
 			xk+=2*di;
 		}
-		vramUp += FB_WIDTH;
-		vramDown -= FB_WIDTH;
+		vramUp32 += FB_WIDTH/2;
+		vramDown32 -= FB_WIDTH/2;
         yk-=2*di;
 	}
 }
@@ -368,7 +381,7 @@ static void draw(void)
 {
 	int i;
 
-	//const int t = 2500;
+	//const int t = 2200;
 	//const int layerAdv = 0;
 
 	const int t = time_msec - startingTime;

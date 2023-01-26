@@ -68,9 +68,9 @@ static int init(void)
 			if (c >= JULIA_COLORS / 2) c = JULIA_COLORS / 2 - 1;
 			c = JULIA_COLORS / 2 - c - 1;
 
-			r = c << 2;
-			g = c << 2;
-			b = c << 1;
+			r = (c << 2) >> j;
+			g = (c << 2) >> j;
+			b = (c << 1);
 
 			juliaTunelPal[k++] = (r<<11) | (g<<5) | b;
 		}
@@ -104,7 +104,7 @@ static unsigned char renderJuliaPixel(int xk, int yk, int layer_iter)
 	
 	if (c>=15 && --layer_iter != 0) return renderJuliaPixel(xk<<1, yk<<1, layer_iter);
 
-	return c;
+	return c + (layer_iter - 1) * JULIA_COLORS;
 }
 
 static void renderJulia()

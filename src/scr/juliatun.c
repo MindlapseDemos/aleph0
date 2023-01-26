@@ -161,8 +161,8 @@ static void draw(void)
 
 	for (i=0; i<JULIA_LAYERS; ++i) {
 		const int t = i << 9;
-		xp_l[i] = (int)(sin((time_msec + t)/812.0) * FP_MUL) >> 1;
-		yp_l[i] = (int)(sin((time_msec + t)/1482.0) * FP_MUL) >> 1;
+		xp_l[i] = (int)(sin((time_msec + t)/812.0) * FP_MUL) / 3;
+		yp_l[i] = (int)(sin((time_msec + t)/1482.0) * FP_MUL) / 2;
 	}
 
 	renderJulia(scale);

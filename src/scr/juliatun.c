@@ -17,6 +17,9 @@
 #define JULIA_ANIM_REPEAT_BITS 11
 #define JULIA_ANIM_REPEAT (1 << JULIA_ANIM_REPEAT_BITS)
 
+#define JULIA_QUARTER_WIDTH (FB_WIDTH / 2)
+#define JULIA_QUARTER_HEIGHT (FB_HEIGHT / 2)
+
 #define FP_SHR 12
 #define FP_MUL (1 << FP_SHR)
 #define DI_BITS 8
@@ -84,7 +87,7 @@ static int init(void)
 	const float dg = (0.6f - sg) / JULIA_LAYERS;
 	const float db = (0.2f - sb) / JULIA_LAYERS;
 
-	const int juliaQuarterSize = (FB_WIDTH / 2) * (FB_HEIGHT / 2);
+	const int juliaQuarterSize = JULIA_QUARTER_WIDTH * ((JULIA_QUARTER_HEIGHT / 2) + 1);
 	juliaQuarterBuffer = (unsigned char*)malloc(juliaQuarterSize);
 	memset(juliaQuarterBuffer, 0, juliaQuarterSize);
 
@@ -224,20 +227,18 @@ static void calcJuliaQuarter(float scale, int palAnimOffset)
 
 	const int screenWidthHalf = FB_WIDTH / 2;
 	const int screenHeightHalf = FB_HEIGHT / 2;
-	const int screenWidthQuarter = screenWidthHalf;
-	const int screenHeightQuarter = screenHeightHalf / 2;
 
 	unsigned char *dst = juliaQuarterBuffer;
 
 	int di = (int)((FP_MUL << DI_BITS) / (screenHeightHalf * scale)) / 2;
+	const int xl = di * -screenWidthHalf;
 	int yk = -di * -screenHeightHalf;
-	int xl = di * -screenWidthHalf;
 
 	di *= 2;
-	for (y=0; y<screenHeightQuarter; ++y)
+	for (y=0; y<JULIA_QUARTER_HEIGHT/2+1; ++y)
 	{
 		int xk = xl;
-		for (x=0; x<screenWidthQuarter; ++x)
+		for (x=0; x<JULIA_QUARTER_WIDTH; ++x)
 		{
 			const int xki = xk >> DI_BITS;
 			const int yki = yk >> DI_BITS;
@@ -253,72 +254,66 @@ static void calcJuliaQuarter(float scale, int palAnimOffset)
 static void renderJuliaQuarter(float scale, int palAnimOffset)
 {
 	int x, y;
-	static int funOffIndex = 0;
-	static int funOff = 0;
 
 	const int screenWidthHalf = FB_WIDTH / 2;
 	const int screenHeightHalf = FB_HEIGHT / 2;
-	const int screenWidthQuarter = screenWidthHalf;
-	const int screenHeightQuarter = screenHeightHalf / 2;
 
 	unsigned char *src = juliaQuarterBuffer;
-	unsigned short *vramUp = (unsigned short*)fb_pixels + funOff;
+	unsigned short *vramUp = (unsigned short*)fb_pixels;
 	unsigned short *vramDown = vramUp + FB_WIDTH * (FB_HEIGHT - 1) - 2;
 	unsigned short *pal = &juliaTunnelPal[JULIA_COLORS * JULIA_LAYERS * palAnimOffset];
 
-	int di = (int)((FP_MUL << DI_BITS) / (screenHeightHalf * scale)) / 2;
+	const int di = (int)((FP_MUL << DI_BITS) / (screenHeightHalf * scale)) / 2;
+	const int xl = di * -screenWidthHalf;
 	int yk = -di * -screenHeightHalf;
-	int xl = di * -screenWidthHalf;
 
-	switch(funOffIndex) {
-		case 0:
-			funOff = 0;
-		break;
-		
-		case 1:
-			funOff = 1;
-		break;
-		
-		case 2:
-			funOff = FB_WIDTH + 1;
-		break;
-		
-		case 3:
-			funOff = FB_WIDTH;
-		break;
-	}
-	funOffIndex = (funOffIndex+1) & 3;
-
-	di *= 2;
-	for (y=0; y<screenHeightQuarter; ++y)
+	for (y=0; y<JULIA_QUARTER_HEIGHT/2; ++y)
 	{
 		int xk = xl;
-		for (x=0; x<screenWidthQuarter; ++x)
+		for (x=0; x<JULIA_QUARTER_WIDTH; ++x)
 		{
-			/*const int xki = xk >> DI_BITS;
-			const int yki = yk >> DI_BITS;
-			const unsigned char c = renderJuliaPixel(xki, yki, JULIA_LAYERS);*/
+			unsigned short *src16 = (unsigned short*)src;
+			const unsigned short c0 = *src16;
+			const unsigned short c1 = *(src16 + (JULIA_QUARTER_WIDTH / 2));
 
-			const unsigned char c = *src++;
-			const unsigned short cc = pal[c];
-
+			unsigned short cc = pal[c0 & 255];
 			*vramUp = cc;
-			//*(vramUp+1) = cc;
-			//*(vramUp+FB_WIDTH) = cc;
-			//*(vramUp+FB_WIDTH+1) = cc;
-			*vramDown = cc;
-			//*(vramDown+1) = cc;
-			//*(vramDown+FB_WIDTH) = cc;
-			//*(vramDown+FB_WIDTH+1) = cc;
-			
+			*(vramDown+FB_WIDTH+1) = cc;
+			if (c0==c1) {
+				*(vramUp+1) = cc;
+				*(vramUp+FB_WIDTH) = cc;
+				*(vramUp+FB_WIDTH+1) = cc;
+				*vramDown = cc;
+				*(vramDown+1) = cc;
+				*(vramDown+FB_WIDTH) = cc;
+			} else {
+				const int xki = xk >> DI_BITS;
+				const int xki1 = (xk+di) >> DI_BITS;
+				const int yki = yk >> DI_BITS;
+				const int yki1 = (yk-di) >> DI_BITS;
+
+				cc = pal[renderJuliaPixel(xki1, yki, JULIA_LAYERS)];
+				*(vramUp+1) = cc;
+				*(vramDown+FB_WIDTH) = cc;
+
+				cc = pal[renderJuliaPixel(xki, yki1, JULIA_LAYERS)];
+				*(vramUp+FB_WIDTH) = cc;
+				*(vramDown+1) = cc;
+
+				cc = pal[renderJuliaPixel(xki1, yki1, JULIA_LAYERS)];
+				*(vramUp+FB_WIDTH+1) = cc;
+				*vramDown = cc;
+			}
+
+			src++;
 			vramUp += 2;
 			vramDown -= 2;
 
-			xk+=di;
+			xk+=2*di;
 		}
 		vramUp += FB_WIDTH;
 		vramDown -= FB_WIDTH;
-        yk-=di;
+        yk-=2*di;
 	}
 }
 

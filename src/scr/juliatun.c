@@ -17,8 +17,8 @@
 #define ESCAPE ((4 * FP_MUL) << FP_SHR)
 
 #define FRAC_ITER_BLOCK \
-						x1 = ((x0 * x0 - y0 * y0)>>FP_SHR) + xp0; \
-						y1 = ((x0 * y0)>>(FP_SHR-1)) + yp0; \
+						x1 = ((x0 * x0 - y0 * y0)>>FP_SHR) + xp; \
+						y1 = ((x0 * y0)>>(FP_SHR-1)) + yp; \
 						mj2 = x1 * x1 + y1 * y1; \
 						x0 = x1; y0 = y1; c++; \
 						if (mj2 > ESCAPE) goto end1;
@@ -46,6 +46,8 @@ static struct screen scr = {
 
 static unsigned short *juliaTunelPal;
 
+static int xp_l[JULIA_LAYERS];
+static int yp_l[JULIA_LAYERS];
 
 
 struct screen *juliatunnel_screen(void)
@@ -85,7 +87,7 @@ static void start(long trans_time)
 {
 }
 
-static unsigned char renderJuliaPixel(int xk, int yk, int xp0, int yp0, int layer_iter)
+static unsigned char renderJuliaPixel(int xk, int yk, int layer_iter)
 {
 	int x1,y1,mj2;
 
@@ -93,16 +95,19 @@ static unsigned char renderJuliaPixel(int xk, int yk, int xp0, int yp0, int laye
 	int y0 = yk;
 	unsigned char c = 255;
 
+	const int xp = xp_l[layer_iter-1];
+	const int yp = yp_l[layer_iter-1];
+
 	FRAC_ITER_TIMES_16
 
 	end1:
 	
-	if (c>=15 && --layer_iter != 0) return renderJuliaPixel(xk<<1, yk<<1, xp0, yp0, layer_iter);
+	if (c>=15 && --layer_iter != 0) return renderJuliaPixel(xk<<1, yk<<1, layer_iter);
 
 	return c;
 }
 
-static void renderJulia(int xp, int yp)
+static void renderJulia()
 {
 	int x, y;
 
@@ -117,15 +122,12 @@ static void renderJulia(int xp, int yp)
 	int yk = -di * -screenHeightHalf;
 	int xl = di * -screenWidthHalf;
 
-	const int xp0 = xp;
-	const int yp0 = yp;
-
 	for (y=0; y<screenHeightHalf; y++)
 	{
 		int xk = xl;
 		for (x=0; x<FB_WIDTH; x++)
 		{
-			const unsigned char c = renderJuliaPixel(xk, yk, xp0, yp0, JULIA_LAYERS);
+			const unsigned char c = renderJuliaPixel(xk, yk, JULIA_LAYERS);
 			const unsigned short cc = juliaTunelPal[c];
 
 			*vramUp++ = cc;
@@ -139,13 +141,15 @@ static void renderJulia(int xp, int yp)
 
 static void draw(void)
 {
-	int x, y;
-	unsigned short c;
+	int i;
 
-	const int xp = (int)(sin(time_msec/812.0) * FP_MUL) >> 1;
-	const int yp = (int)(sin(time_msec/1482.0) * FP_MUL) >> 1;
+	for (i=0; i<JULIA_LAYERS; ++i) {
+		const int t = i << 9;
+		xp_l[i] = (int)(sin((time_msec + t)/812.0) * FP_MUL) >> 1;
+		yp_l[i] = (int)(sin((time_msec + t)/1482.0) * FP_MUL) >> 1;
+	}
 
-	renderJulia(xp,yp);
+	renderJulia();
 
 	swap_buffers(0);
 }

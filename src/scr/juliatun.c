@@ -214,22 +214,22 @@ static void draw(void)
 {
 	int i;
 
-	//const int t = 3500;
+	//const int t = 2500;
 	//const int layerAdv = 0;
 
 	const int t = time_msec - startingTime;
 	const int layerAdv = t >> JULIA_ANIM_REPEAT_BITS;
 	const int palAnimOffset = (t >> (JULIA_ANIM_REPEAT_BITS - JULIA_PAL_TRANSITION_BITS)) & (JULIA_PAL_TRANSITIONS - 1);
 
-	const float tr = 1.0f;
-	const float scale = tr + (float)((t & (JULIA_ANIM_REPEAT-1)) / (float)(JULIA_ANIM_REPEAT-1)) * tr;
+	const float ts = (float)((t & (JULIA_ANIM_REPEAT-1)) / (float)(JULIA_ANIM_REPEAT-1));
+	const float scale = 1.0f + pow(ts, 1.15);	// hmm
 
 	for (i=0; i<JULIA_LAYERS; ++i) {
 		const int ti = (i - layerAdv) << 9;
-		//xp_l[i] = (int)(sin((t + ti)/812.0) * FP_MUL) / 3;
-		//yp_l[i] = (int)(sin((t + ti)/1482.0) * FP_MUL) / 2;
-		xp_l[i] = 1280;
-		yp_l[i] = 1280;
+		xp_l[i] = (int)(sin((t + ti)/812.0) * FP_MUL) / 3;
+		yp_l[i] = (int)(sin((t + ti)/1482.0) * FP_MUL) / 2;
+		//xp_l[i] = 1280;
+		//yp_l[i] = 1280;
 	}
 
 	renderJulia(scale, palAnimOffset);

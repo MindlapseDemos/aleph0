@@ -7,8 +7,22 @@
 #include "demo.h"
 #include "screen.h"
 
-#define FX_WIDTH (FB_WIDTH / 2)
+
+// Select half res (160x200) instead of full res (320x200)
+//#define HALF_WIDTH_RES
+
+#ifdef HALF_WIDTH_RES
+	#define FX_WIDTH (FB_WIDTH / 2)
+#else
+	#define FX_WIDTH FB_WIDTH
+#endif
 #define FX_HEIGHT FB_HEIGHT
+
+// Hack values to fix the nonmatching line in the middle
+#define DI_OFF_X 1
+#define DI_OFF_Y -1
+#define DI_SHIFT_X 1
+#define DI_SHIFT_Y 1
 
 #define JULIA_LAYERS 8
 #define JULIA_COLORS 16
@@ -200,8 +214,8 @@ static void calcJuliaQuarter(float scale, int palAnimOffset)
 	unsigned char *dst = juliaQuarterBuffer;
 
 	int di = (int)((FP_MUL << DI_BITS) / (screenHeightHalf * scale)) / 2;
-	const int xl = di * -screenWidthHalf;
-	int yk = -di * -screenHeightHalf;
+	const int xl = di * -screenWidthHalf + ((DI_OFF_X * di) >> DI_SHIFT_X);
+	int yk = -di * -screenHeightHalf + ((DI_OFF_Y * di) >> DI_SHIFT_Y);
 
 	const int di1 = 2 * di;
 	const int di2 = 2 * di1; // skip every other to prepare for a 4x2 instead of 2x2
@@ -243,8 +257,8 @@ static void calcJuliaQuarter(float scale, int palAnimOffset)
 	unsigned char *dst = juliaQuarterBuffer;
 
 	int di = (int)((FP_MUL << DI_BITS) / (screenHeightHalf * scale)) / 2;
-	const int xl = di * -screenWidthHalf;
-	int yk = -di * -screenHeightHalf;
+	const int xl = di * -screenWidthHalf + ((DI_OFF_X * di) >> DI_SHIFT_X);
+	int yk = -di * -screenHeightHalf + ((DI_OFF_Y * di) >> DI_SHIFT_Y);
 
 	di *= 2;
 	for (y=0; y<JULIA_QUARTER_HEIGHT/2; ++y)
@@ -265,6 +279,9 @@ static void calcJuliaQuarter(float scale, int palAnimOffset)
 }
 #endif
 
+
+#if FX_WIDTH==(FB_WIDTH / 2)
+// 160x200 version
 static void renderJuliaQuarter(float scale, int palAnimOffset)
 {
 	int x, y;
@@ -281,8 +298,8 @@ static void renderJuliaQuarter(float scale, int palAnimOffset)
 	unsigned int *pal32 = &juliaTunnelPal32[JULIA_COLORS * JULIA_LAYERS * palAnimOffset];
 
 	const int di = (int)((FP_MUL << DI_BITS) / (screenHeightHalf * scale)) / 2;
-	const int xl = di * -screenWidthHalf;
-	int yk = -di * -screenHeightHalf;
+	const int xl = di * -screenWidthHalf + ((DI_OFF_X * di) >> DI_SHIFT_X);
+	int yk = -di * -screenHeightHalf + ((DI_OFF_Y * di) >> DI_SHIFT_Y);
 
 	for (y=0; y<JULIA_QUARTER_HEIGHT/2-1; ++y)
 	{
@@ -354,6 +371,96 @@ static void renderJuliaQuarter(float scale, int palAnimOffset)
         yk-=2*di;
 	}
 }
+#else
+// 320x200 version
+static void renderJuliaQuarter(float scale, int palAnimOffset)
+{
+	int x, y;
+
+	const int screenWidthHalf = FX_WIDTH / 2;
+	const int screenHeightHalf = FX_HEIGHT / 2;
+
+	unsigned char *src = juliaQuarterBuffer;
+
+	unsigned short *vramUp = (unsigned short*)fb_pixels;
+	unsigned short *vramDown = vramUp + FB_WIDTH * (FB_HEIGHT - 1) - 2;
+	unsigned short *pal = &juliaTunnelPal[JULIA_COLORS * JULIA_LAYERS * palAnimOffset];
+
+	const int di = (int)((FP_MUL << DI_BITS) / (screenHeightHalf * scale)) / 2;
+	const int xl = di * -screenWidthHalf + ((DI_OFF_X * di) >> DI_SHIFT_X);
+	int yk = -di * -screenHeightHalf + ((DI_OFF_Y * di) >> DI_SHIFT_Y);
+
+	for (y=0; y<JULIA_QUARTER_HEIGHT/2-1; ++y)
+	{
+		int xk = xl;
+		for (x=0; x<JULIA_QUARTER_WIDTH-2; ++x)
+		{
+			// Comparing the two nearby char julia values on x, ignoring the bottom two, works also without visible artifacts, and is quite faster than all four.
+			// So the final version, comparing unsigned char c0 and c1 alone, even if not entirely accurate does give the effect without visible artifacts and quiter better speed.
+			const unsigned char c0 = *src;
+			const unsigned char c1 = *(src + 1);
+			//const unsigned char c2 = *(src + JULIA_QUARTER_WIDTH);
+			//const unsigned char c3 = *(src + JULIA_QUARTER_WIDTH + 1);
+
+			// NOTE: It just happens luckily that the format from julia calc is low 4bits = iterations, 4bits high = layer, and JULIA_COLORS = 16 right now
+			// So it fits perfectly with how I store the palete per 16 colors per whatever layers, so the extra step is not necessary. So directly saying pal32[calcJuliaPixel] is fine, without breaking the bits.
+			// But in case someone changes JULIA_COLORS I added extra code commented out, the two lines below and also 3 times in the 1x1 extra step should be uncommented and the 3rd line after commented
+			// Slight but not significant increase in performance. I also like it as it is right now.
+
+			//const unsigned char col = (c0 >> 4) * JULIA_COLORS + (c0 & 15);
+			//unsigned int cc = pal32[col];
+			unsigned short cc = pal[c0];	// it fits the 4bit layer - 4bit iteration value
+
+			*vramUp = cc;
+			*(vramDown+FX_WIDTH + 1) = cc;
+			if (c0==c1) {
+			//if (c0==c1 && c0==c2 && c0==c3) {
+				*(vramUp+1) = cc;
+				*(vramUp+FX_WIDTH) = cc;
+				*(vramUp+FX_WIDTH+1) = cc;
+				*vramDown = cc;
+				*(vramDown+1) = cc;
+				*(vramDown+FX_WIDTH) = cc;
+			} else {
+				const int xki = xk >> DI_BITS;
+				const int xki1 = (xk+di) >> DI_BITS;
+				const int yki = yk >> DI_BITS;
+				const int yki1 = (yk-di) >> DI_BITS;
+
+				const int startingLayer = c0 >> 4;
+
+				//short cj = calcJuliaPixel(xki1, yki, startingLayer);
+				//cc = pal[(cj >> 4) * JULIA_COLORS + (cj & 15)];
+				cc = pal[calcJuliaPixel(xki1, yki, startingLayer)];	// same
+				*(vramUp+1) = cc;
+				*(vramDown+FX_WIDTH) = cc;
+
+				//short = calcJuliaPixel(xki, yki1, startingLayer);
+				//cc = pal[(cj >> 4) * JULIA_COLORS + (cj & 15)];
+				cc = pal[calcJuliaPixel(xki, yki1, startingLayer)];	// ditto
+				*(vramUp+FX_WIDTH) = cc;
+				*(vramDown+1) = cc;
+
+				//short = calcJuliaPixel(xki1, yki1, startingLayer);
+				//cc = pal[(cj >> 4) * JULIA_COLORS + (cj & 15)];
+				cc = pal[calcJuliaPixel(xki1, yki1, startingLayer)];// etc
+				*(vramUp+FX_WIDTH+1) = cc;
+				*vramDown = cc;
+			}
+
+			src++;
+			vramUp += 2;
+			vramDown -= 2;
+
+			xk+=2*di;
+		}
+		src+=2;
+		vramUp += FX_WIDTH;
+		vramDown -= FX_WIDTH;
+        yk-=2*di;
+	}
+}
+#endif
 
 static void draw(void)
 {

@@ -7,6 +7,8 @@
 #include "demo.h"
 #include "screen.h"
 
+#define FX_WIDTH (FB_WIDTH / 2)
+#define FX_HEIGHT FB_HEIGHT
 
 #define JULIA_LAYERS 8
 #define JULIA_COLORS 16
@@ -17,8 +19,8 @@
 #define JULIA_ANIM_REPEAT_BITS 11
 #define JULIA_ANIM_REPEAT (1 << JULIA_ANIM_REPEAT_BITS)
 
-#define JULIA_QUARTER_WIDTH (FB_WIDTH / 2)
-#define JULIA_QUARTER_HEIGHT (FB_HEIGHT / 2)
+#define JULIA_QUARTER_WIDTH (FX_WIDTH / 2)
+#define JULIA_QUARTER_HEIGHT (FX_HEIGHT / 2)
 
 #define FP_SHR 12
 #define FP_MUL (1 << FP_SHR)
@@ -198,13 +200,13 @@ static unsigned char renderJuliaPixel(int xk, int yk, int layer_iter)
 {
 	int x, y;
 
-	const int screenWidthHalf = FB_WIDTH / 2;
-	const int screenHeightHalf = FB_HEIGHT / 2;
+	const int screenWidthHalf = FX_WIDTH / 2;
+	const int screenHeightHalf = FX_HEIGHT / 2;
 
 	const int di = (int)((FP_MUL << DI_BITS) / (screenHeightHalf * scale)) / 2;
 
 	unsigned short *vramUp = (unsigned short*)fb_pixels;
-	unsigned short *vramDown = vramUp + FB_WIDTH * FB_HEIGHT - 1;
+	unsigned short *vramDown = vramUp + FX_WIDTH * FX_HEIGHT - 1;
 
 	unsigned short *pal = &juliaTunnelPal[JULIA_COLORS * JULIA_LAYERS * palAnimOffset];
 
@@ -214,7 +216,7 @@ static unsigned char renderJuliaPixel(int xk, int yk, int layer_iter)
 	for (y=0; y<screenHeightHalf; y++)
 	{
 		int xk = xl;
-		for (x=0; x<FB_WIDTH; x++)
+		for (x=0; x<FX_WIDTH; x++)
 		{
 			const int xki = xk >> DI_BITS;
 			const int yki = yk >> DI_BITS;
@@ -234,8 +236,8 @@ static void calcJuliaQuarter(float scale, int palAnimOffset)
 {
 	int x, y;
 
-	const int screenWidthHalf = FB_WIDTH / 2;
-	const int screenHeightHalf = FB_HEIGHT / 2;
+	const int screenWidthHalf = FX_WIDTH / 2;
+	const int screenHeightHalf = FX_HEIGHT / 2;
 
 	unsigned char *dst = juliaQuarterBuffer;
 
@@ -264,12 +266,12 @@ static void calcJuliaQuarter(float scale, int palAnimOffset)
 {
 	int x, y;
 
-	const int screenWidthHalf = FB_WIDTH / 2;
-	const int screenHeightHalf = FB_HEIGHT / 2;
+	const int screenWidthHalf = FX_WIDTH / 2;
+	const int screenHeightHalf = FX_HEIGHT / 2;
 
 	unsigned char *src = juliaQuarterBuffer;
 	unsigned short *vramUp = (unsigned short*)fb_pixels;
-	unsigned short *vramDown = vramUp + FB_WIDTH * (FB_HEIGHT - 1) - 2;
+	unsigned short *vramDown = vramUp + FX_WIDTH * (FX_HEIGHT - 1) - 2;
 	unsigned short *pal = &juliaTunnelPal[JULIA_COLORS * JULIA_LAYERS * palAnimOffset];
 
 	const int di = (int)((FP_MUL << DI_BITS) / (screenHeightHalf * scale)) / 2;
@@ -287,14 +289,14 @@ static void calcJuliaQuarter(float scale, int palAnimOffset)
 
 			unsigned short cc = pal[c0 & 255];
 			*vramUp = cc;
-			*(vramDown+FB_WIDTH+1) = cc;
+			*(vramDown+FX_WIDTH+1) = cc;
 			if (c0==c1) {
 				*(vramUp+1) = cc;
-				*(vramUp+FB_WIDTH) = cc;
-				*(vramUp+FB_WIDTH+1) = cc;
+				*(vramUp+FX_WIDTH) = cc;
+				*(vramUp+FX_WIDTH+1) = cc;
 				*vramDown = cc;
 				*(vramDown+1) = cc;
-				*(vramDown+FB_WIDTH) = cc;
+				*(vramDown+FX_WIDTH) = cc;
 			} else {
 				const int xki = xk >> DI_BITS;
 				const int xki1 = (xk+di) >> DI_BITS;
@@ -303,14 +305,14 @@ static void calcJuliaQuarter(float scale, int palAnimOffset)
 
 				cc = pal[renderJuliaPixel(xki1, yki, JULIA_LAYERS)];
 				*(vramUp+1) = cc;
-				*(vramDown+FB_WIDTH) = cc;
+				*(vramDown+FX_WIDTH) = cc;
 
 				cc = pal[renderJuliaPixel(xki, yki1, JULIA_LAYERS)];
-				*(vramUp+FB_WIDTH) = cc;
+				*(vramUp+FX_WIDTH) = cc;
 				*(vramDown+1) = cc;
 
 				cc = pal[renderJuliaPixel(xki1, yki1, JULIA_LAYERS)];
-				*(vramUp+FB_WIDTH+1) = cc;
+				*(vramUp+FX_WIDTH+1) = cc;
 				*vramDown = cc;
 			}
 
@@ -320,8 +322,8 @@ static void calcJuliaQuarter(float scale, int palAnimOffset)
 
 			xk+=2*di;
 		}
-		vramUp += FB_WIDTH;
-		vramDown -= FB_WIDTH;
+		vramUp += FX_WIDTH;
+		vramDown -= FX_WIDTH;
         yk-=2*di;
 	}
 }*/
@@ -330,12 +332,12 @@ static void renderJuliaQuarter(float scale, int palAnimOffset)
 {
 	int x, y;
 
-	const int screenWidthHalf = FB_WIDTH / 2;
-	const int screenHeightHalf = FB_HEIGHT / 2;
+	const int screenWidthHalf = FX_WIDTH / 2;
+	const int screenHeightHalf = FX_HEIGHT / 2;
 
 	unsigned char *src = juliaQuarterBuffer;
 	unsigned short *vramUp = (unsigned short*)fb_pixels;
-	unsigned short *vramDown = vramUp + FB_WIDTH * (FB_HEIGHT - 1) - 2;
+	unsigned short *vramDown = vramUp + FB_WIDTH * (FB_HEIGHT - 1) - 4;
 
 	unsigned int *vramUp32 = (unsigned int*)vramUp;
 	unsigned int *vramDown32 = (unsigned int*)vramDown;
@@ -350,33 +352,59 @@ static void renderJuliaQuarter(float scale, int palAnimOffset)
 		int xk = xl;
 		for (x=0; x<JULIA_QUARTER_WIDTH; ++x)
 		{
-			unsigned short *src16 = (unsigned short*)src;
-			const unsigned short c0 = *src16;
-			const unsigned short c1 = *(src16 + (JULIA_QUARTER_WIDTH / 2));
+			// Not the best proper way. If two values on top match two values on bottom, can skip precise calculation and draw the 2x2 block (which is really 4x2 real pixels)
+			// I forgot about the case of top value being AB and bottom value AB again. Equal, but doesn't mean all 4 julia calcs in 2x2 block are equal. But it works, hard to see artifacts.
+			//unsigned short *src16 = (unsigned short*)src;
+			//const unsigned short c0 = *src16;
+			//const unsigned short c1 = *(src16 + (JULIA_QUARTER_WIDTH / 2));
 
-			unsigned int cc = pal32[c0 & 255];
+			// And here is the thing. Comapring the two nearby char julia values side by side, ignoring the bottom, works also without visible artifacts, and is faster than above, wtf?
+			// Also if I was to uncomment c2 and c3 and do the c0==c1==c2==c3 comparison, much much slower, possibly even because too many comparisons per pixel?
+			// So the final versian, comparing unsigned char c0 and c1 alone, does give the effect visibly with speed improvement. Don't know why, but I keep it.
+			const unsigned char c0 = *src;
+			const unsigned char c1 = *(src + 1);
+			//const unsigned char c2 = *(src + JULIA_QUARTER_WIDTH);
+			//const unsigned char c3 = *(src + JULIA_QUARTER_WIDTH + 1);
+
+			//unsigned int cc = pal32[c0 & 255];
+			unsigned int cc = pal32[c0];
 			*vramUp32 = cc;
-			*(vramDown32+FB_WIDTH/2) = cc;
+			*(vramDown32+FX_WIDTH + 1) = cc;
 			if (c0==c1) {
-				*(vramUp32+FB_WIDTH/2) = cc;
+			//if (c0==c1==c2==c3) {
+				*(vramUp32+1) = cc;
+				*(vramUp32+FX_WIDTH) = cc;
+				*(vramUp32+FX_WIDTH+1) = cc;
 				*vramDown32 = cc;
+				*(vramDown32+1) = cc;
+				*(vramDown32+FX_WIDTH) = cc;
 			} else {
 				const int xki = xk >> DI_BITS;
+				const int xki1 = (xk+di) >> DI_BITS;
+				const int yki = yk >> DI_BITS;
 				const int yki1 = (yk-di) >> DI_BITS;
 
+				cc = pal32[renderJuliaPixel(xki1, yki, JULIA_LAYERS)];
+				*(vramUp32+1) = cc;
+				*(vramDown32+FX_WIDTH) = cc;
+
 				cc = pal32[renderJuliaPixel(xki, yki1, JULIA_LAYERS)];
-				*(vramUp32+FB_WIDTH/2) = cc;
-				*(vramDown32) = cc;
+				*(vramUp32+FX_WIDTH) = cc;
+				*(vramDown32+1) = cc;
+
+				cc = pal32[renderJuliaPixel(xki1, yki1, JULIA_LAYERS)];
+				*(vramUp32+FX_WIDTH+1) = cc;
+				*vramDown32 = cc;
 			}
 
 			src++;
-			vramUp32++;
-			vramDown32--;
+			vramUp32 += 2;
+			vramDown32 -= 2;
 
 			xk+=2*di;
 		}
-		vramUp32 += FB_WIDTH/2;
-		vramDown32 -= FB_WIDTH/2;
+		vramUp32 += FX_WIDTH;
+		vramDown32 -= FX_WIDTH;
         yk-=2*di;
 	}
 }

@@ -33,17 +33,10 @@
 						y1 = ((x0 * y0)>>(FP_SHR-1)) + yp; \
 						mj2 = x1 * x1 + y1 * y1; \
 						x0 = x1; y0 = y1; c++; \
-						if (mj2 > ESCAPE) goto endr1;
-
-#define FRAC_ITER_BLOCX \
-						x1 = ((x0 * x0 - y0 * y0)>>FP_SHR) + xp; \
-						y1 = ((x0 * y0)>>(FP_SHR-1)) + yp; \
-						mj2 = x1 * x1 + y1 * y1; \
-						x0 = x1; y0 = y1; c++; \
-						if (mj2 > ESCAPE) goto end1;
+						if (mj2 > ESCAPE) break;
 
 
-#define FRAC_ITER_TIMES_2 FRAC_ITER_BLOCX FRAC_ITER_BLOCX
+#define FRAC_ITER_TIMES_2 FRAC_ITER_BLOCK FRAC_ITER_BLOCK
 #define FRAC_ITER_TIMES_4 FRAC_ITER_TIMES_2 FRAC_ITER_TIMES_2
 #define FRAC_ITER_TIMES_6 FRAC_ITER_TIMES_4 FRAC_ITER_TIMES_2
 #define FRAC_ITER_TIMES_8 FRAC_ITER_TIMES_4 FRAC_ITER_TIMES_4
@@ -142,38 +135,55 @@ static void start(long trans_time)
 	startingTime = time_msec;
 }
 
-static unsigned char renderJuliaPixel(int xk, int yk, int layer_iter)
+static unsigned char calcJuliaPixel(int xk, int yk, int layer_iter)
 {
 	unsigned char c;
 	int x0, y0;
 	int x1, y1, mj2;
 	int xp, yp;
 
-	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk; y0 = yk;
-	FRAC_ITER_TIMES_14
+	switch(layer_iter) {
 
-	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<1; y0 = yk<<1;
-	FRAC_ITER_TIMES_12
+		case JULIA_LAYERS-1:
+			xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk; y0 = yk;
+			FRAC_ITER_TIMES_14
+			--layer_iter;
 
-	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<2; y0 = yk<<2;
-	FRAC_ITER_TIMES_10
+		case JULIA_LAYERS-2:
+			xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<1; y0 = yk<<1;
+			FRAC_ITER_TIMES_12
+			--layer_iter;
 
-	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<3; y0 = yk<<3;
-	FRAC_ITER_TIMES_8
+		case JULIA_LAYERS-3:
+			xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<2; y0 = yk<<2;
+			FRAC_ITER_TIMES_10
+			--layer_iter;
 
-	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<4; y0 = yk<<4;
-	FRAC_ITER_TIMES_6
+		case JULIA_LAYERS-4:
+			xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<3; y0 = yk<<3;
+			FRAC_ITER_TIMES_8
+			--layer_iter;
 
-	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<5; y0 = yk<<5;
-	FRAC_ITER_TIMES_4
+		case JULIA_LAYERS-5:
+			xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<4; y0 = yk<<4;
+			FRAC_ITER_TIMES_6
+			--layer_iter;
 
-	--layer_iter; xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<6; y0 = yk<<6;
-	FRAC_ITER_TIMES_2
+		case JULIA_LAYERS-6:
+			xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<5; y0 = yk<<5;
+			FRAC_ITER_TIMES_4
+			--layer_iter;
 
-	return 0;
-	end1:
-	
-	return c + layer_iter * JULIA_COLORS;
+		case JULIA_LAYERS-7:
+			xp = xp_l[layer_iter]; yp = yp_l[layer_iter]; c = 255; x0 = xk<<6; y0 = yk<<6;
+			FRAC_ITER_TIMES_2
+			--layer_iter;
+
+		case JULIA_LAYERS-8:
+			return 0;
+	}
+
+	return c | (layer_iter << 4);
 }
 
 /*static void calcJuliaQuarter(float scale, int palAnimOffset)
@@ -198,7 +208,7 @@ static unsigned char renderJuliaPixel(int xk, int yk, int layer_iter)
 			const int xki = xk >> DI_BITS;
 			const int yki = yk >> DI_BITS;
 
-			*dst++ = renderJuliaPixel(xki, yki, JULIA_LAYERS);
+			*dst++ = calcJuliaPixel(xki, yki, JULIA_LAYERS-1);
 
 			xk+=di;
 		}
@@ -226,7 +236,7 @@ static void calcJuliaQuarter(float scale, int palAnimOffset)
 		const int di2 = 2 * di1; // skip every other to prepare for a 4x2 instead of 2x2
 		for (x=0; x<JULIA_QUARTER_WIDTH; x+=2)
 		{
-			dst[x] = renderJuliaPixel(xk >> DI_BITS, yk >> DI_BITS, JULIA_LAYERS);
+			dst[x] = calcJuliaPixel(xk >> DI_BITS, yk >> DI_BITS, JULIA_LAYERS-1);
 			xk+=di2;
 		}
 
@@ -239,7 +249,7 @@ static void calcJuliaQuarter(float scale, int palAnimOffset)
 			if (c0 == c1) {
 				dst[x] = c0;
 			} else {
-				dst[x] = renderJuliaPixel(xk >> DI_BITS, yk >> DI_BITS, JULIA_LAYERS);
+				dst[x] = calcJuliaPixel(xk >> DI_BITS, yk >> DI_BITS, JULIA_LAYERS-1);
 			}
 			xk+=di2;
 		}
@@ -296,15 +306,17 @@ static void renderJuliaQuarter(float scale, int palAnimOffset)
 				const int yki = yk >> DI_BITS;
 				const int yki1 = (yk-di) >> DI_BITS;
 
-				cc = pal32[renderJuliaPixel(xki1, yki, JULIA_LAYERS)];
+				const int startingLayer = c0 >> 4;
+
+				cc = pal32[calcJuliaPixel(xki1, yki, startingLayer)];
 				*(vramUp32+1) = cc;
 				*(vramDown32+FX_WIDTH) = cc;
 
-				cc = pal32[renderJuliaPixel(xki, yki1, JULIA_LAYERS)];
+				cc = pal32[calcJuliaPixel(xki, yki1, startingLayer)];
 				*(vramUp32+FX_WIDTH) = cc;
 				*(vramDown32+1) = cc;
 
-				cc = pal32[renderJuliaPixel(xki1, yki1, JULIA_LAYERS)];
+				cc = pal32[calcJuliaPixel(xki1, yki1, startingLayer)];
 				*(vramUp32+FX_WIDTH+1) = cc;
 				*vramDown32 = cc;
 			}
@@ -325,7 +337,7 @@ static void draw(void)
 {
 	int i;
 
-	//const int t = 2200;
+	//const int t = 3200;
 	//const int layerAdv = 0;
 
 	const int t = time_msec - startingTime;

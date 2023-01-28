@@ -19,8 +19,8 @@
 #define JULIA_ANIM_REPEAT_BITS 11
 #define JULIA_ANIM_REPEAT (1 << JULIA_ANIM_REPEAT_BITS)
 
-#define JULIA_QUARTER_WIDTH (FX_WIDTH / 2)
-#define JULIA_QUARTER_HEIGHT (FX_HEIGHT / 2)
+#define JULIA_QUARTER_WIDTH ((FX_WIDTH / 2) + 2)
+#define JULIA_QUARTER_HEIGHT ((FX_HEIGHT / 2) + 2)
 
 #define FP_SHR 12
 #define FP_MUL (1 << FP_SHR)
@@ -86,7 +86,7 @@ static int init(void)
 	const float dg = (0.6f - sg) / JULIA_LAYERS;
 	const float db = (0.2f - sb) / JULIA_LAYERS;
 
-	const int juliaQuarterSize = JULIA_QUARTER_WIDTH * ((JULIA_QUARTER_HEIGHT / 2) + 1);
+	const int juliaQuarterSize = JULIA_QUARTER_WIDTH * JULIA_QUARTER_HEIGHT;
 	juliaQuarterBuffer = (unsigned char*)malloc(juliaQuarterSize);
 	memset(juliaQuarterBuffer, 0, juliaQuarterSize);
 
@@ -186,36 +186,10 @@ static unsigned char calcJuliaPixel(int xk, int yk, int layer_iter)
 	return c | (layer_iter << 4);
 }
 
-/*static void calcJuliaQuarter(float scale, int palAnimOffset)
-{
-	int x, y;
 
-	const int screenWidthHalf = FX_WIDTH / 2;
-	const int screenHeightHalf = FX_HEIGHT / 2;
+#define HACK_4x2 // 30-40% increase with hard to notice artifacts
 
-	unsigned char *dst = juliaQuarterBuffer;
-
-	int di = (int)((FP_MUL << DI_BITS) / (screenHeightHalf * scale)) / 2;
-	const int xl = di * -screenWidthHalf;
-	int yk = -di * -screenHeightHalf;
-
-	di *= 2;
-	for (y=0; y<JULIA_QUARTER_HEIGHT/2+1; ++y)
-	{
-		int xk = xl;
-		for (x=0; x<JULIA_QUARTER_WIDTH; ++x)
-		{
-			const int xki = xk >> DI_BITS;
-			const int yki = yk >> DI_BITS;
-
-			*dst++ = calcJuliaPixel(xki, yki, JULIA_LAYERS-1);
-
-			xk+=di;
-		}
-        yk-=di;
-	}
-}*/
-
+#ifdef HACK_4x2
 static void calcJuliaQuarter(float scale, int palAnimOffset)
 {
 	int x, y;
@@ -230,26 +204,27 @@ static void calcJuliaQuarter(float scale, int palAnimOffset)
 	int yk = -di * -screenHeightHalf;
 
 	const int di1 = 2 * di;
-	for (y=0; y<JULIA_QUARTER_HEIGHT/2+1; ++y)
+	const int di2 = 2 * di1; // skip every other to prepare for a 4x2 instead of 2x2
+	for (y=0; y<JULIA_QUARTER_HEIGHT/2; ++y)
 	{
 		int xk = xl;
-		const int di2 = 2 * di1; // skip every other to prepare for a 4x2 instead of 2x2
-		for (x=0; x<JULIA_QUARTER_WIDTH; x+=2)
-		{
-			dst[x] = calcJuliaPixel(xk >> DI_BITS, yk >> DI_BITS, JULIA_LAYERS-1);
-			xk+=di2;
-		}
+		const int yki = yk >> DI_BITS;
 
-		// second pass for a 4x2 (tiny hard to see artifacts but some performance improvement)
-		xk = xl + di1;
-		for (x=1; x<JULIA_QUARTER_WIDTH; x+=2)
+		dst[0] = calcJuliaPixel(xk >> DI_BITS, yki, JULIA_LAYERS-1);
+		xk+=di2;
+		for (x=2; x<JULIA_QUARTER_WIDTH; x+=2)
 		{
-			const unsigned char c0 = dst[x-1];
-			const unsigned char c1 = dst[x+1];
+			const unsigned char c0 = dst[x-2];
+			const unsigned char c1 = calcJuliaPixel(xk >> DI_BITS, yki, JULIA_LAYERS-1);
+
+			dst[x] = c1;
+
+			// second pass for a 4x2 (tiny hard to see artifacts but some good performance improvement)
 			if (c0 == c1) {
-				dst[x] = c0;
+				dst[x-1] = c0;
 			} else {
-				dst[x] = calcJuliaPixel(xk >> DI_BITS, yk >> DI_BITS, JULIA_LAYERS-1);
+				//const int startingLayer = c0 >> 4;	// (10-20% increase if fed instead of JULIA_LAYERS-1 but very visible squary artifacts)
+				dst[x-1] = calcJuliaPixel((xk - di1) >> DI_BITS, yki, JULIA_LAYERS-1);
 			}
 			xk+=di2;
 		}
@@ -257,6 +232,38 @@ static void calcJuliaQuarter(float scale, int palAnimOffset)
         yk-=di1;
 	}
 }
+#else
+static void calcJuliaQuarter(float scale, int palAnimOffset)
+{
+	int x, y;
+
+	const int screenWidthHalf = FX_WIDTH / 2;
+	const int screenHeightHalf = FX_HEIGHT / 2;
+
+	unsigned char *dst = juliaQuarterBuffer;
+
+	int di = (int)((FP_MUL << DI_BITS) / (screenHeightHalf * scale)) / 2;
+	const int xl = di * -screenWidthHalf;
+	int yk = -di * -screenHeightHalf;
+
+	di *= 2;
+	for (y=0; y<JULIA_QUARTER_HEIGHT/2; ++y)
+	{
+		int xk = xl;
+		for (x=0; x<JULIA_QUARTER_WIDTH; ++x)
+		{
+			const int xki = xk >> DI_BITS;
+			const int yki = yk >> DI_BITS;
+
+			dst[x] = calcJuliaPixel(xki, yki, JULIA_LAYERS-1);
+
+			xk+=di;
+		}
+		dst += JULIA_QUARTER_WIDTH;
+        yk-=di;
+	}
+}
+#endif
 
 static void renderJuliaQuarter(float scale, int palAnimOffset)
 {
@@ -277,10 +284,10 @@ static void renderJuliaQuarter(float scale, int palAnimOffset)
 	const int xl = di * -screenWidthHalf;
 	int yk = -di * -screenHeightHalf;
 
-	for (y=0; y<JULIA_QUARTER_HEIGHT/2; ++y)
+	for (y=0; y<JULIA_QUARTER_HEIGHT/2-1; ++y)
 	{
 		int xk = xl;
-		for (x=0; x<JULIA_QUARTER_WIDTH; ++x)
+		for (x=0; x<JULIA_QUARTER_WIDTH-2; ++x)
 		{
 			// Comparing the two nearby char julia values on x, ignoring the bottom two, works also without visible artifacts, and is quite faster than all four.
 			// So the final version, comparing unsigned char c0 and c1 alone, even if not entirely accurate does give the effect without visible artifacts and quiter better speed.
@@ -289,7 +296,15 @@ static void renderJuliaQuarter(float scale, int palAnimOffset)
 			//const unsigned char c2 = *(src + JULIA_QUARTER_WIDTH);
 			//const unsigned char c3 = *(src + JULIA_QUARTER_WIDTH + 1);
 
-			unsigned int cc = pal32[c0];
+			// NOTE: It just happens luckily that the format from julia calc is low 4bits = iterations, 4bits high = layer, and JULIA_COLORS = 16 right now
+			// So it fits perfectly with how I store the palete per 16 colors per whatever layers, so the extra step is not necessary. So directly saying pal32[calcJuliaPixel] is fine, without breaking the bits.
+			// But in case someone changes JULIA_COLORS I added extra code commented out, the two lines below and also 3 times in the 1x1 extra step should be uncommented and the 3rd line after commented
+			// Slight but not significant increase in performance. I also like it as it is right now.
+
+			//const unsigned char col = (c0 >> 4) * JULIA_COLORS + (c0 & 15);
+			//unsigned int cc = pal32[col];
+			unsigned int cc = pal32[c0];	// it fits the 4bit layer - 4bit iteration value
+
 			*vramUp32 = cc;
 			*(vramDown32+FX_WIDTH + 1) = cc;
 			if (c0==c1) {
@@ -308,15 +323,21 @@ static void renderJuliaQuarter(float scale, int palAnimOffset)
 
 				const int startingLayer = c0 >> 4;
 
-				cc = pal32[calcJuliaPixel(xki1, yki, startingLayer)];
+				//int cj = calcJuliaPixel(xki1, yki, startingLayer);
+				//cc = pal32[(cj >> 4) * JULIA_COLORS + (cj & 15)];
+				cc = pal32[calcJuliaPixel(xki1, yki, startingLayer)];	// same
 				*(vramUp32+1) = cc;
 				*(vramDown32+FX_WIDTH) = cc;
 
-				cc = pal32[calcJuliaPixel(xki, yki1, startingLayer)];
+				//cj = calcJuliaPixel(xki, yki1, startingLayer);
+				//cc = pal32[(cj >> 4) * JULIA_COLORS + (cj & 15)];
+				cc = pal32[calcJuliaPixel(xki, yki1, startingLayer)];	// ditto
 				*(vramUp32+FX_WIDTH) = cc;
 				*(vramDown32+1) = cc;
 
-				cc = pal32[calcJuliaPixel(xki1, yki1, startingLayer)];
+				//cj = calcJuliaPixel(xki1, yki1, startingLayer);
+				//cc = pal32[(cj >> 4) * JULIA_COLORS + (cj & 15)];
+				cc = pal32[calcJuliaPixel(xki1, yki1, startingLayer)];	// etc
 				*(vramUp32+FX_WIDTH+1) = cc;
 				*vramDown32 = cc;
 			}
@@ -327,6 +348,7 @@ static void renderJuliaQuarter(float scale, int palAnimOffset)
 
 			xk+=2*di;
 		}
+		src+=2;
 		vramUp32 += FX_WIDTH;
 		vramDown32 -= FX_WIDTH;
         yk-=2*di;

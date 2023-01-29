@@ -87,6 +87,10 @@ static void start(long trans_time)
 	g3d_load_identity();
 	g3d_perspective(50.0, 1.3333333, 0.5, 100.0);
 
+	g3d_disable(G3D_LIGHTING);
+	g3d_disable(G3D_DEPTH_TEST);
+	g3d_disable(G3D_CULL_FACE);
+
 	memset(smokebuf_start, 0, smokebuf_size * 2);
 
 	start_time = time_msec;

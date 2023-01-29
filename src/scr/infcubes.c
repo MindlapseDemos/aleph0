@@ -89,6 +89,7 @@ static void start(long trans_time)
 	g3d_enable(G3D_CULL_FACE);
 	g3d_disable(G3D_LIGHTING);
 	g3d_enable(G3D_LIGHT0);
+	g3d_disable(G3D_DEPTH_TEST);
 }
 
 static void update(void)

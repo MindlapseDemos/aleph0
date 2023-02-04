@@ -10,8 +10,25 @@
 #define NUM_POINTS 128
 #define FP_PT 8
 
+#define BLOB_SIZES_NUM 4
+#define BLOB_SIZEX_PAD 4
+#define MAX_BLOB_COLOR 127
+
 static int *xp;
 static int *yp;
+
+static unsigned long startingTime;
+
+static unsigned short *blobsPal;
+
+typedef struct BlobData
+{
+	int sizeX, sizeY;
+	unsigned char *data;
+} BlobData;
+
+BlobData blobData[BLOB_SIZES_NUM][BLOB_SIZEX_PAD];
+
 
 static int init(void);
 static void destroy(void);
@@ -27,15 +44,61 @@ static struct screen scr = {
 	draw
 };
 
-static unsigned long startingTime;
-
-
-static unsigned short *blobsPal;
-
-
 struct screen *blobgrid_screen(void)
 {
 	return &scr;
+}
+
+static void initBlobGfx()
+{
+	static float blobPowVals[4] = { 4.0f, 3.5f, 3.4f, 3.3f };
+
+	int i,j,x,y,c;
+
+	for (i=0; i<BLOB_SIZES_NUM; ++i) {
+		const int n = 6 - i;
+		const int blobSize = 1<<n;
+		const int blobSizeX = blobSize + BLOB_SIZEX_PAD;    // We are padding this, as we generate four pixels offset (for dword rendering)
+
+		const float powVal = blobPowVals[i];
+		const float halfBlobSize = (float)(blobSize / 2);
+		const float r2max = halfBlobSize * halfBlobSize;
+		const float hmm = (float)blobSize / 4.0f;
+
+		float diver = 1.75f;    // div by 2 for more halo, 1 for more blobby
+
+		for (j=0; j<BLOB_SIZEX_PAD; ++j) {
+			unsigned char *dst;
+
+			blobData[i][j].sizeX = blobSizeX;
+			blobData[i][j].sizeY = blobSize;
+
+			blobData[i][j].data = (unsigned char*)malloc(blobSizeX * blobSize);
+			dst = blobData[i][j].data;
+
+			for (y=0; y<blobSize; ++y) {
+				const float yc = (float)y - halfBlobSize + 0.5f;
+				for (x=0; x<blobSizeX; ++x) {
+					const int xc = (float)(x - j) - halfBlobSize + 0.5f;
+					float r2, cf;
+
+					r2 = xc*xc + yc*yc;
+					if (r2 < hmm) r2 = hmm;
+					cf = r2max / r2;
+
+					c = (int)pow(cf, powVal / diver);
+					if (c < 0) c = 0;
+					if (c > MAX_BLOB_COLOR) c = MAX_BLOB_COLOR;
+
+					// hacks to make more optimal data for unrolled codes. Those low values appear even more than the inner white and are almost invisible to the eye.
+					//if (i==0 && c<=2) c = 0;
+					//if (i==1 && c<=1) c = 0;
+
+					*dst++ = c;
+				}
+			}
+		}
+	}
 }
 
 static int init(void)
@@ -59,6 +122,9 @@ static int init(void)
 		int b = 31 - ((i-128) >> 2);
 		blobsPal[i] = (r<<11) | (g<<5) | b;
 	}
+
+	initBlobGfx();
+
 	return 0;
 }
 
@@ -74,7 +140,7 @@ static void start(long trans_time)
 	startingTime = time_msec;
 }
 
-static void drawBlob(int posX, int posY, int size, int color)
+static void drawBlobOld(int posX, int posY, int size, int color)
 {
 	int i,j;
 	unsigned short *dst = (unsigned short*)fb_pixels + posY * FB_WIDTH + posX;
@@ -86,6 +152,55 @@ static void drawBlob(int posX, int posY, int size, int color)
 		dst += FB_WIDTH;
 	}
 }
+
+static void drawBlob(int posX, int posY, int size)
+{
+	int x,y;
+	
+	BlobData *bd = &blobData[size][0];
+	const int sizeX = bd->sizeX;
+	const int sizeY = bd->sizeY;
+
+	unsigned short *dst = (unsigned short*)fb_pixels + (posY - sizeY / 2) * FB_WIDTH + posX - sizeX / 2;
+
+	unsigned char *src = bd->data;
+
+	for (y=0; y<sizeY; ++y) {
+		for (x=0; x<sizeX; ++x) {
+			*(dst + x) |= blobsPal[*(src + x)];
+		}
+		src += sizeX;
+		dst += FB_WIDTH;
+	}
+}
+
+/*static void drawBlobNew32(int posX, int posY, int size)
+{
+	int x,y;
+	unsigned short *dst = (unsigned short*)fb_pixels + posY * FB_WIDTH + posX;
+	
+	BlobData *bd;
+	unsigned int *src;
+	int wordsX;
+
+	if (size < 0) size = 0;
+	if (size > BLOB_SIZES_NUM-1) size = BLOB_SIZES_NUM-1;
+
+	bd = &blobData[size][posX & (BLOB_SIZEX_PAD-1)];
+	wordsX = bd->sizeX / 4;
+	sizeX = bd->sizeX;
+
+	sizeY = bd->sizeY;
+	src = (unsigned int*)bd->data + (posY - bd->sizeY / 2) * wordsX + (((posX & ~3) - bd->sizeX / 2) / 4);
+
+	for (y=0; y<sizeY; ++y) {
+		for (x=0; x<wordsX; ++x) {
+			unsigned short color = 
+			*(dst + x) = blobsPal[color];
+		}
+		dst += FB_WIDTH;
+	}
+}*/
 
 static void drawConnections()
 {
@@ -111,7 +226,7 @@ static void drawConnections()
 					for (k=0; k<steps-1; ++k) {
 						px += dx;
 						py += dy;
-						drawBlob(px>>FP_PT, py>>FP_PT,2,63);
+						drawBlob(px>>FP_PT, py>>FP_PT,3);
 					}
 				}
 			}
@@ -127,7 +242,7 @@ static void drawPoints(int t)
 		xp[i] = FB_WIDTH / 2 + (int)(sin((t + 9768*i)/7924.0) * 148);
 		yp[i] = FB_HEIGHT / 2 + (int)(sin((t + 7024*i)/13838.0) * 96);
 
-		drawBlob(xp[i],yp[i],3,191);
+		drawBlob(xp[i],yp[i],2);
 	}
 }
 

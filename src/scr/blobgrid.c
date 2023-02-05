@@ -10,9 +10,12 @@
 #define NUM_POINTS 128
 #define FP_PT 8
 
-#define BLOB_SIZES_NUM 4
+#define BLOB_SIZES_NUM 5
 #define BLOB_SIZEX_PAD 4
 #define MAX_BLOB_COLOR 127
+
+#define CONNECTION_DIST 1024
+#define CONNECTION_BREAKS 16
 
 static int *xp;
 static int *yp;
@@ -20,6 +23,8 @@ static int *yp;
 static unsigned long startingTime;
 
 static unsigned short *blobsPal;
+static unsigned int *blobsPal32;
+static unsigned char *blobBuffer;
 
 typedef struct BlobData
 {
@@ -51,7 +56,7 @@ struct screen *blobgrid_screen(void)
 
 static void initBlobGfx()
 {
-	static float blobPowVals[4] = { 4.0f, 3.5f, 3.4f, 3.3f };
+	static float blobPowVals[BLOB_SIZES_NUM] = { 4.0f, 3.5f, 3.4f, 3.3f, 3.2f };
 
 	int i,j,x,y,c;
 
@@ -90,10 +95,6 @@ static void initBlobGfx()
 					if (c < 0) c = 0;
 					if (c > MAX_BLOB_COLOR) c = MAX_BLOB_COLOR;
 
-					// hacks to make more optimal data for unrolled codes. Those low values appear even more than the inner white and are almost invisible to the eye.
-					//if (i==0 && c<=2) c = 0;
-					//if (i==1 && c<=1) c = 0;
-
 					*dst++ = c;
 				}
 			}
@@ -103,9 +104,10 @@ static void initBlobGfx()
 
 static int init(void)
 {
-	int i;
+	int i,j,k;
 
 	blobsPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
+	blobsPal32 = (unsigned int*)malloc(sizeof(unsigned int) * 256 * 256);
 	xp = (int*)malloc(sizeof(int) * NUM_POINTS);
 	yp = (int*)malloc(sizeof(int) * NUM_POINTS);
 
@@ -123,6 +125,17 @@ static int init(void)
 		blobsPal[i] = (r<<11) | (g<<5) | b;
 	}
 
+	k = 0;
+	for (j=0; j<256; ++j) {
+		const int c0 = blobsPal[j];
+		for (i=0; i<256; ++i) {
+			const int c1 = blobsPal[i];
+			blobsPal32[k++] = (c0 << 16) | c1;
+		}
+	}
+
+	blobBuffer = (unsigned char*)malloc(FB_WIDTH * FB_HEIGHT);
+
 	initBlobGfx();
 
 	return 0;
@@ -131,6 +144,7 @@ static int init(void)
 static void destroy(void)
 {
 	free(blobsPal);
+	free(blobsPal32);
 	free(xp);
 	free(yp);
 }
@@ -161,53 +175,73 @@ static void drawBlob(int posX, int posY, int size)
 	const int sizeX = bd->sizeX;
 	const int sizeY = bd->sizeY;
 
-	unsigned short *dst = (unsigned short*)fb_pixels + (posY - sizeY / 2) * FB_WIDTH + posX - sizeX / 2;
+	unsigned char *dst = (unsigned char*)blobBuffer + (posY - sizeY / 2) * FB_WIDTH + posX - sizeX / 2;
 
 	unsigned char *src = bd->data;
 
 	for (y=0; y<sizeY; ++y) {
 		for (x=0; x<sizeX; ++x) {
-			*(dst + x) |= blobsPal[*(src + x)];
+			int c = *(dst + x) + *(src + x);
+			if (c > 255) c = 255;
+			*(dst + x) = c;
 		}
 		src += sizeX;
 		dst += FB_WIDTH;
 	}
 }
 
-/*static void drawBlobNew32(int posX, int posY, int size)
+static void drawBlob32(int posX, int posY, int size)
 {
 	int x,y;
-	unsigned short *dst = (unsigned short*)fb_pixels + posY * FB_WIDTH + posX;
+	const int posX32 = posX & ~(BLOB_SIZEX_PAD-1);
 	
-	BlobData *bd;
-	unsigned int *src;
-	int wordsX;
+	BlobData *bd = &blobData[size][posX & (BLOB_SIZEX_PAD-1)];
+	const int sizeX = bd->sizeX;
+	const int sizeY = bd->sizeY;
 
-	if (size < 0) size = 0;
-	if (size > BLOB_SIZES_NUM-1) size = BLOB_SIZES_NUM-1;
+	unsigned int *dst = (unsigned int*)(blobBuffer + (posY - sizeY / 2) * FB_WIDTH + (posX32 - sizeX / 2));
 
-	bd = &blobData[size][posX & (BLOB_SIZEX_PAD-1)];
-	wordsX = bd->sizeX / 4;
-	sizeX = bd->sizeX;
-
-	sizeY = bd->sizeY;
-	src = (unsigned int*)bd->data + (posY - bd->sizeY / 2) * wordsX + (((posX & ~3) - bd->sizeX / 2) / 4);
+	const int wordsX = sizeX / 4;
+	unsigned int *src = (unsigned int*)bd->data;
 
 	for (y=0; y<sizeY; ++y) {
 		for (x=0; x<wordsX; ++x) {
-			unsigned short color = 
-			*(dst + x) = blobsPal[color];
+			unsigned int c = *(dst+x) + *(src+x);
+			*(dst+x) = c; // | ((c & 0x80808080) >> 1);
 		}
-		dst += FB_WIDTH;
+		src += wordsX;
+		dst += FB_WIDTH / 4;
 	}
-}*/
+}
+
+static void blobBufferToVram32()
+{
+	int i;
+	unsigned short *src = (unsigned short*)blobBuffer;
+	unsigned int *dst = (unsigned int*)fb_pixels;
+
+	for (i=0; i<FB_WIDTH * FB_HEIGHT / 2; ++i) {
+		*dst++ = blobsPal32[*src++];
+	}
+}
+
+static void blobBufferToVram()
+{
+	int i;
+	unsigned char *src = blobBuffer;
+	unsigned short *dst = (unsigned short*)fb_pixels;
+
+	for (i=0; i<FB_WIDTH * FB_HEIGHT; ++i) {
+		*dst++ = blobsPal[*src++];
+	}
+}
 
 static void drawConnections()
 {
 	int i,j,k;
-	const int breaks = 16;
-	const int max = 512;
-	const int bp = max / breaks;
+
+	//const int bp = 8*CONNECTION_BREAKS;
+	const int bp = CONNECTION_DIST / CONNECTION_BREAKS;
 
 	for (j=0; j<NUM_POINTS; ++j) {
 		for (i=0; i<NUM_POINTS; ++i) {
@@ -216,7 +250,7 @@ static void drawConnections()
 				const int ly = yp[i] - yp[j];
 				const int dst = lx*lx + ly*ly;
 
-				if (dst >= bp && dst < max) {
+				if (dst >= bp && dst < CONNECTION_DIST) {
 					const int steps = dst / bp;
 					int px = xp[i] << FP_PT;
 					int py = yp[i] << FP_PT;
@@ -226,7 +260,7 @@ static void drawConnections()
 					for (k=0; k<steps-1; ++k) {
 						px += dx;
 						py += dy;
-						drawBlob(px>>FP_PT, py>>FP_PT,3);
+						drawBlob32(px>>FP_PT, py>>FP_PT,4);
 					}
 				}
 			}
@@ -242,18 +276,21 @@ static void drawPoints(int t)
 		xp[i] = FB_WIDTH / 2 + (int)(sin((t + 9768*i)/7924.0) * 148);
 		yp[i] = FB_HEIGHT / 2 + (int)(sin((t + 7024*i)/13838.0) * 96);
 
-		drawBlob(xp[i],yp[i],2);
+		drawBlob32(xp[i],yp[i],2);
 	}
 }
-
+//11
 static void draw(void)
 {
 	const int t = time_msec - startingTime;
 
-	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
+	memset(blobBuffer, 0, FB_WIDTH * FB_HEIGHT);
+	//memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
 
 	drawPoints(t);
 	drawConnections();
+
+	blobBufferToVram32();
 
 	swap_buffers(0);
 }

@@ -22,12 +22,14 @@ static struct screen scr = {
 
 static unsigned long startingTime;
 
-#define PSIN_SIZE 4096
-#define PPAL_SIZE 256
+#define PSIN_SIZE 2048
+#define PSIN_OFFSETS 4
 
 static unsigned char *psin1, *psin2, *psin3;
 static unsigned short *plasmaPal;
+static unsigned int *plasmaPal32;
 
+static unsigned char *plasmaBuffer;
 
 struct screen *plasma_screen(void)
 {
@@ -36,21 +38,26 @@ struct screen *plasma_screen(void)
 
 static int init(void)
 {
-	int i;
+	int i,j,k;
 
-	psin1 = (unsigned char*)malloc(sizeof(unsigned char) * PSIN_SIZE);
-	psin2 = (unsigned char*)malloc(sizeof(unsigned char) * PSIN_SIZE);
-	psin3 = (unsigned char*)malloc(sizeof(unsigned char) * PSIN_SIZE);
+	plasmaBuffer = (unsigned char*)malloc(FB_WIDTH * FB_HEIGHT);
 
-	for (i = 0; i < PSIN_SIZE; i++)
-	{
-		psin1[i] = (unsigned char)(sin((double)i / 45.0) * 63.0 + 63.0);
-		psin2[i] = (unsigned char)(sin((double)i / 75.0) * 42.0 + 42.0);
-		psin3[i] = (unsigned char)(sin((double)i / 32.0) * 88.0 + 88.0);
+	psin1 = (unsigned char*)malloc(sizeof(unsigned char) * PSIN_SIZE * PSIN_OFFSETS);
+	psin2 = (unsigned char*)malloc(sizeof(unsigned char) * PSIN_SIZE * PSIN_OFFSETS);
+	psin3 = (unsigned char*)malloc(sizeof(unsigned char) * PSIN_SIZE * PSIN_OFFSETS);
+
+	for (j = 0; j < PSIN_OFFSETS; j++) {
+		for (i = 0; i < PSIN_SIZE; i++) {
+			psin1[i + j * PSIN_SIZE] = (unsigned char)(sin((double)(i + j) / 45.0) * 63.0 + 63.0);
+			psin2[i + j * PSIN_SIZE] = (unsigned char)(sin((double)(i + j) / 75.0) * 42.0 + 42.0);
+			psin3[i + j * PSIN_SIZE] = (unsigned char)(sin((double)(i + j) / 32.0) * 88.0 + 88.0);
+		}
 	}
 
-	plasmaPal = (unsigned short*)malloc(sizeof(unsigned short) * PPAL_SIZE);
-	for (i=0; i<PPAL_SIZE; i++)
+	plasmaPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
+	plasmaPal32 = (unsigned int*)malloc(sizeof(unsigned int) * 256 * 256);
+
+	for (i=0; i<256; i++)
 	{
 		int r, g, b;
 		int c = i;
@@ -62,11 +69,24 @@ static int init(void)
 		plasmaPal[i] = (r<<11) | (g<<5) | b;
 	}
 
+	k = 0;
+	for (j=0; j<256; ++j) {
+		const int c0 = plasmaPal[j];
+		for (i=0; i<256; ++i) {
+			const int c1 = plasmaPal[i];
+			plasmaPal32[k++] = (c0 << 16) | c1;
+		}
+	}
+
 	return 0;
 }
 
 static void destroy(void)
 {
+	free(plasmaBuffer);
+	free(plasmaPal);
+	free(plasmaPal32);
+
 	free(psin1);
 	free(psin2);
 	free(psin3);
@@ -77,53 +97,59 @@ static void start(long trans_time)
 	startingTime = time_msec;
 }
 
+static void plasmaBufferToVram32()
+{
+	int i;
+	unsigned short *src = (unsigned short*)plasmaBuffer;
+	unsigned int *dst = (unsigned int*)fb_pixels;
+
+	for (i=0; i<FB_WIDTH * FB_HEIGHT / 2; ++i) {
+		*dst++ = plasmaPal32[*src++];
+	}
+}
+
+#define PSIN32(x) ((((x) & 3) * PSIN_SIZE) + ((x) & ~3))
+#define VAL32(x) (((x) << 24) | ((x) << 16) | ((x) << 8) | (x))
+
+//270, 250
 static void draw(void)
 {
 	int x, y;
-	unsigned char c;
+	unsigned int c;
 
 	float dt = (float)(time_msec - startingTime) / 1000.0f;
 	const int t1 = sin(0.1f * dt) * 132 + 132;
 	const int t2 = sin(0.2f * dt) * 248 + 248;
 	const int t3 = sin(0.5f * dt) * 380 + 380;
 
-	unsigned char *psin1_a = (unsigned char*)&psin1[t1];
-	unsigned char *psin2_a = (unsigned char*)&psin2[t2];
-	unsigned int *vram32 = (unsigned int*)fb_pixels;
+	unsigned int *psin1_a = (unsigned int*)&psin1[PSIN32(t1)];
+	unsigned int *psin2_a = (unsigned int*)&psin2[PSIN32(t2)];
+	unsigned int *dst = (unsigned int*)plasmaBuffer;
+
 	for (y = 0; y < FB_HEIGHT; y++)
 	{
-		const unsigned char s1 = psin2[y + t2];
-		unsigned char *psin1_b = (unsigned char*)&psin1[psin3[y + t1]+t3];
-		unsigned char *psin3_a = (unsigned char*)&psin3[y+t3];
-		for (x = 0; x < FB_WIDTH; x+=8)
-		{
-			unsigned int p0, p1;
-	
-			c = psin1_a[x] + s1 + psin3_a[x] + psin1_b[psin2_a[x]];
-			p0 = plasmaPal[c];
-			c = psin1_a[x + 1] + s1 + psin3_a[x + 1] + psin1_b[psin2_a[x + 1]];
-			p1 = plasmaPal[c];
-			*vram32++ = (p1 << 16) | p0;
+		const unsigned int p2 = psin2[PSIN32(y+t2)];
+		const int s1 = psin2[y + t2];
+		const unsigned int ss1 = VAL32(s1);
 
-			c = psin1_a[x + 2] + s1 + psin3_a[x + 2] + psin1_b[psin2_a[x + 2]];
-			p0 = plasmaPal[c];
-			c = psin1_a[x + 3] + s1 + psin3_a[x + 3] + psin1_b[psin2_a[x + 3]];
-			p1 = plasmaPal[c];
-			*vram32++ = (p1 << 16) | p0;
 
-			c = psin1_a[x + 4] + s1 + psin3_a[x + 4] + psin1_b[psin2_a[x + 4]];
-			p0 = plasmaPal[c];
-			c = psin1_a[x + 5] + s1 + psin3_a[x + 5] + psin1_b[psin2_a[x + 5]];
-			p1 = plasmaPal[c];
-			*vram32++ = (p1 << 16) | p0;
+		const int pp13 = psin3[y + t1]+t3;
+		unsigned int *psin1_b = (unsigned int*)&psin1[PSIN32(pp13)];
 
-			c = psin1_a[x + 6] + s1 + psin3_a[x + 6] + psin1_b[psin2_a[x + 6]];
-			p0 = plasmaPal[c];
-			c = psin1_a[x + 7] + s1 + psin3_a[x + 7] + psin1_b[psin2_a[x + 7]];
-			p1 = plasmaPal[c];
-			*vram32++ = (p1 << 16) | p0;
+		unsigned int *psin3_a = (unsigned int*)&psin3[PSIN32(y+t3)];
+		for (x = 0; x < FB_WIDTH/4; x+=8) {
+			*dst++ = psin1_a[x] + ss1 + psin3_a[x] + psin1_b[x];
+			*dst++ = psin1_a[x+1] + ss1 + psin3_a[x+1] + psin1_b[x+1];
+			*dst++ = psin1_a[x+2] + ss1 + psin3_a[x+2] + psin1_b[x+2];
+			*dst++ = psin1_a[x+3] + ss1 + psin3_a[x+3] + psin1_b[x+3];
+			*dst++ = psin1_a[x+4] + ss1 + psin3_a[x+4] + psin1_b[x+4];
+			*dst++ = psin1_a[x+5] + ss1 + psin3_a[x+5] + psin1_b[x+5];
+			*dst++ = psin1_a[x+6] + ss1 + psin3_a[x+6] + psin1_b[x+6];
+			*dst++ = psin1_a[x+7] + ss1 + psin3_a[x+7] + psin1_b[x+7];
 		}
 	}
+
+	plasmaBufferToVram32();
 
 	swap_buffers(0);
 }

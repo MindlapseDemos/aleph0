@@ -14,8 +14,8 @@
     <Filter Include="src\3dgfx">
       <UniqueIdentifier>{247ad6d6-b2d8-49b0-8c2e-811152c9d487}</UniqueIdentifier>
     </Filter>
-	 <Filter Include="src\rt">
-	 </Filter>
+    <Filter Include="src\rt">
+    </Filter>
     <Filter Include="compiled_sprites">
       <UniqueIdentifier>{e144806a-dd28-4127-b341-45bfdc482559}</UniqueIdentifier>
     </Filter>
@@ -160,6 +160,15 @@
       <Filter>src\screens</Filter>
     </ClCompile>
     <ClCompile Include="src\scr\voxscape.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\hexfloor.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\juliatun.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\blobgrid.c">
       <Filter>src\screens</Filter>
     </ClCompile>
   </ItemGroup>

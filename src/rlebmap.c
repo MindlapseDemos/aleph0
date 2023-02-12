@@ -1,309 +1,357 @@
+
+#include "rlebmap.h"
 #include <stdlib.h>
 #include <string.h>
-#include "rlebmap.h"
 
-/* Number of numbers per scanline. Each streak has 2 numbers (start, length) */
-#define RLE_ELEMENTS_PER_SCANLINE RLE_STREAKS_PER_SCANLINE * 2
+void clearPairs(RleScan *scan)
+{
+    int i;
 
-/* Two RLE_TYPE elements per streak (= start,length) */
-#define RLE_BYTES_PER_SCANLINE RLE_ELEMENTS_PER_SCANLINE * sizeof(RLE_TYPE)
-
-/* RLE_TYPE count required for storing an RLE of w,h */
-static int rleWorstCaseElementCount(int w, int h) {
-	/* Allocate an extra worst case for one scanline, which is w/2 streaks = w
-	 * (start,length) elements */
-	return h * RLE_ELEMENTS_PER_SCANLINE + w;
+    for (i = 0; i < RLE_MAX_STREAK_PAIRS; i++) {
+        scan->pairsFrom[i] = scan->pairsTo[i] = RLE_PAIR_DISABLED;
+    }
 }
 
-/* Byte count of the 'scans' buffer */
-static int rleScansByteCount(RleBitmap *rle) {
-	return rleWorstCaseElementCount(rle->w, rle->h) * sizeof(RLE_TYPE);
+void rleReset(RleBitmap *rle, int w, int h)
+{
+    int i;
+
+    rle->w = w;
+    rle->h = h;
+
+    /* Allocate scans */
+    rle->scans = calloc(h, sizeof(RleScan));
+
+    /* Clear pairs */
+    for (i = 0; i < h; i++) {
+        clearPairs(rle->scans + i);
+    }
 }
 
-RleBitmap *rleCreate(unsigned int w, unsigned int h) {
-	RleBitmap *ret = malloc(sizeof(RleBitmap));
-	ret->w = w;
-	ret->h = h;
+RleBitmap *rleCreate(int w, int h)
+{
 
-	/* Allocate scans */
-	ret->scans = calloc(rleWorstCaseElementCount(w, h), sizeof(RLE_TYPE));
+    RleBitmap *ret = malloc(sizeof(RleBitmap));
+    rleReset(ret, w, h);
 
-	return ret;
+    return ret;
 }
 
-void rleDestroy(RleBitmap *b) {
-	if (!b)
-		return;
-	free(b->scans);
-	free(b);
+void rleDestroy(RleBitmap *b)
+{
+    if (!b)
+        return;
+    free(b->scans);
+    free(b);
 }
 
-void rleClear(RleBitmap *rle) { memset(rle->scans, 0, rleScansByteCount(rle)); }
+void rleClear(RleBitmap *rle)
+{
+    int i;
 
-RleBitmap *rleEncode(RleBitmap *rle, unsigned char *pixels, unsigned int pixelsW,
-		     unsigned int pixelsH) {
-	int x = 0;
-	int y = 0;
-	int streakActive = 0;
-	int currentStreakLength = 0;
-	RLE_TYPE *output = 0;
-	unsigned char *currentInputPixel = pixels;
-
-	/* https://www.youtube.com/watch?v=RKMR02o1I88&feature=youtu.be&t=55 */
-	if (!rle)
-		rle = rleCreate(pixelsW, pixelsH);
-	else
-		rleClear(rle); /* The following code assumes cleared array */
-
-	for (y = 0; y < (int)pixelsH; y++) {
-		/* Go to the beginning of the RLE scan */
-		output = rle->scans + y * RLE_ELEMENTS_PER_SCANLINE;
-
-		for (x = 0; x < (int)pixelsW; x++) {
-			if (*currentInputPixel++) {
-				if (streakActive) {
-					if (currentStreakLength >= RLE_MAX_STREAK_LENGTH) {
-						/* Do not allow streaks of more than max length -
-						 * close current streak */
-						*output++ = (RLE_TYPE)currentStreakLength;
-
-						/* Begin new streak at current x */
-						*output++ = (RLE_TYPE)x;
-						currentStreakLength = 0;
-					}
-				} else {
-					/* Begin new streak */
-					*output++ = (RLE_TYPE)x;
-					currentStreakLength = 0;
-					streakActive = 1;
-				}
-				currentStreakLength++;
-			} else {
-				if (streakActive) {
-					/* Close current streak */
-					*output++ = (RLE_TYPE)currentStreakLength;
-					currentStreakLength = 0;
-					streakActive = 0;
-				}
-			} /* End if (current pixel on) */
-		}	  /* End for (all x) */
-
-		/* We reached the end of the scan - close any active streak */
-		if (streakActive) {
-			*output++ = (RLE_TYPE)currentStreakLength;
-		}
-		streakActive = 0;
-		currentStreakLength = 0;
-	} /* End for (all scans */
-
-	return rle;
+    for (i = 0; i < rle->h; i++) {
+        memset(rle->scans[i].streaks, 0, sizeof(RleScan));
+        memset(rle->scans[i].pairsFrom, RLE_PAIR_DISABLED, RLE_MAX_STREAK_PAIRS * sizeof(RLE_TYPE));
+        memset(rle->scans[i].pairsTo, RLE_PAIR_DISABLED, RLE_MAX_STREAK_PAIRS * sizeof(RLE_TYPE));
+    }
 }
 
-void rleDistributeStreaks(RleBitmap *rle) {
-	int scanline = 0;
-	int halfW = rle->w >> 1;
-	RLE_TYPE *ptr = 0;
-	RLE_TYPE tmp = 0;
+inline int overlap(RleStreak *a, RleStreak *b)
+{
+    int maxStart = 0;
+    int minEnd = 0;
+    int aEnd = a->start + a->length;
+    int bEnd = b->start + b->length;
 
-#define LAST_STREAK RLE_STREAKS_PER_SCANLINE
+    // Maximum of starts
+    maxStart = a->start > b->start ? a->start : b->start;
 
-	ptr = rle->scans;
-	for (scanline = 0; scanline < (int)rle->h; scanline++) {
-		if (ptr[0] >= halfW) {
-			/* Exchange first with last streak */
-			tmp = ptr[0];
-			ptr[0] = ptr[LAST_STREAK * 2 - 2];
-			ptr[LAST_STREAK * 2 - 2] = tmp;
-			tmp = ptr[1];
-			ptr[1] = ptr[LAST_STREAK * 2 - 1];
-			ptr[LAST_STREAK * 2 - 1] = tmp;
-		}
+    // minimum of ends
+    minEnd = aEnd < bEnd ? aEnd : bEnd;
 
-		ptr += 8;
-	}
+    return maxStart <= minEnd;
 }
 
-void rleBlit(RleBitmap *rle, unsigned short *dst, int dstW, int dstH, int dstStride, int blitX,
-	     int blitY) {
-	int scanline = 0;
-	int streakPos = 0;
-	int streakLength = 0;
-	int streak = 0;
-	RLE_TYPE *input = rle->scans;
-	unsigned short *output;
-	unsigned int *output32;
+/* Assumes cleared rle. */
+void pairStreaks(RleBitmap *rle)
+{
+    int scan = 0;
+    RleScan *scanA = rle->scans;
+    RleScan *scanB = scanA + 1;
+    int from, to;
+    RLE_TYPE *pairFrom;
+    RLE_TYPE *pairTo;
 
-	dst += blitX + blitY * dstStride;
+    if (rle->h <= 1) {
+        return;
+    }
 
-	for (scanline = blitY; scanline < blitY + (int)rle->h; scanline++) {
-		if (scanline < 0 || scanline >= dstH)
-			continue;
-		for (streak = 0; streak < RLE_STREAKS_PER_SCANLINE; streak++) {
-			streakPos = (int)*input++;
-			streakLength = (int)*input++;
+    for (scan = 0; scan < rle->h - 1; scan++) {
+        pairFrom = scanA->pairsFrom;
+        pairTo = scanA->pairsTo;
+        for (from = 0; from < RLE_STREAKS_PER_SCANLINE; from++) {
+            for (to = 0; to < RLE_STREAKS_PER_SCANLINE; to++) {
+                if (overlap(scanA->streaks + from, scanB->streaks + to)) {
+                    *pairFrom++ = from;
+                    *pairTo++ = to;
+                }
+            }
+        }
 
-			if ((streakPos + blitX) <= 0)
-				continue;
-
-			output = dst + streakPos;
-
-			/* Check if we need to write the first pixel as 16bit */
-			if (streakLength % 2) {
-				*output++ = RLE_FILL_COLOR;
-			}
-
-			/* Then, write 2 pixels at a time */
-			streakLength >>= 1;
-			output32 = (unsigned int *)output;
-			while (streakLength--) {
-				*output32++ = RLE_FILL_COLOR_32;
-			}
-		}
-
-		dst += dstStride;
-	}
+        scanA++;
+        scanB++;
+    }
 }
 
-/* This is madness. We could at least check that we are not interpolating from 0 -> something
- * (length). This could remove the need for 'distributeScans' */
-void interpolateScan(RLE_TYPE *output, RLE_TYPE *a, RLE_TYPE *b, float t) {
-	static int div = 1 << 23;
-	int ti, i;
+RleBitmap *rleEncode(RleBitmap *rle, unsigned char *pixels, int pixelsW, int pixelsH)
+{
+    int x = 0;
+    int y = 0;
+    int streakActive = 0;
+    int currentStreakLength = 0;
+    unsigned char *currentInputPixel = pixels;
 
-	t += 1.0f;
-	ti = (*((unsigned int *)&t)) & 0x7FFFFF;
+    /* https://www.youtube.com/watch?v=RKMR02o1I88&feature=youtu.be&t=55 */
+    if (!rle)
+        rle = rleCreate(pixelsW, pixelsH);
+    else
+        rleClear(rle); /* The following code assumes cleared array */
 
-	for (i = 0; i < RLE_ELEMENTS_PER_SCANLINE; i++) {
-		if (*a == 0) {
-			*output++ = *b++;
-			a++;
-		} else {
-			if (*b == 0) {
-				*output++ = *a++;
-				b++;
-			} else {
-				*output++ = ((*b++ * ti) + (*a++ * (div - ti))) >> 23;
-			}
-		}
-	}
+    if (pixelsH > rle->h) {
+        return rle; // break hard
+    }
+
+    for (y = 0; y < (int)pixelsH; y++) {
+        RleScan *scan = rle->scans + y;
+        int streakIndex = -1;
+
+        for (x = 0; x < (int)pixelsW; x++) {
+            if (*currentInputPixel++) {
+                if (streakActive) {
+                } else {
+                    /* Begin new streak */
+                    streakIndex++;
+                    if (streakIndex >= RLE_STREAKS_PER_SCANLINE) {
+                        /* Simplify your minifx if it takes more streaks per scan than
+                         * supported */
+                        break;
+                    }
+                    scan->streaks[streakIndex].start = (RLE_TYPE)x;
+                    currentStreakLength = 0;
+                    streakActive = 1;
+                }
+                currentStreakLength++;
+            } else {
+                if (streakActive) {
+                    /* Close current streak */
+                    scan->streaks[streakIndex].length = (RLE_TYPE)currentStreakLength;
+                    currentStreakLength = 0;
+                    streakActive = 0;
+                }
+            } /* End if (current pixel on) */
+        } /* End for (all x) */
+
+        /* We reached the end of the scan - close any active streak */
+        if (streakActive) {
+            scan->streaks[streakIndex].length = (RLE_TYPE)currentStreakLength;
+        }
+        streakActive = 0;
+        currentStreakLength = 0;
+    } /* End for (all scans */
+
+    pairStreaks(rle);
+
+    return rle;
 }
 
-void rleBlitScale(RleBitmap *rle, unsigned short *dst, int dstW, int dstH, int dstStride, int blitX,
-		  int blitY, float scaleX, float scaleY) {
-	int scanline = 0;
-	int streakPos = 0;
-	int streakLength = 0;
-	int streak = 0;
-	unsigned short *output;
-	unsigned int *output32;
-	unsigned char *input;
-	int scanlineCounter = 0;
-	int scaleXFixed;
-	static unsigned char scan[512];
+/* Big streak, to hold streaks more than 256 length, using shorts. */
+typedef struct
+{
+    unsigned short start;
+    unsigned short length;
+} BigStreak;
 
-	/*int blitW = (int)(rle->w * scaleX + 0.5f);*/
-	int blitH = (int)(rle->h * scaleY + 0.5f);
+/* Buffer for interpolating scans. */
+BigStreak interpolatedStreaks[RLE_MAX_STREAK_PAIRS];
 
-	/* From this point on, scaleY will be inverted */
-	scaleY = 1.0f / scaleY;
+/* Produces interpolated streaks. Returns number of streaks placed in the buffer */
+inline int lerpScans(RleScan *a, RleScan *b, float t, float scale, BigStreak *streaks)
+{
+    int i;
+    float omt = 1.0f - t;
+    int streakCount = 0;
+    RleStreak *streakA, *streakB;
 
-	scaleXFixed = (int)(scaleX * (float)(1 << RLE_FIXED_BITS) + 0.5f);
+    /* Clear all to zero */
+    for (i=0; i<RLE_MAX_STREAK_PAIRS; i++) {
+        streaks[i].start = streaks[i].length = 0;
+    }
 
-	dst += blitX + blitY * dstStride;
+    /* Interpolate pairs */
+    for (i=0; i<RLE_MAX_STREAK_PAIRS; i++) {
+        if (a->pairsFrom[i] == RLE_PAIR_DISABLED) {
+            break;
+        }
 
-	for (scanline = blitY; scanline < blitY + blitH; scanline++) {
-		float normalScan = scanlineCounter * scaleY; /* ScaleY  is inverted */
-		unsigned char *scan0 = rle->scans + RLE_BYTES_PER_SCANLINE * (int)normalScan;
-		unsigned char *scan1 = scan0 + RLE_BYTES_PER_SCANLINE;
-		normalScan -= (int)normalScan;
-		interpolateScan(scan, scan0, scan1, normalScan);
-		input = scan;
-		scanlineCounter++;
+        streakA = a->streaks + a->pairsFrom[i];
+        streakB = b->streaks + a->pairsTo[i];
 
-		if (scanline < 0 || scanline >= dstH)
-			continue;
-		for (streak = 0; streak < RLE_STREAKS_PER_SCANLINE; streak++) {
-			streakPos = (*input++ * scaleXFixed) >> RLE_FIXED_BITS;
-			streakLength = (*input++ * scaleXFixed) >> RLE_FIXED_BITS;
+        streaks->start = (int) ((streakA->start * omt + streakB->start * t) * scale + 0.5f);
+        streaks->length = (int) ((streakA->length * omt + streakB->length * t) * scale + 0.5f);
+        streaks++;
+        streakCount++;
+    }
 
-			if ((streakPos + blitX) <= 0)
-				continue;
-
-			output = dst + streakPos;
-
-			/* Check if we need to write the first pixel as 16bit */
-			if (streakLength % 2) {
-				*output++ = RLE_FILL_COLOR;
-			}
-
-			/* Then, write 2 pixels at a time */
-			streakLength >>= 1;
-			output32 = (unsigned int *)output;
-			while (streakLength--) {
-				*output32++ = RLE_FILL_COLOR_32;
-			}
-		}
-
-		dst += dstStride;
-	}
+    return streakCount;
 }
 
-void rleBlitScaleInv(RleBitmap *rle, unsigned short *dst, int dstW, int dstH, int dstStride,
-		     int blitX, int blitY, float scaleX, float scaleY) {
-	int scanline = 0;
-	int streakPos = 0;
-	int streakLength = 0;
-	int streak = 0;
-	unsigned short *output;
-	unsigned int *output32;
-	unsigned char *input;
-	int scanlineCounter = 0;
-	int scaleXFixed;
-	static unsigned char scan[512];
+void rleBlitScale(RleBitmap *rle, unsigned short *dst, int dstW, int dstH, int dstStride,
+                  int blitCenterX, int blitCenterY, float scaleX, float scaleY)
+{
+    /* Do it with floats now and optimize later */
 
-	/*int blitW = (int)(rle->w * scaleX + 0.5f);*/
-	int blitH = (int)(rle->h * scaleY + 0.5f);
+    int screenX, screenY;
+    int screenW, screenH;
+    int j, k;
+    int streakCount;
 
-	/* From this point on, scaleY will be inverted */
-	scaleY = 1.0f / scaleY;
+    int currentScanIndex;
+    RleScan *currentScan, *nextScan;
 
-	scaleXFixed = (int)(scaleX * (float)(1 << RLE_FIXED_BITS) + 0.5f);
+    float v; /* v coordinate of the "texture" */
+    float lerpFactor; /* What remains of v after we multiply by height and remove integer part. */
 
-	dst += blitX + blitY * dstStride;
+    /* For rasterization */
+    BigStreak *currentStreak;
+    int currentStreakStart;
+    int currentStreakLength;
+    int currentPenPosition;
 
-	for (scanline = blitY; scanline > blitY - blitH; scanline--) {
-		float normalScan = scanlineCounter * scaleY; /* ScaleY is inverted */
-		unsigned char *scan0 = rle->scans + RLE_BYTES_PER_SCANLINE * (int)normalScan;
-		unsigned char *scan1 = scan0 + RLE_BYTES_PER_SCANLINE;
-		normalScan -= (int)normalScan;
-		interpolateScan(scan, scan0, scan1, normalScan);
-		input = scan;
-		scanlineCounter++;
+    screenW = (int)(rle->w * scaleX + 0.5);
+    screenH = (int)(rle->h * scaleY + 0.5);
 
-		if (scanline < 0 || scanline >= dstH)
-			continue;
-		for (streak = 0; streak < RLE_STREAKS_PER_SCANLINE; streak++) {
-			streakPos = (*input++ * scaleXFixed) >> RLE_FIXED_BITS;
-			streakLength = (*input++ * scaleXFixed) >> RLE_FIXED_BITS;
+    if (screenW < 0) {
+        /* Don't support for now */
+        return;
+    }
 
-			if ((streakPos + blitX) <= 0)
-				continue;
+    if (screenH < 0) {
+        screenH *= -1;
+    }
 
-			output = dst + streakPos;
+    screenX = blitCenterX - screenW / 2;
+    screenY = blitCenterY - screenH / 2;
 
-			/* Check if we need to write the first pixel as 16bit */
-			if (streakLength % 2) {
-				*output++ = RLE_FILL_COLOR;
-			}
+    
 
-			/* Then, write 2 pixels at a time */
-			streakLength >>= 1;
-			output32 = (unsigned int *)output;
-			while (streakLength--) {
-				*output32++ = RLE_FILL_COLOR_32;
-			}
-		}
+    for (j = screenY; j < (screenY + screenH); j++) {
+        if (j < 0 || j >= dstH) {
+            continue;
+        }
 
-		dst -= dstStride;
-	}
+        v = (j - screenY) / (float)screenH;
+        if (scaleY < 0) {
+            v = 1.0f - v;
+        }
+        
+        if (v < 0 || v >= 1) {
+            continue;
+        }
+
+
+        lerpFactor = v * (rle->h - 1);
+        currentScanIndex = (int) lerpFactor;
+        lerpFactor -= currentScanIndex;
+
+        /* Interpolate scans */
+        currentScan = rle->scans + currentScanIndex;
+        nextScan = currentScan + 1;
+        streakCount = lerpScans(currentScan, nextScan, lerpFactor, scaleX, interpolatedStreaks);
+
+        /* Then render the streaks one after another */
+        currentPenPosition = screenX;
+        if (currentPenPosition < 0) {
+            currentPenPosition = 0;
+        }
+        for (k=0; k<streakCount; k++) {
+            currentStreak = interpolatedStreaks + k;
+            currentStreakStart = screenX + currentStreak->start;
+            currentStreakLength = currentStreak->length;
+            
+            if (currentStreakStart > currentPenPosition) {
+                currentPenPosition = currentStreakStart;
+            }
+
+            while (currentPenPosition < currentStreakStart + currentStreakLength) {
+                if (currentPenPosition >= dstW) {
+                    break;
+                }
+                dst[currentPenPosition + j * dstStride] = RLE_FILL_COLOR;
+                currentPenPosition++;
+            }
+        }
+
+    }
+}
+
+void rleInterpolate(RleBitmap *a, RleBitmap *b, float t, RleBitmap *result)
+{
+    int i, j;
+    RleScan *scanA, *scanB, *scanResult;
+    RleStreak *streakA, *streakB, *streakResult;
+    float centerA, centerB, center, length;    
+    float omt = 1.0f - t;
+
+    rleClear(result);
+    if (a->h != b->h) {
+        return;
+    }
+
+    if (result->h != a->h) {
+        rleReset(result, a->w, a->h);
+    }
+
+    scanA = a->scans;
+    scanB = b->scans;
+    scanResult = result->scans;
+    for (i=0; i<a->h; i++) {
+        streakA = scanA->streaks;
+        streakB = scanB->streaks;
+        streakResult = scanResult->streaks;
+
+        for (j=0; j<RLE_STREAKS_PER_SCANLINE; j++) {
+            if (streakA->length <= 0 && streakB->length <= 0) {
+                break; // no more streaks
+            }
+
+            if (streakA->length > 0 && streakB->length > 0) {
+                centerA = streakA->start + 0.5 * streakA->length;
+                centerB = streakB->start + 0.5 * streakB->length;
+                center = omt * centerA + t * centerB;
+                length = omt * streakA->length + t * streakB->length;
+            } else if (streakA->length > 0) {
+                // StreakA only - fade out
+                center = streakA->start + 0.5f * streakA->length;
+                length = omt * streakA->length;
+            } else {
+                // StreakB only - fade in
+                center = streakB->start + 0.5f * streakB->length;
+                length = t * streakB->length;
+            }
+
+            // Write interpolated streak
+            streakResult->start = (int) (center - 0.5f * length + 0.5f);
+            streakResult->length = (int) (length + 0.5f);
+
+            streakA++;
+            streakB++;
+            streakResult++;
+        }
+
+        scanA++;
+        scanB++;
+        scanResult++;
+    }
+
+    pairStreaks(result);
 }

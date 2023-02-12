@@ -19,6 +19,9 @@ static void draw(void);
 
 static void updatePropeller(float t, RleBitmap *rle);
 
+void initializeBlob();
+void updateBlob(float t, RleBitmap *rle);
+
 static unsigned short *backBuffer;
 
 static unsigned char miniFXBuffer[1024];
@@ -31,9 +34,21 @@ struct screen *minifx_screen(void) {
 	return &scr;
 }
 
+struct {
+	RleBitmap *rlePropeller;
+	RleBitmap *rleBlob;
+	RleBitmap *rleInterpolated;
+} state;
+
 static int init(void) {
 	/* Allocate back buffer */
 	backBuffer = calloc(FB_WIDTH * FB_HEIGHT, sizeof(unsigned short));
+
+	initializeBlob();
+
+	state.rlePropeller = rleCreate(32, 32);
+	state.rleBlob = rleCreate(32, 32);
+	state.rleInterpolated = rleCreate(32, 32);
 
 	return 0;
 }
@@ -41,14 +56,19 @@ static int init(void) {
 static void destroy(void) {
 	free(backBuffer);
 	backBuffer = 0;
+	rleDestroy(state.rlePropeller);
+	rleDestroy(state.rleBlob);
+	rleDestroy(state.rleInterpolated);
 }
 
-static void start(long trans_time) { lastFrameTime = time_msec; }
+static void start(long trans_time) { 
+	lastFrameTime = time_msec; 
+}
 
 static void draw(void) {
 	/*long lastFrameDuration;*/
 	int i, stride;
-	RleBitmap *rle;
+	float lerpFactor;
 	int clearColor;
 	unsigned short clearColor16;
 
@@ -64,20 +84,31 @@ static void draw(void) {
 		backBuffer[i] = clearColor16;
 	}
 
-	/* For now create / destroy in each frame. We will manage these later */
-	rle = rleCreate(32, 32);
+	// Update bitmaps
+	updatePropeller(time_msec / 1000.0f, state.rlePropeller);
+	updateBlob(time_msec / 1000.0f, state.rleBlob);
+	lerpFactor = 0.5f * sin(time_msec / 5000.0f) + 0.5f;
+	rleInterpolate(state.rlePropeller, state.rleBlob, lerpFactor, state.rleInterpolated);
 
-	updatePropeller(time_msec / 1000.0f, rle);
 	stride = FB_WIDTH;
-	/*
-	rleBlit(rle, backBuffer, FB_WIDTH, FB_HEIGHT, stride,
-			100, 100);
-	*/
+	
+	// Render propeller
+	rleBlitScale(state.rlePropeller, backBuffer, FB_WIDTH, FB_HEIGHT, stride, 
+		50, 120, 2.0, 2.0);
+	rleBlitScale(state.rlePropeller, backBuffer, FB_WIDTH, FB_HEIGHT, stride, 
+		50, 184, 2.0, -2.0);
 
-	rleBlitScale(rle, backBuffer, FB_WIDTH, FB_HEIGHT, stride, 50,
-		  50, 3.0, 3.0);
+	// Render blob
+	rleBlitScale(state.rleBlob, backBuffer, FB_WIDTH, FB_HEIGHT, stride, 
+		270, 120, 2.0, 2.0);
+	rleBlitScale(state.rleBlob, backBuffer, FB_WIDTH, FB_HEIGHT, stride, 
+		270, 184, 2.0, -2.0);
 
-	rleDestroy(rle);
+	// Render interpolated
+	rleBlitScale(state.rleInterpolated, backBuffer, FB_WIDTH, FB_HEIGHT, stride, 
+		160, 120, 2.0, 2.0);
+	rleBlitScale(state.rleInterpolated, backBuffer, FB_WIDTH, FB_HEIGHT, stride, 
+		160, 184, 2.0, -2.0);
 
 	/* Blit effect to framebuffer */
 	memcpy(fb_pixels, backBuffer, FB_WIDTH * FB_HEIGHT * sizeof(unsigned short));
@@ -105,7 +136,9 @@ static void updatePropeller(float t, RleBitmap *rle) {
 	static float sin120 = 0.86602540378f;
 	static float cos120 = -0.5f;
 
-	t *= 0.1; /* Slow-mo to see what happens */
+	float speed = 4.0f;
+
+	t *= speed;
 
 	/* Rotate */
 	sint = sin(t);
@@ -163,7 +196,50 @@ static void updatePropeller(float t, RleBitmap *rle) {
 
 	/* Then, encode to rle */
 	rleEncode(rle, miniFXBuffer, 32, 32);
+}
 
-	/* Distribute the produced streaks so that they don't produce garbage when interpolated */
-	rleDistributeStreaks(rle);
+#define BLOB_COUNT 4
+
+struct {
+	float x[BLOB_COUNT];
+	float y[BLOB_COUNT];
+	float magnitude[BLOB_COUNT];
+} blobState;
+
+void initializeBlob()
+{
+	blobState.x[0] = 16.0;
+	blobState.y[0] = 16.0;
+	blobState.magnitude[0] = 6.0;
+}
+
+void updateBlob(float t, RleBitmap *rle)
+{
+	
+	int i, j;
+	float dx, dy;
+	float d;
+	float field;
+	unsigned char *dst = miniFXBuffer;
+	float v;
+
+	blobState.y[0] = 32 + 20 * sin(t);
+
+
+	for (j=0; j<32; j++) {
+		v = j / 31.0f;
+		v *= v;
+		v *= v;
+		for (i=0; i<32; i++) {
+			dy = j - blobState.y[0];
+			dx = i - blobState.x[0];
+			d = sqrt(dx * dx + dy * dy) + 0.001;
+			field = blobState.magnitude[0] / d;
+			field += v;
+			*dst++ = field > 1;
+		}
+	}
+
+	/* Then, encode to rle */
+	rleEncode(rle, miniFXBuffer, 32, 32);
 }

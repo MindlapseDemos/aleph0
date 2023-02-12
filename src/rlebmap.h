@@ -5,10 +5,9 @@
  */
 #define RLE_STREAKS_PER_SCANLINE 4
 
-/* Streaks will not exceed this many pixels. This allows us to optimize with a
- * padded framebuffer. If a streak start position happens to lie within
- * framebuffer, we will blit it without checking for out of bounds */
-#define RLE_MAX_STREAK_LENGTH 32
+/* If two streaks from consecutive scanlines overlap, they must be interpolated.
+ * We have this many such pairs in a scan. */
+#define RLE_MAX_STREAK_PAIRS (RLE_STREAKS_PER_SCANLINE * RLE_STREAKS_PER_SCANLINE)
 
 /* Using the following type for storing start and for storing length in (start,
  * length) pairs. */
@@ -22,20 +21,35 @@
 #define RLE_FILL_COLOR_32 ((RLE_FILL_COLOR << 16) | RLE_FILL_COLOR)
 
 /* For fixed-point arithmetic. Used for scaling. */
-#define RLE_FIXED_BITS 16
+#define RLE_FIXED_BITS 8
+
+typedef struct {
+    RLE_TYPE start;
+    RLE_TYPE length;
+} RleStreak;
+
+#define RLE_PAIR_DISABLED 0xFF
+
+typedef struct {
+    RleStreak streaks[RLE_STREAKS_PER_SCANLINE];
+
+    /* Holds the pairs with subsequent scan. Indices to this scan's streak ... */
+    RLE_TYPE pairsFrom[RLE_MAX_STREAK_PAIRS];
+
+    /* ...corresponding to indices of the next scan's streak: */
+    RLE_TYPE pairsTo[RLE_MAX_STREAK_PAIRS];
+} RleScan;
 
 /* This is a bitmap (image in 1bpp), encoded as streaks of consecutive pixels.
  */
 typedef struct {
-	unsigned int w, h;
-
-	/* Each scan is RLE_BYTES_PER_SCANLINE long and contains pairs of
-	 * (start, length). */
-	RLE_TYPE *scans;
+    int w;
+    int h;
+    RleScan *scans;
 } RleBitmap;
 
 /* Constructor */
-RleBitmap *rleCreate(unsigned int w, unsigned int h);
+RleBitmap *rleCreate(int w, int h);
 
 /* Destructor */
 void rleDestroy(RleBitmap *rle);
@@ -43,24 +57,18 @@ void rleDestroy(RleBitmap *rle);
 /* Clears 'rle' to "all transparent" */
 void rleClear(RleBitmap *rle);
 
+/* Resets the data in rle. */
+void rleReset(RleBitmap *rle, int w, int h);
+
 /* Encode 'pixels' into 'rle' and also return it. Pixels are either 0 or 1. This
  * will create an RleBitmap of 'h' scanlines. */
-RleBitmap *rleEncode(RleBitmap *rle, unsigned char *pixels, unsigned int pixelsW,
-		     unsigned int pixelsH);
+RleBitmap *rleEncode(RleBitmap *rle, unsigned char *pixels, int pixelsW, int pixelsH);
 
-/* Rearranges the streaks to make it less frequent that they produce garbege when interpolated */
-void rleDistributeStreaks(RleBitmap *rle);
+/* Scaled blit. */
+void rleBlitScale(RleBitmap *rle, unsigned short *dst, int dstW, int dstH, int dstStride,
+                  int blitCenterX, int blitCenterY, float scaleX, float scaleY);
 
-/* Blits without scaling */
-void rleBlit(RleBitmap *rle, unsigned short *dst, int dstW, int dstH, int dstStride, int blitX,
-	     int blitY);
-
-/* Scaled blit */
-void rleBlitScale(RleBitmap *rle, unsigned short *dst, int dstW, int dstH, int dstStride, int blitX,
-		  int blitY, float scaleX, float scaleY);
-
-/* Inverted blit (upside down) */
-void rleBlitScaleInv(RleBitmap *rle, unsigned short *dst, int dstW, int dstH, int dstStride,
-		     int blitX, int blitY, float scaleX, float scaleY);
+/* Interpolates between bitmaps a and b. Stores in 'result'. Only bitmaps of the same height accepted. Otherwise returns cleared. */
+void rleInterpolate(RleBitmap *a, RleBitmap *b, float t, RleBitmap *result);
 
 #endif // __RLE_BITMAP_H__

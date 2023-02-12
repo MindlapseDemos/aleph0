@@ -163,8 +163,8 @@ static void draw(void) {
 
 	/* Blit reflections first, to be  displaced */
 	for (i = 0; i < 5; i++)
-		rleBlitScaleInv(rlePropeller, backBuffer + PIXEL_PADDING, FB_WIDTH, FB_HEIGHT,
-				BB_SIZE, 134 + (i - 3) * 60, 200, 1.0f, 1.8f);
+		/*rleBlitScaleInv(rlePropeller, backBuffer + PIXEL_PADDING, FB_WIDTH, FB_HEIGHT,
+				BB_SIZE, 134 + (i - 3) * 60, 200, 1.0f, 1.8f);*/
 
 	/* Perform displacement */
 	dst = backBuffer + HORIZON_HEIGHT * BB_SIZE + PIXEL_PADDING;
@@ -195,8 +195,8 @@ static void draw(void) {
 
 	/* Then after displacement, blit the objects */
 	for (i = 0; i < 5; i++)
-		rleBlit(rlePropeller, backBuffer + PIXEL_PADDING, FB_WIDTH, FB_HEIGHT, BB_SIZE,
-			134 + (i - 3) * 60, 100);
+		/*rleBlit(rlePropeller, backBuffer + PIXEL_PADDING, FB_WIDTH, FB_HEIGHT, BB_SIZE,
+			134 + (i - 3) * 60, 100);*/
 
 	/* Blit effect to framebuffer */
 	src = backBuffer + PIXEL_PADDING;
@@ -258,7 +258,7 @@ static void processNormal() {
 
 	if (maxDisplacement == minDisplacement) {
 		printf("Warning: grise normalmap fucked up\n");
-		return;
+		return; 
 	}
 
 	/* Second pass - subtract half maximum displacement to displace in both directions */
@@ -385,6 +385,4 @@ static void updatePropeller(float t) {
 	/* Then, encode to rle */
 	rlePropeller = rleEncode(rlePropeller, miniFXBuffer, 32, 32);
 
-	/* Distribute the produced streaks so that they don't produce garbage when interpolated */
-	rleDistributeStreaks(rlePropeller);
 }

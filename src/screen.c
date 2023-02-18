@@ -32,6 +32,7 @@ struct screen *voxscape_screen(void);
 struct screen *hexfloor_screen(void);
 struct screen *juliatunnel_screen(void);
 struct screen *blobgrid_screen(void);
+struct screen *break_screen(void);
 
 void start_loadscr(void);
 void end_loadscr(void);
@@ -101,15 +102,15 @@ int scr_init(void)
 	if(!(scr[idx++] = hexfloor_screen())) {
 		return -1;
 	}
-	if (!(scr[idx++] = juliatunnel_screen())) {
+	if(!(scr[idx++] = juliatunnel_screen())) {
 		return -1;
 	}
-    if (!(scr[idx++] = blobgrid_screen())) {
-
-
-
+    if(!(scr[idx++] = blobgrid_screen())) {
 		return -1;
     }
+	if(!(scr[idx++] = break_screen())) {
+		return -1;
+	}
 
 	num_screens = idx;
 

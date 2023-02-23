@@ -42,20 +42,9 @@ static int con_active;
 
 extern uint16_t loading_pixels[];	/* data.asm */
 
-int demo_init(int argc, char **argv)
-{
-	if(demo_init1(argc, argv) == -1) {
-		return -1;
-	}
-	if(demo_init2() == -1) {
-		return -1;
-	}
-	return 0;
-}
-
 static struct screen *scr;
 
-int demo_init1(int argc, char **argv)
+int demo_init_cfgopt(int argc, char **argv)
 {
 	char *env;
 
@@ -71,7 +60,7 @@ int demo_init1(int argc, char **argv)
 	return 0;
 }
 
-int demo_init2(void)
+int demo_init(void)
 {
 	con_init();
 	initFpsFonts();

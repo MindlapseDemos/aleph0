@@ -7,14 +7,13 @@
 #include "audio.h"
 #include "midasdll.h"
 #include "util.h"
+#include "cfgopt.h"
 
 #define SET_MUS_VOL(vol) \
 	do { \
 		int mv = (vol) * vol_master >> 10; \
 		MIDASsetMusicVolume(modplay, mv ? mv + 1 : 0); \
 	} while(0)
-
-extern int force_snd_config;
 
 static MIDASmodulePlayHandle modplay;
 static struct au_module *curmod;
@@ -29,7 +28,7 @@ int au_init(void)
 
 	MIDASstartup();
 
-	if(force_snd_config || (!MIDASloadConfig("sound.cfg") && !MIDASdetectSoundCard())) {
+	if(opt.sndconfig || (!MIDASloadConfig("sound.cfg") && !MIDASdetectSoundCard())) {
 		if(MIDASconfig()) {
 			if(!MIDASsaveConfig("sound.cfg")) {
 				fprintf(stderr, "failed to save sound card configuration\n");

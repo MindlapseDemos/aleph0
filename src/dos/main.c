@@ -19,8 +19,6 @@ static void recalc_sball_matrix(float *xform);
 
 static int quit;
 
-int force_snd_config;
-
 static int use_sball;
 static vec3_t pos = {0, 0, 0};
 static quat_t rot = {0, 0, 0, 1};
@@ -32,17 +30,15 @@ int main(int argc, char **argv)
 	int i;
 	int vmidx, status = 0;
 
-	for(i=1; i<argc; i++) {
-		if(strcmp(argv[i], "-setup") == 0) {
-			force_snd_config = 1;
-		}
+	if(demo_init_cfgopt(argc, argv) == -1) {
+		return 1;
 	}
 
 #ifdef __DJGPP__
 	__djgpp_nearptr_enable();
 #endif
 
-	init_logger("demo.log");
+	init_logger(opt.logfile);
 
 #ifdef __WATCOMC__
 	printf("watcom build\n");
@@ -92,7 +88,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if(demo_init(argc, argv) == -1) {
+	if(demo_init() == -1) {
 		status = -1;
 		goto break_evloop;
 	}

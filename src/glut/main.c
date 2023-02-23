@@ -126,7 +126,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	time_msec = 0;
-	if(demo_init1(argc, argv) == -1) {
+	if(demo_init_cfgopt(argc, argv) == -1) {
 		return 1;
 	}
 
@@ -137,7 +137,7 @@ int main(int argc, char **argv)
 		reshape(glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
 	}
 
-	if(demo_init2() == -1) {
+	if(demo_init() == -1) {
 		return 1;
 	}
 	atexit(demo_cleanup);

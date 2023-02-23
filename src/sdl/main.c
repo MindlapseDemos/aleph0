@@ -71,7 +71,7 @@ int main(int argc, char **argv)
 	}
 
 	time_msec = 0;
-	if(demo_init(argc, argv) == -1) {
+	if(demo_init_cfgopt(argc, argv) == -1 || demo_init() == -1) {
 		/*free(fb_pixels);*/
 		SDL_Quit();
 		return 1;

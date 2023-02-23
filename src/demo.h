@@ -53,9 +53,13 @@ enum {
 
 extern float sball_matrix[16];
 
-int demo_init(int argc, char **argv);
-int demo_init1(int argc, char **argv);
-int demo_init2(void);
+/* initialize options (arguments & config file)
+ * this should be called before entering graphics mode
+ */
+int demo_init_cfgopt(int argc, char **argv);
+
+/* rest of the demo initialization, after video mode setup */
+int demo_init(void);
 void demo_cleanup(void);
 
 int demo_resizefb(int width, int height, int bpp);

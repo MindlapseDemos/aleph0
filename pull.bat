@@ -18,6 +18,9 @@ rsync -v 192.168.0.4::dosdemo/src/scr/*.h src/scr
 mkdir src\3dgfx
 rsync -v 192.168.0.4::dosdemo/src/3dgfx/*.c src/3dgfx
 rsync -v 192.168.0.4::dosdemo/src/3dgfx/*.h src/3dgfx
+mkdir src\rt
+rsync -v 192.168.0.4::dosdemo/src/rt/*.c src/rt
+rsync -v 192.168.0.4::dosdemo/src/rt/*.h src/rt
 
 mkdir libs\cgmath
 rsync -v 192.168.0.4::dosdemo/libs/cgmath/*.h libs/cgmath

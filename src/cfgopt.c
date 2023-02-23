@@ -8,6 +8,7 @@
 /* release build default options */
 struct options opt = {
 	0,	/* start_scr */
+	"demo.log",	/* logfile */
 	1,	/* music */
 	0,	/* mouse */
 	0,	/* sball */
@@ -18,6 +19,7 @@ struct options opt = {
 /* debug build default options */
 struct options opt = {
 	0,	/* start_scr */
+	"demo.log",	/* logfile */
 	0,	/* music */
 	1,	/* mouse */
 	0,	/* sball */
@@ -39,6 +41,8 @@ int parse_args(int argc, char **argv)
 				opt.music = 0;
 			} else if(strcmp(argv[i], "-scr") == 0 || strcmp(argv[i], "-screen") == 0) {
 				scrname = argv[++i];
+			} else if(strcmp(argv[i], "-logfile") == 0) {
+				opt.logfile = argv[++i];
 			} else if(strcmp(argv[i], "-mouse") == 0) {
 				opt.mouse = 1;
 			} else if(strcmp(argv[i], "-nomouse") == 0) {
@@ -62,6 +66,9 @@ int parse_args(int argc, char **argv)
 				opt.scaler = SCALER_NEAREST;
 			} else if(strcmp(argv[i], "-scaler-linear") == 0) {
 				opt.scaler = SCALER_LINEAR;
+#else
+			} else if(strcmp(argv[i], "-setup") == 0) {
+				opt.sndsetup = 1;
 #endif
 			} else {
 				fprintf(stderr, "invalid option: %s\n", argv[i]);
@@ -145,6 +152,8 @@ int load_config(const char *fname)
 			opt.music = bool_value(value);
 		} else if(strcmp(line, "screen") == 0) {
 			opt.start_scr = strdup(value);
+		} else if(strcmp(line, "logfile") == 0) {
+			opt.logfile = strdup(value);
 		} else if(strcmp(line, "mouse") == 0) {
 			opt.mouse = bool_value(value);
 		} else if(strcmp(line, "sball") == 0) {

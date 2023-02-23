@@ -12,6 +12,7 @@ enum {
 
 struct options {
 	const char *start_scr;
+	const char *logfile;
 	int music;
 	int mouse, sball;
 	int vsync;
@@ -19,6 +20,8 @@ struct options {
 #ifndef MSDOS
 	int fullscreen;
 	int scaler;
+#else
+	int sndsetup;
 #endif
 };
 

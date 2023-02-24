@@ -19,7 +19,7 @@ void polyfill_flat_new(struct pvertex *varr, int vnum);
  */
 void (*fillfunc[])(struct pvertex*, int) = {
 	polyfill_wire,
-	polyfill_flat_new,
+	polyfill_flat,
 	polyfill_gouraud,
 	0,
 	polyfill_tex_wire,
@@ -172,6 +172,11 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 	polyfill_wire(verts, nverts);	/* TODO */
 }
 
+#define VNEXT(p)	(((p) == vlast) ? varr : (p) + 1)
+#define VPREV(p)	((p) == varr ? vlast : (p) - 1)
+#define VSUCC(p, side)	((side) == 0 ? VNEXT(p) : VPREV(p))
+
+
 #define NEXTIDX(x) (((x) - 1 + nverts) % nverts)
 #define PREVIDX(x) (((x) + 1) % nverts)
 
@@ -191,7 +196,6 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 
 
 #define POLYFILL polyfill_flat
-#define SCANEDGE scanedge_flat
 #undef GOURAUD
 #undef TEXMAP
 #undef BLEND_ALPHA
@@ -199,10 +203,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #undef ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_gouraud
-#define SCANEDGE scanedge_gouraud
 #define GOURAUD
 #undef TEXMAP
 #undef BLEND_ALPHA
@@ -210,10 +212,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #undef ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_tex_flat
-#define SCANEDGE scanedge_tex_flat
 #undef GOURAUD
 #define TEXMAP
 #undef BLEND_ALPHA
@@ -221,10 +221,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #undef ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_tex_gouraud
-#define SCANEDGE scanedge_tex_gouraud
 #define GOURAUD
 #define TEXMAP
 #undef BLEND_ALPHA
@@ -232,10 +230,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #undef ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_alpha_flat
-#define SCANEDGE scanedge_alpha_flat
 #undef GOURAUD
 #undef TEXMAP
 #define BLEND_ALPHA
@@ -243,10 +239,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #undef ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_alpha_gouraud
-#define SCANEDGE scanedge_alpha_gouraud
 #define GOURAUD
 #undef TEXMAP
 #define BLEND_ALPHA
@@ -254,10 +248,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #undef ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_alpha_tex_flat
-#define SCANEDGE scanedge_alpha_tex_flat
 #undef GOURAUD
 #define TEXMAP
 #define BLEND_ALPHA
@@ -265,10 +257,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #undef ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_alpha_tex_gouraud
-#define SCANEDGE scanedge_alpha_tex_gouraud
 #define GOURAUD
 #define TEXMAP
 #define BLEND_ALPHA
@@ -276,10 +266,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #undef ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_add_flat
-#define SCANEDGE scanedge_add_flat
 #undef GOURAUD
 #undef TEXMAP
 #undef BLEND_ALPHA
@@ -287,10 +275,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #undef ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_add_gouraud
-#define SCANEDGE scanedge_add_gouraud
 #define GOURAUD
 #undef TEXMAP
 #undef BLEND_ALPHA
@@ -298,10 +284,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #undef ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_add_tex_flat
-#define SCANEDGE scanedge_add_tex_flat
 #undef GOURAUD
 #define TEXMAP
 #undef BLEND_ALPHA
@@ -309,10 +293,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #undef ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_add_tex_gouraud
-#define SCANEDGE scanedge_add_tex_gouraud
 #define GOURAUD
 #define TEXMAP
 #undef BLEND_ALPHA
@@ -320,12 +302,10 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #undef ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 /* ---- zbuffer variants ----- */
 
 #define POLYFILL polyfill_flat_zbuf
-#define SCANEDGE scanedge_flat_zbuf
 #undef GOURAUD
 #undef TEXMAP
 #undef BLEND_ALPHA
@@ -333,10 +313,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #define ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_gouraud_zbuf
-#define SCANEDGE scanedge_gouraud_zbuf
 #define GOURAUD
 #undef TEXMAP
 #undef BLEND_ALPHA
@@ -344,10 +322,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #define ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_tex_flat_zbuf
-#define SCANEDGE scanedge_tex_flat_zbuf
 #undef GOURAUD
 #define TEXMAP
 #undef BLEND_ALPHA
@@ -355,10 +331,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #define ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_tex_gouraud_zbuf
-#define SCANEDGE scanedge_tex_gouraud_zbuf
 #define GOURAUD
 #define TEXMAP
 #undef BLEND_ALPHA
@@ -366,10 +340,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #define ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_alpha_flat_zbuf
-#define SCANEDGE scanedge_alpha_flat_zbuf
 #undef GOURAUD
 #undef TEXMAP
 #define BLEND_ALPHA
@@ -377,10 +349,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #define ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_alpha_gouraud_zbuf
-#define SCANEDGE scanedge_alpha_gouraud_zbuf
 #define GOURAUD
 #undef TEXMAP
 #define BLEND_ALPHA
@@ -388,10 +358,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #define ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_alpha_tex_flat_zbuf
-#define SCANEDGE scanedge_alpha_tex_flat_zbuf
 #undef GOURAUD
 #define TEXMAP
 #define BLEND_ALPHA
@@ -399,10 +367,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #define ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_alpha_tex_gouraud_zbuf
-#define SCANEDGE scanedge_alpha_tex_gouraud_zbuf
 #define GOURAUD
 #define TEXMAP
 #define BLEND_ALPHA
@@ -410,10 +376,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #define ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_add_flat_zbuf
-#define SCANEDGE scanedge_add_flat_zbuf
 #undef GOURAUD
 #undef TEXMAP
 #undef BLEND_ALPHA
@@ -421,10 +385,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #define ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_add_gouraud_zbuf
-#define SCANEDGE scanedge_add_gouraud_zbuf
 #define GOURAUD
 #undef TEXMAP
 #undef BLEND_ALPHA
@@ -432,10 +394,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #define ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_add_tex_flat_zbuf
-#define SCANEDGE scanedge_add_tex_flat_zbuf
 #undef GOURAUD
 #define TEXMAP
 #undef BLEND_ALPHA
@@ -443,10 +403,8 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #define ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
 #define POLYFILL polyfill_add_tex_gouraud_zbuf
-#define SCANEDGE scanedge_add_tex_gouraud_zbuf
 #define GOURAUD
 #define TEXMAP
 #undef BLEND_ALPHA
@@ -454,12 +412,7 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #define ZBUF
 #include "polytmpl.h"
 #undef POLYFILL
-#undef SCANEDGE
 
-
-#define VNEXT(p)	(((p) == vlast) ? varr : (p) + 1)
-#define VPREV(p)	((p) == varr ? vlast : (p) - 1)
-#define VSUCC(p, side)	((side) == 0 ? VNEXT(p) : VPREV(p))
 
 void polyfill_flat_new(struct pvertex *varr, int vnum)
 {

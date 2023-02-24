@@ -12,11 +12,16 @@
 #include "bsptree.h"
 #include "util.h"
 
+#undef DEBUG_POLYFILL
+
 static int init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
+#ifdef DEBUG_POLYFILL
+static void draw_debug(void);
 static void draw_lowres_raster(void);
+#endif
 static void keypress(int key);
 static int gen_texture(struct pimage *img, int xsz, int ysz);
 
@@ -25,7 +30,11 @@ static struct screen scr = {
 	init,
 	destroy,
 	start, 0,
+#ifdef DEBUG_POLYFILL
+	draw_debug,
+#else
 	draw,
+#endif
 	keypress
 };
 
@@ -37,10 +46,14 @@ static struct bsptree torus_bsp;
 static struct pimage tex;
 
 static int use_bsp = 0;
+static int use_tex = 1;
+static int mode = 2;
 
+#ifdef DEBUG_POLYFILL
 #define LOWRES_SCALE	10
 static uint16_t *lowres_pixels;
 static int lowres_width, lowres_height;
+#endif
 
 static int use_zbuf;
 
@@ -55,6 +68,13 @@ static int init(void)
 	int i;
 
 	gen_cube_mesh(&cube, 1.0, 0);
+
+	for(i=0; i<cube.vcount; i++) {
+		cube.varr[i].r = rand() & 0xff;
+		cube.varr[i].g = rand() & 0xff;
+		cube.varr[i].b = rand() & 0xff;
+	}
+
 	gen_torus_mesh(&torus, 1.0, 0.25, 24, 12);
 	/* scale texcoords */
 	for(i=0; i<torus.vcount; i++) {
@@ -84,7 +104,9 @@ static int init(void)
 
 static void destroy(void)
 {
+#ifdef DEBUG_POLYFILL
 	free(lowres_pixels);
+#endif
 	free(cube.varr);
 	free(torus.varr);
 	free(torus.iarr);
@@ -102,9 +124,6 @@ static void start(long trans_time)
 	g3d_enable(G3D_CULL_FACE);
 	g3d_enable(G3D_LIGHTING);
 	g3d_enable(G3D_LIGHT0);
-
-	g3d_polygon_mode(G3D_GOURAUD);
-	g3d_enable(G3D_TEXTURE_2D);
 
 	g3d_clear_color(20, 30, 50);
 }
@@ -130,6 +149,23 @@ static void draw(void)
 		g3d_disable(G3D_DEPTH_TEST);
 	}
 
+	if(use_tex) {
+		g3d_enable(G3D_TEXTURE_2D);
+	} else {
+		g3d_disable(G3D_TEXTURE_2D);
+	}
+
+	switch(mode) {
+	case 0:
+		g3d_polygon_mode(G3D_WIRE);
+		break;
+	case 1:
+		g3d_polygon_mode(G3D_FLAT);
+		break;
+	case 2:
+		g3d_polygon_mode(G3D_GOURAUD);
+		break;
+	}
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
@@ -176,9 +212,12 @@ static void draw(void)
 	swap_buffers(fb_pixels);
 }
 
+#ifdef DEBUG_POLYFILL
 static void draw_debug(void)
 {
 	update();
+
+	g3d_disable(G3D_LIGHTING);
 
 	memset(lowres_pixels, 0, lowres_width * lowres_height * 2);
 
@@ -196,6 +235,8 @@ static void draw_debug(void)
 
 
 	g3d_framebuffer(FB_WIDTH, FB_HEIGHT, fb_pixels);
+
+	g3d_enable(G3D_LIGHTING);
 
 	g3d_polygon_mode(G3D_WIRE);
 	draw_mesh(&cube);
@@ -232,10 +273,21 @@ static void draw_lowres_raster(void)
 		dptr += FB_WIDTH * LOWRES_SCALE - FB_WIDTH;
 	}
 }
+#endif
 
 static void keypress(int key)
 {
 	switch(key) {
+	case 'w':
+		mode = 0;
+		break;
+	case 'f':
+		mode = 1;
+		break;
+	case 'g':
+		mode = 2;
+		break;
+
 	case 'b':
 		use_bsp = !use_bsp;
 		printf("drawing with %s\n", use_bsp ? "BSP tree" : "z-sorting");
@@ -244,6 +296,10 @@ static void keypress(int key)
 	case 'z':
 		use_zbuf = !use_zbuf;
 		printf("Z-buffer %s\n", use_zbuf ? "on" : "off");
+		break;
+
+	case 't':
+		use_tex = !use_tex;
 		break;
 	}
 }

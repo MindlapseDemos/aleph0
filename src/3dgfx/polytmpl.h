@@ -2,10 +2,11 @@
 #pragma warning (disable: 4101)
 #endif
 
-static uint32_t SCANEDGE(struct pvertex *v0, struct pvertex *v1, struct pvertex *edge)
+void POLYFILL(struct pvertex *varr, int vnum)
 {
-	int i;
-	int32_t x, dx, dy, slope;
+	int i, line, top, bot;
+	struct pvertex *vlast, *v0, *vn, *tab;
+	int32_t x, y0, y1, dx, dy, slope, fx, fy;
 #ifdef GOURAUD
 	int r, g, b, dr, dg, db;
 	int32_t rslope, gslope, bslope;
@@ -18,244 +19,152 @@ static uint32_t SCANEDGE(struct pvertex *v0, struct pvertex *v1, struct pvertex 
 #endif
 #ifdef ZBUF
 	int32_t z, dz, zslope;
-#endif
-	int32_t start_idx, end_idx;
-
-	if(v0->y > v1->y) {
-		struct pvertex *tmp = v0;
-		v0 = v1;
-		v1 = tmp;
-	}
-
-	x = v0->x;
-	dy = v1->y - v0->y;
-	dx = v1->x - v0->x;
-	slope = (dx << 8) / dy;
-#ifdef GOURAUD
-	r = (v0->r << COLOR_SHIFT);
-	g = (v0->g << COLOR_SHIFT);
-	b = (v0->b << COLOR_SHIFT);
-	dr = (v1->r << COLOR_SHIFT) - r;
-	dg = (v1->g << COLOR_SHIFT) - g;
-	db = (v1->b << COLOR_SHIFT) - b;
-	rslope = (dr << 8) / dy;
-	gslope = (dg << 8) / dy;
-	bslope = (db << 8) / dy;
-#ifdef BLEND_ALPHA
-	a = (v0->a << COLOR_SHIFT);
-	da = (v1->a << COLOR_SHIFT) - a;
-	aslope = (da << 8) / dy;
-#endif	/* BLEND_ALPHA */
-#endif	/* GOURAUD */
-#ifdef TEXMAP
-	u = v0->u;
-	v = v0->v;
-	du = v1->u - v0->u;
-	dv = v1->v - v0->v;
-	uslope = (du << 8) / dy;
-	vslope = (dv << 8) / dy;
-#endif
-#ifdef ZBUF
-	z = v0->z;
-	dz = v1->z - v0->z;
-	zslope = (dz << 8) / dy;
+	uint16_t *zptr;
 #endif
 
-	start_idx = v0->y >> 8;
-	end_idx = v1->y >> 8;
-
-	for(i=start_idx; i<end_idx; i++) {
-		CHECKEDGE(i);
-		edge[i].x = x;
-		x += slope;
-#ifdef GOURAUD
-		/* we'll store the color in the edge tables with COLOR_SHIFT extra bits of precision */
-		edge[i].r = r;
-		edge[i].g = g;
-		edge[i].b = b;
-		r += rslope;
-		g += gslope;
-		b += bslope;
-#ifdef BLEND_ALPHA
-		edge[i].a = a;
-		a += aslope;
-#endif
-#endif	/* GOURAUD */
-#ifdef TEXMAP
-		edge[i].u = u;
-		edge[i].v = v;
-		u += uslope;
-		v += vslope;
-#endif
-#ifdef ZBUF
-		edge[i].z = z;
-		z += zslope;
-#endif
-	}
-
-	return (uint32_t)start_idx | ((uint32_t)(end_idx - 1) << 16);
-}
-
-void POLYFILL(struct pvertex *pv, int nverts)
-{
-	int i, winding;
-	int topidx = 0, botidx = 0, sltop = pfill_fb.height, slbot = 0;
-	g3d_pixel color;
-	/* the following variables are used for interpolating horizontally accros scanlines */
-#if defined(GOURAUD) || defined(TEXMAP) || defined(ZBUF)
-	int mid;
-	int32_t dx, tmp;
-#endif
-#ifdef GOURAUD
-	int32_t r, g, b, dr, dg, db, rslope, gslope, bslope;
-#ifdef BLEND_ALPHA
-	int32_t a, da, aslope;
-#endif
-#endif
-#ifdef TEXMAP
-	int32_t u, v, du, dv, uslope, vslope;
-#endif
-#ifdef ZBUF
-	int32_t z, dz, zslope;
-#endif
+	int start, len;
+	g3d_pixel *fbptr, *pptr;
 
 #if !defined(GOURAUD) && !defined(TEXMAP)
-	/* flat version, just pack the color now */
-	color = G3D_PACK_RGB(pv[0].r, pv[0].g, pv[0].b);
+	g3d_pixel color = G3D_PACK_RGB(varr[0].r, varr[0].g, varr[0].b);
+#else
+	g3d_pixel color;
 #endif
 
-	for(i=1; i<nverts; i++) {
-		if(pv[i].y < pv[topidx].y) topidx = i;
-		if(pv[i].y > pv[botidx].y) botidx = i;
-	}
+	vlast = varr + vnum - 1;
+	top = pfill_fb.height;
+	bot = 0;
 
-	winding = 0;
-	for(i=0; i<nverts; i++) {
-		int next = NEXTIDX(i);
-		winding += ((pv[next].x - pv[i].x) >> 4) * ((pv[next].y + pv[i].y) >> 4);
-	}
+	for(i=0; i<vnum; i++) {
+		v0 = varr + i;
+		vn = VNEXT(v0);
 
-	for(i=0; i<nverts; i++) {
-		int next = NEXTIDX(i);
-		int32_t y0 = pv[i].y;
-		int32_t y1 = pv[next].y;
+		if(vn->y > v0->y) {
+			tab = left;
+		} else {
+			tab = right;
+			v0 = vn;
+			vn = varr + i;
+		}
 
-		if((y0 >> 8) == (y1 >> 8)) {
-			/*if(y0 > y1) {*/
-				int i0, i1;
-				int idx = y0 >> 8;
-				if(pv[i].x < pv[next].x) {
-					i0 = i;
-					i1 = next;
-				} else {
-					i0 = next;
-					i1 = i;
-				}
-				CHECKEDGE(idx);
-				left[idx].x = pv[i0].x;
-				right[idx].x = pv[i1].x;
+		dx = vn->x - v0->x;
+		dy = vn->y - v0->y;
+		slope = dy ? (dx << 8) / dy : 0;
+
+		y0 = (v0->y + 0x100) & 0xffffff00;	/* start from the next scanline */
+		fy = y0 - v0->y;					/* fractional part before the next scanline */
+		fx = (fy * slope) >> 8;				/* X adjust for the step to the next scanline */
+		x = v0->x + fx;						/* adjust X */
+		y1 = vn->y & 0xffffff00;			/* last scanline of the edge <= vn->y */
+
+		line = y0 >> 8;
+		if(line < top) top = line;
+		if((y1 >> 8) > bot) bot = y1 >> 8;
+
+		if(dy == 0) {
+			/* horizontal edge */
+			left[line].x = v0->x >> 8;
+			right[line].x = vn->x >> 8;
 #ifdef GOURAUD
-				left[idx].r = pv[i0].r << COLOR_SHIFT;
-				left[idx].g = pv[i0].g << COLOR_SHIFT;
-				left[idx].b = pv[i0].b << COLOR_SHIFT;
-				right[idx].r = pv[i1].r << COLOR_SHIFT;
-				right[idx].g = pv[i1].g << COLOR_SHIFT;
-				right[idx].b = pv[i1].b << COLOR_SHIFT;
+			left[line].r = v0->r << COLOR_SHIFT;
+			left[line].g = v0->g << COLOR_SHIFT;
+			left[line].b = v0->b << COLOR_SHIFT;
+			right[line].r = vn->r << COLOR_SHIFT;
+			right[line].g = vn->g << COLOR_SHIFT;
+			right[line].b = vn->b << COLOR_SHIFT;
 #ifdef BLEND_ALPHA
-				left[idx].a = pv[i0].a << COLOR_SHIFT;
-				right[idx].a = pv[i1].a << COLOR_SHIFT;
+			left[line].a = v0->a << COLOR_SHIFT;
+			right[line].a = vn->a << COLOR_SHIFT;
 #endif	/* BLEND_ALPHA */
 #endif
 #ifdef TEXMAP
-				left[idx].u = pv[i0].u;
-				left[idx].v = pv[i0].v;
-				right[idx].u = pv[i1].u;
-				right[idx].v = pv[i1].v;
+			left[line].u = v0->u;
+			left[line].v = v0->v;
+			right[line].u = vn->u;
+			right[line].v = vn->v;
 #endif
 #ifdef ZBUF
-				left[idx].z = pv[i0].z;
-				right[idx].z = pv[i1].z;
+			left[line].z = v0->z;
+			right[line].z = vn->z;
 #endif
-				CHECKEDGE(idx);
-				if(idx > slbot) slbot = idx;
-				if(idx < sltop) sltop = idx;
-			/*}*/
-		} else {
-			struct pvertex *edge;
-			uint32_t res, tmp;
+			continue;
+		}
 
-			if(winding < 0) {
-				/* clockwise */
-				edge = y0 > y1 ? left : right;
-			} else {
-				/* counter-clockwise */
-				edge = y0 > y1 ? right : left;
+		/* regular non-horizontal edge */
+#ifdef GOURAUD
+		r = (v0->r << COLOR_SHIFT);
+		g = (v0->g << COLOR_SHIFT);
+		b = (v0->b << COLOR_SHIFT);
+		dr = (vn->r << COLOR_SHIFT) - r;
+		dg = (vn->g << COLOR_SHIFT) - g;
+		db = (vn->b << COLOR_SHIFT) - b;
+		rslope = (dr << 8) / dy;
+		gslope = (dg << 8) / dy;
+		bslope = (db << 8) / dy;
+#ifdef BLEND_ALPHA
+		a = (v0->a << COLOR_SHIFT);
+		da = (vn->a << COLOR_SHIFT) - a;
+		aslope = (da << 8) / dy;
+#endif	/* BLEND_ALPHA */
+#endif	/* GOURAUD */
+#ifdef TEXMAP
+		u = v0->u;
+		v = v0->v;
+		du = vn->u - v0->u;
+		dv = vn->v - v0->v;
+		uslope = (du << 8) / dy;
+		vslope = (dv << 8) / dy;
+#endif
+#ifdef ZBUF
+		z = v0->z;
+		dz = vn->z - v0->z;
+		zslope = (dz << 8) / dy;
+#endif
+
+		if(line > 0) tab += line;
+
+		while(line <= (y1 >> 8) && line < pfill_fb.height) {
+			if(line >= 0) {
+				int val = x < 0 ? 0 : x >> 8;
+				tab->x = val < pfill_fb.width ? val : pfill_fb.width - 1;
+#ifdef GOURAUD
+				/* we'll store the color in the edge tables with COLOR_SHIFT extra bits of precision */
+				tab->r = r;
+				tab->g = g;
+				tab->b = b;
+				r += rslope;
+				g += gslope;
+				b += bslope;
+#ifdef BLEND_ALPHA
+				tab->a = a;
+				a += aslope;
+#endif
+#endif	/* GOURAUD */
+#ifdef TEXMAP
+				tab->u = u;
+				tab->v = v;
+				u += uslope;
+				v += vslope;
+#endif
+#ifdef ZBUF
+				tab->z = z;
+				z += zslope;
+#endif
+
+				tab++;
 			}
-			res = SCANEDGE(pv + i, pv + next, edge);
-			tmp = (res >> 16) & 0xffff;
-			if((int)tmp > slbot) slbot = tmp;
-			if((int)(tmp = res & 0xffff) < sltop) {
-				sltop = tmp;
-			}
+			x += slope;
+			line++;
 		}
 	}
 
-	/* calculate the slopes of all attributes across the largest span out
-	 * of the three: middle, top, or bottom.
-	 */
-#ifndef HIGH_QUALITY
-#if defined(GOURAUD) || defined(TEXMAP)
-	mid = (sltop + slbot) >> 1;
-	CHECKEDGE(sltop);
-	CHECKEDGE(slbot);
-	CHECKEDGE(mid);
-	dx = right[mid].x - left[mid].x;
-	if((tmp = right[sltop].x - left[sltop].x) > dx) {
-		dx = tmp;
-		mid = sltop;
-	}
-	if((tmp = right[slbot].x - left[slbot].x) > dx) {
-		dx = tmp;
-		mid = slbot;
-	}
-	if(!dx) dx = 256;	/* avoid division by zero */
-#endif
-	CHECKEDGE(idx);
-#ifdef GOURAUD
-	dr = right[mid].r - left[mid].r;
-	dg = right[mid].g - left[mid].g;
-	db = right[mid].b - left[mid].b;
-	rslope = (dr << 8) / dx;
-	gslope = (dg << 8) / dx;
-	bslope = (db << 8) / dx;
-#ifdef BLEND_ALPHA
-	da = right[mid].a - left[mid].a;
-	aslope = (da << 8) / dx;
-#endif	/* BLEND_ALPHA */
-#endif
-#ifdef TEXMAP
-	du = right[mid].u - left[mid].u;
-	dv = right[mid].v - left[mid].v;
-	uslope = (du << 8) / dx;
-	vslope = (dv << 8) / dx;
-#endif
-#ifdef ZBUF
-	dz = right[mid].z - left[mid].z;
-	zslope = (dz << 8) / dx;
-#endif
-#endif	/* !defined(HIGH_QUALITY) */
+	if(top < 0) top = 0;
+	if(bot >= pfill_fb.height) bot = pfill_fb.height - 1;
 
-	/* for each scanline ... */
-	for(i=sltop; i<=slbot; i++) {
-		g3d_pixel *pixptr;
-		int32_t x;
-#ifdef ZBUF
-		uint16_t *zptr;
-#endif
-
-		CHECKEDGE(i);
-		x = left[i].x;
-		pixptr = pfill_fb.pixels + i * pfill_fb.width + (x >> 8);
+	fbptr = pfill_fb.pixels + top * pfill_fb.width;
+	for(i=top; i<=bot; i++) {
+		start = left[i].x;
+		len = right[i].x - start;
 
 #ifdef GOURAUD
 		r = left[i].r;
@@ -273,12 +182,10 @@ void POLYFILL(struct pvertex *pv, int nverts)
 		z = left[i].z;
 		zptr = pfill_zbuf + i * pfill_fb.width + (x >> 8);
 #endif
-		CHECKEDGE(i);
 
-#if defined(HIGH_QUALITY) && (defined(GOURAUD) || defined(TEXMAP) || defined(ZBUF))
-		if(!(dx = right[i].x - left[i].x)) dx = 256;
+#if defined(GOURAUD) || defined(TEXMAP) || defined(ZBUF)
+		dx = len == 0 ? 256 : (len << 8);
 
-		CHECKEDGE(i);
 #ifdef GOURAUD
 		dr = right[i].r - left[i].r;
 		dg = right[i].g - left[i].g;
@@ -287,6 +194,7 @@ void POLYFILL(struct pvertex *pv, int nverts)
 		gslope = (dg << 8) / dx;
 		bslope = (db << 8) / dx;
 #ifdef BLEND_ALPHA
+		a = left[i].a;
 		da = right[i].a - left[i].a;
 		aslope = (da << 8) / dx;
 #endif	/* BLEND_ALPHA */
@@ -301,14 +209,11 @@ void POLYFILL(struct pvertex *pv, int nverts)
 		dz = right[i].z - left[i].z;
 		zslope = (dz << 8) / dx;
 #endif
-#endif	/* HIGH_QUALITY */
-		CHECKEDGE(i);
+#endif	/* gouraud/texmap/zbuf */
 
-		/* go across the scanline interpolating if necessary */
-		while(x <= right[i].x) {
-			/*if(x == (180 << 8) && i == 174) {
-				asm("int $3");
-			}*/
+
+		pptr = fbptr + start;
+		while(len-- > 0) {
 #if defined(GOURAUD) || defined(TEXMAP) || defined(BLEND_ALPHA) || defined(BLEND_ADD)
 			int cr, cg, cb;
 #endif
@@ -339,12 +244,11 @@ void POLYFILL(struct pvertex *pv, int nverts)
 				v += vslope;
 #endif
 				/* skip pixel */
-				pixptr++;
+				pptr++;
 				zptr++;
-				x += 256;
 				continue;
 			}
-#endif
+#endif	/* ZBUF */
 
 #ifdef GOURAUD
 			/* we upped the color precision to while interpolating the
@@ -384,22 +288,22 @@ void POLYFILL(struct pvertex *pv, int nverts)
 			}
 			u += uslope;
 			v += vslope;
-#endif
+#endif	/* TEXMAP */
 
 #if defined(BLEND_ALPHA) || defined(BLEND_ADD)
 #if !defined(GOURAUD) && !defined(TEXMAP)
 			/* flat version: cr,cg,cb are uninitialized so far */
-			cr = pv[0].r;
-			cg = pv[0].g;
-			cb = pv[0].b;
+			cr = varr[0].r;
+			cg = varr[0].g;
+			cb = varr[0].b;
 #endif
-			fbcol = *pixptr;
+			fbcol = *pptr;
 
 #ifdef BLEND_ALPHA
 #ifdef GOURAUD
 			alpha = a >> COLOR_SHIFT;
 #else
-			alpha = pv[0].a;
+			alpha = varr[0].a;
 #endif
 			inv_alpha = 255 - alpha;
 			cr = (cr * alpha + G3D_UNPACK_R(fbcol) * inv_alpha) >> 8;
@@ -420,12 +324,11 @@ void POLYFILL(struct pvertex *pv, int nverts)
 #endif
 
 #ifdef DEBUG_OVERDRAW
-			*pixptr++ += DEBUG_OVERDRAW;
+			*pptr++ += DEBUG_OVERDRAW;
 #else
-			*pixptr++ = color;
+			*pptr++ = color;
 #endif
-			x += 256;
 		}
+		fbptr += pfill_fb.width;
 	}
 }
-

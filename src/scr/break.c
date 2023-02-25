@@ -60,7 +60,7 @@ static void start(long trans_time)
 	g3d_perspective(VFOV, 1.3333333, 0.5, 500.0);
 
 	g3d_enable(G3D_CULL_FACE);
-	//g3d_enable(G3D_DEPTH_TEST);
+	g3d_enable(G3D_DEPTH_TEST);
 	g3d_enable(G3D_LIGHTING);
 	g3d_enable(G3D_LIGHT0);
 	g3d_polygon_mode(G3D_FLAT);
@@ -95,7 +95,6 @@ static void draw(void)
 
 	g3d_clear(G3D_COLOR_BUFFER_BIT | G3D_DEPTH_BUFFER_BIT);
 
-	zsort_mesh(&foomesh);
 	draw_mesh(&foomesh);
 
 	swap_buffers(fb_pixels);

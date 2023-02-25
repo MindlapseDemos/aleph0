@@ -119,6 +119,10 @@ static void start(long trans_time)
 
 	g3d_enable(G3D_CULL_FACE);
 	g3d_enable(G3D_DEPTH_TEST);
+	g3d_disable(G3D_LIGHTING);
+	g3d_disable(G3D_TEXTURE_2D);
+
+	g3d_polygon_mode(G3D_FLAT);
 
 	g3d_clear_color(85, 70, 136);
 

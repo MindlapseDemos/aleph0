@@ -50,7 +50,7 @@ static int use_tex = 1;
 static int mode = 2;
 
 #ifdef DEBUG_POLYFILL
-#define LOWRES_SCALE	10
+#define LOWRES_SCALE	8
 static uint16_t *lowres_pixels;
 static int lowres_width, lowres_height;
 #endif
@@ -217,7 +217,7 @@ static void draw_debug(void)
 {
 	update();
 
-	g3d_disable(G3D_LIGHTING);
+	//g3d_disable(G3D_LIGHTING);
 
 	memset(lowres_pixels, 0, lowres_width * lowres_height * 2);
 
@@ -228,8 +228,16 @@ static void draw_debug(void)
 	g3d_rotate(cam_theta, 0, 1, 0);
 
 	g3d_framebuffer(lowres_width, lowres_height, lowres_pixels);
-	/*zsort(&torus);*/
-	draw_mesh(&cube);
+
+	if(use_tex) {
+		g3d_enable(G3D_TEXTURE_2D);
+		g3d_set_texture(tex.width, tex.height, tex.pixels);
+	} else {
+		g3d_disable(G3D_TEXTURE_2D);
+	}
+	zsort_mesh(&torus);
+	draw_mesh(&torus);
+	/*draw_mesh(&cube);*/
 
 	draw_lowres_raster();
 
@@ -239,8 +247,9 @@ static void draw_debug(void)
 	g3d_enable(G3D_LIGHTING);
 
 	g3d_polygon_mode(G3D_WIRE);
-	draw_mesh(&cube);
-	g3d_polygon_mode(G3D_FLAT);
+	/*draw_mesh(&cube);*/
+	draw_mesh(&torus);
+	g3d_polygon_mode(G3D_GOURAUD);
 
 	swap_buffers(fb_pixels);
 }

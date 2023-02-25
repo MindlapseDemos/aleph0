@@ -176,19 +176,6 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #define VPREV(p)	((p) == varr ? vlast : (p) - 1)
 #define VSUCC(p, side)	((side) == 0 ? VNEXT(p) : VPREV(p))
 
-
-#define NEXTIDX(x) (((x) - 1 + nverts) % nverts)
-#define PREVIDX(x) (((x) + 1) % nverts)
-
-/* XXX
- * When HIGH_QUALITY is defined, the rasterizer calculates slopes for attribute
- * interpolation on each scanline separately; otherwise the slope for each
- * attribute would be calculated once for the whole polygon, which is faster,
- * but produces some slight quantization artifacts, due to the limited precision
- * of fixed-point calculations.
- */
-#define HIGH_QUALITY
-
 /* extra bits of precision to use when interpolating colors.
  * try tweaking this if you notice strange quantization artifacts.
  */
@@ -413,78 +400,3 @@ void polyfill_add_tex_wire(struct pvertex *verts, int nverts)
 #include "polytmpl.h"
 #undef POLYFILL
 
-
-void polyfill_flat_new(struct pvertex *varr, int vnum)
-{
-	int i, line, top, bot;
-	struct pvertex *vlast, *v, *vn, *tab;
-	int32_t x, y0, y1, dx, dy, slope, fx, fy;
-	int start, len;
-	g3d_pixel *fbptr, *pptr;
-
-	g3d_pixel color = G3D_PACK_RGB(varr[0].r, varr[0].g, varr[0].b);
-
-	vlast = varr + vnum - 1;
-	top = pfill_fb.height;
-	bot = 0;
-
-	for(i=0; i<vnum; i++) {
-		v = varr + i;
-		vn = VNEXT(v);
-
-		if(vn->y == v->y) continue;
-
-		if(vn->y > v->y) {
-			tab = left;
-		} else {
-			tab = right;
-			v = vn;
-			vn = varr + i;
-		}
-
-		dx = vn->x - v->x;
-		dy = vn->y - v->y;
-		slope = (dx << 8) / dy;
-
-		y0 = (v->y + 0x100) & 0xffffff00;	/* start from the next scanline */
-		fy = y0 - v->y;						/* fractional part before the next scanline */
-		fx = (fy * slope) >> 8;				/* X adjust for the step to the next scanline */
-		x = v->x + fx;						/* adjust X */
-		y1 = vn->y & 0xffffff00;			/* last scanline of the edge <= vn->y */
-
-		line = y0 >> 8;
-		if(line < top) top = line;
-		if((y1 >> 8) > bot) bot = y1 >> 8;
-
-		if(line > 0) tab += line;
-
-		while(line <= (y1 >> 8) && line < pfill_fb.height) {
-			if(line >= 0) {
-				int val = x < 0 ? 0 : x >> 8;
-				tab->x = val < pfill_fb.width ? val : pfill_fb.width - 1;
-				tab++;
-			}
-			x += slope;
-			line++;
-		}
-	}
-
-	if(top < 0) top = 0;
-	if(bot >= pfill_fb.height) bot = pfill_fb.height - 1;
-
-	fbptr = pfill_fb.pixels + top * pfill_fb.width;
-	for(i=top; i<=bot; i++) {
-		start = left[i].x;
-		len = right[i].x - start;
-
-		pptr = fbptr + start;
-		while(len-- > 0) {
-#ifdef DEBUG_OVERDRAW
-			*pptr++ += DEBUG_OVERDRAW;
-#else
-			*pptr++ = color;
-#endif
-		}
-		fbptr += pfill_fb.width;
-	}
-}

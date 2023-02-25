@@ -127,6 +127,9 @@
     <ClCompile Include="src\scr\tunnel.c" />
     <ClCompile Include="src\scr\voxscape.c" />
     <ClCompile Include="src\scr\hexfloor.c" />
+    <ClCompile Include="src\scr\blobgrid.c" />
+    <ClCompile Include="src\scr\break.c" />
+    <ClCompile Include="src\scr\juliatun.c" />
     <ClCompile Include="src\tinyfps.c" />
     <ClCompile Include="src\treestor.c" />
     <ClCompile Include="src\ts_text.c" />

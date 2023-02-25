@@ -5,6 +5,15 @@
 #include <fcntl.h>
 #include "logger.h"
 
+#ifdef __WATCOMC__
+#include <i86.h>
+#endif
+#ifdef __DJGPP__
+#include <pc.h>
+#endif
+
+static int setup_serial(int sdev);
+
 static int logfd = -1, orig_fd1 = -1;
 
 int init_logger(const char *fname)

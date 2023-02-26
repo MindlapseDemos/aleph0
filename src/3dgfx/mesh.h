@@ -8,6 +8,7 @@ struct g3d_mesh {
 	struct g3d_vertex *varr;
 	uint16_t *iarr;
 	int vcount, icount;
+	char *name;
 };
 
 int init_mesh(struct g3d_mesh *mesh, int prim, int num_verts, int num_idx);
@@ -17,8 +18,14 @@ void destroy_mesh(struct g3d_mesh *mesh);
 
 int copy_mesh(struct g3d_mesh *dest, struct g3d_mesh *src);
 
-int load_mesh(struct g3d_mesh *mesh, const char *fname);
+/* takes pointer to a dynamic array (dynarr_*) and populates it */
+#define load_meshes(mesharr, fname) load_meshes_impl(&(mesharr), fname)
+int load_meshes_impl(struct g3d_mesh **mesh, const char *fname);
+/* TODO: idx -1 -> merge all meshes into one? */
+int load_mesh(struct g3d_mesh *mesh, const char *fname, int idx);
+int load_named_mesh(struct g3d_mesh *mesh, const char *fname, const char *mname);
 int save_mesh(struct g3d_mesh *mesh, const char *fname);
+struct g3d_mesh *find_mesh(struct g3d_mesh *meshes, const char *mname);
 
 void zsort_mesh(struct g3d_mesh *mesh);
 void draw_mesh(struct g3d_mesh *mesh);

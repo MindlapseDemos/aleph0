@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <ctype.h>
 #include <assert.h>
 #include "mesh.h"
@@ -27,6 +28,49 @@ static char *parse_face_vert(char *ptr, struct facevertex *fv, int numv, int num
 static int cmp_facevert(const void *ap, const void *bp);
 static void free_rbnode_key(struct rbnode *n, void *cls);
 
+static int newmesh(struct g3d_mesh *m, const char *name)
+{
+	memset(m, 0, sizeof *m);
+	if(!(m->varr = dynarr_alloc(0, sizeof *m->varr)) ||
+			!(m->iarr = dynarr_alloc(0, sizeof *m->iarr))) {
+		fprintf(stderr, "load_mesh: failed to allocate resizable mesh arrays\n");
+		return -1;
+	}
+	if(name) {
+		m->name = strdup(name);
+	}
+	return 0;
+}
+
+static int endmesh(struct g3d_mesh **marr, struct g3d_mesh *m, int prim)
+{
+	void *tmp;
+
+	if(dynarr_size(m->varr) && dynarr_size(&m->iarr)) {
+		m->vcount = dynarr_size(m->varr);
+		m->icount = dynarr_size(m->iarr);
+		m->varr = dynarr_finalize(m->varr);
+		m->iarr = dynarr_finalize(m->iarr);
+		m->prim = prim;
+
+		if(!(tmp = dynarr_push(*marr, m))) {
+			fprintf(stderr, "load_meshes: failed to add new mesh (%d)\n", dynarr_size(*marr));
+			return -1;
+		}
+		*marr = tmp;
+
+		printf("  - %s mesh: %s: %d vertices, %d faces\n", prim == 4 ? "quad" : "triangle",
+				m->name, m->vcount, m->icount / m->prim);
+	} else {
+		dynarr_free(m->varr);
+		m->varr = 0;
+		dynarr_free(m->iarr);
+		m->iarr = 0;
+		free(m->name);
+	}
+	return 0;
+}
+
 /* merge of different indices per attribute happens during face processing.
  *
  * A triplet of (vertex index/texcoord index/normal index) is used as the key
@@ -38,7 +82,7 @@ static void free_rbnode_key(struct rbnode *n, void *cls);
  * appended to the vertex buffer. The index of this new vertex is appended to
  * the index buffer, and also inserted into the tree for future searches.
  */
-int load_mesh(struct g3d_mesh *mesh, const char *fname)
+int load_meshes_impl(struct g3d_mesh **meshes, const char *fname)
 {
 	int i, line_num = 0, result = -1;
 	int found_quad = 0;
@@ -48,6 +92,7 @@ int load_mesh(struct g3d_mesh *mesh, const char *fname)
 	vec3_t *narr = 0;
 	vec2_t *tarr = 0;
 	struct rbtree *rbtree = 0;
+	struct g3d_mesh mesh;
 
 	if(!(fp = fopen(fname, "rb"))) {
 		fprintf(stderr, "load_mesh: failed to open file: %s\n", fname);
@@ -60,9 +105,7 @@ int load_mesh(struct g3d_mesh *mesh, const char *fname)
 	}
 	rb_set_delete_func(rbtree, free_rbnode_key, 0);
 
-	if(!(mesh->varr = dynarr_alloc(0, sizeof *mesh->varr)) ||
-			!(mesh->iarr = dynarr_alloc(0, sizeof *mesh->iarr))) {
-		fprintf(stderr, "load_mesh: failed to allocate resizable mesh arrays\n");
+	if(newmesh(&mesh, 0) == -1) {
 		goto err;
 	}
 	if(!(varr = dynarr_alloc(0, sizeof *varr)) ||
@@ -79,6 +122,15 @@ int load_mesh(struct g3d_mesh *mesh, const char *fname)
 		if(!*line) continue;
 
 		switch(line[0]) {
+		case 'g':
+			endmesh(meshes, &mesh, found_quad ? 4 : 3);
+			found_quad = 0;
+			rb_clear(rbtree);
+			if(newmesh(&mesh, clean_line(line + 2)) == -1) {
+				goto err;
+			}
+			break;
+
 		case 'v':
 			if(isspace(line[1])) {
 				/* vertex */
@@ -154,12 +206,12 @@ int load_mesh(struct g3d_mesh *mesh, const char *fname)
 
 					if((node = rb_find(rbtree, &fv))) {
 						uint16_t idx = (int)(intptr_t)node->data;
-						if(!(mesh->iarr = dynarr_push(mesh->iarr, &idx))) {
+						if(!(mesh.iarr = dynarr_push(mesh.iarr, &idx))) {
 							fprintf(stderr, "load_mesh: failed to resize index array\n");
 							goto err;
 						}
 					} else {
-						uint16_t newidx = dynarr_size(mesh->varr);
+						uint16_t newidx = dynarr_size(mesh.varr);
 						struct g3d_vertex v;
 						struct facevertex *newfv;
 
@@ -187,11 +239,11 @@ int load_mesh(struct g3d_mesh *mesh, const char *fname)
 							v.nz = 1.0f;
 						}
 
-						if(!(mesh->varr = dynarr_push(mesh->varr, &v))) {
+						if(!(mesh.varr = dynarr_push(mesh.varr, &v))) {
 							fprintf(stderr, "load_mesh: failed to resize combined vertex array\n");
 							goto err;
 						}
-						if(!(mesh->iarr = dynarr_push(mesh->iarr, &newidx))) {
+						if(!(mesh.iarr = dynarr_push(mesh.iarr, &newidx))) {
 							fprintf(stderr, "load_mesh: failed to resize index array\n");
 							goto err;
 						}
@@ -214,15 +266,10 @@ int load_mesh(struct g3d_mesh *mesh, const char *fname)
 		}
 	}
 
-	mesh->prim = found_quad ? G3D_QUADS : G3D_TRIANGLES;
-	mesh->vcount = dynarr_size(mesh->varr);
-	mesh->icount = dynarr_size(mesh->iarr);
-	mesh->varr = dynarr_finalize(mesh->varr);
-	mesh->iarr = dynarr_finalize(mesh->iarr);
+	endmesh(meshes, &mesh, found_quad ? 4 : 3);
+
 	result = 0;	/* success */
 
-	printf("loaded %s mesh: %s: %d vertices, %d faces\n", found_quad ? "quad" : "triangle",
-			fname, mesh->vcount, mesh->icount / mesh->prim);
 
 err:
 	if(fp) fclose(fp);
@@ -230,11 +277,58 @@ err:
 	dynarr_free(narr);
 	dynarr_free(tarr);
 	if(result == -1) {
-		dynarr_free(mesh->varr);
-		dynarr_free(mesh->iarr);
+		dynarr_free(mesh.varr);
+		dynarr_free(mesh.iarr);
+		free(mesh.name);
 	}
 	rb_free(rbtree);
 	return result;
+}
+
+int load_mesh(struct g3d_mesh *mesh, const char *fname, int idx)
+{
+	int i, res = -1;
+	struct g3d_mesh *meshes = dynarr_alloc(0, sizeof *meshes);
+
+	if(load_meshes(meshes, fname) == -1) {
+		dynarr_free(meshes);
+		return -1;
+	}
+
+	if(idx >= 0 && idx < dynarr_size(meshes)) {
+		*mesh = meshes[idx];
+		res = 0;
+	}
+
+	for(i=0; i<dynarr_size(meshes); i++) {
+		if(i == idx) continue;
+		free_mesh(meshes + i);
+	}
+	dynarr_free(meshes);
+	return res;
+}
+
+int load_named_mesh(struct g3d_mesh *mesh, const char *fname, const char *mname)
+{
+	int i, res = -1;
+	struct g3d_mesh *meshes = dynarr_alloc(0, sizeof *meshes);
+
+	if(load_meshes(meshes, fname) == -1) {
+		dynarr_free(meshes);
+		return -1;
+	}
+
+	for(i=0; i<dynarr_size(meshes); i++) {
+		if(mesh->name && strcmp(mesh->name, mname) == 0) {
+			*mesh = meshes[i];
+			res = 0;
+			continue;
+		}
+		free_mesh(meshes + i);
+	}
+	dynarr_free(meshes);
+	return res;
+
 }
 
 int save_mesh(struct g3d_mesh *mesh, const char *fname)
@@ -274,6 +368,17 @@ int save_mesh(struct g3d_mesh *mesh, const char *fname)
 	fprintf(fp, "\n");
 
 	fclose(fp);
+	return 0;
+}
+
+struct g3d_mesh *find_mesh(struct g3d_mesh *meshes, const char *mname)
+{
+	int i;
+	for(i=0; i<dynarr_size(meshes); i++) {
+		if(meshes->name && strcmp(meshes->name, mname) == 0) {
+			return meshes + i;
+		}
+	}
 	return 0;
 }
 

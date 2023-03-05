@@ -7,15 +7,17 @@
 #include "demo.h"
 #include "screen.h"
 
-#define NUM_POINTS 128
+#define NUM_POINTS 64
 #define FP_PT 8
 
-#define BLOB_SIZES_NUM 5
+#define BLOB_SIZES_NUM 12
 #define BLOB_SIZEX_PAD 4
-#define MAX_BLOB_COLOR 127
+#define MAX_BLOB_COLOR 31
 
-#define CONNECTION_DIST 1024
-#define CONNECTION_BREAKS 16
+#define CONNECTION_DIST 2048
+#define CONNECTION_BREAKS 32
+
+#define CLAMP01(v) if (v < 0.0f) v = 0.0f; if (v > 1.0f) v = 1.0f;
 
 static int *xp;
 static int *yp;
@@ -56,46 +58,37 @@ struct screen *blobgrid_screen(void)
 
 static void initBlobGfx()
 {
-	static float blobPowVals[BLOB_SIZES_NUM] = { 4.0f, 3.5f, 3.4f, 3.3f, 3.2f };
-
-	int i,j,x,y,c;
+	int i,j,x,y;
+	float r;
 
 	for (i=0; i<BLOB_SIZES_NUM; ++i) {
-		const int n = 6 - i;
-		const int blobSize = 1<<n;
-		const int blobSizeX = blobSize + BLOB_SIZEX_PAD;    // We are padding this, as we generate four pixels offset (for dword rendering)
-
-		const float powVal = blobPowVals[i];
-		const float halfBlobSize = (float)(blobSize / 2);
-		const float r2max = halfBlobSize * halfBlobSize;
-		const float hmm = (float)blobSize / 4.0f;
-
-		float diver = 1.75f;    // div by 2 for more halo, 1 for more blobby
+		const int blobSizeY = i+3;	// 3 to 15
+		const int blobSizeX = (((blobSizeY+3) >> 2) << 2) + BLOB_SIZEX_PAD;    // We are padding this, as we generate four pixels offset (for dword rendering)
+		const float blobSizeYhalf = blobSizeY / 2.0f;
+		const float blobSizeXhalf = blobSizeX / 2.0f;
 
 		for (j=0; j<BLOB_SIZEX_PAD; ++j) {
 			unsigned char *dst;
 
 			blobData[i][j].sizeX = blobSizeX;
-			blobData[i][j].sizeY = blobSize;
+			blobData[i][j].sizeY = blobSizeY;
 
-			blobData[i][j].data = (unsigned char*)malloc(blobSizeX * blobSize);
+			blobData[i][j].data = (unsigned char*)malloc(blobSizeX * blobSizeY);
 			dst = blobData[i][j].data;
 
-			for (y=0; y<blobSize; ++y) {
-				const float yc = (float)y - halfBlobSize + 0.5f;
+			for (y=0; y<blobSizeY; ++y) {
+				const float yc = (float)y - blobSizeYhalf + 0.5f;
+				float yci = fabs(yc / (blobSizeYhalf - 0.5f));
+				//CLAMP01(yci)
+
 				for (x=0; x<blobSizeX; ++x) {
-					const int xc = (float)(x - j) - halfBlobSize + 0.5f;
-					float r2, cf;
+					const int xc = (float)(x - j) - blobSizeXhalf + 0.5f;
+					float xci = fabs(xc / (blobSizeYhalf - 0.5f));
+					//CLAMP01(xci)
 
-					r2 = xc*xc + yc*yc;
-					if (r2 < hmm) r2 = hmm;
-					cf = r2max / r2;
-
-					c = (int)pow(cf, powVal / diver);
-					if (c < 0) c = 0;
-					if (c > MAX_BLOB_COLOR) c = MAX_BLOB_COLOR;
-
-					*dst++ = c;
+					r = 1.0f - (xci*xci + yci*yci);
+					CLAMP01(r)
+					*dst++ = (int)(pow(r, 2.0f) * MAX_BLOB_COLOR);
 				}
 			}
 		}
@@ -121,7 +114,7 @@ static int init(void)
 	for (i=128; i<256; i++) {
 		int r = 31 - ((i-128) >> 4);
 		int g = 63 - ((i-128) >> 2);
-		int b = 31 - ((i-128) >> 2);
+		int b = 31 - ((i-128) >> 3);
 		blobsPal[i] = (r<<11) | (g<<5) | b;
 	}
 
@@ -240,7 +233,6 @@ static void drawConnections()
 {
 	int i,j,k;
 
-	//const int bp = 8*CONNECTION_BREAKS;
 	const int bp = CONNECTION_DIST / CONNECTION_BREAKS;
 
 	for (j=0; j<NUM_POINTS; ++j) {
@@ -258,9 +250,11 @@ static void drawConnections()
 					const int dy = ((yp[j] - yp[i]) << FP_PT) / steps;
 
 					for (k=0; k<steps-1; ++k) {
+						int iii = k << 0;
+						if (iii < 0) iii = 0; if (iii > BLOB_SIZES_NUM-1) iii = BLOB_SIZES_NUM-1;
 						px += dx;
 						py += dy;
-						drawBlob32(px>>FP_PT, py>>FP_PT,4);
+						drawBlob32(px>>FP_PT, py>>FP_PT,BLOB_SIZES_NUM - 1 - iii);
 					}
 				}
 			}
@@ -276,16 +270,17 @@ static void drawPoints(int t)
 		xp[i] = FB_WIDTH / 2 + (int)(sin((t + 9768*i)/7924.0) * 148);
 		yp[i] = FB_HEIGHT / 2 + (int)(sin((t + 7024*i)/13838.0) * 96);
 
-		drawBlob32(xp[i],yp[i],2);
+		drawBlob32(xp[i],yp[i],BLOB_SIZES_NUM-1);
 	}
 }
-//11
+
 static void draw(void)
 {
+	int i,y=0;
 	const int t = time_msec - startingTime;
 
 	memset(blobBuffer, 0, FB_WIDTH * FB_HEIGHT);
-	//memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
+	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
 
 	drawPoints(t);
 	drawConnections();

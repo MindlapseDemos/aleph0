@@ -391,10 +391,9 @@ static char *clean_line(char *s)
 
 	end = s;
 	while(*end && *end != '#') ++end;
-	*end = 0;
+	*end-- = 0;
 
-	while(end > s && isspace(*end)) --end;
-	*end = 0;
+	while(end > s && isspace(*end)) *end-- = 0;
 
 	return s;
 }

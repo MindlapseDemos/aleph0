@@ -7,17 +7,27 @@
 #include "demo.h"
 #include "screen.h"
 
-#define NUM_POINTS 64
+typedef struct BlobGridParams
+{
+	int effectIndex;
+	int numPoints;
+	int blobSizesNum;
+	int connectionDist;
+	int connectionBreaks;
+} BlobGridParams;
+
 #define FP_PT 8
 
-#define BLOB_SIZES_NUM 12
+#define BLOB_SIZES_NUM_MAX 16
 #define BLOB_SIZEX_PAD 4
-#define MAX_BLOB_COLOR 31
-
-#define CONNECTION_DIST 2048
-#define CONNECTION_BREAKS 32
+#define MAX_BLOB_COLOR 15
+#define MAX_NUM_POINTS 256
 
 #define CLAMP01(v) if (v < 0.0f) v = 0.0f; if (v > 1.0f) v = 1.0f;
+
+BlobGridParams bgParams0 = { 0, 64, 10, 8192, 32};
+BlobGridParams bgParams1 = { 1, 80, 8, 4096, 32};
+
 
 static int *xp;
 static int *yp;
@@ -34,7 +44,7 @@ typedef struct BlobData
 	unsigned char *data;
 } BlobData;
 
-BlobData blobData[BLOB_SIZES_NUM][BLOB_SIZEX_PAD];
+BlobData blobData[BLOB_SIZES_NUM_MAX][BLOB_SIZEX_PAD];
 
 
 static int init(void);
@@ -61,7 +71,7 @@ static void initBlobGfx()
 	int i,j,x,y;
 	float r;
 
-	for (i=0; i<BLOB_SIZES_NUM; ++i) {
+	for (i=0; i<BLOB_SIZES_NUM_MAX; ++i) {
 		const int blobSizeY = i+3;	// 3 to 15
 		const int blobSizeX = (((blobSizeY+3) >> 2) << 2) + BLOB_SIZEX_PAD;    // We are padding this, as we generate four pixels offset (for dword rendering)
 		const float blobSizeYhalf = blobSizeY / 2.0f;
@@ -79,12 +89,10 @@ static void initBlobGfx()
 			for (y=0; y<blobSizeY; ++y) {
 				const float yc = (float)y - blobSizeYhalf + 0.5f;
 				float yci = fabs(yc / (blobSizeYhalf - 0.5f));
-				//CLAMP01(yci)
 
 				for (x=0; x<blobSizeX; ++x) {
 					const int xc = (float)(x - j) - blobSizeXhalf + 0.5f;
 					float xci = fabs(xc / (blobSizeYhalf - 0.5f));
-					//CLAMP01(xci)
 
 					r = 1.0f - (xci*xci + yci*yci);
 					CLAMP01(r)
@@ -101,8 +109,8 @@ static int init(void)
 
 	blobsPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
 	blobsPal32 = (unsigned int*)malloc(sizeof(unsigned int) * 256 * 256);
-	xp = (int*)malloc(sizeof(int) * NUM_POINTS);
-	yp = (int*)malloc(sizeof(int) * NUM_POINTS);
+	xp = (int*)malloc(sizeof(int) * MAX_NUM_POINTS);
+	yp = (int*)malloc(sizeof(int) * MAX_NUM_POINTS);
 
 	for (i=0; i<128; i++) {
 		int r = i >> 2;
@@ -229,20 +237,24 @@ static void blobBufferToVram()
 	}
 }
 
-static void drawConnections()
+static void drawConnections(BlobGridParams *params)
 {
 	int i,j,k;
+	const int numPoints = params->numPoints;
+	const int connectionDist = params->connectionDist;
+	const int connectionBreaks = params->connectionBreaks;
+	const int blobSizesNum = params->blobSizesNum;
 
-	const int bp = CONNECTION_DIST / CONNECTION_BREAKS;
+	const int bp = connectionDist / connectionBreaks;
 
-	for (j=0; j<NUM_POINTS; ++j) {
-		for (i=0; i<NUM_POINTS; ++i) {
+	for (j=0; j<numPoints; ++j) {
+		for (i=j+1; i<numPoints; ++i) {
 			if (i!=j) {
 				const int lx = xp[i] - xp[j];
 				const int ly = yp[i] - yp[j];
 				const int dst = lx*lx + ly*ly;
 
-				if (dst >= bp && dst < CONNECTION_DIST) {
+				if (dst >= bp && dst < connectionDist) {
 					const int steps = dst / bp;
 					int px = xp[i] << FP_PT;
 					int py = yp[i] << FP_PT;
@@ -250,11 +262,11 @@ static void drawConnections()
 					const int dy = ((yp[j] - yp[i]) << FP_PT) / steps;
 
 					for (k=0; k<steps-1; ++k) {
-						int iii = k << 0;
-						if (iii < 0) iii = 0; if (iii > BLOB_SIZES_NUM-1) iii = BLOB_SIZES_NUM-1;
+						int iii = k >> 1;
+						if (iii < 0) iii = 0; if (iii > blobSizesNum-1) iii = blobSizesNum-1;
 						px += dx;
 						py += dy;
-						drawBlob32(px>>FP_PT, py>>FP_PT,BLOB_SIZES_NUM - 1 - iii);
+						drawBlob32(px>>FP_PT, py>>FP_PT,blobSizesNum - 1 - iii);
 					}
 				}
 			}
@@ -262,16 +274,37 @@ static void drawConnections()
 	}
 }
 
-static void drawPoints(int t)
+static void drawPoints(BlobGridParams *params, int t)
 {
 	int i;
+	const int numPoints = params->numPoints;
+	const int blobSizesNum = params->blobSizesNum;
 
-	for (i=0; i<NUM_POINTS; ++i) {
-		xp[i] = FB_WIDTH / 2 + (int)(sin((t + 9768*i)/7924.0) * 148);
-		yp[i] = FB_HEIGHT / 2 + (int)(sin((t + 7024*i)/13838.0) * 96);
+	switch(params->effectIndex) {
+		case 0:
+			for (i=0; i<numPoints; ++i) {
+				xp[i] = FB_WIDTH / 2 + (int)(sin((t + 478*i)/2924.0) * 148);
+				yp[i] = FB_HEIGHT / 2 + (int)(sin((t + 524*i)/2638.0) * 96);
+			}
+		break;
 
-		drawBlob32(xp[i],yp[i],BLOB_SIZES_NUM-1);
+		case 1:
+			for (i=0; i<numPoints; ++i) {
+				xp[i] = FB_WIDTH / 2 + (int)(sin((t/2 + 768*i)/2624.0) * 148);
+				yp[i] = FB_HEIGHT / 2 + (int)(sin((t/2 + 624*i)/1238.0) * 96);
+			}
+		break;
 	}
+
+	for (i=0; i<numPoints; ++i) {
+		drawBlob32(xp[i],yp[i],blobSizesNum-1);
+	}
+}
+
+static void drawEffect(BlobGridParams *params, int t)
+{
+	drawPoints(params, t);
+	drawConnections(params);
 }
 
 static void draw(void)
@@ -282,8 +315,7 @@ static void draw(void)
 	memset(blobBuffer, 0, FB_WIDTH * FB_HEIGHT);
 	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
 
-	drawPoints(t);
-	drawConnections();
+	drawEffect(&bgParams0, t);
 
 	blobBufferToVram32();
 

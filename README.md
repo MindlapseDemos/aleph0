@@ -59,9 +59,9 @@ OpenWatcom cross-compilation on UNIX
 ------------------------------------
 source owdev script with contents (change WATCOM var as necessary):
 
-  export WATCOM=$HOME/devel/ow
-  export PATH=$WATCOM/binl:$PATH
-  export INCLUDE=$WATCOM/h:$INCLUDE
+    export WATCOM=$HOME/devel/ow
+    export PATH=$WATCOM/binl:$PATH
+    export INCLUDE=$WATCOM/h:$INCLUDE
 
 Run wmake to build. Needs dos4gw.exe and wstub.exe in current dir or PATH
 
@@ -133,13 +133,14 @@ Datafiles
 The demo datafiles are in their own subversion repo. To checkout the data files
 run the following in the demo root directory:
 
-  svn co svn://mutantstargoat.com/datadirs/dosdemo data
+    svn co svn://mutantstargoat.com/datadirs/dosdemo data
 
 Random optimization details about the Pentium1 (p54c)
 -----------------------------------------------------
 Use cround64 (util.h) for float -> integer conversions, instead of casts.
 
 Performance measurement with RDTSC:
+
     perf_start();
     /* code under test */
     perf_end(); /* result in perf_interval_count */

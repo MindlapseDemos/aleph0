@@ -16,7 +16,9 @@ typedef struct BlobGridParams
 	int connectionBreaks;
 } BlobGridParams;
 
-#define FP_PT 8
+#define FP_PT 16
+
+//#define STARS_NORMAL
 
 #define BLOB_SIZES_NUM_MAX 16
 #define BLOB_SIZEX_PAD 4
@@ -24,15 +26,15 @@ typedef struct BlobGridParams
 #define BLOB_SHIFT_MAX 2
 #define MAX_NUM_POINTS 256
 
-#define NUM_STARS (MAX_NUM_POINTS / 2)
-#define STARS_CUBE_LENGTH 256
-#define STARS_CUBE_DEPTH 1024
+#define NUM_STARS MAX_NUM_POINTS
+#define STARS_CUBE_LENGTH 1024
+#define STARS_CUBE_DEPTH 512
 
 #define CLAMP01(v) if (v < 0.0f) v = 0.0f; if (v > 1.0f) v = 1.0f;
 
 BlobGridParams bgParams0 = { 0, 64, 10, 8192, 32};
 BlobGridParams bgParams1 = { 1, 80, 8, 4096, 32};
-BlobGridParams bgParamsStars = { 2, NUM_STARS, 8, 4096, 64};
+BlobGridParams bgParamsStars = { 2, NUM_STARS, 6, 4096, 16};
 
 
 typedef struct Pos3D
@@ -320,23 +322,38 @@ static void drawConnections3D(BlobGridParams *params)
 				const int lz = zpi - zpj;
 				const int dst = lx*lx + ly*ly + lz*lz;
 
-				if (dst >= bp && dst < connectionDist) {
-					const int steps = dst / bp;
+				if (bp > 0 && dst < connectionDist) {
 					const int xsi = screenPos[i].x;
 					const int ysi = screenPos[i].y;
 					const int xsj = screenPos[j].x;
 					const int ysj = screenPos[j].y;
+
+					//int steps = (((xsi - xsj)*(xsi - xsj) + (ysi - ysj)*(ysi - ysj)) / bp);
+					int length = sqrt((xsi - xsj)*(xsi - xsj) + (ysi - ysj)*(ysi - ysj));
+
 					int px = xsi << FP_PT;
 					int py = ysi << FP_PT;
-					const int dx = ((xsj - xsi) << FP_PT) / steps;
-					const int dy = ((ysj - ysi) << FP_PT) / steps;
+					//const int dx = ((xsj - xsi) << FP_PT) / steps;
+					//const int dy = ((ysj - ysi) << FP_PT) / steps;
 
-					for (k=0; k<steps-1; ++k) {
-						int iii = k >> 1;
-						if (iii < 0) iii = 0; if (iii > blobSizesNum-1) iii = blobSizesNum-1;
+					int dx, dy, dl, ti;
+
+					//length >>= 1;
+					if (length<=1) continue;	// ==0 crashes, possibly overflow from sqrt giving a NaN?
+					dl = (1 << FP_PT) / length;
+					dx = (xsj - xsi) * dl;
+					dy = (ysj - ysi) * dl;
+
+					ti = 0;
+					for (k=0; k<length-1; ++k) {
+						int size = ((blobSizesNum-1) * 1 * ti) >> FP_PT;
+						//if (size > blobSizesNum-1) size = blobSizesNum-1 - size;
+						if (size < 1) size = 1;
+						//if (size > blobSizesNum-1) size = blobSizesNum-1;
 						px += dx;
 						py += dy;
-						drawBlob32(px>>FP_PT, py>>FP_PT, blobSizesNum - 1 - iii, 0);
+						ti += dl;
+						drawBlob32(px>>FP_PT, py>>FP_PT, size, 0);
 					}
 				}
 			}
@@ -359,11 +376,13 @@ static void drawStars(BlobGridParams *params)
 
 		dst->z = z;
 		if (z > 0) {
-			const int xp = (FB_WIDTH / 2) + (x << 8) / z;
-			const int yp = (FB_HEIGHT / 2) + (y << 8) / z;
-			
-			int k;
-			drawBlob32(xp,yp,blobSizesNum>>1,2);
+			const int xp = (FB_WIDTH / 2) + (x << 6) / z;
+			const int yp = (FB_HEIGHT / 2) + (y << 6) / z;
+
+			int size = ((blobSizesNum - 1) * (STARS_CUBE_DEPTH - z)) / STARS_CUBE_DEPTH;
+			int shifter = (4 * (STARS_CUBE_DEPTH - z)) / STARS_CUBE_DEPTH;
+
+			drawBlob32(xp,yp,size,shifter);
 
 			dst->x = xp;
 			dst->y = yp;
@@ -415,8 +434,13 @@ static void moveStars(int t)
 	Pos3D *src = origPos;
 
 	do {
-		//src->x = (src->x - ((count & 3) + 1)) & (STARS_CUBE_DEPTH - 1);
-		//src->y = (src->y - ((count & 3) + 1)) & (STARS_CUBE_DEPTH - 1);
+		#ifndef STARS_NORMAL
+			src->x += (((count) & 7) + 1);
+			src->y += (((count) & 3) + 2);
+			if (src->x >= STARS_CUBE_DEPTH / 2) src->x = - STARS_CUBE_DEPTH / 2;
+			if (src->y >= STARS_CUBE_DEPTH / 2) src->y = - STARS_CUBE_DEPTH / 2;
+		#endif			
+
 		src->z = (src->z - ((count & 3) + 1)) & (STARS_CUBE_DEPTH - 1);
 		++src;
 	}while(--count != 0);

@@ -26,13 +26,13 @@ typedef struct BlobGridParams
 
 #define NUM_STARS (MAX_NUM_POINTS / 2)
 #define STARS_CUBE_LENGTH 256
-#define STARS_CUBE_DEPTH 256
+#define STARS_CUBE_DEPTH 1024
 
 #define CLAMP01(v) if (v < 0.0f) v = 0.0f; if (v > 1.0f) v = 1.0f;
 
 BlobGridParams bgParams0 = { 0, 64, 10, 8192, 32};
 BlobGridParams bgParams1 = { 1, 80, 8, 4096, 32};
-BlobGridParams bgParamsStars = { 2, NUM_STARS, 8, 2048, 32};
+BlobGridParams bgParamsStars = { 2, NUM_STARS, 8, 4096, 64};
 
 
 typedef struct Pos3D
@@ -41,7 +41,7 @@ typedef struct Pos3D
 } Pos3D;
 
 static Pos3D *origPos;
-static Pos3D *projPos;
+static Pos3D *screenPos;
 
 static unsigned long startingTime;
 
@@ -135,7 +135,7 @@ static int init(void)
 	blobsPal32 = (unsigned int*)malloc(sizeof(unsigned int) * 256 * 256);
 
 	origPos = (Pos3D*)malloc(sizeof(Pos3D) * MAX_NUM_POINTS);
-	projPos = (Pos3D*)malloc(sizeof(Pos3D) * MAX_NUM_POINTS);
+	screenPos = (Pos3D*)malloc(sizeof(Pos3D) * MAX_NUM_POINTS);
 
 	for (i=0; i<128; i++) {
 		int r = i >> 2;
@@ -174,7 +174,7 @@ static void destroy(void)
 	free(blobsPal);
 	free(blobsPal32);
 	free(origPos);
-	free(projPos);
+	free(screenPos);
 }
 
 static void start(long trans_time)
@@ -264,11 +264,11 @@ static void drawConnections(BlobGridParams *params)
 	const int bp = connectionDist / connectionBreaks;
 
 	for (j=0; j<numPoints; ++j) {
-		const int xpj = projPos[j].x;
-		const int ypj = projPos[j].y;
+		const int xpj = screenPos[j].x;
+		const int ypj = screenPos[j].y;
 		for (i=j+1; i<numPoints; ++i) {
-			const int xpi = projPos[i].x;
-			const int ypi = projPos[i].y;
+			const int xpi = screenPos[i].x;
+			const int ypi = screenPos[i].y;
 
 			if (i!=j) {
 				const int lx = xpi - xpj;
@@ -322,17 +322,21 @@ static void drawConnections3D(BlobGridParams *params)
 
 				if (dst >= bp && dst < connectionDist) {
 					const int steps = dst / bp;
-					int px = xpi << FP_PT;
-					int py = ypi << FP_PT;
-					const int dx = ((xpj - xpi) << FP_PT) / steps;
-					const int dy = ((ypj - ypi) << FP_PT) / steps;
+					const int xsi = screenPos[i].x;
+					const int ysi = screenPos[i].y;
+					const int xsj = screenPos[j].x;
+					const int ysj = screenPos[j].y;
+					int px = xsi << FP_PT;
+					int py = ysi << FP_PT;
+					const int dx = ((xsj - xsi) << FP_PT) / steps;
+					const int dy = ((ysj - ysi) << FP_PT) / steps;
 
 					for (k=0; k<steps-1; ++k) {
 						int iii = k >> 1;
 						if (iii < 0) iii = 0; if (iii > blobSizesNum-1) iii = blobSizesNum-1;
 						px += dx;
 						py += dy;
-						drawBlob32(FB_WIDTH/2 + (px>>FP_PT), FB_HEIGHT/2 + (py>>FP_PT), blobSizesNum - 1 - iii, 0);
+						drawBlob32(px>>FP_PT, py>>FP_PT, blobSizesNum - 1 - iii, 0);
 					}
 				}
 			}
@@ -346,7 +350,7 @@ static void drawStars(BlobGridParams *params)
 
 	int count = params->numPoints;
 	Pos3D *src = origPos;
-	Pos3D *dst = projPos;
+	Pos3D *dst = screenPos;
 
 	do {
 		const int x = src->x;
@@ -359,7 +363,7 @@ static void drawStars(BlobGridParams *params)
 			const int yp = (FB_HEIGHT / 2) + (y << 8) / z;
 			
 			int k;
-			drawBlob32(xp,yp,blobSizesNum>>1,3);
+			drawBlob32(xp,yp,blobSizesNum>>1,2);
 
 			dst->x = xp;
 			dst->y = yp;
@@ -373,7 +377,7 @@ static void drawPoints(BlobGridParams *params, int t)
 {
 	const int numPoints = params->numPoints;
 	const int blobSizesNum = params->blobSizesNum;
-	Pos3D *dst = projPos;
+	Pos3D *dst = screenPos;
 
 	int count = numPoints;
 	switch(params->effectIndex) {
@@ -399,7 +403,7 @@ static void drawPoints(BlobGridParams *params, int t)
 		
 		case 2:
 			drawStars(params);
-			drawConnections(params);
+			drawConnections3D(params);
 		break;
 	}
 }

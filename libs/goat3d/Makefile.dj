@@ -1,0 +1,30 @@
+src = $(wildcard src/*.c)
+obj = $(src:.c=.odj)
+alib = goat3d.dja
+
+ifeq ($(findstring COMMAND.COM, $(SHELL)), COMMAND.COM)
+	hostsys = dos
+else
+	hostsys = unix
+	TCPREFIX = i586-pc-msdosdjgpp-
+endif
+
+CC = $(TCPREFIX)gcc
+AR = $(TCPREFIX)ar
+CFLAGS = $(arch) -O3 -Iinclude -I.. -I../../src
+
+$(alib): $(obj)
+	$(AR) rc $@ $(obj)
+
+%.odj: %.c
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+.PHONY: clean
+ifeq ($(hostsys), dos)
+clean:
+	del src\*.odj
+	del $(alib)
+else
+clean:
+	rm -f $(obj) $(alib)
+endif

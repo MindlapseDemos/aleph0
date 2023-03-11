@@ -16,7 +16,7 @@ else
 endif
 
 inc = -Isrc -Isrc/3dgfx -Isrc/rt -Isrc/scr -Isrc/dos -Ilibs \
-	  -Ilibs/imago/src -Ilibs/anim/src -Ilibs/midas
+	  -Ilibs/imago/src -Ilibs/anim/src -Ilibs/midas -Ilibs/goat3d/include
 opt = -O3 -ffast-math -fno-strict-aliasing
 warn = -pedantic -Wall -Wno-unused-function -Wno-unused-variable -Wno-unknown-pragmas
 
@@ -31,7 +31,7 @@ endif
 CC = $(TOOLPREFIX)gcc
 AR = $(TOOLPREFIX)ar
 CFLAGS = -march=pentium $(warn) -MMD $(dbg) $(opt) $(prof) $(inc) $(def)
-LDFLAGS = libs/imago/imago.dja libs/anim/anim.dja
+LDFLAGS = libs/imago/imago.dja libs/anim/anim.dja libs/goat3d/goat3d.dja
 #libs/midas/libmidas.a
 
 ifneq ($(hostsys), dos)
@@ -39,7 +39,7 @@ ifneq ($(hostsys), dos)
 all: data $(bin)
 endif
 
-$(bin): $(obj) imago anim
+$(bin): $(obj) imago anim goat3d
 	$(CC) -o $@ -Wl,-Map=ld.map $(prof) $(obj) $(LDFLAGS)
 
 %.odj: %.asm
@@ -60,10 +60,15 @@ imago:
 anim:
 	$(MAKE) -C libs/anim -f Makefile.dj
 
+.PHONY: goat3d
+goat3d:
+	$(MAKE) -C libs/goat3d -f Makefile.dj
+
 .PHONY: cleanlibs
 cleanlibs:
 	$(MAKE) -C libs/imago clean -f Makefile.dj
 	$(MAKE) -C libs/anim clean -f Makefile.dj
+	$(MAKE) -C libs/goat3d clean -f Makefile.dj
 
 .PHONY: clean
 .PHONY: cleandep

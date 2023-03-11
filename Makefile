@@ -20,9 +20,9 @@ scrobj = src/scr/bump.obj src/scr/fract.obj src/scr/greets.obj &
 	src/scr/juliatun.obj src/scr/blobgrid.obj src/scr/break.obj
 csprobj = cspr/dbgfont.obj cspr/confont.obj
 
-incpath = -Isrc -Isrc/dos -Isrc/3dgfx -Isrc/rt -Ilibs -Ilibs/imago/src -Ilibs/anim/src &
-	-Ilibs/midas
-libpath = libpath libs/imago libpath libs/anim libpath libs/midas
+incpath = -Isrc -Isrc/dos -Isrc/3dgfx -Isrc/rt -Ilibs -Ilibs/imago/src &
+	-Ilibs/anim/src -Ilibs/midas -Ilibs/goat3d/include
+libpath = libpath libs/imago libpath libs/anim libpath libs/midas libpath libs/goat3d
 !else
 
 dosobj = src\dos\audos.obj src\dos\djdpmi.obj src\dos\gfx.obj src\dos\keyb.obj &
@@ -47,8 +47,8 @@ scrobj = src\scr\bump.obj src\scr\fract.obj src\scr\greets.obj &
 csprobj = cspr\dbgfont.obj cspr\confont.obj
 
 incpath = -Isrc -Isrc\dos -Isrc\3dgfx -Isrc\rt -Ilibs -Ilibs\imago\src &
-	-Ilibs\anim\src -Ilibs\midas
-libpath = libpath libs\imago libpath libs\anim libpath libs\midas
+	-Ilibs\anim\src -Ilibs\midas -Ilibs\goat3d\include
+libpath = libpath libs\imago libpath libs\anim libpath libs\midas libpath libs\goat3d
 !endif
 
 obj = $(dosobj) $(3dobj) $(rtobj) $(scrobj) $(srcobj) $(csprobj)
@@ -57,7 +57,7 @@ bin = demo.exe
 opt = -otexan
 #opt = -od
 def = -dM_PI=3.141592653589793 -dUSE_HLT -dNO_SOUND
-libs = imago.lib anim.lib
+libs = imago.lib anim.lib goat3d.lib
 # midas.lib
 
 AS = nasm
@@ -67,7 +67,7 @@ ASFLAGS = -fobj
 CFLAGS = -d3 -5 -fp5 $(opt) $(def) -s -zq -bt=dos $(incpath)
 LDFLAGS = option map $(libpath) library { $(libs) }
 
-$(bin): cflags.occ $(obj) libs/imago/imago.lib libs/anim/anim.lib
+$(bin): cflags.occ $(obj) libs/imago/imago.lib libs/anim/anim.lib libs/goat3d/goat3d.lib
 	%write objects.lnk $(obj)
 	%write ldflags.lnk $(LDFLAGS)
 	$(LD) debug all name $@ system dos4g file { @objects } @ldflags

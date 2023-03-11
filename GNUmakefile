@@ -61,7 +61,7 @@ $(bin): $(obj) imago mikmod
 src/data.o: src/data.asm $(bindata)
 
 .PHONY: libs
-libs: imago anim mikmod
+libs: imago anim mikmod goat3d
 
 .PHONY: imago
 imago:
@@ -75,11 +75,16 @@ anim:
 mikmod:
 	$(MAKE) -C libs/mikmod
 
+.PHONY: goat3d
+goat3d:
+	$(MAKE) -C libs/goat3d
+
 .PHONY: cleanlibs
 cleanlibs:
 	$(MAKE) -C libs/imago clean
 	$(MAKE) -C libs/anim clean
 	$(MAKE) -C libs/mikmod clean
+	$(MAKE) -C libs/goat3d clean
 
 .PHONY: clean
 clean:

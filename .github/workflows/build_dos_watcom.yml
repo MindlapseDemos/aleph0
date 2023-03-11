@@ -46,6 +46,11 @@ jobs:
         source ow/owsetenv-dos.sh
         cd libs/anim
         wmake
+    - name: build libs/goat3d
+      run: |
+        source ow/owsetenv-dos.sh
+        cd libs/goat3d
+        wmake
     - name: build demo
       run: |
         source ow/owsetenv-dos.sh

@@ -4,12 +4,7 @@
 #include <errno.h>
 #include <assert.h>
 #include "treestor.h"
-
-#ifdef WIN32
-#include <malloc.h>
-#else
-#include <alloca.h>
-#endif
+#include "util.h"
 
 struct ts_node *ts_text_load(struct ts_io *io);
 int ts_text_save(struct ts_node *tree, struct ts_io *io);

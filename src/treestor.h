@@ -1,6 +1,8 @@
 #ifndef TREESTORE_H_
 #define TREESTORE_H_
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <stdarg.h>
 
 #ifdef __cplusplus
@@ -9,6 +11,14 @@ extern "C" {
 #else
 #define TS_DEFVAL(x)
 #endif
+
+/** set of user-supplied I/O functions, for ts_load_io/ts_save_io */
+struct ts_io {
+	void *data;
+
+	long (*read)(void *buf, size_t bytes, void *uptr);
+	long (*write)(const void *buf, size_t bytes, void *uptr);
+};
 
 enum ts_value_type { TS_STRING, TS_NUMBER, TS_VECTOR, TS_ARRAY };
 
@@ -103,6 +113,8 @@ void ts_free_node(struct ts_node *n);	/**< also calls ts_destroy_node */
 /** recursively destroy all the nodes of the tree */
 void ts_free_tree(struct ts_node *tree);
 
+int ts_set_node_name(struct ts_node *node, const char *name);
+
 void ts_add_attr(struct ts_node *node, struct ts_attr *attr);
 struct ts_attr *ts_get_attr(struct ts_node *node, const char *name);
 
@@ -122,8 +134,18 @@ void ts_add_child(struct ts_node *node, struct ts_node *child);
 int ts_remove_child(struct ts_node *node, struct ts_node *child);
 struct ts_node *ts_get_child(struct ts_node *node, const char *name);
 
+/* load/save by opening the specified file */
 struct ts_node *ts_load(const char *fname);
 int ts_save(struct ts_node *tree, const char *fname);
+
+/* load/save using the supplied FILE pointer */
+struct ts_node *ts_load_file(FILE *fp);
+int ts_save_file(struct ts_node *tree, FILE *fp);
+
+/* load/save using custom I/O functions */
+struct ts_node *ts_load_io(struct ts_io *io);
+int ts_save_io(struct ts_node *tree, struct ts_io *io);
+
 
 struct ts_attr *ts_lookup(struct ts_node *root, const char *path);
 const char *ts_lookup_str(struct ts_node *root, const char *path,

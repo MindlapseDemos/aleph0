@@ -2,11 +2,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <assert.h>
 #include "treestor.h"
-#include "util.h"
 
-struct ts_node *ts_text_load(FILE *fp);
-int ts_text_save(struct ts_node *tree, FILE *fp);
+#ifdef WIN32
+#include <malloc.h>
+#else
+#include <alloca.h>
+#endif
+
+struct ts_node *ts_text_load(struct ts_io *io);
+int ts_text_save(struct ts_node *tree, struct ts_io *io);
+
+static long io_read(void *buf, size_t bytes, void *uptr);
+static long io_write(const void *buf, size_t bytes, void *uptr);
+
 
 /* ---- ts_value implementation ---- */
 
@@ -100,7 +110,7 @@ fail:
 	{ \
 		static char scrap[128]; \
 		char *str; \
-		int sz = sprintf(scrap, fmt, x); \
+		int sz = snprintf(scrap, sizeof scrap, fmt, x); \
 		if(!(str = malloc(sz + 1))) return 0; \
 		sprintf(str, fmt, x); \
 		return str; \
@@ -117,8 +127,6 @@ struct val_list_node {
 
 int ts_set_value_str(struct ts_value *tsv, const char *str)
 {
-	char *endp;
-
 	if(tsv->str) {
 		ts_destroy_value(tsv);
 		if(ts_init_value(tsv) == -1) {
@@ -365,6 +373,7 @@ int ts_set_value_arr(struct ts_value *tsv, int count, const struct ts_value *arr
 			return -1;
 		}
 		tsv->type = TS_VECTOR;
+		tsv->vec_size = count;
 
 		for(i=0; i<count; i++) {
 			tsv->vec[i] = tsv->array[i].fnum;
@@ -518,6 +527,17 @@ void ts_free_tree(struct ts_node *tree)
 	ts_free_node(tree);
 }
 
+int ts_set_node_name(struct ts_node *node, const char *name)
+{
+	char *n = malloc(strlen(name) + 1);
+	if(!n) return -1;
+	strcpy(n, name);
+
+	free(node->name);
+	node->name = n;
+	return 0;
+}
+
 void ts_add_attr(struct ts_node *node, struct ts_attr *attr)
 {
 	attr->next = 0;
@@ -527,6 +547,7 @@ void ts_add_attr(struct ts_node *node, struct ts_attr *attr)
 	} else {
 		node->attr_list = node->attr_tail = attr;
 	}
+	node->attr_count++;
 }
 
 struct ts_attr *ts_get_attr(struct ts_node *node, const char *name)
@@ -601,6 +622,7 @@ void ts_add_child(struct ts_node *node, struct ts_node *child)
 	} else {
 		node->child_list = node->child_tail = child;
 	}
+	node->child_count++;
 }
 
 int ts_remove_child(struct ts_node *node, struct ts_node *child)
@@ -622,6 +644,8 @@ int ts_remove_child(struct ts_node *node, struct ts_node *child)
 		node->child_tail = iter;
 	}
 	node->child_list = dummy.next;
+	node->child_count--;
+	assert(node->child_count >= 0);
 	return 0;
 }
 
@@ -647,9 +671,23 @@ struct ts_node *ts_load(const char *fname)
 		return 0;
 	}
 
-	root = ts_text_load(fp);
+	root = ts_load_file(fp);
 	fclose(fp);
 	return root;
+}
+
+struct ts_node *ts_load_file(FILE *fp)
+{
+	struct ts_io io = {0};
+	io.data = fp;
+	io.read = io_read;
+
+	return ts_load_io(&io);
+}
+
+struct ts_node *ts_load_io(struct ts_io *io)
+{
+	return ts_text_load(io);
 }
 
 int ts_save(struct ts_node *tree, const char *fname)
@@ -661,9 +699,23 @@ int ts_save(struct ts_node *tree, const char *fname)
 		fprintf(stderr, "ts_save: failed to open file: %s: %s\n", fname, strerror(errno));
 		return 0;
 	}
-	res = ts_text_save(tree, fp);
+	res = ts_save_file(tree, fp);
 	fclose(fp);
 	return res;
+}
+
+int ts_save_file(struct ts_node *tree, FILE *fp)
+{
+	struct ts_io io = {0};
+	io.data = fp;
+	io.write = io_write;
+
+	return ts_save_io(tree, &io);
+}
+
+int ts_save_io(struct ts_node *tree, struct ts_io *io)
+{
+	return ts_text_save(tree, io);
 }
 
 static const char *pathtok(const char *path, char *tok)
@@ -740,4 +792,18 @@ struct ts_value *ts_lookup_array(struct ts_node *node, const char *path, struct 
 		return def_val;
 	}
 	return attr->val.array;
+}
+
+static long io_read(void *buf, size_t bytes, void *uptr)
+{
+	size_t sz = fread(buf, 1, bytes, uptr);
+	if(sz < bytes && errno) return -1;
+	return sz;
+}
+
+static long io_write(const void *buf, size_t bytes, void *uptr)
+{
+	size_t sz = fwrite(buf, 1, bytes, uptr);
+	if(sz < bytes && errno) return -1;
+	return sz;
 }

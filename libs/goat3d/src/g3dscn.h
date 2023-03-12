@@ -151,6 +151,10 @@ struct goat3d {
 
 	struct aabox bbox;
 	int bbox_valid;
+
+	/* namegen */
+	unsigned int namecnt[7];
+	char namebuf[64];
 };
 
 extern int goat3d_log_level;

@@ -22,13 +22,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "dynarr.h"
 #include "treestor.h"
 
-static struct ts_node *create_mtltree(const struct goat3d_material *mtl);
-static struct ts_node *create_meshtree(const struct goat3d_mesh *mesh);
-static struct ts_node *create_lighttree(const struct goat3d_light *light);
-static struct ts_node *create_camtree(const struct goat3d_camera *cam);
-static struct ts_node *create_nodetree(const struct goat3d_node *node);
-static struct ts_node *create_animtree(const struct goat3d_anim *anim);
-static struct ts_node *create_tracktree(const struct goat3d_track *trk);
+/* type passed to namegen */
+enum { MTL, MESH, LIGHT, CAMERA, NODE, ANIM, TRACK };
+
+static struct ts_node *create_mtltree(struct goat3d *g, const struct goat3d_material *mtl);
+static struct ts_node *create_meshtree(struct goat3d *g, const struct goat3d_mesh *mesh);
+static struct ts_node *create_lighttree(struct goat3d *g, const struct goat3d_light *light);
+static struct ts_node *create_camtree(struct goat3d *g, const struct goat3d_camera *cam);
+static struct ts_node *create_nodetree(struct goat3d *g, const struct goat3d_node *node);
+static struct ts_node *create_animtree(struct goat3d *g, const struct goat3d_anim *anim);
+static struct ts_node *create_tracktree(struct goat3d *g, const struct goat3d_track *trk);
+
+static void init_namegen(struct goat3d *g);
+static const char *namegen(struct goat3d *g, const char *name, int type);
+
+GOAT3DAPI char *goat3d_b64encode(const void *data, int size, char *buf, int *bufsz);
+#define b64encode goat3d_b64encode
 
 #define create_tsnode(n, p, nstr) \
 	do { \
@@ -78,6 +87,8 @@ int g3dimpl_scnsave(const struct goat3d *g, struct goat3d_io *io)
 	tsio.read = io->read;
 	tsio.write = io->write;
 
+	init_namegen((struct goat3d*)g);
+
 	create_tsnode(tsroot, 0, "scene");
 
 	/* environment */
@@ -88,7 +99,7 @@ int g3dimpl_scnsave(const struct goat3d *g, struct goat3d_io *io)
 
 	num = dynarr_size(g->materials);
 	for(i=0; i<num; i++) {
-		if(!(tsn = create_mtltree(g->materials[i]))) {
+		if(!(tsn = create_mtltree((struct goat3d*)g, g->materials[i]))) {
 			goto err;
 		}
 		ts_add_child(tsroot, tsn);
@@ -96,7 +107,7 @@ int g3dimpl_scnsave(const struct goat3d *g, struct goat3d_io *io)
 
 	num = dynarr_size(g->meshes);
 	for(i=0; i<num; i++) {
-		if(!(tsn = create_meshtree(g->meshes[i]))) {
+		if(!(tsn = create_meshtree((struct goat3d*)g, g->meshes[i]))) {
 			goto err;
 		}
 		ts_add_child(tsroot, tsn);
@@ -104,7 +115,7 @@ int g3dimpl_scnsave(const struct goat3d *g, struct goat3d_io *io)
 
 	num = dynarr_size(g->lights);
 	for(i=0; i<num; i++) {
-		if(!(tsn = create_lighttree(g->lights[i]))) {
+		if(!(tsn = create_lighttree((struct goat3d*)g, g->lights[i]))) {
 			goto err;
 		}
 		ts_add_child(tsroot, tsn);
@@ -112,7 +123,7 @@ int g3dimpl_scnsave(const struct goat3d *g, struct goat3d_io *io)
 
 	num = dynarr_size(g->cameras);
 	for(i=0; i<num; i++) {
-		if(!(tsn = create_camtree(g->cameras[i]))) {
+		if(!(tsn = create_camtree((struct goat3d*)g, g->cameras[i]))) {
 			goto err;
 		}
 		ts_add_child(tsroot, tsn);
@@ -120,7 +131,7 @@ int g3dimpl_scnsave(const struct goat3d *g, struct goat3d_io *io)
 
 	num = dynarr_size(g->nodes);
 	for(i=0; i<num; i++) {
-		if(!(tsn = create_nodetree(g->nodes[i]))) {
+		if(!(tsn = create_nodetree((struct goat3d*)g, g->nodes[i]))) {
 			goto err;
 		}
 		ts_add_child(tsroot, tsn);
@@ -128,7 +139,7 @@ int g3dimpl_scnsave(const struct goat3d *g, struct goat3d_io *io)
 
 	num = dynarr_size(g->anims);
 	for(i=0; i<num; i++) {
-		if(!(tsn = create_animtree(g->anims[i]))) {
+		if(!(tsn = create_animtree((struct goat3d*)g, g->anims[i]))) {
 			goto err;
 		}
 		ts_add_child(tsroot, tsn);
@@ -150,7 +161,7 @@ int g3dimpl_anmsave(const struct goat3d *g, struct goat3d_io *io)
 	return -1;
 }
 
-static struct ts_node *create_mtltree(const struct goat3d_material *mtl)
+static struct ts_node *create_mtltree(struct goat3d *g, const struct goat3d_material *mtl)
 {
 	int i, num_attr;
 	struct ts_node *tsn, *tsmtl = 0;
@@ -158,7 +169,7 @@ static struct ts_node *create_mtltree(const struct goat3d_material *mtl)
 
 	create_tsnode(tsmtl, 0, "mtl");
 	create_tsattr(tsa, tsmtl, "name", TS_STRING);
-	if(ts_set_value_str(&tsa->val, mtl->name) == -1) {
+	if(ts_set_value_str(&tsa->val, namegen(g, mtl->name, MTL)) == -1) {
 		goto err;
 	}
 
@@ -187,7 +198,7 @@ err:
 	return 0;
 }
 
-static struct ts_node *create_meshtree(const struct goat3d_mesh *mesh)
+static struct ts_node *create_meshtree(struct goat3d *g, const struct goat3d_mesh *mesh)
 {
 	int i, num;
 	struct ts_node *tsmesh = 0, *tslist, *tsitem;
@@ -195,7 +206,7 @@ static struct ts_node *create_meshtree(const struct goat3d_mesh *mesh)
 
 	create_tsnode(tsmesh, 0, "mesh");
 	create_tsattr(tsa, tsmesh, "name", TS_STRING);
-	if(ts_set_value_str(&tsa->val, mesh->name) == -1) {
+	if(ts_set_value_str(&tsa->val, namegen(g, mesh->name, MESH)) == -1) {
 		goto err;
 	}
 
@@ -213,11 +224,18 @@ static struct ts_node *create_meshtree(const struct goat3d_mesh *mesh)
 		create_tsattr(tsa, tslist, "list_size", TS_NUMBER);
 		ts_set_valuei(&tsa->val, num);
 
-		for(i=0; i<num; i++) {
-			cgm_vec3 *vptr = mesh->vertices + i;
-			create_tsnode(tsitem, tslist, "vertex");
-			create_tsattr(tsa, tsitem, "pos", TS_VECTOR);
-			ts_set_valuefv(&tsa->val, 3, vptr->x, vptr->y, vptr->z);
+		if(goat3d_getopt(g, GOAT3D_OPT_SAVEBINDATA)) {
+			create_tsattr(tsa, tslist, "base64", TS_STRING);
+			if(!(tsa->val.str = b64encode(mesh->vertices, num * 3 * sizeof(float), 0, 0))) {
+				goto err;
+			}
+		} else {
+			for(i=0; i<num; i++) {
+				cgm_vec3 *vptr = mesh->vertices + i;
+				create_tsnode(tsitem, tslist, "vertex");
+				create_tsattr(tsa, tsitem, "pos", TS_VECTOR);
+				ts_set_valuefv(&tsa->val, 3, vptr->x, vptr->y, vptr->z);
+			}
 		}
 	}
 
@@ -226,11 +244,18 @@ static struct ts_node *create_meshtree(const struct goat3d_mesh *mesh)
 		create_tsattr(tsa, tslist, "list_size", TS_NUMBER);
 		ts_set_valuei(&tsa->val, num);
 
-		for(i=0; i<num; i++) {
-			cgm_vec3 *nptr = mesh->normals + i;
-			create_tsnode(tsitem, tslist, "normal");
-			create_tsattr(tsa, tsitem, "dir", TS_VECTOR);
-			ts_set_valuefv(&tsa->val, 3, nptr->x, nptr->y, nptr->z);
+		if(goat3d_getopt(g, GOAT3D_OPT_SAVEBINDATA)) {
+			create_tsattr(tsa, tslist, "base64", TS_STRING);
+			if(!(tsa->val.str = b64encode(mesh->normals, num * 3 * sizeof(float), 0, 0))) {
+				goto err;
+			}
+		} else {
+			for(i=0; i<num; i++) {
+				cgm_vec3 *nptr = mesh->normals + i;
+				create_tsnode(tsitem, tslist, "normal");
+				create_tsattr(tsa, tsitem, "dir", TS_VECTOR);
+				ts_set_valuefv(&tsa->val, 3, nptr->x, nptr->y, nptr->z);
+			}
 		}
 	}
 
@@ -239,11 +264,18 @@ static struct ts_node *create_meshtree(const struct goat3d_mesh *mesh)
 		create_tsattr(tsa, tslist, "list_size", TS_NUMBER);
 		ts_set_valuei(&tsa->val, num);
 
-		for(i=0; i<num; i++) {
-			cgm_vec3 *tptr = mesh->tangents + i;
-			create_tsnode(tsitem, tslist, "tangent");
-			create_tsattr(tsa, tsitem, "dir", TS_VECTOR);
-			ts_set_valuefv(&tsa->val, 3, tptr->x, tptr->y, tptr->z);
+		if(goat3d_getopt(g, GOAT3D_OPT_SAVEBINDATA)) {
+			create_tsattr(tsa, tslist, "base64", TS_STRING);
+			if(!(tsa->val.str = b64encode(mesh->tangents, num * 3 * sizeof(float), 0, 0))) {
+				goto err;
+			}
+		} else {
+			for(i=0; i<num; i++) {
+				cgm_vec3 *tptr = mesh->tangents + i;
+				create_tsnode(tsitem, tslist, "tangent");
+				create_tsattr(tsa, tsitem, "dir", TS_VECTOR);
+				ts_set_valuefv(&tsa->val, 3, tptr->x, tptr->y, tptr->z);
+			}
 		}
 	}
 
@@ -252,11 +284,18 @@ static struct ts_node *create_meshtree(const struct goat3d_mesh *mesh)
 		create_tsattr(tsa, tslist, "list_size", TS_NUMBER);
 		ts_set_valuei(&tsa->val, num);
 
-		for(i=0; i<num; i++) {
-			cgm_vec2 *uvptr = mesh->texcoords + i;
-			create_tsnode(tsitem, tslist, "texcoord");
-			create_tsattr(tsa, tsitem, "uv", TS_VECTOR);
-			ts_set_valuefv(&tsa->val, 3, uvptr->x, uvptr->y, 0.0f);
+		if(goat3d_getopt(g, GOAT3D_OPT_SAVEBINDATA)) {
+			create_tsattr(tsa, tslist, "base64", TS_STRING);
+			if(!(tsa->val.str = b64encode(mesh->texcoords, num * 3 * sizeof(float), 0, 0))) {
+				goto err;
+			}
+		} else {
+			for(i=0; i<num; i++) {
+				cgm_vec2 *uvptr = mesh->texcoords + i;
+				create_tsnode(tsitem, tslist, "texcoord");
+				create_tsattr(tsa, tsitem, "uv", TS_VECTOR);
+				ts_set_valuefv(&tsa->val, 3, uvptr->x, uvptr->y, 0.0f);
+			}
 		}
 	}
 
@@ -265,11 +304,18 @@ static struct ts_node *create_meshtree(const struct goat3d_mesh *mesh)
 		create_tsattr(tsa, tslist, "list_size", TS_NUMBER);
 		ts_set_valuei(&tsa->val, num);
 
-		for(i=0; i<num; i++) {
-			cgm_vec4 *wptr = mesh->skin_weights + i;
-			create_tsnode(tsitem, tslist, "skinweight");
-			create_tsattr(tsa, tsitem, "weights", TS_VECTOR);
-			ts_set_valuefv(&tsa->val, 4, wptr->x, wptr->y, wptr->z, wptr->w);
+		if(goat3d_getopt(g, GOAT3D_OPT_SAVEBINDATA)) {
+			create_tsattr(tsa, tslist, "base64", TS_STRING);
+			if(!(tsa->val.str = b64encode(mesh->skin_weights, num * 4 * sizeof(float), 0, 0))) {
+				goto err;
+			}
+		} else {
+			for(i=0; i<num; i++) {
+				cgm_vec4 *wptr = mesh->skin_weights + i;
+				create_tsnode(tsitem, tslist, "skinweight");
+				create_tsattr(tsa, tsitem, "weights", TS_VECTOR);
+				ts_set_valuefv(&tsa->val, 4, wptr->x, wptr->y, wptr->z, wptr->w);
+			}
 		}
 	}
 
@@ -278,11 +324,18 @@ static struct ts_node *create_meshtree(const struct goat3d_mesh *mesh)
 		create_tsattr(tsa, tslist, "list_size", TS_NUMBER);
 		ts_set_valuei(&tsa->val, num);
 
-		for(i=0; i<num; i++) {
-			int4 *iptr = mesh->skin_matrices + i;
-			create_tsnode(tsitem, tslist, "skinmatrix");
-			create_tsattr(tsa, tsitem, "idx", TS_VECTOR);
-			ts_set_valueiv(&tsa->val, 4, iptr->x, iptr->y, iptr->z, iptr->w);
+		if(goat3d_getopt(g, GOAT3D_OPT_SAVEBINDATA)) {
+			create_tsattr(tsa, tslist, "base64", TS_STRING);
+			if(!(tsa->val.str = b64encode(mesh->skin_matrices, num * 4 * sizeof(int), 0, 0))) {
+				goto err;
+			}
+		} else {
+			for(i=0; i<num; i++) {
+				int4 *iptr = mesh->skin_matrices + i;
+				create_tsnode(tsitem, tslist, "skinmatrix");
+				create_tsattr(tsa, tsitem, "idx", TS_VECTOR);
+				ts_set_valueiv(&tsa->val, 4, iptr->x, iptr->y, iptr->z, iptr->w);
+			}
 		}
 	}
 
@@ -291,11 +344,18 @@ static struct ts_node *create_meshtree(const struct goat3d_mesh *mesh)
 		create_tsattr(tsa, tslist, "list_size", TS_NUMBER);
 		ts_set_valuei(&tsa->val, num);
 
-		for(i=0; i<num; i++) {
-			cgm_vec4 *cptr = mesh->colors + i;
-			create_tsnode(tsitem, tslist, "color");
-			create_tsattr(tsa, tsitem, "color", TS_VECTOR);
-			ts_set_valuefv(&tsa->val, 4, cptr->x, cptr->y, cptr->z, cptr->w);
+		if(goat3d_getopt(g, GOAT3D_OPT_SAVEBINDATA)) {
+			create_tsattr(tsa, tslist, "base64", TS_STRING);
+			if(!(tsa->val.str = b64encode(mesh->colors, num * 4 * sizeof(float), 0, 0))) {
+				goto err;
+			}
+		} else {
+			for(i=0; i<num; i++) {
+				cgm_vec4 *cptr = mesh->colors + i;
+				create_tsnode(tsitem, tslist, "color");
+				create_tsattr(tsa, tsitem, "color", TS_VECTOR);
+				ts_set_valuefv(&tsa->val, 4, cptr->x, cptr->y, cptr->z, cptr->w);
+			}
 		}
 	}
 
@@ -304,6 +364,7 @@ static struct ts_node *create_meshtree(const struct goat3d_mesh *mesh)
 		create_tsattr(tsa, tslist, "list_size", TS_NUMBER);
 		ts_set_valuei(&tsa->val, num);
 
+		/* TODO: base64 option */
 		for(i=0; i<num; i++) {
 			create_tsnode(tsitem, tslist, "bone");
 			create_tsattr(tsa, tsitem, "name", TS_STRING);
@@ -318,11 +379,18 @@ static struct ts_node *create_meshtree(const struct goat3d_mesh *mesh)
 		create_tsattr(tsa, tslist, "list_size", TS_NUMBER);
 		ts_set_valuei(&tsa->val, num);
 
-		for(i=0; i<num; i++) {
-			struct face *fptr = mesh->faces + i;
-			create_tsnode(tsitem, tslist, "face");
-			create_tsattr(tsa, tsitem, "idx", TS_VECTOR);
-			ts_set_valueiv(&tsa->val, 3, fptr->v[0], fptr->v[1], fptr->v[2]);
+		if(goat3d_getopt(g, GOAT3D_OPT_SAVEBINDATA)) {
+			create_tsattr(tsa, tslist, "base64", TS_STRING);
+			if(!(tsa->val.str = b64encode(mesh->faces, num * 3 * sizeof(int), 0, 0))) {
+				goto err;
+			}
+		} else {
+			for(i=0; i<num; i++) {
+				struct face *fptr = mesh->faces + i;
+				create_tsnode(tsitem, tslist, "face");
+				create_tsattr(tsa, tsitem, "idx", TS_VECTOR);
+				ts_set_valueiv(&tsa->val, 3, fptr->v[0], fptr->v[1], fptr->v[2]);
+			}
 		}
 	}
 
@@ -333,14 +401,14 @@ err:
 	return 0;
 }
 
-static struct ts_node *create_lighttree(const struct goat3d_light *light)
+static struct ts_node *create_lighttree(struct goat3d *g, const struct goat3d_light *light)
 {
 	struct ts_node *tslight = 0;
 	struct ts_attr *tsa;
 
 	create_tsnode(tslight, 0, "light");
 	create_tsattr(tsa, tslight, "name", TS_STRING);
-	if(ts_set_value_str(&tsa->val, light->name) == -1) {
+	if(ts_set_value_str(&tsa->val, namegen(g, light->name, LIGHT)) == -1) {
 		goto err;
 	}
 
@@ -377,14 +445,14 @@ err:
 	return 0;
 }
 
-static struct ts_node *create_camtree(const struct goat3d_camera *cam)
+static struct ts_node *create_camtree(struct goat3d *g, const struct goat3d_camera *cam)
 {
 	struct ts_node *tscam = 0;
 	struct ts_attr *tsa;
 
 	create_tsnode(tscam, 0, "camera");
 	create_tsattr(tsa, tscam, "name", TS_STRING);
-	if(ts_set_value_str(&tsa->val, cam->name) == -1) {
+	if(ts_set_value_str(&tsa->val, namegen(g, cam->name, CAMERA)) == -1) {
 		goto err;
 	}
 
@@ -412,7 +480,7 @@ err:
 	return 0;
 }
 
-static struct ts_node *create_nodetree(const struct goat3d_node *node)
+static struct ts_node *create_nodetree(struct goat3d *g, const struct goat3d_node *node)
 {
 	struct ts_node *tsnode = 0;
 	struct ts_attr *tsa;
@@ -423,7 +491,7 @@ static struct ts_node *create_nodetree(const struct goat3d_node *node)
 
 	create_tsnode(tsnode, 0, "node");
 	create_tsattr(tsa, tsnode, "name", TS_STRING);
-	if(ts_set_value_str(&tsa->val, goat3d_get_node_name(node)) == -1) {
+	if(ts_set_value_str(&tsa->val, namegen(g, node->name, NODE)) == -1) {
 		goto err;
 	}
 
@@ -472,7 +540,7 @@ err:
 	return 0;
 }
 
-static struct ts_node *create_animtree(const struct goat3d_anim *anim)
+static struct ts_node *create_animtree(struct goat3d *g, const struct goat3d_anim *anim)
 {
 	int i, num_trk;
 	struct ts_node *tsanim, *tstrk;
@@ -480,14 +548,14 @@ static struct ts_node *create_animtree(const struct goat3d_anim *anim)
 
 	create_tsnode(tsanim, 0, "anim");
 	create_tsattr(tsa, tsanim, "name", TS_STRING);
-	if(ts_set_value_str(&tsa->val, goat3d_get_anim_name(anim)) == -1) {
+	if(ts_set_value_str(&tsa->val, namegen(g, anim->name, ANIM)) == -1) {
 		goto err;
 	}
 
 
 	num_trk = goat3d_get_anim_track_count(anim);
 	for(i=0; i<num_trk; i++) {
-		if((tstrk = create_tracktree(goat3d_get_anim_track(anim, i)))) {
+		if((tstrk = create_tracktree(g, goat3d_get_anim_track(anim, i)))) {
 			ts_add_child(tsanim, tstrk);
 		}
 	}
@@ -502,21 +570,18 @@ err:
 static const char *instr[] = {"step", "linear", "cubic"};
 static const char *exstr[] = {"extend", "clamp", "repeat", "pingpong"};
 
-static struct ts_node *create_tracktree(const struct goat3d_track *trk)
+static struct ts_node *create_tracktree(struct goat3d *g, const struct goat3d_track *trk)
 {
 	int i, num_keys;
 	struct ts_node *tstrk, *tskey;
 	struct ts_attr *tsa;
 	struct goat3d_key key;
 	enum goat3d_track_type basetype;
-	const char *str;
 
 	create_tsnode(tstrk, 0, "track");
-	if((str = goat3d_get_track_name(trk))) {
-		create_tsattr(tsa, tstrk, "name", TS_STRING);
-		if(ts_set_value_str(&tsa->val, str) == -1) {
-			goto err;
-		}
+	create_tsattr(tsa, tstrk, "name", TS_STRING);
+	if(ts_set_value_str(&tsa->val, namegen(g, trk->name, TRACK)) == -1) {
+		goto err;
 	}
 
 	create_tsattr(tsa, tstrk, "type", TS_STRING);
@@ -564,4 +629,102 @@ static struct ts_node *create_tracktree(const struct goat3d_track *trk)
 err:
 	ts_free_tree(tstrk);
 	return 0;
+}
+
+
+
+static void init_namegen(struct goat3d *g)
+{
+	memset(g->namecnt, 0, sizeof g->namecnt);
+}
+
+static const char *namegen(struct goat3d *g, const char *name, int type)
+{
+	static const char *fmt[] = {"material%03u", "mesh%03u", "light%03u",
+		"camera%03u", "node%03u", "animation%03u", "track%03u"};
+
+	if(name) {
+		/* if an actual name happens to match our pattern, make sure to skip it
+		 * for the auto-generated names
+		 */
+		int n;
+		if(sscanf(name, fmt[type], &n)) {
+			g->namecnt[type] = n;
+		}
+		return name;
+	}
+
+	sprintf(g->namebuf, fmt[type], g->namecnt[type]++);
+	return g->namebuf;
+}
+
+static const char *enctab =
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	"abcdefghijklmnopqrstuvwxyz"
+	"0123456789+/";
+
+GOAT3DAPI char *goat3d_b64encode(const void *data, int size, char *buf, int *bufsz)
+{
+	const unsigned char *src = data;
+	char *dest;
+	int i;
+	int outsz = size * 4 / 3 + 1;
+	int bitgrp[4];
+	int leftover;
+
+	if(buf) {
+		if(*bufsz < outsz) {
+			*bufsz = outsz;
+			return 0;
+		}
+	} else {
+		if(bufsz) *bufsz = outsz;
+
+		/* reserve more space for up to two padding bytes */
+		if(!(buf = malloc(outsz + 2))) {
+			return 0;
+		}
+	}
+	dest = buf;
+
+	leftover = 0;
+	while(size > 0) {
+		bitgrp[0] = (src[0] & 0xfc) >> 2;
+		bitgrp[1] = (src[0] & 3) << 4;
+		if(--size <= 0) {
+			leftover = 2;
+			break;
+		}
+		bitgrp[1] |= src[1] >> 4;
+		bitgrp[2] = (src[1] & 0xf) << 2;
+		if(--size <= 0) {
+			leftover = 3;
+			break;
+		}
+		bitgrp[2] |= src[2] >> 6;
+		bitgrp[3] = src[2] & 0x3f;
+
+		dest[0] = enctab[bitgrp[0]];
+		dest[1] = enctab[bitgrp[1]];
+		dest[2] = enctab[bitgrp[2]];
+		dest[3] = enctab[bitgrp[3]];
+
+		dest += 4;
+		src += 3;
+		leftover = 0;
+		size--;
+	}
+
+	if(leftover) {
+		for(i=0; i<4; i++) {
+			if(i < leftover) {
+				*dest++ = enctab[bitgrp[i]];
+			} else {
+				*dest++ = '=';
+			}
+		}
+	}
+
+	*dest = 0;
+	return buf;
 }

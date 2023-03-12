@@ -45,6 +45,10 @@ static int read_node(struct goat3d *g, struct goat3d_node *node, struct ts_node 
 static int read_anim(struct goat3d *g, struct ts_node *tsanim);
 static struct goat3d_track *read_track(struct goat3d *g, struct ts_node *tstrk);
 
+GOAT3DAPI void *goat3d_b64decode(const char *str, void *buf, int *bufsz);
+#define b64decode goat3d_b64decode
+
+
 int g3dimpl_scnload(struct goat3d *g, struct goat3d_io *io)
 {
 	int idx;
@@ -376,13 +380,21 @@ fail:
 	return 0;
 }
 
+static int calc_b64_size(const char *s)
+{
+	int len = strlen(s);
+	const char *end = s + len;
+	while(end > s && *--end == '=') len--;
+	return len * 3 / 4;
+}
 
 static void *read_veclist(void *arr, int dim, const char *nodename, const char *attrname, struct ts_node *tslist)
 {
-	int i, size;
+	int i, size, bufsz;
 	struct ts_node *c;
 	struct ts_attr *attr;
 	float vec[4];
+	const char *str;
 
 	arr = dynarr_clear(arr);
 	assert(arr);
@@ -390,6 +402,18 @@ static void *read_veclist(void *arr, int dim, const char *nodename, const char *
 	if((size = ts_get_attr_int(tslist, "list_size", -1)) <= 0) {
 		goat3d_logmsg(LOG_WARNING, "read_veclist: list_size attribute missing or invalid\n");
 		size = -1;
+	}
+
+	if((str = ts_get_attr_str(tslist, "base64", 0))) {
+		if(size == -1) size = calc_b64_size(str);
+		if(!(arr = dynarr_resize(arr, size))) {
+			goat3d_logmsg(LOG_ERROR, "read_veclist: failed to resize %s array\n",
+					nodename);
+			return 0;
+		}
+
+		bufsz = size * dim * sizeof(float);
+		b64decode(str, arr, &bufsz);
 	}
 
 	c = tslist->child_list;
@@ -425,10 +449,11 @@ static void *read_veclist(void *arr, int dim, const char *nodename, const char *
 
 static void *read_intlist(void *arr, int dim, const char *nodename, const char *attrname, struct ts_node *tslist)
 {
-	int i, size;
+	int i, size, bufsz;
 	struct ts_node *c;
 	struct ts_attr *attr;
 	int ivec[4];
+	const char *str;
 
 	arr = dynarr_clear(arr);
 	assert(arr);
@@ -436,6 +461,18 @@ static void *read_intlist(void *arr, int dim, const char *nodename, const char *
 	if((size = ts_get_attr_int(tslist, "list_size", -1)) <= 0) {
 		goat3d_logmsg(LOG_WARNING, "read_intlist: list_size attribute missing or invalid\n");
 		size = -1;
+	}
+
+	if((str = ts_get_attr_str(tslist, "base64", 0))) {
+		if(size == -1) size = calc_b64_size(str);
+		if(!(arr = dynarr_resize(arr, size))) {
+			goat3d_logmsg(LOG_ERROR, "read_intlist: failed to resize %s array\n",
+					nodename);
+			return 0;
+		}
+
+		bufsz = size * dim * sizeof(int);
+		b64decode(str, arr, &bufsz);
 	}
 
 	c = tslist->child_list;
@@ -483,6 +520,8 @@ static void *read_bonelist(struct goat3d *g, struct goat3d_node **arr, struct ts
 		goat3d_logmsg(LOG_WARNING, "read_bonelist: list_size attribute missing or invalid\n");
 		size = -1;
 	}
+
+	/* TODO base64 data support */
 
 	c = tslist->child_list;
 	while(c) {
@@ -729,4 +768,79 @@ static struct goat3d_track *read_track(struct goat3d *g, struct ts_node *tstrk)
 	}
 
 	return trk;
+}
+
+static int b64bits(int c)
+{
+	if(c >= 'A' && c <= 'Z') {
+		return c - 'A';
+	}
+	if(c >= 'a' && c <= 'z') {
+		return c - 'a' + 26;
+	}
+	if(c >= '0' && c <= '9') {
+		return c - '0' + 52;
+	}
+	if(c == '+') return 62;
+	if(c == '/') return 63;
+
+	return -1;
+}
+
+GOAT3DAPI void *goat3d_b64decode(const char *str, void *buf, int *bufsz)
+{
+	unsigned char *dest, *end;
+	unsigned char acc;
+	int bits, sz;
+	unsigned int gidx;
+
+	if(buf) {
+		sz = *bufsz;
+	} else {
+		sz = calc_b64_size(str);
+		if(!(buf = malloc(sz))) {
+			return 0;
+		}
+		if(bufsz) *bufsz = sz;
+	}
+	dest = buf;
+	end = (unsigned char*)buf + sz;
+
+	sz = 0;
+	gidx = 0;
+	acc = 0;
+	while(*str) {
+		if((bits = b64bits(*str++)) == -1) {
+			continue;
+		}
+
+		switch(gidx++ & 3) {
+		case 0:
+			acc = bits << 2;
+			break;
+		case 1:
+			if(dest < end) *dest = acc | (bits >> 4);
+			dest++;
+			acc = bits << 4;
+			break;
+		case 2:
+			if(dest < end) *dest = acc | (bits >> 2);
+			dest++;
+			acc = bits << 6;
+			break;
+		case 3:
+			if(dest < end) *dest = acc | bits;
+			dest++;
+		default:
+			break;
+		}
+	}
+
+	if(gidx & 3) {
+		if(dest < end) *dest = acc;
+		dest++;
+	}
+
+	if(bufsz) *bufsz = dest - (unsigned char*)buf;
+	return buf;
 }

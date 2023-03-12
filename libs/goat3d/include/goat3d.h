@@ -1,6 +1,6 @@
 /*
 goat3d - 3D scene, and animation file format library.
-Copyright (C) 2013-2018  John Tsiombikas <nuclear@member.fsf.org>
+Copyright (C) 2013-2023  John Tsiombikas <nuclear@member.fsf.org>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -98,6 +98,7 @@ enum goat3d_extrap {
 enum goat3d_option {
 	GOAT3D_OPT_SAVEXML,		/* save in XML format (dropped) */
 	GOAT3D_OPT_SAVETEXT,	/* save in text format */
+	GOAT3D_OPT_SAVEBINDATA,	/* save mesh data in text files as binary blobs */
 	GOAT3D_OPT_SAVEBIN,		/* not implemented yet */
 	GOAT3D_OPT_SAVEGLTF,	/* not implemented yet */
 	GOAT3D_OPT_SAVEGLB,		/* not implemented yet */

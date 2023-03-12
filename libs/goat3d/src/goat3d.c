@@ -1192,6 +1192,8 @@ GOAT3DAPI struct goat3d_node *goat3d_create_node(void)
 	node->child_count = 0;
 
 	node->rot.w = node->arot.w = 1;
+	cgm_vcons(&node->scale, 1, 1, 1);
+	cgm_midentity(node->matrix);
 
 	return node;
 }

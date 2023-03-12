@@ -4,7 +4,7 @@ dosobj = src/dos/audos.obj src/dos/djdpmi.obj src/dos/gfx.obj src/dos/keyb.obj &
 	src/dos/vbe.obj src/dos/vga.obj src/dos/s3.obj src/dos/watdpmi.obj &
 	src/dos/mouse.obj src/dos/pci.obj
 3dobj = src/3dgfx/3dgfx.obj src/3dgfx/mesh.obj src/3dgfx/meshload.obj &
-	src/3dgfx/polyclip.obj src/3dgfx/polyfill.obj
+	src/3dgfx/polyclip.obj src/3dgfx/polyfill.obj src/3dgfx/scene.obj
 rtobj = src/rt/rt.obj src/rt/rtgeom.obj
 srcobj = src/bsptree.obj src/cfgopt.obj src/console.obj src/demo.obj &
 	src/dynarr.obj src/gfxutil.obj src/metasurf.obj src/noise.obj &
@@ -30,7 +30,7 @@ dosobj = src\dos\audos.obj src\dos\djdpmi.obj src\dos\gfx.obj src\dos\keyb.obj &
 	src\dos\vbe.obj src\dos\vga.obj src\dos\s3.obj src\dos\watdpmi.obj &
 	src\dos\mouse.obj src\dos\pci.obj
 3dobj = src\3dgfx\3dgfx.obj src\3dgfx\mesh.obj src\3dgfx\meshload.obj &
-	src\3dgfx\polyclip.obj src\3dgfx\polyfill.obj
+	src\3dgfx\polyclip.obj src\3dgfx\polyfill.obj src\3dgfx\scene.obj
 rtobj = src\rt\rt.obj src\rt\rtgeom.obj
 srcobj = src\bsptree.obj src\cfgopt.obj src\console.obj src\demo.obj &
 	src\dynarr.obj src\gfxutil.obj src\metasurf.obj src\noise.obj &

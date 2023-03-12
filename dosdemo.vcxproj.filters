@@ -102,6 +102,9 @@
     <ClCompile Include="src\3dgfx\polyfill.c">
       <Filter>src\3dgfx</Filter>
     </ClCompile>
+    <ClCompile Include="src\3dgfx\scene.c">
+      <Filter>src\3dgfx</Filter>
+    </ClCompile>
     <ClCompile Include="src\rt\rt.c">
       <Filter>src\rt</Filter>
     </ClCompile>
@@ -218,9 +221,6 @@
     <ClInclude Include="src\sball.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\scene.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="src\screen.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -252,6 +252,9 @@
       <Filter>src\3dgfx</Filter>
     </ClInclude>
     <ClInclude Include="src\3dgfx\polytmpl.h">
+      <Filter>src\3dgfx</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3dgfx\scene.h">
       <Filter>src\3dgfx</Filter>
     </ClInclude>
     <ClInclude Include="src\rt\rt.h">

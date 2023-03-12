@@ -5,7 +5,6 @@
 #include "mesh.h"
 #include "treestor.h"
 #include "dynarr.h"
-#include "scene.h"
 
 struct object {
 	char *name;

@@ -4,6 +4,26 @@
 #include <math.h>
 #include "mesh.h"
 #include "3dgfx.h"
+#include "util.h"
+
+int init_mesh(struct g3d_mesh *mesh, int prim, int num_verts, int num_idx)
+{
+	mesh->name = 0;
+	mesh->prim = prim;
+	if(num_verts > 0) {
+		mesh->varr = malloc_nf(num_verts * sizeof *mesh->varr);
+	} else {
+		mesh->varr = 0;
+	}
+	if(num_idx > 0) {
+		mesh->iarr = malloc_nf(num_idx * prim * sizeof *mesh->iarr);
+	} else {
+		mesh->iarr = 0;
+	}
+	mesh->vcount = num_verts;
+	mesh->icount = num_idx;
+	return 0;
+}
 
 void free_mesh(struct g3d_mesh *mesh)
 {
@@ -13,8 +33,11 @@ void free_mesh(struct g3d_mesh *mesh)
 
 void destroy_mesh(struct g3d_mesh *mesh)
 {
-	free(mesh->varr);
-	free(mesh->iarr);
+	if(mesh) {
+		free(mesh->name);
+		free(mesh->varr);
+		free(mesh->iarr);
+	}
 }
 
 int copy_mesh(struct g3d_mesh *dest, struct g3d_mesh *src)
@@ -293,7 +316,7 @@ int gen_sphere_mesh(struct g3d_mesh *mesh, float rad, int usub, int vsub)
 	struct g3d_vertex *vptr;
 	uint16_t *iptr;
 
-	mesh->prim = G3D_QUADS;
+	init_mesh(mesh, G3D_QUADS, 0, 0);
 
 	if(usub < 4) usub = 4;
 	if(vsub < 2) vsub = 2;
@@ -358,6 +381,8 @@ int gen_plane_mesh(struct g3d_mesh *m, float width, float height, int usub, int 
 	struct g3d_vertex *vptr;
 	uint16_t *iptr;
 
+	init_mesh(m, G3D_QUADS, 0, 0);
+
 	if(usub < 1) usub = 1;
 	if(vsub < 1) vsub = 1;
 
@@ -381,7 +406,6 @@ int gen_plane_mesh(struct g3d_mesh *m, float width, float height, int usub, int 
 		return -1;
 	}
 
-	m->prim = G3D_QUADS;
 	m->vcount = nverts;
 	m->icount = nidx;
 
@@ -486,7 +510,7 @@ int gen_torus_mesh(struct g3d_mesh *mesh, float rad, float ringrad, int usub, in
 	struct g3d_vertex *vptr;
 	uint16_t *iptr;
 
-	mesh->prim = G3D_QUADS;
+	init_mesh(mesh, G3D_QUADS, 0, 0);
 
 	if(usub < 4) usub = 4;
 	if(vsub < 2) vsub = 2;

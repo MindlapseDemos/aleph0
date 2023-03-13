@@ -3,6 +3,7 @@
 #include "demo.h"
 #include "3dgfx.h"
 #include "mesh.h"
+#include "scene.h"
 #include "screen.h"
 #include "util.h"
 #include "dynarr.h"
@@ -30,8 +31,7 @@ static float cam_dist = 10;
 
 static long part_start;
 
-static struct g3d_mesh *smeshes;
-static struct g3d_mesh *mlapse;
+static struct g3d_scene *scn;
 
 
 struct screen *break_screen(void)
@@ -43,17 +43,16 @@ struct screen *break_screen(void)
 static int init(void)
 {
 	int i, j;
+	struct goat3d *g;
 
-	smeshes = dynarr_alloc(0, sizeof *smeshes);
-	if(!smeshes || load_meshes(smeshes, "data/fracscn.obj") == -1) {
+	if(!(g = goat3d_create()) || goat3d_load(g, "data/fracscn.g3d") == -1) {
+		goat3d_free(g);
 		return -1;
 	}
+	scn = scn_create();
 
-	mlapse = dynarr_alloc(0, sizeof *mlapse);
-	if(!mlapse || load_meshes(mlapse, "data/mlapse.obj") == -1) {
-		return -1;
-	}
-
+	conv_goat3d_scene(scn, g);
+	goat3d_free(g);
 	return 0;
 }
 
@@ -104,12 +103,7 @@ static void draw(void)
 
 	g3d_clear(G3D_COLOR_BUFFER_BIT | G3D_DEPTH_BUFFER_BIT);
 
-	for(i=0; i<dynarr_size(smeshes); i++) {
-		draw_mesh(smeshes + i);
-	}
-	for(i=0; i<dynarr_size(mlapse); i++) {
-		draw_mesh(mlapse + i);
-	}
+	scn_draw(scn);
 
 	swap_buffers(fb_pixels);
 }

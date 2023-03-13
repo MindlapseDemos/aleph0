@@ -1,6 +1,7 @@
 #ifndef MESH_H_
 #define MESH_H_
 
+#include "3dgfx.h"
 #include "inttypes.h"
 
 struct g3d_mesh {

@@ -124,6 +124,7 @@ void g3d_reset(void)
 	}
 
 	for(i=0; i<MAX_LIGHTS; i++) {
+		g3d_light_dir(i, 0, 0, 1);
 		g3d_light_color(i, 1, 1, 1);
 	}
 	g3d_light_ambient(0.1, 0.1, 0.1);

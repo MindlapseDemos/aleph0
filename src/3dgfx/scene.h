@@ -19,6 +19,7 @@ struct g3d_track {
 };
 
 struct g3d_anim {
+	char *name;
 	struct g3d_track pos, rot, scale;
 };
 
@@ -56,7 +57,16 @@ int scn_mesh_count(struct g3d_scene *scn);
 int scn_node_count(struct g3d_scene *scn);
 int scn_anim_count(struct g3d_scene *scn);
 
-void conv_goat3d_mesh(struct g3d_mesh *dstmesh, struct goat3d_mesh *srcmesh);
-void conv_goat3d_anim(struct g3d_anim *dstanim, struct goat3d_anim *srcanim);
+struct g3d_mesh *scn_find_mesh(struct g3d_scene *scn, const char *name);
+struct g3d_node *scn_find_node(struct g3d_scene *scn, const char *name);
+struct g3d_anim *scn_find_anim(struct g3d_scene *scn, const char *name);
+
+int conv_goat3d_scene(struct g3d_scene *scn, struct goat3d *g);
+int conv_goat3d_mesh(struct g3d_mesh *dstmesh, struct goat3d_mesh *srcmesh);
+int conv_goat3d_node(struct g3d_scene *scn, struct g3d_node *dstnode, struct goat3d_node *srcnode);
+int link_goat3d_node(struct g3d_scene *scn, struct g3d_node *dstnode, struct goat3d_node *srcnode);
+int conv_goat3d_anim(struct g3d_anim *dstanim, struct goat3d_anim *srcanim);
+
+void scn_draw(struct g3d_scene *scn);
 
 #endif	/* SCENE_H_ */

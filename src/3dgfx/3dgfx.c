@@ -600,6 +600,7 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 		}
 
 		/* backface culling */
+#if 0	/* TODO fix culling */
 		if(vnum > 2 && st->opt & G3D_CULL_FACE) {
 			int32_t ax = pv[1].x - pv[0].x;
 			int32_t ay = pv[1].y - pv[0].y;
@@ -612,6 +613,7 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 				continue;	/* back-facing */
 			}
 		}
+#endif
 
 		switch(vnum) {
 		case 1:

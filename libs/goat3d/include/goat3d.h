@@ -318,7 +318,7 @@ GOAT3DAPI void goat3d_get_node_pivot(const struct goat3d_node *node, float *xptr
 
 GOAT3DAPI void goat3d_get_node_matrix(const struct goat3d_node *node, float *matrix);
 /* same as above, but also takes hierarchy into account */
-GOAT3DAPI void goat3d_get_matrix(const struct goat3d_node *Node, float *matrix);
+GOAT3DAPI void goat3d_get_matrix(const struct goat3d_node *node, float *matrix);
 
 GOAT3DAPI void goat3d_get_node_bounds(const struct goat3d_node *node, float *bmin, float *bmax);
 
@@ -371,6 +371,7 @@ GOAT3DAPI const char *goat3d_get_anim_name(const struct goat3d_anim *anim);
 GOAT3DAPI int goat3d_add_anim_track(struct goat3d_anim *anim, struct goat3d_track *trk);
 GOAT3DAPI struct goat3d_track *goat3d_get_anim_track(const struct goat3d_anim *anim, int idx);
 GOAT3DAPI struct goat3d_track *goat3d_get_anim_track_by_name(const struct goat3d_anim *anim, const char *name);
+GOAT3DAPI struct goat3d_track *goat3d_get_anim_track_by_type(const struct goat3d_anim *anim, enum goat3d_track_type type);
 GOAT3DAPI int goat3d_get_anim_track_count(const struct goat3d_anim *anim);
 
 GOAT3DAPI long goat3d_get_anim_timeline(const struct goat3d_anim *anim, long *tstart, long *tend);

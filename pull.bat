@@ -26,6 +26,14 @@ mkdir libs\cgmath
 rsync -v 192.168.0.4::dosdemo/libs/cgmath/*.h libs/cgmath
 rsync -v 192.168.0.4::dosdemo/libs/cgmath/*.inl libs/cgmath
 
+mkdir libs\goat3d
+mkdir libs\goat3d\src
+mkdir libs\goat3d\include
+rsync -v 192.168.0.4::dosdemo/libs/goat3d/Makefile libs/goat3d/Makefile
+rsync -v 192.168.0.4::dosdemo/libs/goat3d/src/*.h libs/goat3d/src
+rsync -v 192.168.0.4::dosdemo/libs/goat3d/src/*.c libs/goat3d/src
+rsync -v 192.168.0.4::dosdemo/libs/goat3d/include/*.h libs/goat3d/include
+
 mkdir tools
 mkdir tools\csprite
 rsync -v 192.168.0.4::dosdemo/tools/csprite/Makefile tools/csprite/Makefile

@@ -58,6 +58,7 @@ struct material_attrib {
 
 struct goat3d_material {
 	char *name;
+	int idx;
 	struct material_attrib *attrib;	/* dynarr */
 };
 

@@ -1,6 +1,6 @@
 /*
 libanim - hierarchical keyframe animation library
-Copyright (C) 2012-2014 John Tsiombikas <nuclear@member.fsf.org>
+Copyright (C) 2012-2023 John Tsiombikas <nuclear@member.fsf.org>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published
@@ -39,6 +39,8 @@ enum anm_extrapolator {
 };
 
 typedef long anm_time_t;
+#define ANM_TIME_MIN	LONG_MIN
+#define ANM_TIME_MAX	LONG_MAX
 #define ANM_TIME_INVAL	LONG_MIN
 
 #define ANM_SEC2TM(x)	((anm_time_t)((x) * 1000))
@@ -80,12 +82,13 @@ void anm_free_track(struct anm_track *track);
 void anm_copy_track(struct anm_track *dest, const struct anm_track *src);
 
 int anm_set_track_name(struct anm_track *track, const char *name);
-const char *anm_get_track_name(struct anm_track *track);
+const char *anm_get_track_name(const struct anm_track *track);
 
 void anm_set_track_interpolator(struct anm_track *track, enum anm_interpolator in);
 void anm_set_track_extrapolator(struct anm_track *track, enum anm_extrapolator ex);
 
-anm_time_t anm_remap_time(struct anm_track *track, anm_time_t tm, anm_time_t start, anm_time_t end);
+anm_time_t anm_remap_time(const struct anm_track *track, anm_time_t tm,
+		anm_time_t start, anm_time_t end);
 
 void anm_set_track_default(struct anm_track *track, float def);
 
@@ -93,7 +96,7 @@ void anm_set_track_default(struct anm_track *track, float def);
 int anm_set_keyframe(struct anm_track *track, struct anm_keyframe *key);
 
 /* get the idx-th keyframe, returns null if it doesn't exist */
-struct anm_keyframe *anm_get_keyframe(struct anm_track *track, int idx);
+struct anm_keyframe *anm_get_keyframe(const struct anm_track *track, int idx);
 
 /* Finds the 0-based index of the intra-keyframe interval which corresponds
  * to the specified time. If the time falls exactly onto the N-th keyframe
@@ -104,12 +107,19 @@ struct anm_keyframe *anm_get_keyframe(struct anm_track *track, int idx);
  * - if the time is after the last keyframe, the index of the last keyframe
  *   is returned.
  */
-int anm_get_key_interval(struct anm_track *track, anm_time_t tm);
+int anm_get_key_interval(const struct anm_track *track, anm_time_t tm);
 
 int anm_set_value(struct anm_track *track, anm_time_t tm, float val);
 
 /* evaluates and returns the value of the track for a particular time */
-float anm_get_value(struct anm_track *track, anm_time_t tm);
+float anm_get_value(const struct anm_track *track, anm_time_t tm);
+
+/* evaluates a set of 4 tracks treated as a quaternion, to perform slerp instead
+ * of linear interpolation. Result is returned through the last argument, which
+ * is expected to point to an array of 4 floats (x,y,z,w)
+ */
+void anm_get_quat(const struct anm_track *xtrk, const struct anm_track *ytrk,
+		const struct anm_track *ztrk, const struct anm_track *wtrk, anm_time_t tm, float *qres);
 
 #ifdef __cplusplus
 }

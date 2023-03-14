@@ -211,9 +211,14 @@ static struct ts_node *create_meshtree(struct goat3d *g, const struct goat3d_mes
 	}
 
 	if(mesh->mtl) {
-		create_tsattr(tsa, tsmesh, "material", TS_STRING);
-		if(ts_set_value_str(&tsa->val, mesh->mtl->name) == -1) {
-			goto err;
+		if(mesh->mtl->name) {
+			create_tsattr(tsa, tsmesh, "material", TS_STRING);
+			if(ts_set_value_str(&tsa->val, mesh->mtl->name) == -1) {
+				goto err;
+			}
+		} else {
+			create_tsattr(tsa, tsmesh, "material", TS_NUMBER);
+			ts_set_valuei(&tsa->val, mesh->mtl->idx);
 		}
 	}
 
@@ -526,6 +531,7 @@ static struct ts_node *create_nodetree(struct goat3d *g, const struct goat3d_nod
 	ts_set_valuef_arr(&tsa->val, 3, vec);
 
 	goat3d_get_node_matrix(node, xform);
+	cgm_mtranspose(xform);
 	create_tsattr(tsa, tsnode, "matrix0", TS_VECTOR);
 	ts_set_valuef_arr(&tsa->val, 4, xform);
 	create_tsattr(tsa, tsnode, "matrix1", TS_VECTOR);

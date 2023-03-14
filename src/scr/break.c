@@ -26,12 +26,13 @@ static struct screen scr = {
 	draw
 };
 
-static float cam_theta = 0, cam_phi = 0;
-static float cam_dist = 10;
+static float cam_theta = -20, cam_phi = 15;
+static float cam_dist = 5;
 
 static long part_start;
 
 static struct g3d_scene *scn;
+static struct g3d_anim *anim;
 
 
 struct screen *break_screen(void)
@@ -53,6 +54,11 @@ static int init(void)
 
 	conv_goat3d_scene(scn, g);
 	goat3d_free(g);
+
+	if(scn_anim_count(scn) > 0) {
+		anim = scn->anims[0];
+	}
+
 	return 0;
 }
 
@@ -78,9 +84,13 @@ static void start(long trans_time)
 	part_start = time_msec;
 }
 
+
 static void update(void)
 {
-	int i;
+	if(anim) {
+		long msec = time_msec - part_start;
+		scn_eval_anim(anim, msec % anim->dur + anim->start);
+	}
 
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
 }
@@ -88,7 +98,6 @@ static void update(void)
 static void draw(void)
 {
 	int i;
-	float tm = (float)(time_msec - part_start) / 100.0f;
 
 	update();
 

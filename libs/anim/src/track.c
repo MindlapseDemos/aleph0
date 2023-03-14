@@ -1,6 +1,6 @@
 /*
 libanim - hierarchical keyframe animation library
-Copyright (C) 2012-2015 John Tsiombikas <nuclear@member.fsf.org>
+Copyright (C) 2012-2023 John Tsiombikas <nuclear@member.fsf.org>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published
@@ -22,8 +22,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "track.h"
 #include "dynarr.h"
 
+#include "cgmath/cgmath.h"
+
 static int keycmp(const void *a, const void *b);
-static int find_prev_key(struct anm_keyframe *arr, int start, int end, anm_time_t tm);
+static int find_prev_key(const struct anm_keyframe *arr, int start, int end, anm_time_t tm);
 
 static float interp_step(float v0, float v1, float v2, float v3, float t);
 static float interp_linear(float v0, float v1, float v2, float v3, float t);
@@ -120,7 +122,7 @@ int anm_set_track_name(struct anm_track *track, const char *name)
 	return 0;
 }
 
-const char *anm_get_track_name(struct anm_track *track)
+const char *anm_get_track_name(const struct anm_track *track)
 {
 	return track->name;
 }
@@ -135,7 +137,7 @@ void anm_set_track_extrapolator(struct anm_track *track, enum anm_extrapolator e
 	track->extrap = ex;
 }
 
-anm_time_t anm_remap_time(struct anm_track *track, anm_time_t tm, anm_time_t start, anm_time_t end)
+anm_time_t anm_remap_time(const struct anm_track *track, anm_time_t tm, anm_time_t start, anm_time_t end)
 {
 	return remap_time[track->extrap](tm, start, end);
 }
@@ -171,7 +173,7 @@ static int keycmp(const void *a, const void *b)
 	return ((struct anm_keyframe*)a)->time - ((struct anm_keyframe*)b)->time;
 }
 
-struct anm_keyframe *anm_get_keyframe(struct anm_track *track, int idx)
+struct anm_keyframe *anm_get_keyframe(const struct anm_track *track, int idx)
 {
 	if(idx < 0 || idx >= track->count) {
 		return 0;
@@ -179,7 +181,7 @@ struct anm_keyframe *anm_get_keyframe(struct anm_track *track, int idx)
 	return track->keys + idx;
 }
 
-int anm_get_key_interval(struct anm_track *track, anm_time_t tm)
+int anm_get_key_interval(const struct anm_track *track, anm_time_t tm)
 {
 	int last;
 
@@ -195,7 +197,7 @@ int anm_get_key_interval(struct anm_track *track, anm_time_t tm)
 	return find_prev_key(track->keys, 0, last, tm);
 }
 
-static int find_prev_key(struct anm_keyframe *arr, int start, int end, anm_time_t tm)
+static int find_prev_key(const struct anm_keyframe *arr, int start, int end, anm_time_t tm)
 {
 	int mid;
 
@@ -222,7 +224,7 @@ int anm_set_value(struct anm_track *track, anm_time_t tm, float val)
 	return anm_set_keyframe(track, &key);
 }
 
-float anm_get_value(struct anm_track *track, anm_time_t tm)
+float anm_get_value(const struct anm_track *track, anm_time_t tm)
 {
 	int idx0, idx1, last_idx;
 	anm_time_t tstart, tend;
@@ -263,6 +265,66 @@ float anm_get_value(struct anm_track *track, anm_time_t tm)
 	v3 = idx1 < last_idx ? track->keys[idx1 + 1].val : v2;
 
 	return interp[track->interp](v0, v1, v2, v3, t);
+}
+
+
+void anm_get_quat(const struct anm_track *xtrk, const struct anm_track *ytrk,
+		const struct anm_track *ztrk, const struct anm_track *wtrk, anm_time_t tm, float *qres)
+{
+	int idx0, idx1, last_idx;
+	anm_time_t tstart, tend;
+	float t, dt;
+	cgm_quat q1, q2;
+
+	if(!xtrk->count) {
+		qres[0] = xtrk->def_val;
+		qres[1] = ytrk->def_val;
+		qres[2] = ztrk->def_val;
+		qres[3] = wtrk->def_val;
+		return;
+	}
+
+	last_idx = xtrk->count - 1;
+
+	tstart = xtrk->keys[0].time;
+	tend = xtrk->keys[last_idx].time;
+
+	if(tstart == tend) {
+		qres[0] = xtrk->keys[0].val;
+		qres[1] = ytrk->keys[0].val;
+		qres[2] = ztrk->keys[0].val;
+		qres[3] = wtrk->keys[0].val;
+		return;
+	}
+
+	tm = anm_remap_time(xtrk, tm, tstart, tend);
+
+	idx0 = anm_get_key_interval(xtrk, tm);
+	assert(idx0 >= 0 && idx0 < xtrk->count);
+	idx1 = idx0 + 1;
+
+	if(idx0 == last_idx) {
+		qres[0] = xtrk->keys[idx0].val;
+		qres[1] = ytrk->keys[idx0].val;
+		qres[2] = ztrk->keys[idx0].val;
+		qres[3] = wtrk->keys[idx0].val;
+		return;
+	}
+
+	dt = (float)(xtrk->keys[idx1].time - xtrk->keys[idx0].time);
+	t = (float)(tm - xtrk->keys[idx0].time) / dt;
+
+	q1.x = xtrk->keys[idx0].val;
+	q1.y = ytrk->keys[idx0].val;
+	q1.z = ztrk->keys[idx0].val;
+	q1.w = wtrk->keys[idx0].val;
+
+	q2.x = xtrk->keys[idx1].val;
+	q2.y = ytrk->keys[idx1].val;
+	q2.z = ztrk->keys[idx1].val;
+	q2.w = wtrk->keys[idx1].val;
+
+	cgm_qslerp((cgm_quat*)qres, &q1, &q2, t);
 }
 
 

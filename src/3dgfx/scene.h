@@ -1,6 +1,7 @@
 #ifndef SCENE_H_
 #define SCENE_H_
 
+#include "cgmath/cgmath.h"
 #include "mesh.h"
 #include "goat3d.h"
 
@@ -10,7 +11,13 @@ struct g3d_node {
 	struct g3d_node *parent;
 	struct g3d_node *child, *next;
 
+	cgm_vec3 pos;
+	cgm_quat rot;
+	cgm_vec3 scale;
+	cgm_vec3 pivot;
+
 	float xform[16];
+	int xform_valid;
 };
 
 struct g3d_track {
@@ -20,7 +27,8 @@ struct g3d_track {
 
 struct g3d_anim {
 	char *name;
-	struct g3d_track pos, rot, scale;
+	struct g3d_track **tracks;	/* darray */
+	long start, end, dur;
 };
 
 struct g3d_scene {
@@ -65,8 +73,10 @@ int conv_goat3d_scene(struct g3d_scene *scn, struct goat3d *g);
 int conv_goat3d_mesh(struct g3d_mesh *dstmesh, struct goat3d_mesh *srcmesh);
 int conv_goat3d_node(struct g3d_scene *scn, struct g3d_node *dstnode, struct goat3d_node *srcnode);
 int link_goat3d_node(struct g3d_scene *scn, struct g3d_node *dstnode, struct goat3d_node *srcnode);
-int conv_goat3d_anim(struct g3d_anim *dstanim, struct goat3d_anim *srcanim);
+int conv_goat3d_anim(struct g3d_scene *scn, struct g3d_anim *dstanim, struct goat3d_anim *srcanim);
+int conv_goat3d_track(struct g3d_scene *scn, struct g3d_track *dsttrk, struct goat3d_track *srctrk);
 
+void scn_eval_anim(struct g3d_anim *anim, long tm);
 void scn_draw(struct g3d_scene *scn);
 
 #endif	/* SCENE_H_ */

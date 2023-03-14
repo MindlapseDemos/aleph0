@@ -105,7 +105,7 @@ fail:
 	{ \
 		static char scrap[128]; \
 		char *str; \
-		int sz = snprintf(scrap, sizeof scrap, fmt, x); \
+		int sz = sprintf(scrap, fmt, x); \
 		if(!(str = malloc(sz + 1))) return 0; \
 		sprintf(str, fmt, x); \
 		return str; \

@@ -400,6 +400,7 @@ use_mesh_bounds:
 GOAT3DAPI int goat3d_add_mtl(struct goat3d *g, struct goat3d_material *mtl)
 {
 	struct goat3d_material **newarr;
+	mtl->idx = dynarr_size(g->materials);
 	if(!(newarr = dynarr_push(g->materials, &mtl))) {
 		return -1;
 	}
@@ -1825,6 +1826,17 @@ GOAT3DAPI struct goat3d_track *goat3d_get_anim_track_by_name(const struct goat3d
 	int i, num = dynarr_size(anim->tracks);
 	for(i=0; i<num; i++) {
 		if(strcmp(anim->tracks[i]->name, name) == 0) {
+			return anim->tracks[i];
+		}
+	}
+	return 0;
+}
+
+GOAT3DAPI struct goat3d_track *goat3d_get_anim_track_by_type(const struct goat3d_anim *anim, enum goat3d_track_type type)
+{
+	int i, num = dynarr_size(anim->tracks);
+	for(i=0; i<num; i++) {
+		if(anim->tracks[i]->type == type) {
 			return anim->tracks[i];
 		}
 	}

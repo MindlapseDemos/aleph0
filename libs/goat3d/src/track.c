@@ -24,7 +24,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "cgmath/cgmath.h"
 
-static int keycmp(const void *a, const void *b);
 static int find_prev_key(const struct anm_keyframe *arr, int start, int end, anm_time_t tm);
 
 static float interp_step(float v0, float v1, float v2, float v3, float t);
@@ -60,6 +59,7 @@ int anm_init_track(struct anm_track *track)
 	if(!(track->keys = dynarr_alloc(0, sizeof *track->keys))) {
 		return -1;
 	}
+	track->keys_sorted = 1;
 	track->interp = ANM_INTERP_LINEAR;
 	track->extrap = ANM_EXTRAP_CLAMP;
 	return 0;
@@ -108,6 +108,7 @@ void anm_copy_track(struct anm_track *dest, const struct anm_track *src)
 	dest->def_val = src->def_val;
 	dest->interp = src->interp;
 	dest->extrap = src->extrap;
+	dest->keys_sorted = src->keys_sorted;
 }
 
 int anm_set_track_name(struct anm_track *track, const char *name)
@@ -147,6 +148,11 @@ void anm_set_track_default(struct anm_track *track, float def)
 	track->def_val = def;
 }
 
+static int keycmp(const void *a, const void *b)
+{
+	return ((struct anm_keyframe*)a)->time - ((struct anm_keyframe*)b)->time;
+}
+
 int anm_set_keyframe(struct anm_track *track, struct anm_keyframe *key)
 {
 	int idx = anm_get_key_interval(track, key->time);
@@ -156,34 +162,41 @@ int anm_set_keyframe(struct anm_track *track, struct anm_keyframe *key)
 		/* ... it's the same key, just update the value */
 		track->keys[idx].val = key->val;
 	} else {
-		/* ... it's a new key, add it and re-sort them */
+		/* ... it's a new key, add it and re-sort them if necessary */
 		void *tmp;
 		if(!(tmp = dynarr_push(track->keys, key))) {
 			return -1;
 		}
 		track->keys = tmp;
-		/* TODO lazy qsort */
-		qsort(track->keys, ++track->count, sizeof *track->keys, keycmp);
+		idx = track->count++;
+		if(idx > 0 && track->keys[idx - 1].time > key->time) {
+			/* key shold not go to the end, mark for re-sorting */
+			track->keys_sorted = 0;
+		}
 	}
 	return 0;
 }
 
-static int keycmp(const void *a, const void *b)
-{
-	return ((struct anm_keyframe*)a)->time - ((struct anm_keyframe*)b)->time;
-}
+#define lazysort_keys(track)	\
+	if(track->count > 1 && !track->keys_sorted) { \
+		qsort(track->keys, track->count, sizeof *track->keys, keycmp); \
+		((struct anm_track*)track)->keys_sorted = 1; \
+	}
 
 struct anm_keyframe *anm_get_keyframe(const struct anm_track *track, int idx)
 {
 	if(idx < 0 || idx >= track->count) {
 		return 0;
 	}
+	lazysort_keys(track);
 	return track->keys + idx;
 }
 
 int anm_get_key_interval(const struct anm_track *track, anm_time_t tm)
 {
 	int last;
+
+	lazysort_keys(track);
 
 	if(!track->count || tm < track->keys[0].time) {
 		return -1;
@@ -234,6 +247,7 @@ float anm_get_value(const struct anm_track *track, anm_time_t tm)
 	if(!track->count) {
 		return track->def_val;
 	}
+	lazysort_keys(track);
 
 	last_idx = track->count - 1;
 
@@ -283,6 +297,11 @@ void anm_get_quat(const struct anm_track *xtrk, const struct anm_track *ytrk,
 		qres[3] = wtrk->def_val;
 		return;
 	}
+
+	lazysort_keys(xtrk);
+	lazysort_keys(ytrk);
+	lazysort_keys(ztrk);
+	lazysort_keys(wtrk);
 
 	last_idx = xtrk->count - 1;
 

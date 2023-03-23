@@ -182,19 +182,26 @@ struct g3d_anim *scn_find_anim(struct g3d_scene *scn, const char *name)
 int conv_goat3d_scene(struct g3d_scene *scn, struct goat3d *g)
 {
 	int i, num;
+	long count, nfaces;
 	struct g3d_mesh *mesh;
 	struct g3d_node *node;
 	struct g3d_anim *anim;
 
+	printf("loaded goat3d scene: %s\n", goat3d_get_name(g));
+
+	count = nfaces = 0;
 	num = goat3d_get_mesh_count(g);
 	for(i=0; i<num; i++) {
 		mesh = malloc_nf(sizeof *mesh);
 		if(conv_goat3d_mesh(mesh, goat3d_get_mesh(g, i)) != -1) {
 			scn_add_mesh(scn, mesh);
+			nfaces += mesh->icount / 3;
+			count++;
 		} else {
 			free(mesh);
 		}
 	}
+	printf(" - %ld meshes with %ld total polygons\n", count, nfaces);
 
 	num = goat3d_get_node_count(g);
 	for(i=0; i<num; i++) {
@@ -210,15 +217,18 @@ int conv_goat3d_scene(struct g3d_scene *scn, struct goat3d *g)
 		link_goat3d_node(scn, node, goat3d_get_node(g, i));
 	}
 
+	count = 0;
 	num = goat3d_get_anim_count(g);
 	for(i=0; i<num; i++) {
 		anim = malloc_nf(sizeof *anim);
 		if(conv_goat3d_anim(scn, anim, goat3d_get_anim(g, i)) != -1) {
 			scn_add_anim(scn, anim);
+			count++;
 		} else {
 			free(anim);
 		}
 	}
+	printf(" - %ld animations\n", count);
 
 	return 0;
 }

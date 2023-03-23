@@ -62,6 +62,8 @@ struct anm_track {
 
 	enum anm_interpolator interp;
 	enum anm_extrapolator extrap;
+
+	int keys_sorted;
 };
 
 #ifdef __cplusplus

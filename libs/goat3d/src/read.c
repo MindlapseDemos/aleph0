@@ -767,6 +767,9 @@ static struct goat3d_track *read_track(struct goat3d *g, struct ts_node *tstrk)
 		c = c->next;
 	}
 
+	/* force lazy re-sorting of keyframes if necessary */
+	goat3d_get_track_key(trk, 0, &key);
+
 	return trk;
 }
 

@@ -7,13 +7,15 @@ inc = -Isrc -Isrc/3dgfx -Isrc/rt -Isrc/scr -Isrc/utils -Isrc/sdl -Ilibs \
 	  -Ilibs/imago/src -Ilibs/mikmod/include -Ilibs/goat3d/include
 def = -DMIKMOD_STATIC
 warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function -Wno-address
-#opt = -O3 -ffast-math
-dbg = -g
+opt = -O3 -ffast-math
+dbg = -g3
 
 CC = emcc
 CFLAGS = $(warn) $(opt) -fno-pie -fno-strict-aliasing $(dbg) $(inc)
 LDFLAGS = libs/imago/imago.ema libs/anim/anim.ema libs/goat3d/goat3d.ema \
-		  libs/mikmod/mikmod.ema -lSDL --preload-file data
+		  libs/mikmod/mikmod.ema -lSDL --preload-file data --exclude-file data/.svn \
+		  -s INITIAL_MEMORY=67108864
+#		  -gsource-maps --profile-funcs -s SAFE_HEAP=1
 
 $(bin): $(obj) imago anim goat3d mikmod
 	$(CC) -o $@ $(obj) $(LDFLAGS)

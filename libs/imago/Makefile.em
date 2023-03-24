@@ -7,7 +7,7 @@ alib = imago.ema
 
 CC = emcc
 AR = emar
-CFLAGS = -fno-pie -Wno-main -g -O3 -Izlib -Ilibpng -Ijpeglib
+CFLAGS = -fno-pie -Wno-main -g3 -O3 -Izlib -Ilibpng -Ijpeglib
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

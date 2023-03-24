@@ -10,6 +10,7 @@
 #include "cfgopt.h"
 #include "sball.h"
 #include "vmath.h"
+#include "gfxutil.h"
 #include "cpuid.h"
 
 #ifdef __EMSCRIPTEN__
@@ -30,7 +31,7 @@ static int sdlkey_to_demokey(int sdlkey, unsigned int mod);
 static int quit;
 static SDL_Surface *fbsurf;
 
-static int fbscale = 2;
+static int fbscale = 3;
 static int xsz, ysz;
 static unsigned int sdl_flags = SDL_SWSURFACE;
 
@@ -74,7 +75,7 @@ int main(int argc, char **argv)
 #endif
 
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_NOPARACHUTE);
-	if(!(fbsurf = SDL_SetVideoMode(xsz, ysz, FB_BPP, sdl_flags))) {
+	if(!(fbsurf = SDL_SetVideoMode(xsz, ysz, 32, sdl_flags))) {
 		fprintf(stderr, "failed to set video mode %dx%d %dbpp\n", FB_WIDTH, FB_HEIGHT, FB_BPP);
 		/*free(fb_pixels);*/
 		SDL_Quit();
@@ -88,6 +89,10 @@ int main(int argc, char **argv)
 		print_cpuid(&cpuid);
 	}
 #endif
+
+	if(!set_video_mode(match_video_mode(FB_WIDTH, FB_HEIGHT, FB_BPP), 1)) {
+		return 1;
+	}
 
 	time_msec = 0;
 	if(demo_init_cfgopt(argc, argv) == -1 || demo_init() == -1) {
@@ -209,7 +214,8 @@ void wait_vsync(void)
 void blit_frame(void *pixels, int vsync)
 {
 	int i, j;
-	unsigned short *sptr, *dptr;
+	unsigned short *sptr;
+	uint32_t *dptr;
 
 	demo_post_draw(pixels);
 
@@ -222,15 +228,20 @@ void blit_frame(void *pixels, int vsync)
 	}
 
 	sptr = fb_pixels;
-	dptr = (unsigned short*)fbsurf->pixels + (fbsurf->w - xsz) / 2;
+	dptr = (uint32_t*)fbsurf->pixels + (fbsurf->w - xsz) / 2;
 	for(i=0; i<FB_HEIGHT; i++) {
 		for(j=0; j<FB_WIDTH; j++) {
 			int x, y;
 			unsigned short pixel = *sptr++;
 
+			int r = UNPACK_R16(pixel);
+			int g = UNPACK_G16(pixel);
+			int b = UNPACK_B16(pixel);
+			uint32_t pix32 = PACK_RGB32(b, g, r);
+
 			for(y=0; y<fbscale; y++) {
 				for(x=0; x<fbscale; x++) {
-					dptr[y * fbsurf->w + x] = pixel;
+					dptr[y * fbsurf->w + x] = pix32;
 				}
 			}
 			dptr += fbscale;

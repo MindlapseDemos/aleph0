@@ -4,7 +4,7 @@ alib = anim.ema
 
 CC = emcc
 AR = emar
-CFLAGS = -Wno-main -g -I.. -I../../src
+CFLAGS = -Wno-main -g3 -I.. -I../../src
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

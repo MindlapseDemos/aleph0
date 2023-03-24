@@ -4,7 +4,7 @@ alib = goat3d.ema
 
 CC = emcc
 AR = emar
-CFLAGS = -fno-pie -g -O3 -Iinclude -I.. -I../../src
+CFLAGS = -fno-pie -g3 -O3 -Iinclude -I.. -I../../src
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

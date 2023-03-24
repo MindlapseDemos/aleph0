@@ -10,10 +10,11 @@ alib = mikmod.ema
 def = -DHAVE_CONFIG_H -DMIKMOD_BUILD
 inc = -I. -Iinclude
 warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function
+dbg = -g3
 
 CC = emcc
 AR = emar
-CFLAGS = $(warn) -g $(def) $(inc)
+CFLAGS = $(warn) $(dbg) $(def) $(inc)
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

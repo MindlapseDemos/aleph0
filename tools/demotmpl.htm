@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Emscripten-Generated Code</title>
+    <title>Unnamed DOS Demo / Mindlapse</title>
     <style>
       .emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
       textarea.emscripten { font-family: monospace; width: 80%; }
@@ -64,8 +64,11 @@
     </div>
     <hr/>
     <div class="emscripten">
-      <input type="checkbox" id="resize">Resize canvas
-      <input type="checkbox" id="pointerLock" checked>Lock/hide mouse pointer
+		 Select demo part:
+		 <select onInput="change_part(this.value)">
+			 <option value="" selected disabled hidden>tunnel</option>
+			 <!-- DEMOPARTS -->
+		 </select>
       &nbsp;&nbsp;&nbsp;
       <input type="button" value="Fullscreen" onclick="Module.requestFullscreen(document.getElementById('pointerLock').checked, 
                                                                                 document.getElementById('resize').checked)">
@@ -145,6 +148,40 @@
           if (text) console.error('[post-exception status] ' + text);
         };
       };
+
+		var change_part = function(str)
+		{
+			send_string("/" + str + "\r");
+		}
+
+		var send_string = function(str)
+		{
+			var keys = Array.from(str);
+
+			for(i=0; i<keys.length; i++) {
+				send_event(keys[i]);
+			}
+		}
+
+		var send_event = function(keystr)
+		{
+			var charcode = keystr.charCodeAt(0);
+			var keycode = keystr.toUpperCase().charCodeAt(0);
+
+			console.log("sending key '" + keystr + "' (code: " + keycode + ")");
+
+			var press = new Event("keydown", {bubbles: true});
+			press.keyCode = keycode;
+			press.code = charcode;
+			press.key = keystr;
+			Module.canvas.dispatchEvent(press);
+
+			var release = new Event("keyup", {bubbles: true});
+			release.keyCode = keycode;
+			release.code = charcode;
+			release.key = keystr;
+			Module.canvas.dispatchEvent(release);
+		}
     </script>
     {{{ SCRIPT }}}
   </body>

@@ -1,0 +1,11 @@
+#!/bin/sh
+
+parts=$(for i in src/scr/*.c; do grep -C 1 'struct screen.*=' $i | grep '\"' | sed 's/.*\"\(.*\)\".*/\1/'; done)
+
+sed '/DEMOPARTS/q' tools/demotmpl.htm
+
+for i in `echo $parts | xargs -n1 | sort | uniq`; do
+	printf '\t<option value="%s">%s</option>\n' $i $i
+done
+
+sed '1,/DEMOPARTS/d' tools/demotmpl.htm

@@ -53,3 +53,9 @@ RUN
 *.png
 *.user
 .vs/
+*.emo
+*.ema
+*.wasm
+*.js
+*.html
+*.data

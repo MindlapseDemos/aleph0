@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <limits.h>
+#include <ctype.h>
 #include <SDL/SDL.h>
 #include "demo.h"
 #include "tinyfps.h"
@@ -11,6 +12,12 @@
 #include "vmath.h"
 #include "cpuid.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
+
+static void mainloop_iter(void);
 static void handle_event(SDL_Event *ev);
 static void toggle_fullscreen(void);
 
@@ -26,6 +33,16 @@ static SDL_Surface *fbsurf;
 static int fbscale = 2;
 static int xsz, ysz;
 static unsigned int sdl_flags = SDL_SWSURFACE;
+
+#define MODE(w, h)	\
+	{0, w, h, 16, w * 2, 5, 6, 5, 11, 5, 0, 0xf800, 0x7e0, 0x1f, 0xbadf00d, 2, 0}
+static struct video_mode vmodes[] = {
+	MODE(320, 240), MODE(400, 300), MODE(512, 384), MODE(640, 480),
+	MODE(800, 600), MODE(1024, 768), MODE(1280, 960), MODE(1280, 1024),
+	MODE(1920, 1080), MODE(1600, 1200), MODE(1920, 1200)
+};
+static struct video_mode *cur_vmode;
+
 
 static int use_sball;
 static vec3_t pos = {0, 0, 0};
@@ -66,9 +83,11 @@ int main(int argc, char **argv)
 	SDL_WM_SetCaption("dosdemo/SDL", 0);
 	SDL_ShowCursor(0);
 
+#ifndef __EMSCRIPTEN__
 	if(read_cpuid(&cpuid) == 0) {
 		print_cpuid(&cpuid);
 	}
+#endif
 
 	time_msec = 0;
 	if(demo_init_cfgopt(argc, argv) == -1 || demo_init() == -1) {
@@ -84,36 +103,101 @@ int main(int argc, char **argv)
 
 	reset_timer();
 
+#ifdef __EMSCRIPTEN__
+	emscripten_set_main_loop(mainloop_iter, -1, 0);
+	return 0;
+#else
 	while(!quit) {
-		SDL_Event ev;
-		while(SDL_PollEvent(&ev)) {
-			handle_event(&ev);
-			if(quit) goto break_evloop;
-		}
-
-		if(use_sball) {
-			while(sball_pending()) {
-				sball_event ev;
-				sball_getevent(&ev);
-				handle_sball_event(&ev);
-			}
-			recalc_sball_matrix(sball_matrix);
-		}
-
-		time_msec = get_msec();
-		demo_draw();
+		mainloop_iter();
 	}
+#endif
 
-break_evloop:
 	demo_cleanup();
 	SDL_Quit();
 	return 0;
+}
+
+static void mainloop_iter(void)
+{
+	SDL_Event ev;
+	while(SDL_PollEvent(&ev)) {
+		handle_event(&ev);
+		if(quit) return;
+	}
+
+	if(use_sball) {
+		while(sball_pending()) {
+			sball_event ev;
+			sball_getevent(&ev);
+			handle_sball_event(&ev);
+		}
+		recalc_sball_matrix(sball_matrix);
+	}
+
+	time_msec = get_msec();
+	demo_draw();
 }
 
 void demo_quit(void)
 {
 	quit = 1;
 }
+
+void demo_abort(void)
+{
+	abort();
+}
+
+struct video_mode *video_modes(void)
+{
+	return vmodes;
+}
+
+int num_video_modes(void)
+{
+	return sizeof vmodes / sizeof *vmodes;
+}
+
+struct video_mode *get_video_mode(int idx)
+{
+	if(idx == VMODE_CURRENT) {
+		return cur_vmode;
+	}
+	return vmodes + idx;
+}
+
+int match_video_mode(int xsz, int ysz, int bpp)
+{
+	struct video_mode *vm = vmodes;
+	int i, count = num_video_modes();
+
+	for(i=0; i<count; i++) {
+		if(vm->xsz == xsz && vm->ysz == ysz && vm->bpp == bpp) {
+			return i;
+		}
+		vm++;
+	}
+	return -1;
+}
+
+void *set_video_mode(int idx, int nbuf)
+{
+	struct video_mode *vm = vmodes + idx;
+
+	if(cur_vmode == vm) {
+		return vmem;
+	}
+
+	if(demo_resizefb(vm->xsz, vm->ysz, vm->bpp) == -1) {
+		fprintf(stderr, "failed to allocate virtual framebuffer\n");
+		return 0;
+	}
+	vmem = fb_pixels;
+
+	cur_vmode = vm;
+	return vmem;
+}
+
 
 void wait_vsync(void)
 {
@@ -122,14 +206,14 @@ void wait_vsync(void)
 	while(SDL_GetTicks() <= until);
 }
 
-void swap_buffers(void *pixels)
+void blit_frame(void *pixels, int vsync)
 {
 	int i, j;
 	unsigned short *sptr, *dptr;
 
-	demo_post_draw(pixels ? pixels : fb_pixels);
+	demo_post_draw(pixels);
 
-	if(opt.vsync) {
+	if(vsync) {
 		wait_vsync();
 	}
 

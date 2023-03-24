@@ -93,9 +93,17 @@ void cs_confont(void *fb, int x, int y, int idx);
 /* helper to print text with cs_font */
 void cs_puts_font(cs_font_func csfont, int sz, void *fb, int x, int y, const char *str);
 
+#ifndef __EMSCRIPTEN__
+
 #define cs_dputs(fb, x, y, str)	cs_puts_font(cs_dbgfont, 9, fb, x, y, str)
 #define cs_cputs(fb, x, y, str)	cs_puts_font(cs_confont, 6, fb, x, y, str)
 
 #define cs_mouseptr(fb, x, y) cs_dbgfont(fb, x, y, 127 - ' ')
+
+#else	/* __EMSCRIPTEN__ */
+#define cs_dputs(fb, x, y, str)
+#define cs_cputs(fb, x, y, str)
+#define cs_mouseptr(fb, x, y)
+#endif
 
 #endif	/* DEMO_H_ */

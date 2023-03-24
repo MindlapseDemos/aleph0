@@ -49,6 +49,7 @@ void con_stop(void)
 
 void con_draw(uint16_t *fb)
 {
+#ifndef __EMSCRIPTEN__
 	int x, y, sidx, cidx;
 
 	/* print output buffer */
@@ -71,6 +72,7 @@ void con_draw(uint16_t *fb)
 		cidx = (cidx + 1) & CBUF_MASK;
 	}
 	memset(fb + (y + 8) * 320, 0xff, 640);
+#endif
 }
 
 int con_input(int key)

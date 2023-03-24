@@ -217,6 +217,7 @@ int scr_change(struct screen *s, long trans_time)
 	return 0;
 }
 
+#ifndef __EMSCRIPTEN__
 /* loading screen */
 extern uint16_t loading_pixels[];
 static long prev_load_msec;
@@ -285,3 +286,19 @@ void loadscr(int n, int count)
 	}
 	prev_load_msec = get_msec();
 }
+
+#else	/* __EMSCRIPTEN__ */
+
+void start_loadscr(void)
+{
+}
+
+void end_loadscr(void)
+{
+}
+
+void loadscr(int n, int count)
+{
+}
+
+#endif

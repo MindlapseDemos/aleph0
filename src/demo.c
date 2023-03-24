@@ -224,9 +224,11 @@ void demo_keyboard(int key, int press)
 			}
 			return;
 
+#ifndef __EMSCRIPTEN__
 		case 127:
 			debug_break();
 			return;
+#endif
 
 		case '`':
 			con_active = !con_active;

@@ -365,7 +365,7 @@ static void vfield_eval(struct vfield *vf, float x, float y, struct vec2 *dir)
 #endif
 
 #ifdef RANDOMIZE_FIELD
-	dir->x += ((float)rand() / RAND_MAX - 0.5) * RAND_FIELD_MAX;
-	dir->y += ((float)rand() / RAND_MAX - 0.5) * RAND_FIELD_MAX;
+	dir->x += ((float)rand() / (float)RAND_MAX - 0.5) * RAND_FIELD_MAX;
+	dir->y += ((float)rand() / (float)RAND_MAX - 0.5) * RAND_FIELD_MAX;
 #endif
 }

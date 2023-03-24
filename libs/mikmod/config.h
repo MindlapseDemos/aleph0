@@ -48,4 +48,8 @@
 #define DRV_DS	1
 #endif
 
+#ifdef __EMSCRIPTEN__
+#define DRV_SDL	1
+#endif
+
 #endif	/* MIKMOD_CONFIG_H_ */

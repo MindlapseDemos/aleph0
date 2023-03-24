@@ -146,8 +146,8 @@ static vec3_t INLINE sphrand(float rad)
 {
 	vec3_t res;
 
-	float u = (float)rand() / RAND_MAX;
-	float v = (float)rand() / RAND_MAX;
+	float u = (float)rand() / (float)RAND_MAX;
+	float v = (float)rand() / (float)RAND_MAX;
 
 	float theta = 2.0f * M_PI * u;
 	float phi = acos(2.0f * v - 1.0f);

@@ -14,7 +14,7 @@ dbg = -g3
 
 CC = emcc
 AR = emar
-CFLAGS = $(warn) $(dbg) $(def) $(inc)
+CFLAGS = $(warn) $(dbg) $(def) $(inc) -sUSE_SDL
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

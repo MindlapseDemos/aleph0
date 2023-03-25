@@ -27,9 +27,9 @@ jobs:
       with:
         name: demo-emscripten
         path: |
-          data/
           demo.html
           demo.js
           demo.wasm
+          demo.data
 
 # vi:ts=2 sts=2 sw=2 expandtab:

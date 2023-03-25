@@ -11,11 +11,11 @@ opt = -O3 -ffast-math
 dbg = -g3
 
 CC = emcc
-CFLAGS = $(warn) $(opt) -fno-pie -fno-strict-aliasing $(dbg) $(inc)
+CFLAGS = $(warn) $(opt) -fno-pie -fno-strict-aliasing $(dbg) $(inc) -sUSE_SDL
 LDFLAGS = libs/imago/imago.ema libs/anim/anim.ema libs/goat3d/goat3d.ema \
 		  libs/mikmod/mikmod.ema -lSDL --preload-file data --exclude-file data/.svn \
-		  -s INITIAL_MEMORY=67108864 --shell-file demopage_shell.html
-#		  -gsource-maps --profile-funcs -s SAFE_HEAP=1
+		  -sINITIAL_MEMORY=67108864 -sUSE_SDL --shell-file demopage_shell.html
+#		  -gsource-maps --profile-funcs -sSAFE_HEAP=1
 
 $(bin): $(obj) imago anim goat3d mikmod demopage_shell.html
 	$(CC) -o $@ $(obj) $(LDFLAGS)

@@ -62,4 +62,5 @@ cleandep:
 
 .PHONY: install
 install: $(bin)
-	rsync -vz -e ssh $(bin) demo.data demo.js demo.wasm goat.mutantstargoat.com:public_html/dosdemo
+	rsync -vz -e ssh $(bin) goat.mutantstargoat.com:public_html/dosdemo/index.html
+	rsync -vz -e ssh demo.data demo.js demo.wasm goat.mutantstargoat.com:public_html/dosdemo

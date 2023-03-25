@@ -65,7 +65,7 @@
     <hr/>
     <div class="emscripten">
 		 Select demo part:
-		 <select onInput="change_part(this.value)">
+		 <select id="partsel" onInput="change_part(this.value)">
 			 <option value="" selected disabled hidden>tunnel</option>
 			 <!-- DEMOPARTS -->
 		 </select>
@@ -82,7 +82,7 @@
       var spinnerElement = document.getElementById('spinner');
 
       var Module = {
-        preRun: [],
+		  preRun: [],
         postRun: [],
         print: (function() {
           var element = document.getElementById('output');
@@ -147,6 +147,22 @@
           if (text) console.error('[post-exception status] ' + text);
         };
       };
+
+		Module.preRun.push(function() {
+			params = new URLSearchParams(window.location.search);
+			if(params.has("screen")) {
+				var scr = params.get("screen");
+				var selw = document.getElementById("partsel");
+
+				for(i=0; i<selw.options.length; i++) {
+					if(selw.options[i].text == scr) {
+						ENV.START_SCR = scr;
+						selw.options[i].selected = true;
+						break;
+					}
+				}
+			}
+		});
 
 		var change_part = function(str)
 		{

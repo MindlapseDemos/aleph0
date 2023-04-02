@@ -76,7 +76,10 @@ int link_goat3d_node(struct g3d_scene *scn, struct g3d_node *dstnode, struct goa
 int conv_goat3d_anim(struct g3d_scene *scn, struct g3d_anim *dstanim, struct goat3d_anim *srcanim);
 int conv_goat3d_track(struct g3d_scene *scn, struct g3d_track *dsttrk, struct goat3d_track *srctrk);
 
+void scn_merge_anims(struct g3d_scene *scn);
+
 void scn_eval_anim(struct g3d_anim *anim, long tm);
 void scn_draw(struct g3d_scene *scn);
+void scn_draw_node(struct g3d_node *node);
 
 #endif	/* SCENE_H_ */

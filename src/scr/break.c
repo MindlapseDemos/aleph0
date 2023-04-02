@@ -56,7 +56,11 @@ static int init(void)
 	goat3d_free(g);
 
 	if(scn_anim_count(scn) > 0) {
+		scn_merge_anims(scn);
 		anim = scn->anims[0];
+
+		printf("animation timeline %ld -> %ld (duration: %ld)\n", anim->start,
+				anim->end, anim->dur);
 	}
 
 	return 0;

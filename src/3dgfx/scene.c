@@ -214,7 +214,7 @@ int conv_goat3d_scene(struct g3d_scene *scn, struct goat3d *g)
 	}
 
 	for(i=0; i<num; i++) {
-		link_goat3d_node(scn, node, goat3d_get_node(g, i));
+		link_goat3d_node(scn, scn->nodes[i], goat3d_get_node(g, i));
 	}
 
 	count = 0;
@@ -400,6 +400,33 @@ int conv_goat3d_track(struct g3d_scene *scn, struct g3d_track *dsttrk, struct go
 	return 0;
 }
 
+void scn_merge_anims(struct g3d_scene *scn)
+{
+	int i, j;
+	struct g3d_anim *dest, *anim;
+	long t0, t1;
+
+	dest = scn->anims[0];
+	for(i=1; i<darr_size(scn->anims); i++) {
+		anim = scn->anims[i];
+		for(j=0; j<darr_size(anim->tracks); j++) {
+			struct g3d_track *trk = anim->tracks[j];
+
+			darr_push(dest->tracks, &trk);
+
+			goat3d_get_track_timeline(trk->trk, &t0, &t1);
+			if(t0 < dest->start) dest->start = t0;
+			if(t1 > dest->end) dest->end = t1;
+		}
+
+		free(anim->name);
+		free(anim);
+	}
+
+	darr_resize(scn->anims, 1);
+	dest->dur = dest->end - dest->start;
+}
+
 void scn_eval_anim(struct g3d_anim *anim, long tm)
 {
 	int i, num;
@@ -410,6 +437,7 @@ void scn_eval_anim(struct g3d_anim *anim, long tm)
 	for(i=0; i<num; i++) {
 		trk = anim->tracks[i];
 		if(!(node = trk->node)) {
+			printf("skip track without node\n");
 			continue;
 		}
 
@@ -473,16 +501,31 @@ void scn_draw(struct g3d_scene *scn)
 		num = darr_size(scn->nodes);
 		for(i=0; i<num; i++) {
 			node = scn->nodes[i];
-			if(!node->mesh) continue;
+			if(!node->mesh || node->parent) continue;
 
-			if(!node->xform_valid) {
-				scn_calc_node_matrix(node);
-			}
-
-			g3d_push_matrix();
-			g3d_mult_matrix(node->xform);
-			draw_mesh(node->mesh);
-			g3d_pop_matrix();
+			scn_draw_node(node);
 		}
 	}
+}
+
+void scn_draw_node(struct g3d_node *node)
+{
+	struct g3d_node *n;
+
+	if(!node->xform_valid) {
+		scn_calc_node_matrix(node);
+	}
+
+	g3d_push_matrix();
+	g3d_mult_matrix(node->xform);
+
+	draw_mesh(node->mesh);
+
+	n = node->child;
+	while(n) {
+		scn_draw_node(n);
+		n = n->next;
+	}
+
+	g3d_pop_matrix();
 }

@@ -178,7 +178,7 @@ void link_follow(Link *link, Link *parent, cgm_vec3 *target, float ratio)
 }
 
 #define LINK_COUNT 3
-struct {
+static struct {
 	Link links[LINK_COUNT];
 	cgm_vec3 camera_pos;
 	float camera_scale;

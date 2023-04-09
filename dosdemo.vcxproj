@@ -112,6 +112,7 @@
     <ClCompile Include="src\screen.c" />
     <ClCompile Include="src\scr\bump.c" />
     <ClCompile Include="src\scr\cybersun.c" />
+	 <ClCompile Include="src\scr\dott.c" />
     <ClCompile Include="src\scr\fract.c" />
     <ClCompile Include="src\scr\greets.c" />
     <ClCompile Include="src\scr\grise.c" />

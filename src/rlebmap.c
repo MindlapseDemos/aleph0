@@ -1,5 +1,8 @@
 
 #include "rlebmap.h"
+
+#include "imago2.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -124,16 +127,17 @@ RleBitmap *rleEncode(RleBitmap *rle, unsigned char *pixels, int pixelsW, int pix
     for (y = 0; y < (int)pixelsH; y++) {
         RleScan *scan = rle->scans + y;
         int streakIndex = -1;
+        currentInputPixel = pixels + y * pixelsW;
 
         for (x = 0; x < (int)pixelsW; x++) {
             if (*currentInputPixel++) {
-                if (streakActive) {
-                } else {
+                if (!streakActive) {
                     /* Begin new streak */
                     streakIndex++;
                     if (streakIndex >= RLE_STREAKS_PER_SCANLINE) {
                         /* Simplify your minifx if it takes more streaks per scan than
                          * supported */
+                        streakActive = 0;
                         break;
                     }
                     scan->streaks[streakIndex].start = (RLE_TYPE)x;
@@ -354,4 +358,43 @@ void rleInterpolate(RleBitmap *a, RleBitmap *b, float t, RleBitmap *result)
     }
 
     pairStreaks(result);
+}
+
+RleBitmap *rleFromFile(char *filename)
+{
+    unsigned int *data = 0;
+    int w, h;
+    unsigned char *alpha;
+    int i;
+    RleBitmap *result = 0;
+    int pixel_count = 0;
+
+    if (!(data =
+		  img_load_pixels(filename, &w, &h, IMG_FMT_RGBA32))) {
+		fprintf(stderr, "failed to load image %s\n", filename);
+		return 0;
+	}
+
+    /* Get alpha channel only */
+    alpha = malloc(w * h);
+
+    for (i=0; i<w*h; i++) {
+        alpha[i] = data[i] >> 24;
+    }
+
+    free(data);
+
+    /* Encode */
+    result = rleEncode(0, alpha, w, h);
+    for (i=0; i<result->h; i++) {
+        printf("(%d, %d) ", result->scans[i].streaks[0].start, result->scans[i].streaks[0].length);
+        printf("(%d, %d) ", result->scans[i].streaks[1].start, result->scans[i].streaks[1].length);
+        printf("(%d, %d) ", result->scans[i].streaks[2].start, result->scans[i].streaks[2].length);
+        printf("(%d, %d) ", result->scans[i].streaks[3].start, result->scans[i].streaks[3].length);
+        printf("\n");
+    }
+
+    free(alpha);
+
+    return result;
 }

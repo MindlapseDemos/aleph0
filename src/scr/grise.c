@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "rlebmap.h"
+#include "util.h"
 
 /* APPROX. 170 FPS Minimum */
 
@@ -175,7 +176,7 @@ static void destroy(void) {
 static void start(long trans_time) { lastFrameTime = time_msec; }
 
 
-struct 
+struct
 {
 	float r[FB_WIDTH];
 	float b[FB_WIDTH];
@@ -187,7 +188,7 @@ struct
 #define XB(c) (c & 31)
 #define CRGB(r, g, b) ((r << 11) | (g << 5) | b)
 
-inline float sample(float *buffer, float u)
+static INLINE float sample(float *buffer, float u)
 {
 	int i0, i1;
 

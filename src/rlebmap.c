@@ -1,5 +1,6 @@
 
 #include "rlebmap.h"
+#include "util.h"
 
 #include "imago2.h"
 
@@ -59,7 +60,7 @@ void rleClear(RleBitmap *rle)
     }
 }
 
-inline int overlap(RleStreak *a, RleStreak *b)
+static INLINE int overlap(RleStreak *a, RleStreak *b)
 {
     int maxStart = 0;
     int minEnd = 0;
@@ -179,7 +180,7 @@ typedef struct
 BigStreak interpolatedStreaks[RLE_MAX_STREAK_PAIRS];
 
 /* Produces interpolated streaks. Returns number of streaks placed in the buffer */
-inline int lerpScans(RleScan *a, RleScan *b, float t, float scale, BigStreak *streaks)
+static INLINE int lerpScans(RleScan *a, RleScan *b, float t, float scale, BigStreak *streaks)
 {
     int i;
     float omt = 1.0f - t;

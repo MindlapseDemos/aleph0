@@ -43,11 +43,11 @@ GOAT3DAPI char *goat3d_b64encode(const void *data, int size, char *buf, int *buf
 	do { \
 		int len = strlen(nstr); \
 		if(!((n) = ts_alloc_node())) { \
-			goat3d_logmsg(LOG_ERROR, "%s: failed to create treestore node\n", __func__); \
+			goat3d_logmsg(LOG_ERROR, "failed to create treestore node\n"); \
 			goto err; \
 		} \
 		if(!((n)->name = malloc(len + 1))) { \
-			goat3d_logmsg(LOG_ERROR, "%s: failed to allocate node name string\n", __func__); \
+			goat3d_logmsg(LOG_ERROR, "failed to allocate node name string\n"); \
 			ts_free_node(n); \
 			goto err; \
 		} \
@@ -60,11 +60,11 @@ GOAT3DAPI char *goat3d_b64encode(const void *data, int size, char *buf, int *buf
 #define create_tsattr(a, n, nstr, atype) \
 	do { \
 		if(!((a) = ts_alloc_attr())) { \
-			goat3d_logmsg(LOG_ERROR, "%s: failed to create treestore attribute\n", __func__); \
+			goat3d_logmsg(LOG_ERROR, "failed to create treestore attribute\n"); \
 			goto err; \
 		} \
 		if(ts_set_attr_name(a, nstr) == -1) { \
-			goat3d_logmsg(LOG_ERROR, "%s: failed to allocate attrib name string\n", __func__); \
+			goat3d_logmsg(LOG_ERROR, "failed to allocate attrib name string\n"); \
 			ts_free_attr(a); \
 			goto err; \
 		} \

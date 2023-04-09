@@ -6,6 +6,7 @@
 #include "scene.h"
 #include "screen.h"
 #include "util.h"
+#include "gfxutil.h"
 #include "dynarr.h"
 
 #define VFOV	50.0f
@@ -33,6 +34,10 @@ static long part_start;
 
 static struct g3d_scene *scn;
 static struct g3d_anim *anim;
+
+static struct image testimg;	/* XXX */
+static uint16_t *testimg_pixels;
+static unsigned char *testimg_alpha;
 
 
 struct screen *break_screen(void)
@@ -63,6 +68,14 @@ static int init(void)
 				anim->end, anim->dur);
 	}
 
+	/* alpha blending test */
+	if(load_image(&testimg, "data/blendtst.png") == -1) {
+		fprintf(stderr, "failed to load blend test image\n");
+		return -1;
+	}
+	testimg_pixels = testimg.pixels;
+	testimg_alpha = testimg.alpha;
+
 	return 0;
 }
 
@@ -83,7 +96,7 @@ static void start(long trans_time)
 	g3d_polygon_mode(G3D_GOURAUD);
 	g3d_disable(G3D_TEXTURE_2D);
 
-	g3d_clear_color(85, 70, 136);
+	g3d_clear_color(0, 0, 0);
 
 	part_start = time_msec;
 }
@@ -117,6 +130,16 @@ static void draw(void)
 	g3d_clear(G3D_COLOR_BUFFER_BIT | G3D_DEPTH_BUFFER_BIT);
 
 	scn_draw(scn);
+
+	/* XXX alpha overlay test */
+	{
+		int xpos = (time_msec >> 3) % 640;
+		xpos = 319 - abs(xpos - 320);
+
+		testimg.pixels = testimg_pixels + xpos;
+		testimg.alpha = testimg_alpha + xpos;
+		overlay_alpha(&fbimg, 0, 0, &testimg, 320, 240);
+	}
 
 	swap_buffers(fb_pixels);
 }

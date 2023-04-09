@@ -1,6 +1,19 @@
 #include <string.h>
+#include <assert.h>
 #include "demo.h"
 #include "gfxutil.h"
+
+void (*overlay_alpha)(struct image *dest, int x, int y, const struct image *src,
+		int width, int height);
+static void overlay_alpha_c(struct image *dest, int x, int y, const struct image *src,
+		int width, int height);
+static void overlay_alpha_mmx(struct image *dest, int x, int y, const struct image *src,
+		int width, int height);
+
+void init_gfxutil(void)
+{
+	overlay_alpha = overlay_alpha_c;
+}
 
 enum {
 	IN		= 0,
@@ -277,4 +290,50 @@ void blit_key(uint16_t *dest, int destwidth, uint16_t *src, int width, int heigh
 		src += sadv;
 	}
 
+}
+
+void overlay_add_full(uint16_t *dest, uint16_t *src)
+{
+	/* TODO */
+}
+
+
+static void overlay_alpha_c(struct image *dest, int x, int y, const struct image *src,
+		int width, int height)
+{
+	int i, j;
+	unsigned int sr, sg, sb, dr, dg, db;
+	unsigned int alpha, invalpha;
+	uint16_t *dptr, *sptr, pix;
+	unsigned char *aptr;
+
+	assert(dest->width == 320);
+
+	dptr = dest->pixels + (y << 8) + (y << 6) + x;
+	sptr = src->pixels;
+	aptr = src->alpha;
+
+	for(i=0; i<height; i++) {
+		for(j=0; j<width; j++) {
+			alpha = aptr[j];
+			invalpha = ~alpha & 0xff;
+			pix = sptr[j];
+			sr = UNPACK_R16(pix);
+			sg = UNPACK_G16(pix);
+			sb = UNPACK_B16(pix);
+			pix = dptr[j];
+			dr = (UNPACK_R16(pix) * invalpha + sr * alpha) >> 8;
+			dg = (UNPACK_G16(pix) * invalpha + sg * alpha) >> 8;
+			db = (UNPACK_B16(pix) * invalpha + sb * alpha) >> 8;
+			dptr[j] = PACK_RGB16(dr, dg, db);
+		}
+		dptr += 320;
+		sptr += src->scanlen;
+		aptr += src->scanlen;
+	}
+}
+
+static void overlay_alpha_mmx(struct image *dest, int x, int y, const struct image *src,
+		int width, int height)
+{
 }

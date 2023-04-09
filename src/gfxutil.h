@@ -2,7 +2,7 @@
 #define GFXUTIL_H_
 
 #include "inttypes.h"
-
+#include "image.h"
 
 #define PACK_RGB16(r, g, b) \
 	((((uint16_t)(r) << 8) & 0xf800) | \
@@ -33,6 +33,8 @@
 #define UNPACK_B32(c)	((c) & 0xff)
 #endif
 
+void init_gfxutil(void);
+
 int clip_line(int *x0, int *y0, int *x1, int *y1, int xmin, int ymin, int xmax, int ymax);
 void draw_line(int x0, int y0, int x1, int y1, unsigned short color);
 
@@ -47,5 +49,8 @@ void blit(uint16_t *dest, int destwidth, uint16_t *src, int xsz, int ysz, int pi
 void blit_key(uint16_t *dest, int destwidth, uint16_t *src, int xsz, int ysz, int pitch_pix, uint16_t key);
 
 void overlay_add_full(uint16_t *dest, uint16_t *src);
+
+extern void (*overlay_alpha)(struct image *dest, int x, int y, const struct image *src,
+		int width, int height);
 
 #endif	/* GFXUTIL_H_ */

@@ -195,4 +195,7 @@ int g3dimpl_anmsave(const struct goat3d *g, struct goat3d_io *io);
 /* defined in extmesh.c */
 int g3dimpl_loadmesh(struct goat3d_mesh *mesh, const char *fname);
 
+/* defined in readgltf.c */
+int g3dimpl_loadgltf(struct goat3d *g, struct goat3d_io *io);
+
 #endif	/* GOAT3D_SCENE_H_ */

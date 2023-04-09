@@ -3,6 +3,7 @@
 
 #include "inttypes.h"
 #include "gfx.h"
+#include "image.h"
 #include "cfgopt.h"
 
 /*extern int fb_width, fb_height, fb_bpp;*/
@@ -12,6 +13,8 @@
 #define FB_BPP		16
 extern uint16_t *fb_pixels;
 extern uint16_t *vmem;
+
+extern struct image fbimg;
 
 extern unsigned long time_msec;
 extern int mouse_x, mouse_y;

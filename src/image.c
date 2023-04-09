@@ -7,14 +7,16 @@
 #include "treestor.h"
 #include "util.h"
 
+/* TODO support alpha masks in raw image dumps */
+
 static void calc_pow2(struct image *img)
 {
 	int mask;
-	if(img->width <= 0 || img->height <= 0) {
+	if(img->scanlen <= 0 || img->height <= 0) {
 		return;
 	}
 
-	img->xmask = img->width - 1;
+	img->xmask = img->scanlen - 1;
 	img->ymask = img->height - 1;
 
 	img->xshift = 0;
@@ -27,9 +29,12 @@ static void calc_pow2(struct image *img)
 
 int load_image(struct image *img, const char *fname)
 {
+	int i, count;
 	FILE *fp;
 	char sig[8];
 	uint16_t width, height;
+	unsigned char *pptr;
+	struct img_pixmap pixmap;
 
 	memset(img, 0, sizeof *img);
 
@@ -84,6 +89,7 @@ int load_image(struct image *img, const char *fname)
 	fclose(fp);
 	img->width = width;
 	img->height = height;
+	img->scanlen = width;
 	calc_pow2(img);
 	return 0;
 not565:
@@ -157,10 +163,49 @@ not565:
 	}
 
 	/* just a regular image */
-	if(!(img->pixels = img_load_pixels(fname, &img->width, &img->height, IMG_FMT_RGB565))) {
+	img_init(&pixmap);
+	if(img_load(&pixmap, fname) == -1) {
 		fprintf(stderr, "failed to load image: %s\n", fname);
 		return -1;
 	}
+	img->width = pixmap.width;
+	img->height = pixmap.height;
+	img->scanlen = img->width;
+
+	/* for images with an alpha channel, make an alpha image from the alpha
+	 * channel first, before converting to 565
+	 */
+	if(img_has_alpha(&pixmap)) {
+		/* In most cases, like this image having been loaded from a PNG or a TGA
+		 * file, the following conversion is a no-op. Only if we were doing
+		 * something weird like loading a 16bit per color channel PNG, or a
+		 * floating point image format, will this have to do work.
+		 */
+		if(img_convert(&pixmap, IMG_FMT_RGBA32) == -1) {
+			fprintf(stderr, "failed to convert %s to RGBA32 to grab alpha mask\n", fname);
+			goto noalpha;
+		}
+		count = img->width * img->height;
+		if(!(img->alpha = malloc(count))) {
+			fprintf(stderr, "failed to allocate %dx%d alpha mask for: %s\n",
+					img->width, img->height, fname);
+			goto noalpha;
+		}
+
+		pptr = (unsigned char*)pixmap.pixels + 3;
+		for(i=0; i<count; i++) {
+			img->alpha[i] = *pptr;
+			pptr += 4;
+		}
+	}
+noalpha:
+	if(img_convert(&pixmap, IMG_FMT_RGB565) == -1) {
+		fprintf(stderr, "failed to convert %s to RGB565\n", fname);
+		free(img->alpha);
+		return -1;
+	}
+
+	img->pixels = pixmap.pixels;
 	calc_pow2(img);
 	return 0;
 }
@@ -172,10 +217,10 @@ int dump_image(struct image *img, const char *fname)
 
 #ifdef BUILD_BIGENDIAN
 	int i, npix = img->width * img->height;
-	width = BSWAP16(img->width);
+	width = BSWAP16(img->scanlen);
 	height = BSWAP16(img->height);
 #else
-	width = img->width;
+	width = img->scanlen;
 	height = img->height;
 #endif
 
@@ -193,7 +238,7 @@ int dump_image(struct image *img, const char *fname)
 		fwrite(&p, 2, 1, fp);
 	}
 #else
-	fwrite(img->pixels, 2, img->width * img->height, fp);
+	fwrite(img->pixels, 2, img->scanlen * img->height, fp);
 #endif
 	fclose(fp);
 	return 0;
@@ -236,4 +281,16 @@ void destroy_cubemap(struct image *cube)
 	for(i=0; i<6; i++) {
 		destroy_image(cube + i);
 	}
+}
+
+void init_image(struct image *img, int x, int y, uint16_t *pixels, int scanlen)
+{
+	memset(img, 0, sizeof *img);
+
+	img->width = x;
+	img->height = y;
+	img->scanlen = scanlen > 0 ? scanlen : x;
+	img->pixels = pixels;
+
+	calc_pow2(img);
 }

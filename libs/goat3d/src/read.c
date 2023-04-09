@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "log.h"
 #include "dynarr.h"
 #include "track.h"
+#include "util.h"
 
 #if defined(__WATCOMC__) || defined(_WIN32) || defined(__DJGPP__)
 #include <malloc.h>
@@ -45,9 +46,6 @@ static int read_node(struct goat3d *g, struct goat3d_node *node, struct ts_node 
 static int read_anim(struct goat3d *g, struct ts_node *tsanim);
 static struct goat3d_track *read_track(struct goat3d *g, struct ts_node *tstrk);
 
-GOAT3DAPI void *goat3d_b64decode(const char *str, void *buf, int *bufsz);
-#define b64decode goat3d_b64decode
-
 
 int g3dimpl_scnload(struct goat3d *g, struct goat3d_io *io)
 {
@@ -55,6 +53,12 @@ int g3dimpl_scnload(struct goat3d *g, struct goat3d_io *io)
 	struct ts_io tsio;
 	struct ts_node *tsroot, *c;
 	const char *str;
+
+	/* attempt to load it as gltf first */
+	if((g3dimpl_loadgltf(g, io)) == 0) {
+		return 0;
+	}
+	io->seek(0, SEEK_SET, io->cls);
 
 	tsio.data = io->cls;
 	tsio.read = io->read;
@@ -380,14 +384,6 @@ fail:
 	return 0;
 }
 
-static int calc_b64_size(const char *s)
-{
-	int len = strlen(s);
-	const char *end = s + len;
-	while(end > s && *--end == '=') len--;
-	return len * 3 / 4;
-}
-
 static void *read_veclist(void *arr, int dim, const char *nodename, const char *attrname, struct ts_node *tslist)
 {
 	int i, size, bufsz;
@@ -414,6 +410,9 @@ static void *read_veclist(void *arr, int dim, const char *nodename, const char *
 
 		bufsz = size * dim * sizeof(float);
 		b64decode(str, arr, &bufsz);
+#ifdef GOAT3D_BIGEND
+		goat3d_bswap32(arr, size * dim);
+#endif
 	}
 
 	c = tslist->child_list;
@@ -473,6 +472,9 @@ static void *read_intlist(void *arr, int dim, const char *nodename, const char *
 
 		bufsz = size * dim * sizeof(int);
 		b64decode(str, arr, &bufsz);
+#ifdef GOAT3D_BIGEND
+		goat3d_bswap32(arr, size * dim);
+#endif
 	}
 
 	c = tslist->child_list;
@@ -771,79 +773,4 @@ static struct goat3d_track *read_track(struct goat3d *g, struct ts_node *tstrk)
 	goat3d_get_track_key(trk, 0, &key);
 
 	return trk;
-}
-
-static int b64bits(int c)
-{
-	if(c >= 'A' && c <= 'Z') {
-		return c - 'A';
-	}
-	if(c >= 'a' && c <= 'z') {
-		return c - 'a' + 26;
-	}
-	if(c >= '0' && c <= '9') {
-		return c - '0' + 52;
-	}
-	if(c == '+') return 62;
-	if(c == '/') return 63;
-
-	return -1;
-}
-
-GOAT3DAPI void *goat3d_b64decode(const char *str, void *buf, int *bufsz)
-{
-	unsigned char *dest, *end;
-	unsigned char acc;
-	int bits, sz;
-	unsigned int gidx;
-
-	if(buf) {
-		sz = *bufsz;
-	} else {
-		sz = calc_b64_size(str);
-		if(!(buf = malloc(sz))) {
-			return 0;
-		}
-		if(bufsz) *bufsz = sz;
-	}
-	dest = buf;
-	end = (unsigned char*)buf + sz;
-
-	sz = 0;
-	gidx = 0;
-	acc = 0;
-	while(*str) {
-		if((bits = b64bits(*str++)) == -1) {
-			continue;
-		}
-
-		switch(gidx++ & 3) {
-		case 0:
-			acc = bits << 2;
-			break;
-		case 1:
-			if(dest < end) *dest = acc | (bits >> 4);
-			dest++;
-			acc = bits << 4;
-			break;
-		case 2:
-			if(dest < end) *dest = acc | (bits >> 2);
-			dest++;
-			acc = bits << 6;
-			break;
-		case 3:
-			if(dest < end) *dest = acc | bits;
-			dest++;
-		default:
-			break;
-		}
-	}
-
-	if(gidx & 3) {
-		if(dest < end) *dest = acc;
-		dest++;
-	}
-
-	if(bufsz) *bufsz = dest - (unsigned char*)buf;
-	return buf;
 }

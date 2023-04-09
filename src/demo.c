@@ -12,6 +12,7 @@
 #include "cfgopt.h"
 #include "console.h"
 #include "tinyfps.h"
+#include "gfxutil.h"
 #include "util.h"
 
 #ifdef __GLIBC__
@@ -30,6 +31,8 @@ float fb_aspect;
 long fb_size, fb_buf_size;
 uint16_t *fb_pixels, *vmem;
 uint16_t *fb_buf;
+
+struct image fbimg;
 
 unsigned long time_msec;
 int mouse_x, mouse_y;
@@ -74,6 +77,8 @@ int demo_init(void)
 
 	con_init();
 	initFpsFonts();
+
+	init_gfxutil();
 
 	if(g3d_init() == -1) {
 		return -1;
@@ -161,6 +166,12 @@ int demo_resizefb(int width, int height, int bpp)
 	fb_size = fb_scan_size * fb_height;
 
 	fb_aspect = (float)fb_width / (float)fb_height;
+
+	/* initialize fbimg structure */
+	fbimg.pixels = fb_pixels;
+	fbimg.width = width;
+	fbimg.height = height;
+	fbimg.scanlen = width;
 
 	return 0;
 }

@@ -109,7 +109,7 @@ static int init(void) {
 		if (!strcmp(node->name, "image")) {
 			attr = ts_lookup(node, "image.file");
 			if (!attr) {
-				printf("Cannot file attribute 'file' for %s node\n", node->name);
+				printf("Cannot find attribute 'file' for %s node\n", node->name);
 				return 1;
 			}
 			printf("\tFile: %s\n", attr->val.str);

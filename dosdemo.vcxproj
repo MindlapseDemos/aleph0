@@ -41,7 +41,6 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <ExecutablePath>G:\Projects\Demo\nasm-2.17rc0-20221222;$(ExecutablePath)</ExecutablePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -111,7 +110,6 @@
     <ClCompile Include="src\rbtree.c" />
     <ClCompile Include="src\rlebmap.c" />
     <ClCompile Include="src\screen.c" />
-    <ClCompile Include="src\scr\blobgrid.c" />
     <ClCompile Include="src\scr\bump.c" />
     <ClCompile Include="src\scr\cybersun.c" />
 	<ClCompile Include="src\scr\dott.c" />
@@ -120,7 +118,6 @@
     <ClCompile Include="src\scr\grise.c" />
     <ClCompile Include="src\scr\hairball.c" />
     <ClCompile Include="src\scr\infcubes.c" />
-    <ClCompile Include="src\scr\juliatun.c" />
     <ClCompile Include="src\scr\metaball.c" />
     <ClCompile Include="src\scr\minifx.c" />
     <ClCompile Include="src\scr\plasma.c" />

@@ -110,7 +110,7 @@ Link *link_update_hierarchy(Link *link, Link *parent)
 void extract_angle(cgm_quat *angle, cgm_vec3 *a, cgm_vec3 *b, cgm_vec3 *p) {
 	cgm_vec3 axis;
 	cgm_vec3 da, db;
-	float l;
+	float l, dotValue;
 	float rads;
 
 	cgm_vcross(&axis, a, b);
@@ -145,7 +145,18 @@ void extract_angle(cgm_quat *angle, cgm_vec3 *a, cgm_vec3 *b, cgm_vec3 *p) {
 	cgm_vscale(&db, l);
 
 	/* Get angle to go from a to b */
-	rads = acos(cgm_vdot(&da, &db));
+	dotValue = cgm_vdot(&da, &db);
+	if (dotValue > 1.0f) {
+		dotValue = 1.0f;
+	}
+	if (dotValue < -1.0f) {
+		dotValue = -1.0f;
+	}
+	rads = acos(dotValue);
+
+	if (isnan(rads) || isnan(axis.x) || isnan(axis.y) || isnan(axis.z)) {
+		printf("Here");
+	}
 
 	cgm_qrotation(angle, rads, axis.x, axis.y, axis.z);
 }

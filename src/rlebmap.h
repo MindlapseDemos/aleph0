@@ -15,7 +15,7 @@
 
 /* For now, keep a static fill color. We can change this. Not that much about
  * speed, but let's keep function definitions more compact. */
-#define RLE_FILL_COLOR 0
+#define RLE_FILL_COLOR 0xFFFF
 
 /* Two entries of RLE_FILL_COLOR (16 bits) packed one after the other. */
 #define RLE_FILL_COLOR_32 ((RLE_FILL_COLOR << 16) | RLE_FILL_COLOR)
@@ -70,5 +70,8 @@ void rleBlitScale(RleBitmap *rle, unsigned short *dst, int dstW, int dstH, int d
 
 /* Interpolates between bitmaps a and b. Stores in 'result'. Only bitmaps of the same height accepted. Otherwise returns cleared. */
 void rleInterpolate(RleBitmap *a, RleBitmap *b, float t, RleBitmap *result);
+
+/* Loads bitmap from file and encodes rle from it. */
+RleBitmap *rleFromFile(char *filename);
 
 #endif // __RLE_BITMAP_H__

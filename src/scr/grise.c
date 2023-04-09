@@ -1,6 +1,10 @@
+#include <cgmath/cgmath.h>
 #include "demo.h"
 #include "imago2.h"
+#include "noise.h"
+#include "rbtree.h"
 #include "screen.h"
+#include "treestor.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -70,6 +74,8 @@ static RleBitmap *rlePropeller = 0;
 
 static struct screen scr = {"galaxyrise", init, destroy, start, 0, draw};
 
+struct rbtree *bitmap_props = 0;
+
 struct screen *grise_screen(void) {
 	return &scr;
 }
@@ -77,6 +83,52 @@ struct screen *grise_screen(void) {
 static int init(void) {
 	unsigned char *tmpBitmap;
 	int tmpBitmapW, tmpBitmapH;
+	char *propsFile = "data/grise/props.txt";
+	struct ts_node *node = 0;
+	struct ts_node *props = 0;
+	struct ts_attr *attr = 0;
+	
+	struct rbnode *bitmap_node = 0;
+	char *filename = 0;
+	char tb[100];
+	int i;
+
+	/* Load props file */
+	props = ts_load(propsFile);
+	if (!props) {
+		printf("Failed to load props file: %s\n", propsFile);
+		return 1;
+	}
+
+	/* Keep all bitmaps to be loaded */
+	bitmap_props = rb_create(RB_KEY_STRING);
+
+	for (node = props->child_list; node; node = node->next) {
+		printf("Child: %s\n", node->name);
+		if (!strcmp(node->name, "image")) {
+			attr = ts_lookup(node, "image.file");
+			if (!attr) {
+				printf("Cannot file attribute 'file' for %s node\n", node->name);
+				return 1;
+			}
+			printf("\tFile: %s\n", attr->val.str);
+			rb_insert(bitmap_props, attr->val.str, attr->val.str);
+		}
+	}
+
+	rb_begin(bitmap_props);
+	bitmap_node = rb_next(bitmap_props);
+	while (bitmap_node) {
+		filename = bitmap_node->data;
+		printf("Encoding bitmap to rle: %s\n", filename);
+		sprintf(tb, "data/grise/%s", filename);
+		bitmap_node->data = rleFromFile(tb);
+		printf("\tW: %d H: %d\n", ((RleBitmap*)bitmap_node->data)->w, ((RleBitmap*)bitmap_node->data)->h);
+		bitmap_node = rb_next(bitmap_props);
+	}
+
+
+	// TODO: Free the config file and bitmap tree
 
 	/* Allocate back buffer */
 	backBuffer = (unsigned short *)calloc(BB_SIZE * BB_SIZE, sizeof(unsigned short));
@@ -122,7 +174,116 @@ static void destroy(void) {
 
 static void start(long trans_time) { lastFrameTime = time_msec; }
 
+
+struct 
+{
+	float r[FB_WIDTH];
+	float b[FB_WIDTH];
+	float g[FB_WIDTH];
+} tvBuffers;
+
+#define XR(c) ((c >> 11) & 31)
+#define XG(c) ((c >> 5) & 63)
+#define XB(c) (c & 31)
+#define CRGB(r, g, b) ((r << 11) | (g << 5) | b)
+
+inline float sample(float *buffer, float u)
+{
+	int i0, i1;
+
+	u = u * FB_WIDTH;
+	i0 = (int) u;
+	i1 = i0 + 1;
+	i0 = i0 < 0 ? 0 : i0;
+	i1 = i1 >= FB_WIDTH ? (FB_WIDTH - 1) : i1;
+
+	u -= i0;
+
+	return buffer[i0] * (1.0f - u) + buffer[i1] * u;
+}
+
+static void oldTv(unsigned short *dst, unsigned short *src, float sr, float tr, float sg, float tg, float sb, float tb)
+{
+	int i;
+	unsigned short *pixel = src;
+	float *r = tvBuffers.r;
+	float *g = tvBuffers.g;
+	float *b = tvBuffers.b;
+	float u, ur, ug, ub;
+	int ir, ig, ib;
+
+	for (i=0; i<FB_WIDTH; i++) {
+		// decompose pixel
+		*r++ = XR(*pixel);
+		*g++ = XG(*pixel);
+		*b++ = XB(*pixel);
+
+		pixel++;
+	}
+
+	pixel = dst;
+	for (i=0; i<FB_WIDTH; i++) {
+		u = (float) i / (float) (FB_WIDTH - 1);
+		u = 2.0f * u - 1.0f;
+		ur = u * sr + tr;
+		ug = u * sg + tg;
+		ub = u * sb + tb;
+		ur = 0.5f * ur + 0.5f;
+		ug = 0.5f * ug + 0.5f;
+		ub = 0.5f * ub + 0.5f;
+		
+		ir = sample(tvBuffers.r, ur) + 0.5f;
+		ig = sample(tvBuffers.g, ug) + 0.5f;
+		ib = sample(tvBuffers.b, ub) + 0.5f;
+
+
+		*pixel++ = CRGB(ir, ig, ib);
+	}
+}
+
+float lerp(float a, float b, float t)
+{
+	return (1.0f - t) * a + t * b;
+}
+
+float rScale(int scanline, float t)
+{
+	float l = noise2(scanline + 0.5, t);
+	return lerp(0.9f, 1.0f, l);
+}
+
+float gScale(int scanline, float t)
+{
+	float l = noise2(scanline + 0.5, t * 1.7f);
+	return lerp(0.9f, 1.0f, l);
+}
+
+float rShift(int scanline, float t)
+{
+	float l = noise2(1.7f * scanline + 0.5, t * 1.7f);
+	return lerp(0.01f, 0.05f, l);
+}
+
+float gShift(int scanline, float t)
+{
+	float l = noise2(0.7f * scanline + 0.5, t * 1.7f);
+	return lerp(0.01f, 0.05f, l);
+}
+
+float bShift(int scanline, float t)
+{
+	float l = noise2(0.87f * scanline + 0.5, t * 1.7f);
+	return lerp(0.01f, 0.05f, l);
+}
+
+float bScale(int scanline, float t)
+{
+	float l = noise2(scanline + 0.5, t * 0.97f);
+	return lerp(0.95f, 1.0f, l);
+}
+
 static void draw(void) {
+	float time_sec = time_msec / 1000.0f;
 	int scroll = MIN_SCROLL + (MAX_SCROLL - MIN_SCROLL) * mouse_x / FB_WIDTH;
 	unsigned short *dst = backBuffer + PIXEL_PADDING;
 	unsigned short *src = background + scroll;
@@ -133,6 +294,8 @@ static void draw(void) {
 	int accum = 0;
 	int md, sc;
 	int scrolledIndex;
+	struct rbnode *bitmap_node = 0;
+	
 
 	lastFrameDuration = (time_msec - lastFrameTime) / 1000.0f;
 	lastFrameTime = time_msec;
@@ -193,6 +356,15 @@ static void draw(void) {
 		dispScanline += backgroundW;
 	}
 
+	rb_begin(bitmap_props);
+	struct rbnode *node = rb_next(bitmap_props);
+	while (node) {
+		RleBitmap *rle = node->data;
+		rleBlitScale(node->data, backBuffer + PIXEL_PADDING, FB_WIDTH, FB_HEIGHT, BB_SIZE,
+			100, 120, 2, 2);
+		node = rb_next(bitmap_props);
+	}
+
 	/* Then after displacement, blit the objects */
 	for (i = 0; i < 5; i++)
 		/*rleBlit(rlePropeller, backBuffer + PIXEL_PADDING, FB_WIDTH, FB_HEIGHT, BB_SIZE,
@@ -203,6 +375,12 @@ static void draw(void) {
 	dst = fb_pixels;
 	for (scanline = 0; scanline < FB_HEIGHT; scanline++) {
 		memcpy(dst, src, FB_WIDTH * 2);
+		/*
+		oldTv(dst, src, 
+			rScale(scanline, time_sec), rShift(scanline, time_sec),
+			gScale(scanline, time_sec), gShift(scanline, time_sec),
+			bScale(scanline, time_sec), bShift(scanline, time_sec));
+			*/
 		src += BB_SIZE;
 		dst += FB_WIDTH;
 	}

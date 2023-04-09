@@ -171,6 +171,9 @@
     <ClCompile Include="src\scr\blobgrid.c">
       <Filter>src\screens</Filter>
     </ClCompile>
+    <ClCompile Include="src\scr\dott.c">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\glut\gfx.h">

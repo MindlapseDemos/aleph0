@@ -62,6 +62,10 @@ int demo_init_cfgopt(int argc, char **argv)
 
 int demo_init(void)
 {
+	if(opt.dbgmode) {
+		enable_fpexcept();
+	}
+
 	con_init();
 	initFpsFonts();
 

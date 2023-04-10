@@ -361,7 +361,7 @@ static void shade(struct rayhit *hit, struct rtscene *scn, int lvl, cgm_vec3 *co
 		ray.dir = lt->p;
 		cgm_vsub(&ray.dir, &ray.origin);
 
-		//if(ray_scene(&ray, scn, 1.0f, 0)) continue;
+		if(ray_scene(&ray, scn, 1.0f, 0)) continue;
 
 		normalize(&ray.dir);
 		ndotl = cgm_vdot(&ray.dir, &hit->n);

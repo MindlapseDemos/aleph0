@@ -265,4 +265,7 @@ void *realloc_nf_impl(void *p, size_t sz, const char *file, int line);
 #define strdup_nf(s)	strdup_nf_impl(s, __FILE__, __LINE__)
 char *strdup_nf_impl(const char *s, const char *file, int line);
 
+void enable_fpexcept(void);
+void disable_fpexcept(void);
+
 #endif	/* UTIL_H_ */

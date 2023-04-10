@@ -565,7 +565,7 @@ int ray_csg_box(cgm_ray *ray, struct rtbox *box, float maxt, struct rayival *iva
 {
 	int i, axis[2], sign[3];
 	float param[2][3];
-	float inv_dir[3];
+	float inv_dir[3], *vec;
 	float tmin, tmax, tymin, tymax, tzmin, tzmax;
 	cgm_vec3 p;
 	struct rayhit *hit;
@@ -574,7 +574,8 @@ int ray_csg_box(cgm_ray *ray, struct rtbox *box, float maxt, struct rayival *iva
 		param[0][i] = (&box->min.x)[i];
 		param[1][i] = (&box->max.x)[i];
 
-		inv_dir[i] = 1.0f / (&ray->dir.x)[i];
+		vec = &ray->dir.x;
+		inv_dir[i] = vec[i] == 0 ? 0 : 1.0f / vec[i];
 		sign[i] = inv_dir[i] < 0;
 	}
 

@@ -16,7 +16,7 @@ struct options {
 	int music;
 	int mouse, sball;
 	int vsync;
-	int dbginfo;
+	int dbgmode;
 #ifndef MSDOS
 	int fullscreen;
 	int scaler;

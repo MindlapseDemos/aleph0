@@ -48,78 +48,63 @@ static long trans_start, trans_dur;
 const char *dbg_curscr_name;
 int dbg_curscr_name_len, dbg_curscr_name_pos;
 
+void populate_screens(void)
+{
+	int idx = 0;
+
+	scr[idx++] = tunnel_screen();
+	scr[idx++] = fract_screen();
+	scr[idx++] = grise_screen();
+	scr[idx++] = polytest_screen();
+	scr[idx++] = plasma_screen();
+	scr[idx++] = bump_screen();
+	scr[idx++] = thunder_screen();
+	scr[idx++] = metaballs_screen();
+	scr[idx++] = greets_screen();
+	scr[idx++] = infcubes_screen();
+	scr[idx++] = hairball_screen();
+	scr[idx++] = cybersun_screen();
+	scr[idx++] = raytrace_screen();
+	scr[idx++] = minifx_screen();
+	scr[idx++] = voxscape_screen();
+	scr[idx++] = hexfloor_screen();
+	scr[idx++] = juliatunnel_screen();
+    scr[idx++] = blobgrid_screen();
+	scr[idx++] = break_screen();
+
+	num_screens = idx;
+	assert(num_screens <= NUM_SCR);
+}
+
 int scr_init(void)
 {
-	int i, idx = 0;
+	int i, idx;
 
 	start_loadscr();
 
-	if(!(scr[idx++] = tunnel_screen())) {
-		return -1;
-	}
-	if(!(scr[idx++] = fract_screen())) {
-		return -1;
-	}
-	if (!(scr[idx++] = grise_screen())) {
-		return -1;
-	}
-	if(!(scr[idx++] = polytest_screen())) {
-		return -1;
-	}
-	if (!(scr[idx++] = plasma_screen())) {
-		return -1;
-	}
-	if (!(scr[idx++] = bump_screen())) {
-		return -1;
-	}
-	if (!(scr[idx++] = thunder_screen())) {
-		return -1;
-	}
-	if(!(scr[idx++] = metaballs_screen())) {
-		return -1;
-	}
-	if(!(scr[idx++] = greets_screen())) {
-		return -1;
-	}
-	if(!(scr[idx++] = infcubes_screen())) {
-		return -1;
-	}
-	if(!(scr[idx++] = hairball_screen())) {
-		return -1;
-	}
-	if(!(scr[idx++] = cybersun_screen())) {
-		return -1;
-	}
-	if(!(scr[idx++] = raytrace_screen())) {
-		return -1;
-	}
-	if (!(scr[idx++] = minifx_screen())) {
-		return -1;
-	}
-	if (!(scr[idx++] = voxscape_screen())) {
-		return -1;
-	}
-	if(!(scr[idx++] = hexfloor_screen())) {
-		return -1;
-	}
-	if(!(scr[idx++] = juliatunnel_screen())) {
-		return -1;
-	}
-    if(!(scr[idx++] = blobgrid_screen())) {
-		return -1;
-    }
-	if(!(scr[idx++] = break_screen())) {
-		return -1;
-	}
-
-	num_screens = idx;
-
-	assert(num_screens <= NUM_SCR);
+	populate_screens();
 
 	for(i=0; i<num_screens; i++) {
 		loadscr(i, num_screens);
 		if(scr[i]->init() == -1) {
-			return -1;
+			if(opt.dbgmode) {
+				fprintf(stderr, "screen \"%s\" failed to initialize, removing.\n", scr[i]->name);
+				scr[i] = 0;
+			} else {
+				return -1;
+			}
+		}
+	}
+
+	/* remove any null pointers (failed init screens) from the array */
+	idx = 0;
+	while(idx < num_screens) {
+		if(!scr[idx]) {
+			if(idx < --num_screens) {
+				scr[idx] = scr[num_screens];
+			}
+		} else {
+			idx++;
 		}
 	}
 

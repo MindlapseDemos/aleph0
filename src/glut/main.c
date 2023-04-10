@@ -74,6 +74,9 @@ static cgm_quat rot = {0, 0, 0, 1};
 int main(int argc, char **argv)
 {
 	glutInit(&argc, argv);
+	if(demo_init_cfgopt(argc, argv) == -1) {
+		return 1;
+	}
 
 	if(glutGet(GLUT_SCREEN_HEIGHT) <= 1024) {
 		glutInitWindowSize(640, 480);
@@ -126,9 +129,6 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	time_msec = 0;
-	if(demo_init_cfgopt(argc, argv) == -1) {
-		return 1;
-	}
 
 	if(opt.fullscreen) {
 		set_fullscreen(opt.fullscreen);

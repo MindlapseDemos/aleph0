@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "cfgopt.h"
+#include "screen.h"
 
 #ifdef NDEBUG
 /* release build default options */
@@ -13,7 +14,7 @@ struct options opt = {
 	0,	/* mouse */
 	0,	/* sball */
 	0,	/* vsync */
-	0	/* dbginfo */
+	0	/* dbgmode */
 };
 #else
 /* debug build default options */
@@ -24,9 +25,12 @@ struct options opt = {
 	1,	/* mouse */
 	0,	/* sball */
 	0,	/* vsync */
-	1	/* dbginfo */
+	1	/* dbgmode */
 };
 #endif
+
+static void print_usage(const char *argv0);
+static void print_screen_list(void);
 
 int parse_args(int argc, char **argv)
 {
@@ -41,6 +45,9 @@ int parse_args(int argc, char **argv)
 				opt.music = 0;
 			} else if(strcmp(argv[i], "-scr") == 0 || strcmp(argv[i], "-screen") == 0) {
 				scrname = argv[++i];
+			} else if(strcmp(argv[i], "-list") == 0) {
+				print_screen_list();
+				exit(0);
 			} else if(strcmp(argv[i], "-logfile") == 0) {
 				opt.logfile = argv[++i];
 			} else if(strcmp(argv[i], "-mouse") == 0) {
@@ -54,9 +61,9 @@ int parse_args(int argc, char **argv)
 			} else if(strcmp(argv[i], "-novsync") == 0) {
 				opt.vsync = 0;
 			} else if(strcmp(argv[i], "-dbg") == 0) {
-				opt.dbginfo = 1;
+				opt.dbgmode = 1;
 			} else if(strcmp(argv[i], "-nodbg") == 0) {
-				opt.dbginfo = 0;
+				opt.dbgmode = 0;
 #ifndef MSDOS
 			} else if(strcmp(argv[i], "-fs") == 0) {
 				opt.fullscreen = 1;
@@ -70,6 +77,9 @@ int parse_args(int argc, char **argv)
 			} else if(strcmp(argv[i], "-setup") == 0) {
 				opt.sndsetup = 1;
 #endif
+			} else if(strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "-help") == 0) {
+				print_usage(argv[0]);
+				exit(0);
 			} else {
 				fprintf(stderr, "invalid option: %s\n", argv[i]);
 				return -1;
@@ -87,6 +97,52 @@ int parse_args(int argc, char **argv)
 		opt.start_scr = scrname;
 	}
 	return 0;
+}
+
+static void print_usage(const char *argv0)
+{
+	printf("Usage: %s [options] [screen name]\n", argv0);
+	printf("Options:\n");
+	printf(" -music/-nomusic: enable/disable music playback\n");
+	printf(" -screen <name>: select starting screen (alias: -scr)\n");
+	printf(" -list: list available screens\n");
+	printf(" -logfile <path>: choose where to log messages\n");
+	printf(" -mouse/-nomouse: enable/disable mouse input\n");
+	printf(" -sball: enable 6dof (spaceball) input\n");
+	printf(" -vsync/-novsync: enable/disable vertical sync\n");
+	printf(" -dbg/-nodbg: enable/disable running in debug mode\n");
+#ifndef MSDOS
+	printf(" -fs/-win: run in fullscreen or windowed mode\n");
+	printf(" -scaler-nearest: use nearest-neighbor upscaling\n");
+	printf(" -scaler-linear: use linear interpolation for upscaling\n");
+#else
+	printf(" -setup: run sound setup utility before starting demo\n");
+#endif
+	printf(" -h/-help: print help and exit\n");
+}
+
+void populate_screens(void);	/* defined in screen.c */
+
+static void print_screen_list(void)
+{
+	int i, count, len, col;
+	struct screen *scr;
+
+	populate_screens();
+
+	col = 0;
+	count = scr_num_screens();
+	printf("%d screens:\n", count);
+	for(i=0; i<count; i++) {
+		scr = scr_screen(i);
+		col += (len = strlen(scr->name) + 2);
+		if(col >= 80) {
+			putchar('\n');
+			col = len;
+		}
+		printf("  %s", scr->name);
+	}
+	putchar('\n');
 }
 
 static char *strip_space(char *s)
@@ -161,7 +217,7 @@ int load_config(const char *fname)
 		} else if(strcmp(line, "vsync") == 0) {
 			opt.vsync = bool_value(value);
 		} else if(strcmp(line, "debug") == 0) {
-			opt.dbginfo = bool_value(value);
+			opt.dbgmode = bool_value(value);
 #ifndef MSDOS
 		} else if(strcmp(line, "fullscreen") == 0) {
 			opt.fullscreen = bool_value(value);

@@ -177,7 +177,7 @@ void demo_draw(void)
 /* called by swap_buffers just before the actual swap */
 void demo_post_draw(void *pixels)
 {
-	if(opt.dbginfo) {
+	if(opt.dbgmode) {
 		drawFps(pixels);
 		if(dbg_curscr_name) {
 			cs_dputs(pixels, dbg_curscr_name_pos, 240 - 16, dbg_curscr_name);

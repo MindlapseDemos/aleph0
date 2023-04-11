@@ -14,6 +14,12 @@
 #include "tinyfps.h"
 #include "util.h"
 
+#ifdef __GLIBC__
+#include <malloc.h>
+/* for malloc_stats */
+#endif
+
+
 #define MOUSE_TIMEOUT	1200
 
 #define GUARD_XPAD	0
@@ -106,6 +112,11 @@ int demo_init(void)
 
 void demo_cleanup(void)
 {
+#ifdef __GLIBC__
+	printf("malloc statistics:\n");
+	malloc_stats();
+#endif
+
 	if(opt.music) {
 		au_free_module(mod);
 	}

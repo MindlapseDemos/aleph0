@@ -3,7 +3,7 @@ src = $(wildcard src/*.c) $(wildcard src/3dgfx/*.c) $(wildcard src/rt/*.c) \
 asmsrc = $(wildcard src/*.asm) $(wildcard src/scr/*.asm) $(wildcard src/dos/*.asm)
 obj = $(src:.c=.odj) $(asmsrc:.asm=.odj)
 dep = $(src:.c=.d)
-bin = demo.exe
+bin = djdemo.exe
 
 asmsrc += cspr/dbgfont.asm cspr/confont.asm
 bindata = data/loading.img

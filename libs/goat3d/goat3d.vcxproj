@@ -20,8 +20,11 @@
     <ClCompile Include="src\goat3d.c" />
     <ClCompile Include="src\log.c" />
     <ClCompile Include="src\read.c" />
+    <ClCompile Include="src\readgltf.c" />
+    <ClCompile Include="src\json.c" />
     <ClCompile Include="src\track.c" />
     <ClCompile Include="src\write.c" />
+    <ClCompile Include="src\util.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\goat3d.h" />
@@ -32,6 +35,8 @@
     <ClInclude Include="src\g3dscn.h" />
     <ClInclude Include="src\log.h" />
     <ClInclude Include="src\track.h" />
+    <ClInclude Include="src\json.h" />
+    <ClInclude Include="src\util.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{5DDB5403-A105-470E-882B-4276EFDDAAB1}</ProjectGuid>

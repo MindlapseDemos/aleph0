@@ -1,13 +1,13 @@
 !ifdef __UNIX__
 obj = src/aabox.obj src/extmesh.obj src/goat3d.obj src/track.obj src/chunk.obj &
 	src/g3danm.obj src/log.obj src/write.obj src/dynarr.obj src/g3dscn.obj &
-	src/read.obj
+	src/read.obj src/readgltf.obj src/json.obj src/util.obj
 
 incdir = -Iinclude -I.. -I../../src
 !else
 obj = src\aabox.obj src\extmesh.obj src\goat3d.obj src\track.obj src\chunk.obj &
 	src\g3danm.obj src\log.obj src\write.obj src\dynarr.obj src\g3dscn.obj &
-	src\read.obj
+	src\read.obj src\readgltf.obj src\json.obj src\util.obj
 
 incdir = -Iinclude -I.. -I..\..\src
 !endif

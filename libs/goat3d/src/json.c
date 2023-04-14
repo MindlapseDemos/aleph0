@@ -4,7 +4,7 @@
 #include <ctype.h>
 #include "dynarr.h"
 
-#if defined(_MSC_VER) || defined(__WATCOMC__)
+#if defined(_MSC_VER) || defined(__WATCOMC__) || defined(__DJGPP__)
 #include <malloc.h>
 #else
 #if !defined(__FreeBSD__) && !defined(__OpenBSD__)

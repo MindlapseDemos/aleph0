@@ -81,7 +81,7 @@ void disable_fpexcept(void)
 	fedisableexcept(FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW);
 }
 
-#elif defined(_MSC_VER) || defined(__MINGW32__) || defined(__WATCOM__)
+#elif defined(_MSC_VER) || defined(__MINGW32__) || defined(__WATCOMC__)
 #include <float.h>
 
 #if defined(__MINGW32__) && !defined(_EM_OVERFLOW)
@@ -92,9 +92,9 @@ void disable_fpexcept(void)
 #define _EM_OVERFLOW	0x04
 unsigned int __cdecl _clearfp(void);
 unsigned int __cdecl _controlfp(unsigned int, unsigned int);
-#elif defined(__WATCOM__)
-#define clearfp	clear87
-#define controlfp control87
+#elif defined(__WATCOMC__)
+#define _clearfp	_clear87
+#define _controlfp	_control87
 #endif
 
 void enable_fpexcept(void)
@@ -111,4 +111,37 @@ void disable_fpexcept(void)
 #else
 void enable_fpexcept(void) {}
 void disable_fpexcept(void) {}
+#endif
+
+#ifdef __WATCOMC__
+int strcasecmp(const char *a, const char *b)
+{
+	int ca, cb;
+
+	while(*a && *b) {
+		ca = tolower(*a++);
+		cb = tolower(*b++);
+		if(ca != cb) return ca - cb;
+	}
+
+	if(!*a && !*b) return 0;
+	if(!*a) return -1;
+	if(!*b) return 1;
+	return 0;
+}
+
+int strncasecmp(const char *a, const char *b, size_t n)
+{
+	int ca, cb;
+	while(n-- > 0 && *a && *b) {
+		ca = tolower(*a++);
+		cb = tolower(*b++);
+		if(ca != cb) return ca - cb;
+	}
+
+	if(!*a && !*b) return 0;
+	if(!*a) return -1;
+	if(!*b) return 1;
+	return 0;
+}
 #endif

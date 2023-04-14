@@ -69,15 +69,15 @@ int main(int argc, char **argv)
 	}
 
 	if((vmidx = match_video_mode(FB_WIDTH, FB_HEIGHT, FB_BPP)) == -1) {
-		if((vmidx = match_video_mode(FB_WIDTH * 2, FB_HEIGHT * 2, FB_BPP)) == -1) {
-			return 1;
-		}
+		/*if((vmidx = match_video_mode(FB_WIDTH * 2, FB_HEIGHT * 2, FB_BPP)) == -1) {*/
+			demo_abort();
+		/*}
 		dblsize = 1;
 		printf("Warning: failed to find suitable, %dx%d video mode. Will use 2x scaling, performance might suffer\n",
-				FB_WIDTH, FB_HEIGHT);
+				FB_WIDTH, FB_HEIGHT);*/
 	}
 	if(!(vmem = set_video_mode(vmidx, 1))) {
-		return 1;
+		demo_abort();
 	}
 
 	if(opt.mouse) {
@@ -97,6 +97,7 @@ int main(int argc, char **argv)
 		use_sball = 1;
 	}
 
+	fflush(stdout);
 	reset_timer();
 
 	for(;;) {
@@ -142,9 +143,8 @@ void demo_abort(void)
 {
 	set_text_mode();
 	stop_logger();
-	printf("demo_abort called. see demo.log for details. Last lines:\n\n");
-	print_tail("demo.log");
-	abort();
+	print_tail(opt.logfile);
+	exit(1);
 }
 
 #define TX(ev)	((ev)->motion.motion[0])

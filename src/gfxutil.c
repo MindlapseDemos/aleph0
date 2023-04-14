@@ -7,6 +7,8 @@ void (*overlay_alpha)(struct image *dest, int x, int y, const struct image *src,
 		int width, int height);
 static void overlay_alpha_c(struct image *dest, int x, int y, const struct image *src,
 		int width, int height);
+static void overlay_alpha_asm(struct image *dest, int x, int y, const struct image *src,
+		int width, int height);
 static void overlay_alpha_mmx(struct image *dest, int x, int y, const struct image *src,
 		int width, int height);
 
@@ -305,6 +307,7 @@ static void overlay_alpha_c(struct image *dest, int x, int y, const struct image
 	unsigned int sr, sg, sb, dr, dg, db;
 	unsigned int alpha, invalpha;
 	uint16_t *dptr, *sptr, pix;
+	uint32_t pixpair;
 	unsigned char *aptr;
 
 	assert(dest->width == 320);
@@ -314,18 +317,33 @@ static void overlay_alpha_c(struct image *dest, int x, int y, const struct image
 	aptr = src->alpha;
 
 	for(i=0; i<height; i++) {
-		for(j=0; j<width; j++) {
-			alpha = aptr[j];
-			invalpha = ~alpha & 0xff;
-			pix = sptr[j];
-			sr = UNPACK_R16(pix);
-			sg = UNPACK_G16(pix);
-			sb = UNPACK_B16(pix);
-			pix = dptr[j];
-			dr = (UNPACK_R16(pix) * invalpha + sr * alpha) >> 8;
-			dg = (UNPACK_G16(pix) * invalpha + sg * alpha) >> 8;
-			db = (UNPACK_B16(pix) * invalpha + sb * alpha) >> 8;
-			dptr[j] = PACK_RGB16(dr, dg, db);
+		for(j=0; j<width/8; j++) {
+			int idx = j << 3;
+#define INNERLOOP \
+			alpha = aptr[idx];	\
+			invalpha = ~alpha & 0xff;	\
+			pix = sptr[idx];	\
+			sr = UNPACK_R16(pix);	\
+			sg = UNPACK_G16(pix);	\
+			sb = UNPACK_B16(pix);	\
+			pix = dptr[idx];	\
+			dr = (UNPACK_R16(pix) * invalpha + sr * alpha) >> 8;	\
+			dg = (UNPACK_G16(pix) * invalpha + sg * alpha) >> 8;	\
+			db = (UNPACK_B16(pix) * invalpha + sb * alpha) >> 8;	\
+			dptr[idx++] = PACK_RGB16(dr, dg, db)
+
+			INNERLOOP;
+			INNERLOOP;
+			INNERLOOP;
+			INNERLOOP;
+			INNERLOOP;
+			INNERLOOP;
+			INNERLOOP;
+			INNERLOOP;
+		}
+		for(j=width&0xfff8; j<width; j++) {
+			int idx = j;
+			INNERLOOP;
 		}
 		dptr += 320;
 		sptr += src->scanlen;

@@ -268,4 +268,9 @@ char *strdup_nf_impl(const char *s, const char *file, int line);
 void enable_fpexcept(void);
 void disable_fpexcept(void);
 
+#ifdef __WATCOMC__
+int strcasecmp(const char *a, const char *b);
+int strncasecmp(const char *a, const char *b, size_t n);
+#endif
+
 #endif	/* UTIL_H_ */

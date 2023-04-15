@@ -16,6 +16,13 @@ struct image {
 	float *uoffs, *voffs;
 };
 
+struct image_rgba {
+	int width, height, scanlen;
+	uint32_t *pixels;
+
+	unsigned int xmask, ymask, xshift;
+};
+
 int load_image(struct image *img, const char *fname);
 int load_image_alpha(struct image *img, const char *fname);
 int dump_image(struct image *img, const char *fname);

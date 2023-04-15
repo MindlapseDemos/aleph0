@@ -116,6 +116,7 @@ static void draw(void)
 {
 	int i;
 
+	/*
 	update();
 
 	g3d_matrix_mode(G3D_MODELVIEW);
@@ -130,11 +131,14 @@ static void draw(void)
 	g3d_clear(G3D_COLOR_BUFFER_BIT | G3D_DEPTH_BUFFER_BIT);
 
 	scn_draw(scn);
+	*/
 
 	/* XXX alpha overlay test */
 	{
 		int xpos = (time_msec >> 3) % 640;
 		xpos = 319 - abs(xpos - 320);
+
+		memset(fb_pixels + 210*320, 0, 30*320*2);
 
 		testimg.pixels = testimg_pixels + xpos;
 		testimg.alpha = testimg_alpha + xpos;

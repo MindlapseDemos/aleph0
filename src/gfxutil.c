@@ -327,9 +327,9 @@ static void overlay_alpha_c(struct image *dest, int x, int y, const struct image
 			sg = UNPACK_G16(pix);	\
 			sb = UNPACK_B16(pix);	\
 			pix = dptr[idx];	\
-			dr = (UNPACK_R16(pix) * invalpha + sr * alpha) >> 8;	\
-			dg = (UNPACK_G16(pix) * invalpha + sg * alpha) >> 8;	\
-			db = (UNPACK_B16(pix) * invalpha + sb * alpha) >> 8;	\
+			dr = ((UNPACK_R16(pix) * invalpha) >> 8) + sr;	\
+			dg = ((UNPACK_G16(pix) * invalpha) >> 8) + sg;	\
+			db = ((UNPACK_B16(pix) * invalpha) >> 8) + sb;	\
 			dptr[idx++] = PACK_RGB16(dr, dg, db)
 
 			INNERLOOP;

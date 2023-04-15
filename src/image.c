@@ -6,6 +6,7 @@
 #include "image.h"
 #include "treestor.h"
 #include "util.h"
+#include "gfxutil.h"
 
 /* TODO support alpha masks in raw image dumps */
 
@@ -29,7 +30,7 @@ static void calc_pow2(struct image *img)
 
 int load_image(struct image *img, const char *fname)
 {
-	int i, count;
+	int i, pixcount;
 	FILE *fp;
 	char sig[8];
 	uint16_t width, height;
@@ -172,6 +173,8 @@ not565:
 	img->height = pixmap.height;
 	img->scanlen = img->width;
 
+	pixcount = img->width * img->height;
+
 	/* for images with an alpha channel, make an alpha image from the alpha
 	 * channel first, before converting to 565
 	 */
@@ -185,15 +188,14 @@ not565:
 			fprintf(stderr, "failed to convert %s to RGBA32 to grab alpha mask\n", fname);
 			goto noalpha;
 		}
-		count = img->width * img->height;
-		if(!(img->alpha = malloc(count))) {
+		if(!(img->alpha = malloc(pixcount))) {
 			fprintf(stderr, "failed to allocate %dx%d alpha mask for: %s\n",
 					img->width, img->height, fname);
 			goto noalpha;
 		}
 
 		pptr = (unsigned char*)pixmap.pixels + 3;
-		for(i=0; i<count; i++) {
+		for(i=0; i<pixcount; i++) {
 			img->alpha[i] = *pptr;
 			pptr += 4;
 		}
@@ -207,6 +209,19 @@ noalpha:
 
 	img->pixels = pixmap.pixels;
 	calc_pow2(img);
+
+	if(img->alpha) {
+		/* premultiply alpha */
+		for(i=0; i<pixcount; i++) {
+			int r = UNPACK_R16(img->pixels[i]);
+			int g = UNPACK_G16(img->pixels[i]);
+			int b = UNPACK_B16(img->pixels[i]);
+			r = (r * img->alpha[i]) >> 8;
+			g = (g * img->alpha[i]) >> 8;
+			b = (b * img->alpha[i]) >> 8;
+			img->pixels[i] = PACK_RGB16(r, g, b);
+		}
+	}
 	return 0;
 }
 

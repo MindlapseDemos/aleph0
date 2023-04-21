@@ -31,12 +31,12 @@
 #define RAD_TO_DEG_256(x) ((256 * (x)) / (2 * M_PI))
 
 
-#define FIXED_TEST
+//#define FIXED_TEST
 
 #define OBJECT_POS_Z 1024
 
 
-typedef double real;
+typedef float real;
 
 typedef struct OptVertex
 {
@@ -215,6 +215,63 @@ static void renderVertices(int count)
 	}
 }
 
+static void doAllTogether(OptVertex *v, int count, int ticks)
+{
+	unsigned short* dst = (unsigned short*)fb_pixels;
+	const int t = ticks >> 1;
+	int i;
+
+	#ifdef FIXED_TEST
+		static int m[9];
+		const int offsetX = FB_WIDTH >> 1;
+		const int offsetY = FB_HEIGHT >> 1;
+
+		createRotationMatrixValues(t, 2*t, 3*t, m);
+	#else
+		static real m[9];
+		const real offsetX = (real)(FB_WIDTH >> 1);
+		const real offsetY = (real)(FB_HEIGHT >> 1);
+
+		createRotationMatrixValues((real)DEG_TO_RAD_256(t) / 64.0f, (real)DEG_TO_RAD_256(2*t) / 64.0f, (real)DEG_TO_RAD_256(3*t) / 64.0f, m);
+	#endif
+
+	#ifdef FIXED_TEST
+		for (i = 0; i < count; ++i) {
+			const int x = v->x;
+			const int y = v->y;
+			const int z = v->z;
+
+			const int sz = FIXED_TO_INT(x * m[2] + y * m[5] + z * m[8], FP_CORE) + OBJECT_POS_Z;
+			if (sz > 0) {
+				const int sx = offsetX + ((FIXED_TO_INT(x * m[0] + y * m[3] + z * m[6], FP_CORE)) << PROJ_SHR) / sz;
+				const int sy = offsetY + ((FIXED_TO_INT(x * m[1] + y * m[4] + z * m[7], FP_CORE)) << PROJ_SHR) / sz;
+
+				if (sx >= 0 && sx < FB_WIDTH && sy >= 0 && sy < FB_HEIGHT) {
+					*(dst + sy * FB_WIDTH + sx) = 0xFFFF;
+				}
+			}
+			++v;
+		}
+	#else
+		for (i = 0; i < count; ++i) {
+			const real x = v->x;
+			const real y = v->y;
+			const real z = v->z;
+
+			const real sz = x * m[2] + y * m[5] + z * m[8] + OBJECT_POS_Z;
+			if (sz > 0) {
+				const int sx = cround64(offsetX + ((x * m[0] + y * m[3] + z * m[6]) * (1 << PROJ_SHR)) / sz);
+				const int sy = cround64(offsetY + ((x * m[1] + y * m[4] + z * m[7]) * (1 << PROJ_SHR)) / sz);
+
+				if (sx >= 0 && sx < FB_WIDTH && sy >= 0 && sy < FB_HEIGHT) {
+					*(dst + sy * FB_WIDTH + sx) = 0xFFFF;
+				}
+			}
+			++v;
+		}
+	#endif
+}
+
 
 static void initObject3D()
 {
@@ -241,7 +298,9 @@ void Opt3DrunPerfTest(int ticks)
 {
 	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
 
-	rotateVertices(ticks, MAX_VERTEX_ELEMENTS_NUM);
+	doAllTogether(objectVertices, MAX_VERTEX_ELEMENTS_NUM, ticks);
+	
+	/*rotateVertices(ticks, MAX_VERTEX_ELEMENTS_NUM);
 	translateAndProjectVertices(MAX_VERTEX_ELEMENTS_NUM);
-	renderVertices(MAX_VERTEX_ELEMENTS_NUM);
+	renderVertices(MAX_VERTEX_ELEMENTS_NUM);*/
 }

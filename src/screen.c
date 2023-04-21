@@ -33,6 +33,7 @@ struct screen *hexfloor_screen(void);
 struct screen *juliatunnel_screen(void);
 struct screen *blobgrid_screen(void);
 struct screen *break_screen(void);
+struct screen *polka_screen(void);
 
 void start_loadscr(void);
 void end_loadscr(void);
@@ -71,6 +72,7 @@ void populate_screens(void)
 	scr[idx++] = juliatunnel_screen();
     scr[idx++] = blobgrid_screen();
 	scr[idx++] = break_screen();
+	scr[idx++] = polka_screen();
 
 	num_screens = idx;
 	assert(num_screens <= NUM_SCR);

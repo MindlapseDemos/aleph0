@@ -31,7 +31,7 @@
 #define RAD_TO_DEG_256(x) ((256 * (x)) / (2 * M_PI))
 
 
-#define FIXED_TEST
+//#define FIXED_TEST
 
 #define OBJECT_POS_Z 1024
 

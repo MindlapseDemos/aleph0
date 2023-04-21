@@ -31,7 +31,7 @@
 #define RAD_TO_DEG_256(x) ((256 * (x)) / (2 * M_PI))
 
 
-//#define FIXED_TEST
+#define FIXED_TEST
 
 #define OBJECT_POS_Z 1024
 
@@ -142,13 +142,13 @@ static OptVertex screenVertices[MAX_VERTEX_ELEMENTS_NUM];
 #endif
 
 #ifdef FIXED_TEST
-static void translateAndProjectVertices()
+static void translateAndProjectVertices(int count)
 {
 	int i;
 	const int offsetX = FB_WIDTH >> 1;
 	const int offsetY = FB_HEIGHT >> 1;
 
-	for (i=0; i<MAX_VERTEX_ELEMENTS_NUM; i++) {
+	for (i=0; i<count; i++) {
 		const int vz = screenVertices[i].z + OBJECT_POS_Z;
 		screenVertices[i].z = vz;
 		if (vz > 0) {
@@ -158,13 +158,13 @@ static void translateAndProjectVertices()
 	}
 }
 #else
-static void translateAndProjectVertices()
+static void translateAndProjectVertices(int count)
 {
 	int i;
 	const real offsetX = (real)(FB_WIDTH >> 1);
 	const real offsetY = (real)(FB_HEIGHT >> 1);
 
-	for (i=0; i<MAX_VERTEX_ELEMENTS_NUM; i++) {
+	for (i=0; i<count; i++) {
 		const real vz = screenVertices[i].z + OBJECT_POS_Z;
 		screenVertices[i].z = vz;
 		if (vz > 0) {
@@ -175,7 +175,7 @@ static void translateAndProjectVertices()
 }
 #endif
 
-static void rotateVertices(int ticks)
+static void rotateVertices(int ticks, int count)
 {
 	const int t = ticks >> 1;
 
@@ -189,16 +189,16 @@ static void rotateVertices(int ticks)
 		createRotationMatrixValues((real)DEG_TO_RAD_256(t) / 64.0f, (real)DEG_TO_RAD_256(2*t) / 64.0f, (real)DEG_TO_RAD_256(3*t) / 64.0f, rotMat);
 	#endif
 
-	MulManyVec3Mat33(screenVertices, objectVertices, rotMat, MAX_VERTEX_ELEMENTS_NUM);
+	MulManyVec3Mat33(screenVertices, objectVertices, rotMat, count);
 }
 
-static void renderVertices()
+static void renderVertices(int count)
 {
 	int i;
 	unsigned short* dst = (unsigned short*)fb_pixels;
 
 	OptVertex* v = screenVertices;
-	for (i = 0; i < MAX_VERTEX_ELEMENTS_NUM; i++) {
+	for (i = 0; i < count; i++) {
 		#ifdef FIXED_TEST
 			const int x = v->x;
 			const int y = v->y;
@@ -241,7 +241,7 @@ void Opt3DrunPerfTest(int ticks)
 {
 	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
 
-	rotateVertices(ticks);
-	translateAndProjectVertices();
-	renderVertices();
+	rotateVertices(ticks, MAX_VERTEX_ELEMENTS_NUM);
+	translateAndProjectVertices(MAX_VERTEX_ELEMENTS_NUM);
+	renderVertices(MAX_VERTEX_ELEMENTS_NUM);
 }

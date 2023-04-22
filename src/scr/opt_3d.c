@@ -15,9 +15,9 @@
 #define OBJECT_POS_Z 1024
 
 #define AXIS_SHIFT 4
-#define AXIS_HALF_WIDTH ((VERTICES_WIDTH/2)<<AXIS_SHIFT)
-#define AXIS_HALF_HEIGHT ((VERTICES_HEIGHT/2)<<AXIS_SHIFT)
-#define AXIS_HALF_DEPTH ((VERTICES_DEPTH/2)<<AXIS_SHIFT)
+#define AXIS_WIDTH (VERTICES_WIDTH<<AXIS_SHIFT)
+#define AXIS_HEIGHT (VERTICES_HEIGHT<<AXIS_SHIFT)
+#define AXIS_DEPTH (VERTICES_DEPTH<<AXIS_SHIFT)
 
 
 #define FP_CORE 16
@@ -38,9 +38,10 @@
 #define RAD_TO_DEG_256(x) ((256 * (x)) / (2 * M_PI))
 
 
-#define FIXED_TEST
-#define DO_ALL_TOGETHER
-//#define AXES_TEST
+//#define FIXED_TEST
+
+//#define DO_ALL_TOGETHER
+#define AXES_TEST
 
 #ifdef FIXED_TEST
 	#define VECTYPE_AFTER_MUL_ADDS(x,b)		FIXED_TO_INT(x,b)
@@ -60,6 +61,7 @@ typedef float real;
 	typedef real vecType;
 #endif
 
+
 typedef struct OptVertex
 {
 	vecType x,y,z;
@@ -67,8 +69,9 @@ typedef struct OptVertex
 
 #define SET_OPT_VERTEX(xp,yp,zp,v) v->x = (xp); v->y = (yp); v->z = (zp);
 
+
 static OptVertex *objectVertices;
-static OptVertex *screenVertices;
+static OptVertex *transformedVertices;
 
 static OptVertex *axisVerticesX, *axisVerticesY, *axisVerticesZ;
 
@@ -137,11 +140,11 @@ static void translateAndProjectVertices(int count)
 	const vecType offsetY = (vecType)(FB_HEIGHT >> 1);
 
 	for (i=0; i<count; i++) {
-		const vecType vz = screenVertices[i].z + OBJECT_POS_Z;
-		screenVertices[i].z = vz;
+		const vecType vz = transformedVertices[i].z + OBJECT_POS_Z;
+		transformedVertices[i].z = vz;
 		if (vz > 0) {
-			screenVertices[i].x = offsetX + (screenVertices[i].x * PROJ_MUL) / vz;
-			screenVertices[i].y = offsetY + (screenVertices[i].y * PROJ_MUL) / vz;
+			transformedVertices[i].x = offsetX + (transformedVertices[i].x * PROJ_MUL) / vz;
+			transformedVertices[i].y = offsetY + (transformedVertices[i].y * PROJ_MUL) / vz;
 		}
 	}
 }
@@ -152,7 +155,7 @@ static void rotateVertices(int count, int t)
 
 	createRotationMatrixValues(t, 2*t, 3*t, rotMat);
 
-	MulManyVec3Mat33(screenVertices, objectVertices, rotMat, count);
+	MulManyVec3Mat33(transformedVertices, objectVertices, rotMat, count);
 }
 
 static void renderVertices(int count)
@@ -160,7 +163,7 @@ static void renderVertices(int count)
 	int i;
 	unsigned short* dst = (unsigned short*)fb_pixels;
 
-	OptVertex* v = screenVertices;
+	OptVertex* v = transformedVertices;
 	for (i = 0; i < count; i++) {
 		const int x = VECTYPE_ROUND(v->x);
 		const int y = VECTYPE_ROUND(v->y);
@@ -192,8 +195,8 @@ static void doAllTogether(OptVertex *v, int count, int t)
 
 		const vecType sz = VECTYPE_AFTER_MUL_ADDS(x * m[2] + y * m[5] + z * m[8], FP_CORE) + OBJECT_POS_Z;
 		if (sz > 0) {
-			const int sx = offsetX + ((VECTYPE_AFTER_MUL_ADDS(x * m[0] + y * m[3] + z * m[6], FP_CORE)) * PROJ_MUL) / sz;
-			const int sy = offsetY + ((VECTYPE_AFTER_MUL_ADDS(x * m[1] + y * m[4] + z * m[7], FP_CORE)) * PROJ_MUL) / sz;
+			const int sx = VECTYPE_ROUND(offsetX + ((VECTYPE_AFTER_MUL_ADDS(x * m[0] + y * m[3] + z * m[6], FP_CORE)) * PROJ_MUL) / sz);
+			const int sy = VECTYPE_ROUND(offsetY + ((VECTYPE_AFTER_MUL_ADDS(x * m[1] + y * m[4] + z * m[7], FP_CORE)) * PROJ_MUL) / sz);
 
 			if (sx >= 0 && sx < FB_WIDTH && sy >= 0 && sy < FB_HEIGHT) {
 				*(dst + sy * FB_WIDTH + sx) = 0xFFFF;
@@ -209,7 +212,7 @@ static void initObject3D()
 	OptVertex* v;
 
 	objectVertices = (OptVertex*)malloc(MAX_VERTEX_ELEMENTS_NUM * sizeof(OptVertex));
-	screenVertices = (OptVertex*)malloc(MAX_VERTEX_ELEMENTS_NUM * sizeof(OptVertex));
+	transformedVertices = (OptVertex*)malloc(MAX_VERTEX_ELEMENTS_NUM * sizeof(OptVertex));
 
 	v = objectVertices;
 	for (z = -VERTICES_DEPTH / 2; z < VERTICES_DEPTH / 2; ++z) {
@@ -222,19 +225,77 @@ static void initObject3D()
 	}
 }
 
-static void generateAxisVertices(OptVertex *axisStart, OptVertex *axisStep, OptVertex *axisDst, int count)
+static void renderAxesBoxDots()
 {
-/*	int x = axisStart->x;
-	int y = axisStart->y;
-	int z = axisStart->z;
-	const int 
+	unsigned short* dst = (unsigned short*)fb_pixels;
+
+	const vecType offsetX = (vecType)(FB_WIDTH >> 1);
+	const vecType offsetY = (vecType)(FB_HEIGHT >> 1);
+
+	OptVertex *axisZ = axisVerticesZ;
+	int countZ = VERTICES_DEPTH;
 	do {
-	} while(--count != 0);*/
+		const vecType aZx = axisZ->x;
+		const vecType aZy = axisZ->y;
+		const vecType aZz = axisZ->z;
+
+		OptVertex *axisY = axisVerticesY;
+		int countY = VERTICES_HEIGHT;
+		do {
+			const vecType aYx = axisY->x;
+			const vecType aYy = axisY->y;
+			const vecType aYz = axisY->z;
+			
+			OptVertex *axisX = axisVerticesX;
+			int countX = VERTICES_WIDTH;
+			do {
+				const vecType aXx = axisX->x;
+				const vecType aXy = axisX->y;
+				const vecType aXz = axisX->z;
+
+				const vecType sz = VECTYPE_AFTER_MUL_ADDS(aXz + aYz + aZz, FP_CORE) + OBJECT_POS_Z;
+				if (sz > 0) {
+					const int sx = VECTYPE_ROUND(offsetX + ((VECTYPE_AFTER_MUL_ADDS(aXx + aYx + aZx, FP_CORE)) * PROJ_MUL) / sz);
+					const int sy = VECTYPE_ROUND(offsetY + ((VECTYPE_AFTER_MUL_ADDS(aXy + aYy + aZy, FP_CORE)) * PROJ_MUL) / sz);
+
+					if (sx >= 0 && sx < FB_WIDTH && sy >= 0 && sy < FB_HEIGHT) {
+						*(dst + sy * FB_WIDTH + sx) = 0xFFFF;
+					}
+				}
+				++axisX;
+			} while(--countX != 0);
+			++axisY;
+		} while(--countY != 0);
+		++axisZ;
+	} while(--countZ != 0);
+}
+
+static void generateAxisVertices(OptVertex *rotatedAxis, OptVertex *dstAxis, int count)
+{
+	const real dx = (real)rotatedAxis->x / (VERTICES_WIDTH - 1);
+	const real dy = (real)rotatedAxis->y / (VERTICES_HEIGHT - 1);
+	const real dz = (real)rotatedAxis->z / (VERTICES_DEPTH - 1);
+	const real halfSteps = (real)count / 2;
+	real px = -halfSteps * dx;
+	real py = -halfSteps * dy;
+	real pz = -halfSteps * dz;
+	do {
+		const vecType x = FLOAT_TO_VECTYPE(px, FP_CORE);
+		const vecType y = FLOAT_TO_VECTYPE(py, FP_CORE);
+		const vecType z = FLOAT_TO_VECTYPE(pz, FP_CORE);
+		SET_OPT_VERTEX(x,y,z,dstAxis);
+		px += dx;
+		py += dy;
+		pz += dz;
+		++dstAxis;
+	} while(--count != 0);
 }
 
 static void generateAxesVertices(OptVertex *axesEnds)
 {
-	int i;
+	generateAxisVertices(&axesEnds[0], axisVerticesX, VERTICES_WIDTH);
+	generateAxisVertices(&axesEnds[1], axisVerticesY, VERTICES_HEIGHT);
+	generateAxisVertices(&axesEnds[2], axisVerticesZ, VERTICES_DEPTH);
 }
 
 static void initAxes3D()
@@ -242,16 +303,16 @@ static void initAxes3D()
 	OptVertex* v;
 
 	objectVertices = (OptVertex*)malloc(3 * sizeof(OptVertex));
-	screenVertices = (OptVertex*)malloc(3 * sizeof(OptVertex));
+	transformedVertices = (OptVertex*)malloc(3 * sizeof(OptVertex));
 
 	axisVerticesX = (OptVertex*)malloc(VERTICES_WIDTH * sizeof(OptVertex));
 	axisVerticesY = (OptVertex*)malloc(VERTICES_HEIGHT * sizeof(OptVertex));
 	axisVerticesZ = (OptVertex*)malloc(VERTICES_DEPTH * sizeof(OptVertex));
 
 	v = objectVertices;
-	SET_OPT_VERTEX(AXIS_HALF_WIDTH,0,0,v)	++v;
-	SET_OPT_VERTEX(0,AXIS_HALF_HEIGHT,0,v)	++v;
-	SET_OPT_VERTEX(0,0,AXIS_HALF_DEPTH,v)
+	SET_OPT_VERTEX(AXIS_WIDTH,0,0,v)	++v;
+	SET_OPT_VERTEX(0,AXIS_HEIGHT,0,v)	++v;
+	SET_OPT_VERTEX(0,0,AXIS_DEPTH,v)
 }
 
 void Opt3DinitPerfTest()
@@ -266,7 +327,7 @@ void Opt3DinitPerfTest()
 void Opt3DfreePerfTest()
 {
 	free(objectVertices);
-	free(screenVertices);
+	free(transformedVertices);
 
 	free(axisVerticesX);
 	free(axisVerticesY);
@@ -279,7 +340,8 @@ void Opt3DrunPerfTest(int ticks)
 
 	#ifdef AXES_TEST
 		rotateVertices(3, ticks);
-		generateAxesVertices(screenVertices);
+		generateAxesVertices(transformedVertices);
+		renderAxesBoxDots();
 	#else
 		#ifdef DO_ALL_TOGETHER
 			doAllTogether(objectVertices, MAX_VERTEX_ELEMENTS_NUM, ticks);

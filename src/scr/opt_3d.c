@@ -13,6 +13,7 @@
 #define MAX_VERTEX_ELEMENTS_NUM (VERTICES_WIDTH * VERTICES_HEIGHT * VERTICES_DEPTH)
 
 #define OBJECT_POS_Z 1024
+#define REC_DIV_Z_MAX 2048
 
 #define AXIS_SHIFT 4
 #define AXIS_WIDTH (VERTICES_WIDTH<<AXIS_SHIFT)
@@ -38,19 +39,23 @@
 #define RAD_TO_DEG_256(x) ((256 * (x)) / (2 * M_PI))
 
 
-//#define FIXED_TEST
+#define FIXED_TEST
 
 //#define DO_ALL_TOGETHER
 #define AXES_TEST
 
 #ifdef FIXED_TEST
 	#define VECTYPE_AFTER_MUL_ADDS(x,b)		FIXED_TO_INT(x,b)
+	#define VECTYPE_AFTER_RECZ_MUL(x,b)		FIXED_TO_INT(x,b)
 	#define VECTYPE_ROUND(x)				(x)
 	#define FLOAT_TO_VECTYPE(x,b)			FLOAT_TO_FIXED(x,b)
+	#define DOT_COLOR						0xFFFF
 #else
 	#define VECTYPE_AFTER_MUL_ADDS(x,b)		(x)
+#define VECTYPE_AFTER_RECZ_MUL(x,b)			(x)
 	#define VECTYPE_ROUND(x)				(cround64(x))
 	#define FLOAT_TO_VECTYPE(x,b)			(x)
+	#define DOT_COLOR						0xF321
 #endif
 
 typedef float real;
@@ -74,6 +79,8 @@ static OptVertex *objectVertices;
 static OptVertex *transformedVertices;
 
 static OptVertex *axisVerticesX, *axisVerticesY, *axisVerticesZ;
+
+static vecType *recDivZ;
 
 
 static void createRotationMatrixValues(vecType rotX, vecType rotY, vecType rotZ, vecType *mat)
@@ -170,7 +177,7 @@ static void renderVertices(int count)
 		const int z = VECTYPE_ROUND(v->z);
 
 		if (z > 0 && x >= 0 && x < FB_WIDTH && y >= 0 && y < FB_HEIGHT) {
-			*(dst + y * FB_WIDTH + x) = 0xFFFF;
+			*(dst + y * FB_WIDTH + x) = DOT_COLOR;
 		}
 		++v;
 	}
@@ -199,7 +206,7 @@ static void doAllTogether(OptVertex *v, int count, int t)
 			const int sy = VECTYPE_ROUND(offsetY + ((VECTYPE_AFTER_MUL_ADDS(x * m[1] + y * m[4] + z * m[7], FP_CORE)) * PROJ_MUL) / sz);
 
 			if (sx >= 0 && sx < FB_WIDTH && sy >= 0 && sy < FB_HEIGHT) {
-				*(dst + sy * FB_WIDTH + sx) = 0xFFFF;
+				*(dst + sy * FB_WIDTH + sx) = DOT_COLOR;
 			}
 		}
 		++v;
@@ -255,11 +262,12 @@ static void renderAxesBoxDots()
 
 				const vecType sz = VECTYPE_AFTER_MUL_ADDS(aXz + aYz + aZz, FP_CORE) + OBJECT_POS_Z;
 				if (sz > 0) {
-					const int sx = VECTYPE_ROUND(offsetX + ((VECTYPE_AFTER_MUL_ADDS(aXx + aYx + aZx, FP_CORE)) * PROJ_MUL) / sz);
-					const int sy = VECTYPE_ROUND(offsetY + ((VECTYPE_AFTER_MUL_ADDS(aXy + aYy + aZy, FP_CORE)) * PROJ_MUL) / sz);
+					const vecType recZ = recDivZ[(int)sz];
+					const int sx = VECTYPE_ROUND(offsetX + VECTYPE_AFTER_RECZ_MUL(((VECTYPE_AFTER_MUL_ADDS(aXx + aYx + aZx, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE));
+					const int sy = VECTYPE_ROUND(offsetY + VECTYPE_AFTER_RECZ_MUL(((VECTYPE_AFTER_MUL_ADDS(aXy + aYy + aZy, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE));
 
 					if (sx >= 0 && sx < FB_WIDTH && sy >= 0 && sy < FB_HEIGHT) {
-						*(dst + sy * FB_WIDTH + sx) = 0xFFFF;
+						*(dst + sy * FB_WIDTH + sx) = DOT_COLOR;
 					}
 				}
 				++axisX;
@@ -317,11 +325,18 @@ static void initAxes3D()
 
 void Opt3DinitPerfTest()
 {
+	int z;
+
 	#ifdef AXES_TEST
 		initAxes3D();
 	#else
 		initObject3D();
 	#endif
+
+	recDivZ = (vecType*)malloc(REC_DIV_Z_MAX * sizeof(vecType));
+	for (z=1; z<REC_DIV_Z_MAX; ++z) {
+		recDivZ[z] = FLOAT_TO_VECTYPE(1/(real)z, FP_CORE);
+	}
 }
 
 void Opt3DfreePerfTest()
@@ -332,6 +347,8 @@ void Opt3DfreePerfTest()
 	free(axisVerticesX);
 	free(axisVerticesY);
 	free(axisVerticesZ);
+
+	free(recDivZ);
 }
 
 void Opt3DrunPerfTest(int ticks)

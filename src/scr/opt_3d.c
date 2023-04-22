@@ -32,12 +32,13 @@
 
 
 //#define FIXED_TEST
-#define DO_ALL_TOGETHER
+//#define DO_ALL_TOGETHER
+#define AXES_TEST
 
 #define OBJECT_POS_Z 1024
 
 
-typedef double real;
+typedef float real;
 
 typedef struct OptVertex
 {
@@ -48,11 +49,12 @@ typedef struct OptVertex
 	#endif
 }OptVertex;
 
+#define SET_OPT_VERTEX(xp,yp,zp,v) v->x = (xp); v->y = (yp); v->z = (zp);
 
 static OptVertex *objectVertices;
 static OptVertex *screenVertices;
 
-//static OptVertex 
+static OptVertex *axisVerticesX, *axisVerticesY, *axisVerticesZ;
 
 
 #ifdef FIXED_TEST
@@ -287,35 +289,62 @@ static void initObject3D()
 	for (z = -VERTICES_DEPTH / 2; z < VERTICES_DEPTH / 2; ++z) {
 		for (y = -VERTICES_HEIGHT / 2; y < VERTICES_HEIGHT / 2; ++y) {
 			for (x = -VERTICES_WIDTH / 2; x < VERTICES_WIDTH / 2; ++x) {
-				v->x = x<<4;
-				v->y = y<<4;
-				v->z = z<<4;
+				SET_OPT_VERTEX(x<<4,y<<4,z<<4,v)
 				++v;
 			}
 		}
 	}
 }
 
+static void initAxes3D()
+{
+	OptVertex* v;
+
+	objectVertices = (OptVertex*)malloc(3 * sizeof(OptVertex));
+	screenVertices = (OptVertex*)malloc(3 * sizeof(OptVertex));
+
+	axisVerticesX = (OptVertex*)malloc(VERTICES_WIDTH * sizeof(OptVertex));
+	axisVerticesY = (OptVertex*)malloc(VERTICES_HEIGHT * sizeof(OptVertex));
+	axisVerticesZ = (OptVertex*)malloc(VERTICES_DEPTH * sizeof(OptVertex));
+
+	v = objectVertices;
+	SET_OPT_VERTEX((VERTICES_WIDTH/2)<<4,0,0,v)	++v;
+	SET_OPT_VERTEX(0,(VERTICES_HEIGHT/2)<<4,0,v)	++v;
+	SET_OPT_VERTEX(0,0,(VERTICES_DEPTH/2)<<4,v)
+}
+
 void Opt3DinitPerfTest()
 {
-	initObject3D();
+	#ifdef AXES_TEST
+		initAxes3D();
+	#else
+		initObject3D();
+	#endif
 }
 
 void Opt3DfreePerfTest()
 {
 	free(objectVertices);
 	free(screenVertices);
+
+	free(axisVerticesX);
+	free(axisVerticesY);
+	free(axisVerticesZ);
 }
 
 void Opt3DrunPerfTest(int ticks)
 {
 	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
 
-	#ifdef DO_ALL_TOGETHER
-		doAllTogether(objectVertices, MAX_VERTEX_ELEMENTS_NUM, ticks);
+	#ifdef AXES_TEST
+		doAllTogether(objectVertices, 3, ticks);
 	#else
-		rotateVertices(ticks, MAX_VERTEX_ELEMENTS_NUM);
-		translateAndProjectVertices(MAX_VERTEX_ELEMENTS_NUM);
-		renderVertices(MAX_VERTEX_ELEMENTS_NUM);
+		#ifdef DO_ALL_TOGETHER
+			doAllTogether(objectVertices, MAX_VERTEX_ELEMENTS_NUM, ticks);
+		#else
+			rotateVertices(ticks, MAX_VERTEX_ELEMENTS_NUM);
+			translateAndProjectVertices(MAX_VERTEX_ELEMENTS_NUM);
+			renderVertices(MAX_VERTEX_ELEMENTS_NUM);
+		#endif
 	#endif
 }

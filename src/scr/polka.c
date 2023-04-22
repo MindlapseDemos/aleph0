@@ -36,6 +36,7 @@ static int init(void)
 
 static void destroy(void)
 {
+	Opt3DfreePerfTest();
 }
 
 static void start(long trans_time)

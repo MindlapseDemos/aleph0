@@ -32,11 +32,12 @@
 
 
 //#define FIXED_TEST
+#define DO_ALL_TOGETHER
 
 #define OBJECT_POS_Z 1024
 
 
-typedef float real;
+typedef double real;
 
 typedef struct OptVertex
 {
@@ -48,8 +49,10 @@ typedef struct OptVertex
 }OptVertex;
 
 
-static OptVertex objectVertices[MAX_VERTEX_ELEMENTS_NUM];
-static OptVertex screenVertices[MAX_VERTEX_ELEMENTS_NUM];
+static OptVertex *objectVertices;
+static OptVertex *screenVertices;
+
+//static OptVertex 
 
 
 #ifdef FIXED_TEST
@@ -272,11 +275,15 @@ static void doAllTogether(OptVertex *v, int count, int ticks)
 	#endif
 }
 
-
 static void initObject3D()
 {
 	int x,y,z;
-	OptVertex* v = objectVertices;
+	OptVertex* v;
+
+	objectVertices = (OptVertex*)malloc(MAX_VERTEX_ELEMENTS_NUM * sizeof(OptVertex));
+	screenVertices = (OptVertex*)malloc(MAX_VERTEX_ELEMENTS_NUM * sizeof(OptVertex));
+
+	v = objectVertices;
 	for (z = -VERTICES_DEPTH / 2; z < VERTICES_DEPTH / 2; ++z) {
 		for (y = -VERTICES_HEIGHT / 2; y < VERTICES_HEIGHT / 2; ++y) {
 			for (x = -VERTICES_WIDTH / 2; x < VERTICES_WIDTH / 2; ++x) {
@@ -289,18 +296,26 @@ static void initObject3D()
 	}
 }
 
-void Opt3DinitPerfTest(void)
+void Opt3DinitPerfTest()
 {
 	initObject3D();
+}
+
+void Opt3DfreePerfTest()
+{
+	free(objectVertices);
+	free(screenVertices);
 }
 
 void Opt3DrunPerfTest(int ticks)
 {
 	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
 
-	doAllTogether(objectVertices, MAX_VERTEX_ELEMENTS_NUM, ticks);
-	
-	/*rotateVertices(ticks, MAX_VERTEX_ELEMENTS_NUM);
-	translateAndProjectVertices(MAX_VERTEX_ELEMENTS_NUM);
-	renderVertices(MAX_VERTEX_ELEMENTS_NUM);*/
+	#ifdef DO_ALL_TOGETHER
+		doAllTogether(objectVertices, MAX_VERTEX_ELEMENTS_NUM, ticks);
+	#else
+		rotateVertices(ticks, MAX_VERTEX_ELEMENTS_NUM);
+		translateAndProjectVertices(MAX_VERTEX_ELEMENTS_NUM);
+		renderVertices(MAX_VERTEX_ELEMENTS_NUM);
+	#endif
 }

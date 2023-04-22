@@ -39,7 +39,7 @@
 #define RAD_TO_DEG_256(x) ((256 * (x)) / (2 * M_PI))
 
 
-#define FIXED_TEST
+//#define FIXED_TEST
 
 //#define DO_ALL_TOGETHER
 #define AXES_TEST
@@ -261,7 +261,7 @@ static void renderAxesBoxDots()
 				const vecType aXz = axisX->z;
 
 				const vecType sz = VECTYPE_AFTER_MUL_ADDS(aXz + aYz + aZz, FP_CORE) + OBJECT_POS_Z;
-				if (sz > 0) {
+				if (sz > 0 && sz < REC_DIV_Z_MAX) {
 					const vecType recZ = recDivZ[(int)sz];
 					const int sx = VECTYPE_ROUND(offsetX + VECTYPE_AFTER_RECZ_MUL(((VECTYPE_AFTER_MUL_ADDS(aXx + aYx + aZx, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE));
 					const int sy = VECTYPE_ROUND(offsetY + VECTYPE_AFTER_RECZ_MUL(((VECTYPE_AFTER_MUL_ADDS(aXy + aYy + aZy, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE));

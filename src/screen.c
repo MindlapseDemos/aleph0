@@ -74,6 +74,7 @@ void populate_screens(void)
     scr[idx++] = blobgrid_screen();
 	scr[idx++] = break_screen();
 	scr[idx++] = polka_screen();
+	scr[idx++] = dott_screen();
 
 	num_screens = idx;
 	assert(num_screens <= NUM_SCR);
@@ -85,71 +86,7 @@ int scr_init(void)
 
 	start_loadscr();
 
-<<<<<<< HEAD
 	populate_screens();
-=======
-	if(!(scr[idx++] = tunnel_screen())) {
-		return -1;
-	}
-	if(!(scr[idx++] = fract_screen())) {
-		return -1;
-	}
-	if (!(scr[idx++] = grise_screen())) {
-		return -1;
-	}
-	if(!(scr[idx++] = polytest_screen())) {
-		return -1;
-	}
-	if (!(scr[idx++] = plasma_screen())) {
-		return -1;
-	}
-	if (!(scr[idx++] = bump_screen())) {
-		return -1;
-	}
-	if (!(scr[idx++] = thunder_screen())) {
-		return -1;
-	}
-	if(!(scr[idx++] = metaballs_screen())) {
-		return -1;
-	}
-	if(!(scr[idx++] = greets_screen())) {
-		return -1;
-	}
-	if(!(scr[idx++] = infcubes_screen())) {
-		return -1;
-	}
-	if(!(scr[idx++] = hairball_screen())) {
-		return -1;
-	}
-	if(!(scr[idx++] = cybersun_screen())) {
-		return -1;
-	}
-	if(!(scr[idx++] = raytrace_screen())) {
-		return -1;
-	}
-	if (!(scr[idx++] = minifx_screen())) {
-		return -1;
-	}
-	if (!(scr[idx++] = voxscape_screen())) {
-		return -1;
-	}
-	if(!(scr[idx++] = hexfloor_screen())) {
-		return -1;
-	}
-	if (!(scr[idx++] = juliatunnel_screen())) {
-		return -1;
-	}
-    if (!(scr[idx++] = blobgrid_screen())) {
-		return -1;
-    }
-	if (!(scr[idx++] = dott_screen())) {
-		return -1;
-    }
-
-	num_screens = idx;
-
-	assert(num_screens <= NUM_SCR);
->>>>>>> 71a6407 (Added dott effect)
 
 	for(i=0; i<num_screens; i++) {
 		loadscr(i, num_screens);

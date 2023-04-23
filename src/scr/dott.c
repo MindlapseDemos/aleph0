@@ -113,16 +113,6 @@ void extract_angle(cgm_quat *angle, cgm_vec3 *a, cgm_vec3 *b, cgm_vec3 *p) {
 	float l, dotValue;
 	float rads;
 
-	cgm_vcross(&axis, a, b);
-	l = cgm_vlength_sq(&axis);
-	if (l < 0.00001f) {
-		/* Don't bother normalizing */
-		cgm_qcons(angle, 0, 0, 0, 1);
-		return;
-	}
-	l = 1.0f / sqrt(l);
-	cgm_vscale(&axis, l);
-
 	/* Gt offsets from pivot */
 	cgm_vcons(&da, a->x, a->y, a->z);
 	cgm_vsub(&da, p);
@@ -144,17 +134,46 @@ void extract_angle(cgm_quat *angle, cgm_vec3 *a, cgm_vec3 *b, cgm_vec3 *p) {
 	l = 1.0f / sqrt(l);
 	cgm_vscale(&db, l);
 
+
+	cgm_vcross(&axis, &da, &db);
+	l = cgm_vlength_sq(&axis);
+	if (l < 0.00001f) {
+		/* Don't bother normalizing */
+		cgm_qcons(angle, 0, 0, 0, 1);
+		return;
+	}
+	l = 1.0f / sqrt(l);
+	cgm_vscale(&axis, l);
+
+	
 	/* Get angle to go from a to b */
 	dotValue = cgm_vdot(&da, &db);
-	if (dotValue > 1.0f) {
-		dotValue = 1.0f;
-	}
-	if (dotValue < -1.0f) {
-		dotValue = -1.0f;
+	if (fabs(dotValue) > 0.999) {
+		/* No deal. We can't construct a good axis of rotation. */
+		cgm_qcons(angle, 0, 0, 0, 1);
+		return;
 	}
 	rads = acos(dotValue);
 
+
 	cgm_qrotation(angle, rads, axis.x, axis.y, axis.z);
+}
+
+/* Clamps so the quaternion does not exceed 90 degrees */
+void clamp_quat(cgm_quat *q)
+{
+	/* ChatGPT wrote this function for me - no kidding. 
+	   It even used cgm_ types and xyz instead of ijk for quaternions because I gave it the below function to look at. */
+	float angle, s;
+
+	angle = acos(q->w) * 2.0f;
+    if (angle > M_PI / 2.0f) {
+        s = sin(M_PI / 4.0f) / sqrt(q->x * q->x + q->y * q->y + q->z * q->z);
+        q->x *= s;
+        q->y *= s;
+        q->z *= s;
+        q->w = cos(M_PI / 4.0f);
+    }
 }
 
 /* Will both update the link hierarchy and rotate the links to cover 'ratio' oft he angle. */
@@ -162,6 +181,8 @@ void link_follow(Link *link, Link *parent, cgm_vec3 *target, float ratio)
 {
 	Link *lastLink = 0;
 	cgm_quat fullRotation, rotation, tmp;
+	float angle, s;
+
 
 	lastLink = link_update_hierarchy(link, parent);
 
@@ -171,16 +192,22 @@ void link_follow(Link *link, Link *parent, cgm_vec3 *target, float ratio)
 	/* Get part of that rotation */
 	cgm_qcons(&tmp, 0, 0, 0, 1);
 	cgm_qslerp(&rotation, &tmp, &fullRotation, ratio);
+	cgm_qnormalize(&rotation);
 
 	/* Rotate */
 	cgm_qmul(&link->rotation, &rotation);
+	cgm_qnormalize(&link->rotation);
 
+	clamp_quat(&link->rotation);
+
+	
 	/* Update local */
 	link_update(link, parent);
 
 	/* Recurse */
 	if (link->child) {
-		link_follow(link->child, link, target, ratio);
+		/* Make the child a tiny bit faster so we don't lock ourselves in situations where the parent does the exact inverse rotation of the child. */
+		link_follow(link->child, link, target, ratio * 1.01f);
 	}
 }
 
@@ -228,7 +255,78 @@ static inline void unproject(cgm_vec3 *v, int x, int y) {
 	v->z = 0.0f;
 }
 
+static inline float bezier_segment(float y0, float y1, float y2, float y3, float t)
+{
+	float t2 = t * t;
+   float a0 = y3 - y2 - y0 + y1;
+   float a1 = y0 - y1 - a0;
+   float a2 = y2 - y0;
+   float a3 = y1;
+
+   return a0 * t * t2 + a1 * t2 + a2 * t + a3;
+}
+
+static void bezier(cgm_vec3 *result, cgm_vec3 *points, int point_count, float t)
+{
+	float findex;
+	int index;
+	cgm_vec3 a, b, c, d;
+	float b0, b1, b2, b3, t2;
+	cgm_vec3 *tmp;
+
+	if (point_count <= 0) {
+		cgm_vcons(result, 0, 0, 0);
+		return;
+	}
+
+	if (point_count == 1) {
+		cgm_vcons(result, points->x, points->y, points->z);
+		return;
+	}
+
+	if (point_count == 2) {
+		cgm_vlerp(result, points, points + 1, t);
+		return;
+	}
+
+	if (t < 0.001f) {
+		cgm_vcons(result, points->x, points->y, points->z);
+		return;
+	}
+
+	if (t > 0.999f) {
+		points += point_count - 1;
+		cgm_vcons(result, points->x, points->y, points->z);
+		return;
+	}
+
+	findex = (point_count - 1) * t;
+	index = (int) findex;
+	t = findex - index;
+
+	/* We have at least two points guaranteed by now */
+	points += index;
+	cgm_vcons(&a, points->x, points->y, points->z);
+	if (index > 0) {
+		tmp = points - 1;
+		cgm_vcons(&a, tmp->x, tmp->y, tmp->z);
+	}
+	cgm_vcons(&b, points->x, points->y, points->z);
+	points++;
+	cgm_vcons(&c, points->x, points->y, points->z);
+	cgm_vcons(&d, points->x, points->y, points->z);
+	if (index < point_count - 2) {
+		tmp = points + 1;
+		cgm_vcons(&d, tmp->x, tmp->y, tmp->z);
+	}
+
+	result->x = bezier_segment(a.x, b.x, c.x, d.x, t);
+	result->y = bezier_segment(a.y, b.y, c.y, d.y, t);
+	result->z = bezier_segment(a.z, b.z, c.z, d.z, t);
+}
+
 #define RED 0xF800
+#define GREEN 0x7D00
 #define BLUE 0x1F
 #define WHITE 0xFFFF
 
@@ -257,8 +355,9 @@ static void draw(void) {
 	int x0, y0, x1, y1;
 	float t, dt;
 	float ratio;
-	cgm_vec3 v;
+	cgm_vec3 v, v2;
 	cgm_vec3 right;
+	cgm_vec3 controls[4];
 
 	t = time_msec / 1000.0f;
 	dt = (time_msec - lastFrameTime) / 1000.0f;
@@ -285,6 +384,7 @@ static void draw(void) {
 	
 
 	/* Render debugs */
+#if 1
 	for (i=0; i<LINK_COUNT; i++) {
 		project(&x0, &y0, &state.links[i].global_start);
 		project(&x1, &y1, &state.links[i].global_end);
@@ -295,10 +395,25 @@ static void draw(void) {
 		project(&x1, &y1, &right);
 		draw_line(x0, y0, x1, y1, RED);
 	}
+#endif
 
-	
+	/* Do a bezier curve */
+	cgm_vcons(controls + 0, state.links[0].global_start.x, state.links[0].global_start.y, state.links[0].global_start.z);
+	for (i=0; i<LINK_COUNT; i++) {
+		cgm_vcons(controls + i + 1, state.links[i].global_end.x, state.links[i].global_end.y, state.links[i].global_end.z);
+	}
+	cgm_vcons(&v, state.links[0].global_start.x, state.links[0].global_start.y, state.links[0].global_start.z);
+#define SEGS 10
+	for (i=0; i<=SEGS; i++) {
+		t = i / (float) SEGS;
+		bezier(&v2, controls, 4, t);
+		project(&x0, &y0, &v);
+		project(&x1, &y1, &v2);
+		draw_line(x0, y0, x1, y1, GREEN);
 
-
+		cgm_vcons(&v, v2.x, v2.y, v2.z);
+	}
+		
 	swap_buffers(0);
 }
 

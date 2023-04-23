@@ -39,7 +39,7 @@
 #define RAD_TO_DEG_256(x) ((256 * (x)) / (2 * M_PI))
 
 
-//#define FIXED_TEST
+#define FIXED_TEST
 
 //#define DO_ALL_TOGETHER
 #define AXES_TEST
@@ -242,29 +242,30 @@ static void renderAxesBoxDots()
 	OptVertex *axisZ = axisVerticesZ;
 	int countZ = VERTICES_DEPTH;
 	do {
-		const vecType aZx = axisZ->x;
-		const vecType aZy = axisZ->y;
+		//const vecType aZx = axisZ->x;
+		//const vecType aZy = axisZ->y;
 		const vecType aZz = axisZ->z;
 
 		OptVertex *axisY = axisVerticesY;
 		int countY = VERTICES_HEIGHT;
 		do {
-			const vecType aYx = axisY->x;
-			const vecType aYy = axisY->y;
+			//const vecType aYx = axisY->x;
+			//const vecType aYy = axisY->y;
 			const vecType aYz = axisY->z;
 			
 			OptVertex *axisX = axisVerticesX;
 			int countX = VERTICES_WIDTH;
 			do {
-				const vecType aXx = axisX->x;
-				const vecType aXy = axisX->y;
+				//const vecType aXx = axisX->x;
+				//const vecType aXy = axisX->y;
 				const vecType aXz = axisX->z;
 
 				const vecType sz = VECTYPE_AFTER_MUL_ADDS(aXz + aYz + aZz, FP_CORE) + OBJECT_POS_Z;
+				//const vecType sz = VECTYPE_AFTER_MUL_ADDS(axisX->z + axisY->z + axisZ->z, FP_CORE) + OBJECT_POS_Z;
 				if (sz > 0 && sz < REC_DIV_Z_MAX) {
 					const vecType recZ = recDivZ[(int)sz];
-					const int sx = VECTYPE_ROUND(offsetX + VECTYPE_AFTER_RECZ_MUL(((VECTYPE_AFTER_MUL_ADDS(aXx + aYx + aZx, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE));
-					const int sy = VECTYPE_ROUND(offsetY + VECTYPE_AFTER_RECZ_MUL(((VECTYPE_AFTER_MUL_ADDS(aXy + aYy + aZy, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE));
+					const int sx = VECTYPE_ROUND(offsetX + VECTYPE_AFTER_RECZ_MUL(((VECTYPE_AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE));
+					const int sy = VECTYPE_ROUND(offsetY + VECTYPE_AFTER_RECZ_MUL(((VECTYPE_AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE));
 
 					if (sx >= 0 && sx < FB_WIDTH && sy >= 0 && sy < FB_HEIGHT) {
 						*(dst + sy * FB_WIDTH + sx) = DOT_COLOR;

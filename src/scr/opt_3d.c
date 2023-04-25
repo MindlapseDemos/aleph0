@@ -7,11 +7,6 @@
 #include "screen.h"
 #include "util.h"
 
-#define VERTICES_WIDTH 32
-#define VERTICES_HEIGHT 32
-#define VERTICES_DEPTH 32
-#define MAX_VERTEX_ELEMENTS_NUM (VERTICES_WIDTH * VERTICES_HEIGHT * VERTICES_DEPTH)
-
 #define OBJECT_POS_Z 1024
 #define REC_DIV_Z_MAX 2048
 
@@ -24,7 +19,8 @@
 #define FP_CORE 16
 #define FP_BASE 12
 #define FP_BASE_TO_CORE (FP_CORE - FP_BASE)
-#define PROJ_MUL (1 << 8)
+#define PROJ_SHR 8
+#define PROJ_MUL (1 << PROJ_SHR)
 
 #define FLOAT_TO_FIXED(f,b) ((int)((f) * (1 << (b))))
 #define INT_TO_FIXED(i,b) ((i) * (1 << (b)))
@@ -38,8 +34,6 @@
 #define DEG_TO_RAD_256(x) (((2 * M_PI) * (x)) / 256)
 #define RAD_TO_DEG_256(x) ((256 * (x)) / (2 * M_PI))
 
-
-#define FIXED_TEST
 
 //#define DO_ALL_TOGETHER
 #define AXES_TEST
@@ -58,22 +52,6 @@
 	#define DOT_COLOR						0xF321
 #endif
 
-typedef float real;
-
-#ifdef FIXED_TEST
-	typedef int vecType;
-#else
-	typedef real vecType;
-#endif
-
-
-typedef struct OptVertex
-{
-	vecType x,y,z;
-}OptVertex;
-
-#define SET_OPT_VERTEX(xp,yp,zp,v) v->x = (xp); v->y = (yp); v->z = (zp);
-
 
 static OptVertex *objectVertices;
 static OptVertex *transformedVertices;
@@ -82,6 +60,12 @@ static OptVertex *axisVerticesX, *axisVerticesY, *axisVerticesZ;
 
 static vecType *recDivZ;
 
+static unsigned char *volumeData;
+
+unsigned char *getDotsVolumeBuffer()
+{
+	return volumeData;
+}
 
 static void createRotationMatrixValues(vecType rotX, vecType rotY, vecType rotZ, vecType *mat)
 {
@@ -232,8 +216,9 @@ static void initObject3D()
 	}
 }
 
-static void renderAxesBoxDots()
+static void renderAxesBoxDotsEffect()
 {
+	unsigned char *src = volumeData;
 	unsigned short* dst = (unsigned short*)fb_pixels;
 
 	const vecType offsetX = (vecType)(FB_WIDTH >> 1);
@@ -242,33 +227,24 @@ static void renderAxesBoxDots()
 	OptVertex *axisZ = axisVerticesZ;
 	int countZ = VERTICES_DEPTH;
 	do {
-		//const vecType aZx = axisZ->x;
-		//const vecType aZy = axisZ->y;
-		const vecType aZz = axisZ->z;
-
 		OptVertex *axisY = axisVerticesY;
 		int countY = VERTICES_HEIGHT;
 		do {
-			//const vecType aYx = axisY->x;
-			//const vecType aYy = axisY->y;
-			const vecType aYz = axisY->z;
-			
+		
 			OptVertex *axisX = axisVerticesX;
 			int countX = VERTICES_WIDTH;
 			do {
-				//const vecType aXx = axisX->x;
-				//const vecType aXy = axisX->y;
-				const vecType aXz = axisX->z;
+				const unsigned char c = *src++;
+				if (c != 0) {
+					const vecType sz = VECTYPE_AFTER_MUL_ADDS(axisX->z + axisY->z + axisZ->z, FP_CORE) + OBJECT_POS_Z;
+					if (sz > 0 && sz < REC_DIV_Z_MAX) {
+						const vecType recZ = recDivZ[(int)sz];
+						const int sx = VECTYPE_ROUND(offsetX + VECTYPE_AFTER_RECZ_MUL(((VECTYPE_AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE));
+						const int sy = VECTYPE_ROUND(offsetY + VECTYPE_AFTER_RECZ_MUL(((VECTYPE_AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE));
 
-				const vecType sz = VECTYPE_AFTER_MUL_ADDS(aXz + aYz + aZz, FP_CORE) + OBJECT_POS_Z;
-				//const vecType sz = VECTYPE_AFTER_MUL_ADDS(axisX->z + axisY->z + axisZ->z, FP_CORE) + OBJECT_POS_Z;
-				if (sz > 0 && sz < REC_DIV_Z_MAX) {
-					const vecType recZ = recDivZ[(int)sz];
-					const int sx = VECTYPE_ROUND(offsetX + VECTYPE_AFTER_RECZ_MUL(((VECTYPE_AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE));
-					const int sy = VECTYPE_ROUND(offsetY + VECTYPE_AFTER_RECZ_MUL(((VECTYPE_AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE));
-
-					if (sx >= 0 && sx < FB_WIDTH && sy >= 0 && sy < FB_HEIGHT) {
-						*(dst + sy * FB_WIDTH + sx) = DOT_COLOR;
+						if (sx >= 0 && sx < FB_WIDTH && sy >= 0 && sy < FB_HEIGHT) {
+							*(dst + sy * FB_WIDTH + sx) = DOT_COLOR;
+						}
 					}
 				}
 				++axisX;
@@ -277,6 +253,36 @@ static void renderAxesBoxDots()
 		} while(--countY != 0);
 		++axisZ;
 	} while(--countZ != 0);
+}
+
+static void renderAxesBoxDots()
+{
+	unsigned short* dst = (unsigned short*)fb_pixels;
+
+	int x,y,z;
+
+	OptVertex *axisZ = axisVerticesZ;
+	for (z=0; z<VERTICES_DEPTH; ++z) {
+		OptVertex *axisY = axisVerticesY;
+		for (y=0; y<VERTICES_HEIGHT; ++y) {
+			OptVertex *axisX = axisVerticesX;
+			for (x=0; x<VERTICES_WIDTH; ++x) {
+				const vecType sz = VECTYPE_AFTER_MUL_ADDS(axisX->z + axisY->z + axisZ->z, FP_CORE) + OBJECT_POS_Z;
+				if (sz > 0 && sz < REC_DIV_Z_MAX) {
+					const vecType recZ = recDivZ[(int)sz];
+					const int sx = VECTYPE_ROUND((FB_WIDTH / 2) + VECTYPE_AFTER_RECZ_MUL((axisX->x + axisY->x + axisZ->x) * recZ, 2*FP_CORE - PROJ_SHR));
+					const int sy = VECTYPE_ROUND((FB_HEIGHT / 2) + VECTYPE_AFTER_RECZ_MUL((axisX->y + axisY->y + axisZ->y) * recZ, 2*FP_CORE - PROJ_SHR));
+
+					if (sx >= 0 && sx < FB_WIDTH && sy >= 0 && sy < FB_HEIGHT) {
+						*(dst + sy * FB_WIDTH + sx) = DOT_COLOR;
+					}
+				}
+				++axisX;
+			}
+			++axisY;
+		}
+		++axisZ;
+	}
 }
 
 static void generateAxisVertices(OptVertex *rotatedAxis, OptVertex *dstAxis, int count)
@@ -314,6 +320,9 @@ static void initAxes3D()
 	objectVertices = (OptVertex*)malloc(3 * sizeof(OptVertex));
 	transformedVertices = (OptVertex*)malloc(3 * sizeof(OptVertex));
 
+	volumeData = (unsigned char*)malloc(MAX_VERTEX_ELEMENTS_NUM);
+	memset(volumeData, 0, MAX_VERTEX_ELEMENTS_NUM);
+
 	axisVerticesX = (OptVertex*)malloc(VERTICES_WIDTH * sizeof(OptVertex));
 	axisVerticesY = (OptVertex*)malloc(VERTICES_HEIGHT * sizeof(OptVertex));
 	axisVerticesZ = (OptVertex*)malloc(VERTICES_DEPTH * sizeof(OptVertex));
@@ -345,6 +354,8 @@ void Opt3DfreePerfTest()
 	free(objectVertices);
 	free(transformedVertices);
 
+	free(volumeData);
+
 	free(axisVerticesX);
 	free(axisVerticesY);
 	free(axisVerticesZ);
@@ -356,10 +367,12 @@ void Opt3DrunPerfTest(int ticks)
 {
 	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
 
+	ticks >>= 1;
 	#ifdef AXES_TEST
 		rotateVertices(3, ticks);
 		generateAxesVertices(transformedVertices);
 		renderAxesBoxDots();
+		//renderAxesBoxDotsEffect();
 	#else
 		#ifdef DO_ALL_TOGETHER
 			doAllTogether(objectVertices, MAX_VERTEX_ELEMENTS_NUM, ticks);

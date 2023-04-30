@@ -21,6 +21,9 @@ static long lastFrameTime = 0;
 static struct screen scr = {"dott", init, destroy, start, 0, draw};
 
 struct LinkStruct {
+	/* Link parent */
+	struct LinkStruct *parent;
+
 	/* Link child */
 	struct LinkStruct *child;
 
@@ -43,21 +46,25 @@ struct LinkStruct {
 
 typedef struct LinkStruct Link;
 
-void link_cons(Link *link, Link *child, float elevation)
+void link_cons(Link *link, Link *parent, float elevation)
 {
-	link->child = child;
+	link->child = 0;
+	link->parent = parent;
+	if (parent) {
+		parent->child = link;
+	}
 	cgm_qrotation(&link->rotation, 0.0f, 0.0f, 0.0f, 1.0f);
 	link->elevation = elevation;
 }
 
 /* Has to be called parent filst -> child next */
-void link_update(Link *link, Link *parent)
+void link_update(Link *link)
 {
 	/* global transform */
-	if (parent) {
+	if (link->parent) {
 		cgm_qcons(&link->global_rotation, 
-			parent->global_rotation.x, parent->global_rotation.y, 
-			parent->global_rotation.z, parent->global_rotation.w);
+			link->parent->global_rotation.x, link->parent->global_rotation.y, 
+			link->parent->global_rotation.z, link->parent->global_rotation.w);
 	} else {
 		cgm_qcons(&link->global_rotation, 0, 0, 0, 1);
 	}
@@ -76,8 +83,9 @@ void link_update(Link *link, Link *parent)
 	cgm_vrotate_quat(&link->global_right, &link->global_rotation);
 	
 	/* global position */
-	if (parent) {
-		cgm_vcons(&link->global_start, parent->global_end.x, parent->global_end.y, parent->global_end.z);
+	if (link->parent) {
+		cgm_vcons(&link->global_start, link->parent->global_end.x, 
+			link->parent->global_end.y, link->parent->global_end.z);
 	} else {
 		cgm_vcons(&link->global_start, 0, 0, 0);
 	}
@@ -88,18 +96,15 @@ void link_update(Link *link, Link *parent)
 }
 
 /* Updates link and all children. Returns last child. */
-Link *link_update_hierarchy(Link *link, Link *parent)
+Link *link_update_hierarchy(Link *link)
 {
-	Link *currentParent = parent;
 	Link *current = link;
 	Link *last = link;
 
 	while (current) {
 		last = current;
 
-		link_update(current, currentParent);
-
-		currentParent = current;
+		link_update(current);
 		current = current->child;
 	}
 
@@ -160,7 +165,7 @@ void extract_angle(cgm_quat *angle, cgm_vec3 *a, cgm_vec3 *b, cgm_vec3 *p) {
 }
 
 /* Clamps so the quaternion does not exceed 90 degrees */
-void clamp_quat(cgm_quat *q)
+void clamp_quat90(cgm_quat *q)
 {
 	/* ChatGPT wrote this function for me - no kidding. 
 	   It even used cgm_ types and xyz instead of ijk for quaternions because I gave it the below function to look at. */
@@ -176,15 +181,29 @@ void clamp_quat(cgm_quat *q)
     }
 }
 
+/* Clamps so the quaternion does not exceed 45 degrees */
+void clamp_quat45(cgm_quat *q)
+{
+    float angle, s;
+    
+    angle = acos(q->w) * 2.0f;
+    if (angle > M_PI / 4.0f) {
+        s = sin(M_PI / 8.0f) / sqrt(q->x * q->x + q->y * q->y + q->z * q->z);
+        q->x *= s;
+        q->y *= s;
+        q->z *= s;
+        q->w = cos(M_PI / 8.0f);
+    }
+}
+
 /* Will both update the link hierarchy and rotate the links to cover 'ratio' oft he angle. */
-void link_follow(Link *link, Link *parent, cgm_vec3 *target, float ratio)
+void link_follow(Link *link, cgm_vec3 *target, float ratio)
 {
 	Link *lastLink = 0;
 	cgm_quat fullRotation, rotation, tmp;
-	float angle, s;
 
 
-	lastLink = link_update_hierarchy(link, parent);
+	lastLink = link_update_hierarchy(link);
 
 	/* Get rotation to reach the target */
 	extract_angle(&fullRotation, &lastLink->global_end, target, &link->global_start);
@@ -198,16 +217,16 @@ void link_follow(Link *link, Link *parent, cgm_vec3 *target, float ratio)
 	cgm_qmul(&link->rotation, &rotation);
 	cgm_qnormalize(&link->rotation);
 
-	clamp_quat(&link->rotation);
-
+	/* Maximum bend constraint */
+	clamp_quat45(&link->rotation);
 	
 	/* Update local */
-	link_update(link, parent);
+	link_update(link);
 
 	/* Recurse */
 	if (link->child) {
 		/* Make the child a tiny bit faster so we don't lock ourselves in situations where the parent does the exact inverse rotation of the child. */
-		link_follow(link->child, link, target, ratio * 1.01f);
+		link_follow(link->child, target, ratio * 1.01f);
 	}
 }
 
@@ -224,9 +243,9 @@ struct screen *dott_screen(void) {
 
 static int init(void) {
 	/* Initialize links */
-	link_cons(&state.links[0], &state.links[1], 1.5f);
-	link_cons(&state.links[1], &state.links[2], 1.5f);
-	link_cons(&state.links[2], 0, 1.5f);
+	link_cons(&state.links[0], 0, 1.5f);
+	link_cons(&state.links[1], &state.links[0], 1.5f);
+	link_cons(&state.links[2], &state.links[1], 1.5f);
 	
 	/* Setup camera */
 	cgm_vcons(&state.camera_pos, 0, 3, 0);
@@ -271,7 +290,6 @@ static void bezier(cgm_vec3 *result, cgm_vec3 *points, int point_count, float t)
 	float findex;
 	int index;
 	cgm_vec3 a, b, c, d;
-	float b0, b1, b2, b3, t2;
 	cgm_vec3 *tmp;
 
 	if (point_count <= 0) {
@@ -379,7 +397,7 @@ static void draw(void) {
 	ratio = frame_independent_feedback(0.05f, dt);
 
 	/* Update links */
-	link_follow(&state.links[0], 0, &v, ratio);
+	link_follow(&state.links[0], &v, ratio);
 
 	
 

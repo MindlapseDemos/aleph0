@@ -16,6 +16,7 @@ static void start(long trans_time);
 static void stop(long trans_time);
 static void draw(void);
 
+
 static long lastFrameTime = 0;
 
 static struct screen scr = {"dott", init, destroy, start, 0, draw};
@@ -258,12 +259,36 @@ void link_follow(Link *link, cgm_vec3 *target, float ratio)
 	}
 }
 
-#define TENTACLE_COUNT 5
+struct TargetStruct {
+	cgm_vec3 pos;
+	cgm_vec3 vel;
+};
+
+typedef struct TargetStruct Target;
+
+#define TENTACLE_COUNT 8
+#define TARGET_COUNT 20
 static struct {
 	Tentacle tentacles[TENTACLE_COUNT];
+	
+	/* Lorenz states to be the targets*/
+	Target targets[TARGET_COUNT];
+
 	cgm_vec3 camera_pos;
 	float camera_scale;
 } state;
+
+/* 2D projection */
+static inline void project(int *x, int *y, cgm_vec3 *v) {
+	*x = FB_WIDTH / 2 + (int)((v->x - state.camera_pos.x) * state.camera_scale + 0.5f);
+	*y = FB_HEIGHT / 2 - (int)((v->y - state.camera_pos.y) * state.camera_scale + 0.5f);
+}
+
+static inline void unproject(cgm_vec3 *v, int x, int y) {
+	v->x = (x - FB_WIDTH / 2) / state.camera_scale + state.camera_pos.x;
+	v->y = (FB_HEIGHT / 2 - y) / state.camera_scale + state.camera_pos.y;
+	v->z = 0.0f;
+}
 
 struct screen *dott_screen(void) {
 	return &scr;
@@ -271,6 +296,7 @@ struct screen *dott_screen(void) {
 
 static int init(void) {
 	int i;
+	Target *current_target;
 	cgm_quat base_rotation, angle;
 	
 	cgm_qrotation(&angle, 2.0f * M_PI / TENTACLE_COUNT, 0.0f, 0.0f, 1.0f);
@@ -284,7 +310,17 @@ static int init(void) {
 	/* Setup camera */
 	cgm_vcons(&state.camera_pos, 0, 0, 0);
 	state.camera_scale = 15.0f; /* pixels per world unit */
-	
+
+	/* Init target positions */
+	current_target = state.targets;
+	for (i=0; i<TARGET_COUNT; i++) {
+		unproject(&current_target->pos, rand() % FB_WIDTH, rand() % FB_HEIGHT);
+		current_target->vel.x = sin(current_target->pos.x) * 3;
+		current_target->vel.y = cos(current_target->pos.x) * 3;
+		current_target->vel.z = 0;
+		current_target++;
+	}
+
 	return 0;
 }
 
@@ -296,17 +332,6 @@ static void start(long trans_time) {
 	lastFrameTime = time_msec; 
 }
 
-/* 2D projection */
-static inline void project(int *x, int *y, cgm_vec3 *v) {
-	*x = FB_WIDTH / 2 + (int)((v->x - state.camera_pos.x) * state.camera_scale + 0.5f);
-	*y = FB_HEIGHT / 2 - (int)((v->y - state.camera_pos.y) * state.camera_scale + 0.5f);
-}
-
-static inline void unproject(cgm_vec3 *v, int x, int y) {
-	v->x = (x - FB_WIDTH / 2) / state.camera_scale + state.camera_pos.x;
-	v->y = (FB_HEIGHT / 2 - y) / state.camera_scale + state.camera_pos.y;
-	v->z = 0.0f;
-}
 
 static inline float bezier_segment(float y0, float y1, float y2, float y3, float t)
 {
@@ -417,9 +442,29 @@ void line3d(cgm_vec3 *start, cgm_vec3 *end, unsigned short color)
 	draw_line(x0, y0, x1, y1, color);
 }
 
-void tentacle_update(Tentacle *tentacle, cgm_vec3 *target, float ratio)
+void point3d(cgm_vec3 *v, unsigned short color)
 {
-	link_follow(&tentacle->links[0], target, ratio);
+	line3d(v, v, color);
+}
+
+void tentacle_update(Tentacle *tentacle, float ratio)
+{
+	int i;
+	cgm_vec3 target;
+	float dist, tmp_dist;
+
+	/* Find target */
+	target = state.targets[0].pos;
+	dist = cgm_vdist_sq(&tentacle->links[LINK_COUNT-1].global_end, &state.targets[0].pos);
+	for (i=1; i<TARGET_COUNT; i++) {
+		tmp_dist = cgm_vdist_sq(&tentacle->links[LINK_COUNT-1].global_end, &state.targets[i].pos);
+		if (tmp_dist < dist) {
+			target = state.targets[i].pos;
+			dist = tmp_dist;
+		}
+	}
+
+	link_follow(&tentacle->links[0], &target, ratio);
 }
 
 void tentacle_draw(Tentacle *tentacle)
@@ -430,6 +475,7 @@ void tentacle_draw(Tentacle *tentacle)
 	cgm_vec3 controls[4];
 
 	/* Render debugs */
+#if 0
 	for (i=0; i<LINK_COUNT; i++) {
 		line3d(&tentacle->links[i].global_start, &tentacle->links[i].global_end, BLUE);
 
@@ -437,7 +483,7 @@ void tentacle_draw(Tentacle *tentacle)
 		cgm_vadd(&right, &tentacle->links[i].global_start);
 		line3d(&tentacle->links[i].global_start, &right, RED);
 	}
-
+#endif
 	/* Do a bezier curve */
 	cgm_vcons(controls + 0, tentacle->links[0].global_start.x, tentacle->links[0].global_start.y, tentacle->links[0].global_start.z);
 	for (i=0; i<LINK_COUNT; i++) {
@@ -460,7 +506,6 @@ static void draw(void) {
 	float t, dt;
 	float ratio;
 	cgm_vec3 mouse3d;
-	float v0, v1;
 	
 
 	t = time_msec / 1000.0f;
@@ -472,7 +517,22 @@ static void draw(void) {
 		fb_pixels[i] = 0;
 	}
 
-	/* Draw mounse-to-origin */
+	/* Update targets */
+#define WORLD_CLAMP 10
+	for (i=0; i<TARGET_COUNT; i++) {
+		state.targets[i].pos.x += state.targets[i].vel.x * dt;
+		if (state.targets[i].pos.x < -WORLD_CLAMP) state.targets[i].pos.x = WORLD_CLAMP;
+		if (state.targets[i].pos.x > WORLD_CLAMP) state.targets[i].pos.x = -WORLD_CLAMP;
+
+		state.targets[i].pos.y += state.targets[i].vel.y * dt;
+		if (state.targets[i].pos.y < -WORLD_CLAMP) state.targets[i].pos.y = WORLD_CLAMP;
+		if (state.targets[i].pos.y > WORLD_CLAMP) state.targets[i].pos.y = -WORLD_CLAMP;
+
+		cgm_vec3 p = state.targets[i].pos;
+		point3d(&p, WHITE);
+	}
+
+	/* Get mouse pos in 3d */
 	unproject(&mouse3d, mouse_x, mouse_y);
 
 	/* Frame-independent ratio */
@@ -480,7 +540,7 @@ static void draw(void) {
 
 	/* Update and render tentacles */
 	for (i=0; i<TENTACLE_COUNT; i++) {
-		tentacle_update(&state.tentacles[i], &mouse3d, ratio);
+		tentacle_update(&state.tentacles[i], ratio);
 		tentacle_draw(&state.tentacles[i]);
 	}
 

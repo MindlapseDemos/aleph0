@@ -110,6 +110,34 @@ Link *link_update_hierarchy(Link *link)
 
 	return last;
 }
+#define LINK_COUNT 3
+struct TentacleStruct
+{
+	/* For placing the tentacle - will not move this */
+	Link base;
+
+	/* Moving parts */
+	Link links[LINK_COUNT];
+};
+
+typedef struct TentacleStruct Tentacle;
+
+void tentacle_cons(Tentacle *tentacle, cgm_quat *base_rotation)
+{
+	link_cons(&tentacle->base, 0, 3.0f);
+	tentacle->base.rotation = *base_rotation;
+
+	/* Initialize links */
+	link_cons(&tentacle->links[0], &tentacle->base, 1.5f);
+	link_cons(&tentacle->links[1], &tentacle->links[0], 1.5f);
+	link_cons(&tentacle->links[2], &tentacle->links[1], 1.5f);
+	
+	/* Update all to get calculated stuff in place */
+	link_update(&tentacle->base);
+	link_update(&tentacle->links[0]);
+	link_update(&tentacle->links[1]);
+	link_update(&tentacle->links[2]);
+}
 
 /* Get angle to rotate point 'a' around pivot 'p' to reach point 'b' */
 void extract_angle(cgm_quat *angle, cgm_vec3 *a, cgm_vec3 *b, cgm_vec3 *p) {
@@ -230,9 +258,9 @@ void link_follow(Link *link, cgm_vec3 *target, float ratio)
 	}
 }
 
-#define LINK_COUNT 3
+#define TENTACLE_COUNT 5
 static struct {
-	Link links[LINK_COUNT];
+	Tentacle tentacles[TENTACLE_COUNT];
 	cgm_vec3 camera_pos;
 	float camera_scale;
 } state;
@@ -242,14 +270,20 @@ struct screen *dott_screen(void) {
 }
 
 static int init(void) {
-	/* Initialize links */
-	link_cons(&state.links[0], 0, 1.5f);
-	link_cons(&state.links[1], &state.links[0], 1.5f);
-	link_cons(&state.links[2], &state.links[1], 1.5f);
+	int i;
+	cgm_quat base_rotation, angle;
 	
+	cgm_qrotation(&angle, 2.0f * M_PI / TENTACLE_COUNT, 0.0f, 0.0f, 1.0f);
+	cgm_qrotation(&base_rotation, 0.0f, 0.0f, 0.0f, 1.0f);
+
+	for (i=0; i<TENTACLE_COUNT; i++) {
+		tentacle_cons(&state.tentacles[i], &base_rotation);
+		cgm_qmul(&base_rotation, &angle);
+	}
+
 	/* Setup camera */
-	cgm_vcons(&state.camera_pos, 0, 3, 0);
-	state.camera_scale = 32.0f; /* 32 pixels per world unit */
+	cgm_vcons(&state.camera_pos, 0, 0, 0);
+	state.camera_scale = 15.0f; /* pixels per world unit */
 	
 	return 0;
 }
@@ -368,14 +402,66 @@ static inline float frame_independent_feedback(float portion_per_frame, float dt
 
 }
 
+void line3d(cgm_vec3 *start, cgm_vec3 *end, unsigned short color)
+{
+	int x0, y0, x1, y1;
+
+	project(&x0, &y0, start);
+	if (x0 < 0 || x0 >= FB_WIDTH) return;
+	if (y0 < 0 || y0 >= FB_HEIGHT) return;
+
+	project(&x1, &y1, end);
+	if (x1 < 0 || x1 >= FB_WIDTH) return;
+	if (y1 < 0 || y1 >= FB_HEIGHT) return;
+
+	draw_line(x0, y0, x1, y1, color);
+}
+
+void tentacle_update(Tentacle *tentacle, cgm_vec3 *target, float ratio)
+{
+	link_follow(&tentacle->links[0], target, ratio);
+}
+
+void tentacle_draw(Tentacle *tentacle)
+{
+	int i;
+	float t;
+	cgm_vec3 v, v2, right;
+	cgm_vec3 controls[4];
+
+	/* Render debugs */
+	for (i=0; i<LINK_COUNT; i++) {
+		line3d(&tentacle->links[i].global_start, &tentacle->links[i].global_end, BLUE);
+
+		cgm_vcons(&right, tentacle->links[i].global_right.x, tentacle->links[i].global_right.y, tentacle->links[i].global_right.z);
+		cgm_vadd(&right, &tentacle->links[i].global_start);
+		line3d(&tentacle->links[i].global_start, &right, RED);
+	}
+
+	/* Do a bezier curve */
+	cgm_vcons(controls + 0, tentacle->links[0].global_start.x, tentacle->links[0].global_start.y, tentacle->links[0].global_start.z);
+	for (i=0; i<LINK_COUNT; i++) {
+		cgm_vcons(controls + i + 1, tentacle->links[i].global_end.x, tentacle->links[i].global_end.y, tentacle->links[i].global_end.z);
+	}
+	cgm_vcons(&v, tentacle->links[0].global_start.x, tentacle->links[0].global_start.y, tentacle->links[0].global_start.z);
+#define SEGS 10
+	for (i=0; i<=SEGS; i++) {
+		t = i / (float) SEGS;
+		bezier(&v2, controls, 4, t);
+		
+		line3d(&v, &v2, GREEN);
+
+		v = v2;
+	}
+}
+
 static void draw(void) {
 	int i;
-	int x0, y0, x1, y1;
 	float t, dt;
 	float ratio;
-	cgm_vec3 v, v2;
-	cgm_vec3 right;
-	cgm_vec3 controls[4];
+	cgm_vec3 mouse3d;
+	float v0, v1;
+	
 
 	t = time_msec / 1000.0f;
 	dt = (time_msec - lastFrameTime) / 1000.0f;
@@ -386,50 +472,21 @@ static void draw(void) {
 		fb_pixels[i] = 0;
 	}
 
-	/* Test unproject / project */
-	cgm_vcons(&v, 0, 0, 0);
-	project(&x0, &y0, &v);
-	unproject(&v, mouse_x, mouse_y);
-	project(&x1, &y1, &v);
-	draw_line(x0, y0, x1, y1, WHITE);
+	/* Draw mounse-to-origin */
+	unproject(&mouse3d, mouse_x, mouse_y);
 
 	/* Frame-independent ratio */
 	ratio = frame_independent_feedback(0.05f, dt);
 
-	/* Update links */
-	link_follow(&state.links[0], &v, ratio);
-
-	
-
-	/* Render debugs */
-#if 1
-	for (i=0; i<LINK_COUNT; i++) {
-		project(&x0, &y0, &state.links[i].global_start);
-		project(&x1, &y1, &state.links[i].global_end);
-		draw_line(x0, y0, x1, y1, BLUE);
-
-		cgm_vcons(&right, state.links[i].global_right.x, state.links[i].global_right.y, state.links[i].global_right.z);
-		cgm_vadd(&right, &state.links[i].global_start);
-		project(&x1, &y1, &right);
-		draw_line(x0, y0, x1, y1, RED);
+	/* Update and render tentacles */
+	for (i=0; i<TENTACLE_COUNT; i++) {
+		tentacle_update(&state.tentacles[i], &mouse3d, ratio);
+		tentacle_draw(&state.tentacles[i]);
 	}
-#endif
 
-	/* Do a bezier curve */
-	cgm_vcons(controls + 0, state.links[0].global_start.x, state.links[0].global_start.y, state.links[0].global_start.z);
-	for (i=0; i<LINK_COUNT; i++) {
-		cgm_vcons(controls + i + 1, state.links[i].global_end.x, state.links[i].global_end.y, state.links[i].global_end.z);
-	}
-	cgm_vcons(&v, state.links[0].global_start.x, state.links[0].global_start.y, state.links[0].global_start.z);
-#define SEGS 10
-	for (i=0; i<=SEGS; i++) {
-		t = i / (float) SEGS;
-		bezier(&v2, controls, 4, t);
-		project(&x0, &y0, &v);
-		project(&x1, &y1, &v2);
-		draw_line(x0, y0, x1, y1, GREEN);
-
-		cgm_vcons(&v, v2.x, v2.y, v2.z);
+	/* Creature body */
+	for (i=0; i<TENTACLE_COUNT; i++) {
+		line3d(&state.tentacles[i].base.global_end, &state.tentacles[(i+1) % TENTACLE_COUNT].base.global_end, WHITE);
 	}
 		
 	swap_buffers(0);

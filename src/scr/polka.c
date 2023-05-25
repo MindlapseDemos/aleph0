@@ -106,6 +106,10 @@ static void start(long trans_time)
 static void draw(void)
 {
 	const int t = time_msec - startingTime;
+	
+	memset(polkaBuffer, 0, FB_WIDTH * FB_HEIGHT);
+
+	buffer8bppToVram(polkaBuffer, polkaPal32);
 
 	Opt3Drun(t);
 

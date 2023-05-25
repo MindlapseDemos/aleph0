@@ -35,15 +35,17 @@
 #define RAD_TO_DEG_256(x) ((256 * (x)) / (2 * M_PI))
 
 
-#define int_AFTER_MUL_ADDS(x,b)		FIXED_TO_INT(x,b)
-#define int_AFTER_RECZ_MUL(x,b)		FIXED_TO_INT(x,b)
-#define int_ROUND(x)				(x)
-#define FLOAT_TO_int(x,b)			FLOAT_TO_FIXED(x,b)
-#define DOT_COLOR						0xFFFF
+#define AFTER_MUL_ADDS(x,b)		FIXED_TO_INT(x,b)
+#define AFTER_RECZ_MUL(x,b)		FIXED_TO_INT(x,b)
+#define FLOAT_TO_int(x,b)		FLOAT_TO_FIXED(x,b)
+#define DOT_COLOR				0xFFFF
 
 
-static Vertex3D *objectVertices;
-static Vertex3D *transformedVertices;
+static Vertex3D *objectGridVertices;
+static Vertex3D *transformedGridVertices;
+static Vertex3D *objectAxesVertices;
+static Vertex3D *transformedAxesVertices;
+static ScreenPoints *screenPoints;
 
 static Vertex3D *axisVerticesX, *axisVerticesY, *axisVerticesZ;
 
@@ -94,96 +96,71 @@ static void MulManyVec3Mat33(Vertex3D *dst, Vertex3D *src, int *m, int count)
 		const int y = src->y;
 		const int z = src->z;
 
-		dst->x = int_AFTER_MUL_ADDS(x * m[0] + y * m[3] + z * m[6], FP_CORE);
-		dst->y = int_AFTER_MUL_ADDS(x * m[1] + y * m[4] + z * m[7], FP_CORE);
-		dst->z = int_AFTER_MUL_ADDS(x * m[2] + y * m[5] + z * m[8], FP_CORE);
+		dst->x = AFTER_MUL_ADDS(x * m[0] + y * m[3] + z * m[6], FP_CORE);
+		dst->y = AFTER_MUL_ADDS(x * m[1] + y * m[4] + z * m[7], FP_CORE);
+		dst->z = AFTER_MUL_ADDS(x * m[2] + y * m[5] + z * m[8], FP_CORE);
 
 		++src;
 		++dst;
 	}
 }
 
-static void translateAndProjectVertices(int count)
+static void translateAndProjectVertices(Vertex3D *src, Vertex3D *dst, int count)
 {
 	int i;
 	const int offsetX = (int)(FB_WIDTH >> 1);
 	const int offsetY = (int)(FB_HEIGHT >> 1);
 
 	for (i=0; i<count; i++) {
-		const int vz = transformedVertices[i].z + OBJECT_POS_Z;
-		transformedVertices[i].z = vz;
+		const int vz = src[i].z + OBJECT_POS_Z;
+		dst[i].z = vz;
 		if (vz > 0) {
-			transformedVertices[i].x = offsetX + (transformedVertices[i].x * PROJ_MUL) / vz;
-			transformedVertices[i].y = offsetY + (transformedVertices[i].y * PROJ_MUL) / vz;
+			dst[i].x = offsetX + (src[i].x * PROJ_MUL) / vz;
+			dst[i].y = offsetY + (src[i].y * PROJ_MUL) / vz;
 		}
 	}
 }
 
-static void rotateVertices(int count, int t)
+static void rotateVertices(Vertex3D *src, Vertex3D *dst, int count, int t)
 {
 	static int rotMat[9];
 
 	createRotationMatrixValues(t, 2*t, 3*t, rotMat);
 
-	MulManyVec3Mat33(transformedVertices, objectVertices, rotMat, count);
+	MulManyVec3Mat33(dst, src, rotMat, count);
 }
 
-static void renderVertices(int count)
+static void renderVertices()
 {
 	int i;
 	unsigned short* dst = (unsigned short*)fb_pixels;
 
-	Vertex3D* v = transformedVertices;
+	Vertex3D *src = screenPoints->v;
+	const int count = screenPoints->num;
+
 	for (i = 0; i < count; i++) {
-		const int x = int_ROUND(v->x);
-		const int y = int_ROUND(v->y);
-		const int z = int_ROUND(v->z);
+		const int x = src->x;
+		const int y = src->y;
+		const int z = src->z;
 
 		if (z > 0 && x >= 0 && x < FB_WIDTH && y >= 0 && y < FB_HEIGHT) {
-			*(dst + y * FB_WIDTH + x) = DOT_COLOR;
+			int c = (OBJECT_POS_Z + 256 - z) >> 4;
+			if (c < 0) c = 0;
+			if (c > 31) c = 31;
+			*(dst + y * FB_WIDTH + x) = (c << 11) | ((c << 1) << 5) | c;
 		}
-		++v;
+		++src;
 	}
 }
 
-static void transformProjectAndRenderVertices(Vertex3D *v, int count, int t)
-{
-	static int m[9];
-
-	unsigned short* dst = (unsigned short*)fb_pixels;
-	int i;
-
-	const int offsetX = (int)(FB_WIDTH >> 1);
-	const int offsetY = (int)(FB_HEIGHT >> 1);
-
-	createRotationMatrixValues(t, 2*t, 3*t, m);
-
-	for (i = 0; i < count; ++i) {
-		const int x = v->x;
-		const int y = v->y;
-		const int z = v->z;
-
-		const int sz = int_AFTER_MUL_ADDS(x * m[2] + y * m[5] + z * m[8], FP_CORE) + OBJECT_POS_Z;
-		if (sz > 0) {
-			const int sx = int_ROUND(offsetX + ((int_AFTER_MUL_ADDS(x * m[0] + y * m[3] + z * m[6], FP_CORE)) * PROJ_MUL) / sz);
-			const int sy = int_ROUND(offsetY + ((int_AFTER_MUL_ADDS(x * m[1] + y * m[4] + z * m[7], FP_CORE)) * PROJ_MUL) / sz);
-
-			if (sx >= 0 && sx < FB_WIDTH && sy >= 0 && sy < FB_HEIGHT) {
-				*(dst + sy * FB_WIDTH + sx) = DOT_COLOR;
-			}
-		}
-		++v;
-	}
-}
-
-static void renderAxesBoxDotsEffect()
+static void transformAndProjectAxesBoxDotsEffect()
 {
 	unsigned char *src = volumeData;
-	unsigned short* dst = (unsigned short*)fb_pixels;
 
 	const int offsetX = (int)(FB_WIDTH >> 1);
 	const int offsetY = (int)(FB_HEIGHT >> 1);
 
+	Vertex3D *dst = screenPoints->v;
 	Vertex3D *axisZ = axisVerticesZ;
 	int countZ = VERTICES_DEPTH;
 	do {
@@ -196,15 +173,17 @@ static void renderAxesBoxDotsEffect()
 			do {
 				const unsigned char c = *src++;
 				if (c != 0) {
-					const int sz = int_AFTER_MUL_ADDS(axisX->z + axisY->z + axisZ->z, FP_CORE) + OBJECT_POS_Z;
+					const int sz = AFTER_MUL_ADDS(axisX->z + axisY->z + axisZ->z, FP_CORE) + OBJECT_POS_Z;
 					if (sz > 0 && sz < REC_DIV_Z_MAX) {
 						const int recZ = recDivZ[(int)sz];
-						const int sx = int_ROUND(offsetX + int_AFTER_RECZ_MUL(((int_AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE));
-						const int sy = int_ROUND(offsetY + int_AFTER_RECZ_MUL(((int_AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE));
+						const int sx = offsetX + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);
+						const int sy = offsetY + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);
 
-						if (sx >= 0 && sx < FB_WIDTH && sy >= 0 && sy < FB_HEIGHT) {
-							*(dst + sy * FB_WIDTH + sx) = DOT_COLOR;
-						}
+						dst->x = sx;
+						dst->y = sy;
+						dst->z = sz;
+						screenPoints->num++;
+						++dst;
 					}
 				}
 				++axisX;
@@ -213,36 +192,6 @@ static void renderAxesBoxDotsEffect()
 		} while(--countY != 0);
 		++axisZ;
 	} while(--countZ != 0);
-}
-
-static void renderAxesBoxDots()
-{
-	unsigned short* dst = (unsigned short*)fb_pixels;
-
-	int x,y,z;
-
-	Vertex3D *axisZ = axisVerticesZ;
-	for (z=0; z<VERTICES_DEPTH; ++z) {
-		Vertex3D *axisY = axisVerticesY;
-		for (y=0; y<VERTICES_HEIGHT; ++y) {
-			Vertex3D *axisX = axisVerticesX;
-			for (x=0; x<VERTICES_WIDTH; ++x) {
-				const int sz = int_AFTER_MUL_ADDS(axisX->z + axisY->z + axisZ->z, FP_CORE) + OBJECT_POS_Z;
-				if (sz > 0 && sz < REC_DIV_Z_MAX) {
-					const int recZ = recDivZ[(int)sz];
-					const int sx = int_ROUND((FB_WIDTH / 2) + int_AFTER_RECZ_MUL((axisX->x + axisY->x + axisZ->x) * recZ, 2*FP_CORE - PROJ_SHR));
-					const int sy = int_ROUND((FB_HEIGHT / 2) + int_AFTER_RECZ_MUL((axisX->y + axisY->y + axisZ->y) * recZ, 2*FP_CORE - PROJ_SHR));
-
-					if (sx >= 0 && sx < FB_WIDTH && sy >= 0 && sy < FB_HEIGHT) {
-						*(dst + sy * FB_WIDTH + sx) = DOT_COLOR;
-					}
-				}
-				++axisX;
-			}
-			++axisY;
-		}
-		++axisZ;
-	}
 }
 
 static void generateAxisVertices(Vertex3D *rotatedAxis, Vertex3D *dstAxis, int count)
@@ -273,24 +222,36 @@ static void generateAxesVertices(Vertex3D *axesEnds)
 	generateAxisVertices(&axesEnds[2], axisVerticesZ, VERTICES_DEPTH);
 }
 
+static void initGrid3D()
+{
+	objectGridVertices = (Vertex3D*)malloc(MAX_VERTEX_ELEMENTS_NUM * sizeof(Vertex3D));
+	transformedGridVertices = (Vertex3D*)malloc(MAX_VERTEX_ELEMENTS_NUM * sizeof(Vertex3D));
+
+	volumeData = (unsigned char*)malloc(MAX_VERTEX_ELEMENTS_NUM);
+	memset(volumeData, 0, MAX_VERTEX_ELEMENTS_NUM);
+}
+
 static void initAxes3D()
 {
 	Vertex3D* v;
 
-	objectVertices = (Vertex3D*)malloc(3 * sizeof(Vertex3D));
-	transformedVertices = (Vertex3D*)malloc(3 * sizeof(Vertex3D));
-
-	volumeData = (unsigned char*)malloc(MAX_VERTEX_ELEMENTS_NUM);
-	memset(volumeData, 0, MAX_VERTEX_ELEMENTS_NUM);
+	objectAxesVertices = (Vertex3D*)malloc(3 * sizeof(Vertex3D));
+	transformedAxesVertices = (Vertex3D*)malloc(3 * sizeof(Vertex3D));
 
 	axisVerticesX = (Vertex3D*)malloc(VERTICES_WIDTH * sizeof(Vertex3D));
 	axisVerticesY = (Vertex3D*)malloc(VERTICES_HEIGHT * sizeof(Vertex3D));
 	axisVerticesZ = (Vertex3D*)malloc(VERTICES_DEPTH * sizeof(Vertex3D));
 
-	v = objectVertices;
+	v = objectAxesVertices;
 	SET_OPT_VERTEX(AXIS_WIDTH,0,0,v)	++v;
 	SET_OPT_VERTEX(0,AXIS_HEIGHT,0,v)	++v;
 	SET_OPT_VERTEX(0,0,AXIS_DEPTH,v)
+}
+
+static void initScreenPoints(Vertex3D *src)
+{
+	screenPoints->num = 0;
+	screenPoints->v = src;
 }
 
 void Opt3Dinit()
@@ -299,6 +260,7 @@ void Opt3Dinit()
 		int z;
 
 		initAxes3D();
+		initGrid3D();
 
 		recDivZ = (int*)malloc(REC_DIV_Z_MAX * sizeof(int));
 		for (z=1; z<REC_DIV_Z_MAX; ++z) {
@@ -311,9 +273,11 @@ void Opt3Dinit()
 void Opt3Dfree()
 {
 	if (isOpt3Dinit) {
-		free(objectVertices);
-		free(transformedVertices);
+		free(objectAxesVertices);
+		free(transformedAxesVertices);
 
+		free(objectGridVertices);
+		free(transformedGridVertices);
 		free(volumeData);
 
 		free(axisVerticesX);
@@ -328,11 +292,14 @@ void Opt3Dfree()
 
 void Opt3Drun(int ticks)
 {
-	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
-
 	ticks >>= 1;
 
-	rotateVertices(3, ticks);
-	generateAxesVertices(transformedVertices);
-	renderAxesBoxDotsEffect();
+	initScreenPoints(transformedGridVertices);
+
+	rotateVertices(objectAxesVertices, transformedAxesVertices, 3, ticks);
+	generateAxesVertices(transformedAxesVertices);
+
+	transformAndProjectAxesBoxDotsEffect();
+
+	renderVertices();
 }

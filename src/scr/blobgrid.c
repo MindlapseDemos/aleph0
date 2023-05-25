@@ -334,7 +334,6 @@ static void draw(void)
 	const int t = time_msec - startingTime;
 
 	memset(blobBuffer, 0, FB_WIDTH * FB_HEIGHT);
-	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
 
 	//drawEffect(&bgParams1, t);
 	drawEffect(&bgParamsStars, t);

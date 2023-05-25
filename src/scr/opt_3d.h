@@ -13,6 +13,12 @@ typedef struct Vertex3D
 	int x,y,z;
 }Vertex3D;
 
+typedef struct ScreenPoints
+{
+	Vertex3D *v;
+	int num;
+}ScreenPoints;
+
 
 void Opt3Dinit(void);
 void Opt3Dfree(void);

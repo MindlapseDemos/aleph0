@@ -22,7 +22,7 @@ typedef struct ScreenPoints
 
 void Opt3Dinit(void);
 void Opt3Dfree(void);
-void Opt3Drun(int ticks);
+void Opt3Drun(unsigned char *buffer, int ticks);
 
 unsigned char *getDotsVolumeBuffer();
 

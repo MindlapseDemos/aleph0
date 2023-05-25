@@ -40,7 +40,7 @@ struct screen *polka_screen(void)
 static void updateDotsVolumeBufferPlasma(int t)
 {
 	unsigned char *dst = getDotsVolumeBuffer();
-	const float tt = t * 0.001f;
+	const float tt = t * 0.0005f;
 
 	int countZ = VERTICES_DEPTH;
 	do {
@@ -49,7 +49,7 @@ static void updateDotsVolumeBufferPlasma(int t)
 			int countX = VERTICES_WIDTH;
 			do {
 				unsigned char c = 0;
-				float n = fmod(fabs(sin((float)countX/8.0f + tt) + sin((float)countY/6.0f + 2.0f * tt) + sin((float)countZ/7.0f - tt)), 1.0f);
+				float n = fmod(fabs(sin((float)countX/8.0f + tt) + sin((float)countY/9.0f + 2.0f * tt) + sin((float)countZ/11.0f - tt)), 1.0f);
 				if (n > 0.9f) c = 1;
 
 				*dst++ = c;
@@ -84,8 +84,6 @@ static int init(void)
 
 	polkaPal32 = createColMap16to32(polkaPal);
 
-	updateDotsVolumeBufferPlasma(0);
-
 	return 0;
 }
 
@@ -109,9 +107,11 @@ static void draw(void)
 	
 	memset(polkaBuffer, 0, FB_WIDTH * FB_HEIGHT);
 
+	Opt3Drun(polkaBuffer, t);
+
 	buffer8bppToVram(polkaBuffer, polkaPal32);
 
-	Opt3Drun(t);
+	updateDotsVolumeBufferPlasma(t);
 
 	swap_buffers(0);
 }

@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "opt_3d.h"
+#include "opt_rend.h"
 
 #include "demo.h"
 #include "screen.h"
@@ -130,14 +131,12 @@ static void rotateVertices(Vertex3D *src, Vertex3D *dst, int count, int t)
 	MulManyVec3Mat33(dst, src, rotMat, count);
 }
 
-static void renderVertices()
+static void renderVertices(unsigned char *buffer)
 {
-	int i;
-	unsigned short* dst = (unsigned short*)fb_pixels;
-
 	Vertex3D *src = screenPoints->v;
 	const int count = screenPoints->num;
 
+	int i;
 	for (i = 0; i < count; i++) {
 		const int x = src->x;
 		const int y = src->y;
@@ -147,7 +146,28 @@ static void renderVertices()
 			int c = (OBJECT_POS_Z + 256 - z) >> 4;
 			if (c < 0) c = 0;
 			if (c > 31) c = 31;
-			*(dst + y * FB_WIDTH + x) = (c << 11) | ((c << 1) << 5) | c;
+			*(buffer + y * FB_WIDTH + x) = c;
+		}
+		++src;
+	}
+}
+
+static void renderBlobVertices(unsigned char *buffer)
+{
+	Vertex3D *src = screenPoints->v;
+	const int count = screenPoints->num;
+
+	int i;
+	for (i = 0; i < count; i++) {
+		const int x = src->x;
+		const int y = src->y;
+		const int z = src->z;
+
+		if (z > 0 && x >= 0 && x < FB_WIDTH && y >= 0 && y < FB_HEIGHT) {
+			int c = (OBJECT_POS_Z + 128 - z) >> 4;
+			if (c < 2) c = 2;
+			if (c > 8) c = 8;
+			drawBlob(x,y, c, 0, buffer);
 		}
 		++src;
 	}
@@ -290,7 +310,7 @@ void Opt3Dfree()
 	}
 }
 
-void Opt3Drun(int ticks)
+void Opt3Drun(unsigned char *buffer, int ticks)
 {
 	ticks >>= 1;
 
@@ -301,5 +321,5 @@ void Opt3Drun(int ticks)
 
 	transformAndProjectAxesBoxDotsEffect();
 
-	renderVertices();
+	renderBlobVertices(buffer);
 }

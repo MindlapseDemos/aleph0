@@ -1,8 +1,6 @@
 #ifndef OPT_3D_H
 #define OPT_3D_H
 
-#define FIXED_TEST
-
 #define VERTICES_WIDTH 32
 #define VERTICES_HEIGHT 32
 #define VERTICES_DEPTH 32
@@ -10,23 +8,15 @@
 #define SET_OPT_VERTEX(xp,yp,zp,v) v->x = (xp); v->y = (yp); v->z = (zp);
 
 
-typedef float real;
-
-#ifdef FIXED_TEST
-	typedef int vecType;
-#else
-	typedef real vecType;
-#endif
-
-typedef struct OptVertex
+typedef struct Vertex3D
 {
-	vecType x,y,z;
-}OptVertex;
+	int x,y,z;
+}Vertex3D;
 
 
-void Opt3DinitPerfTest(void);
-void Opt3DfreePerfTest(void);
-void Opt3DrunPerfTest(int ticks);
+void Opt3Dinit(void);
+void Opt3Dfree(void);
+void Opt3Drun(int ticks);
 
 unsigned char *getDotsVolumeBuffer();
 

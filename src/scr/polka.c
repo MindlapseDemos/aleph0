@@ -4,7 +4,10 @@
 #include "screen.h"
 
 #include "opt_3d.h"
+#include "opt_rend.h"
 
+#include <stdlib.h>
+#include <string.h>
 #include <math.h>
 
 
@@ -12,6 +15,10 @@ static int init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
+
+static unsigned short *polkaPal;
+static unsigned int *polkaPal32;
+static unsigned char *polkaBuffer;
 
 static struct screen scr = {
 	"polka",
@@ -29,22 +36,6 @@ struct screen *polka_screen(void)
 	return &scr;
 }
 
-static int init(void)
-{
-	Opt3DinitPerfTest();
-
-	return 0;
-}
-
-static void destroy(void)
-{
-	Opt3DfreePerfTest();
-}
-
-static void start(long trans_time)
-{
-	startingTime = time_msec;
-}
 
 static void updateDotsVolumeBufferPlasma(int t)
 {
@@ -67,12 +58,56 @@ static void updateDotsVolumeBufferPlasma(int t)
 	} while(--countZ != 0);
 }
 
+static int init(void)
+{
+	int i;
+
+	Opt3Dinit();
+	initBlobGfx();
+
+	polkaBuffer = (unsigned char*)malloc(FB_WIDTH * FB_HEIGHT);
+	polkaPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
+
+	for (i=0; i<128; i++) {
+		int r = i >> 2;
+		int g = i >> 1;
+		int b = i >> 1;
+		if (b > 31) b = 31;
+		polkaPal[i] = (r<<11) | (g<<5) | b;
+	}
+	for (i=128; i<256; i++) {
+		int r = 31 - ((i-128) >> 4);
+		int g = 63 - ((i-128) >> 2);
+		int b = 31 - ((i-128) >> 3);
+		polkaPal[i] = (r<<11) | (g<<5) | b;
+	}
+
+	polkaPal32 = createColMap16to32(polkaPal);
+
+	updateDotsVolumeBufferPlasma(0);
+
+	return 0;
+}
+
+static void destroy(void)
+{
+	Opt3Dfree();
+	freeBlobGfx();
+
+	free(polkaBuffer);
+	free(polkaPal);
+}
+
+static void start(long trans_time)
+{
+	startingTime = time_msec;
+}
+
 static void draw(void)
 {
 	const int t = time_msec - startingTime;
 
-	//updateDotsVolumeBufferPlasma(t);
-	Opt3DrunPerfTest(t);
+	Opt3Drun(t);
 
 	swap_buffers(0);
 }

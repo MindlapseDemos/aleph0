@@ -161,12 +161,9 @@ static void renderBlobVertices(unsigned char *buffer)
 	for (i = 0; i < count; i++) {
 		const int x = src->x;
 		const int y = src->y;
-		const int z = src->z;
 
-		if (z > 0 && x >= 0 && x < FB_WIDTH && y >= 0 && y < FB_HEIGHT) {
-			int c = (OBJECT_POS_Z + 128 - z) >> 4;
-			if (c < 2) c = 2;
-			if (c > 8) c = 8;
+		if (x >= 0 && x < FB_WIDTH && y >= 0 && y < FB_HEIGHT) {
+			const int c = 1 + (src->z >> 6);
 			drawBlob(x,y, c, 0, buffer);
 		}
 		++src;
@@ -201,7 +198,7 @@ static void transformAndProjectAxesBoxDotsEffect()
 
 						dst->x = sx;
 						dst->y = sy;
-						dst->z = sz;
+						dst->z = c;
 						screenPoints->num++;
 						++dst;
 					}

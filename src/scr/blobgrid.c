@@ -30,7 +30,7 @@ typedef struct BlobGridParams
 
 BlobGridParams bgParams0 = { 0, 64, 10, 8192, 32};
 BlobGridParams bgParams1 = { 1, 80, 8, 4096, 32};
-BlobGridParams bgParamsStars = { 2, NUM_STARS, 6, 4096, 16};
+BlobGridParams bgParamsStars = { 2, NUM_STARS, 7, 4096, 16};
 
 
 typedef struct Pos3D

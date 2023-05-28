@@ -152,24 +152,6 @@ static void renderVertices(unsigned char *buffer)
 	}
 }
 
-static void renderBlobVertices(unsigned char *buffer)
-{
-	Vertex3D *src = screenPoints->v;
-	const int count = screenPoints->num;
-
-	int i;
-	for (i = 0; i < count; i++) {
-		const int x = src->x;
-		const int y = src->y;
-
-		if (x >= 0 && x < FB_WIDTH && y >= 0 && y < FB_HEIGHT) {
-			const int c = 1 + (src->z >> 6);
-			drawBlob(x,y, c, 0, buffer);
-		}
-		++src;
-	}
-}
-
 static void transformAndProjectAxesBoxDotsEffect()
 {
 	unsigned char *src = volumeData;
@@ -318,5 +300,5 @@ void Opt3Drun(unsigned char *buffer, int ticks)
 
 	transformAndProjectAxesBoxDotsEffect();
 
-	renderBlobVertices(buffer);
+	drawBlobs(screenPoints->v, screenPoints->num, buffer);
 }

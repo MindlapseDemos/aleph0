@@ -1,7 +1,10 @@
 #ifndef OPT_REND_H
 #define OPT_REND_H
 
+#include "opt_3d.h"
+
 #define CLAMP01(v) if (v < 0.0f) v = 0.0f; if (v > 1.0f) v = 1.0f;
+
 
 typedef struct BlobData
 {
@@ -16,5 +19,6 @@ unsigned int *createColMap16to32(unsigned short *srcPal);
 void initBlobGfx();
 void freeBlobGfx();
 void drawBlob(int posX, int posY, int size, int shift, unsigned char *blobBuffer);
+void drawBlobs(Vertex3D *v, int count, unsigned char *blobBuffer);
 
 #endif

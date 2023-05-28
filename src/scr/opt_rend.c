@@ -97,6 +97,40 @@ void freeBlobGfx()
 	}
 }
 
+void drawBlobs(Vertex3D *v, int count, unsigned char *blobBuffer)
+{
+	do {
+		const int size = 1 + (v->z >> 6);
+		if (size < BLOB_SIZES_NUM_MAX) {
+			const int posX = v->x;
+			const int posY = v->y;
+			BlobData *bd = &blobData[size][posX & (BLOB_SIZEX_PAD-1)];
+			const int sizeX = bd->sizeX;
+			const int sizeY = bd->sizeY;
+
+			if (!(posX <= sizeX / 2 || posX >= FB_WIDTH - sizeX / 2 || posY <= sizeY / 2 || posY >= FB_HEIGHT - sizeY / 2))
+			{
+				const int posX32 = posX & ~(BLOB_SIZEX_PAD-1);
+				const int wordsX = sizeX / 4;
+
+				unsigned int *dst = (unsigned int*)(blobBuffer + (posY - sizeY / 2) * FB_WIDTH + (posX32 - sizeX / 2));
+				unsigned int *src = (unsigned int*)bd->data;
+
+				int y;
+				for (y=0; y<sizeY; ++y) {
+					int x;
+					for (x=0; x<wordsX; ++x) {
+						*(dst+x) += *(src+x);
+					}
+					src += wordsX;
+					dst += FB_WIDTH / 4;
+				}
+			}
+		}
+		++v;
+	}while(--count != 0);
+}
+
 void drawBlob(int posX, int posY, int size, int shift, unsigned char *blobBuffer)
 {
 	if (size < BLOB_SIZES_NUM_MAX) {
@@ -116,8 +150,8 @@ void drawBlob(int posX, int posY, int size, int shift, unsigned char *blobBuffer
 
 		for (y=0; y<sizeY; ++y) {
 			for (x=0; x<wordsX; ++x) {
-				unsigned int c = *(dst+x) + (*(src+x) << shift);
-				*(dst+x) = c;
+				const unsigned int c = *(src+x) << shift;
+				*(dst+x) += c;
 			}
 			src += wordsX;
 			dst += FB_WIDTH / 4;

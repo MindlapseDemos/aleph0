@@ -295,8 +295,7 @@ static void draw(void) {
 	int accum = 0;
 	int md, sc;
 	int scrolledIndex;
-	struct rbnode *bitmap_node = 0;
-	
+	struct rbnode *node, *bitmap_node = 0;
 
 	lastFrameDuration = (time_msec - lastFrameTime) / 1000.0f;
 	lastFrameTime = time_msec;
@@ -358,7 +357,7 @@ static void draw(void) {
 	}
 
 	rb_begin(bitmap_props);
-	struct rbnode *node = rb_next(bitmap_props);
+	node = rb_next(bitmap_props);
 	while (node) {
 		RleBitmap *rle = node->data;
 		rleBlitScale(node->data, backBuffer + PIXEL_PADDING, FB_WIDTH, FB_HEIGHT, BB_SIZE,

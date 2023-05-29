@@ -320,7 +320,8 @@ static void moveStars(int t)
 static void drawEffect(BlobGridParams *params, int t)
 {
 	static int prevT = 0;
-	if (t - prevT > 20) {
+	const int dt = t - prevT;
+	if (dt < 0 || dt > 20) {
 		moveStars(t);
 		prevT = t;
 	}

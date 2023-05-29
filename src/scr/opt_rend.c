@@ -48,7 +48,6 @@ void initBlobGfx()
 {
 	if (!isBlobGfxInit) {
 		int i,j,x,y;
-		float r;
 
 		for (i=0; i<BLOB_SIZES_NUM_MAX; ++i) {
 			const int blobSizeY = i+3;	// 3 to 15
@@ -67,13 +66,13 @@ void initBlobGfx()
 
 				for (y=0; y<blobSizeY; ++y) {
 					const float yc = (float)y - blobSizeYhalf + 0.5f;
-					float yci = fabs(yc / (blobSizeYhalf - 0.5f));
+					const float yci = yc / (blobSizeYhalf - 0.5f);
 
 					for (x=0; x<blobSizeX; ++x) {
 						const int xc = (float)(x - j) - blobSizeXhalf + 0.5f;
-						float xci = fabs(xc / (blobSizeYhalf - 0.5f));
+						const float xci = xc / (blobSizeYhalf - 0.5f);
 
-						r = 1.0f - (xci*xci + yci*yci);
+						float r = 1.0f - (xci*xci + yci*yci);
 						CLAMP01(r)
 						*dst++ = (int)(pow(r, 2.0f) * MAX_BLOB_COLOR);
 					}
@@ -99,6 +98,8 @@ void freeBlobGfx()
 
 void drawBlobs(Vertex3D *v, int count, unsigned char *blobBuffer)
 {
+	if (count <=0) return;
+
 	do {
 		const int size = 1 + (v->z >> 6);
 		if (size < BLOB_SIZES_NUM_MAX) {

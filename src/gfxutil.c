@@ -2,6 +2,7 @@
 #include <assert.h>
 #include "demo.h"
 #include "gfxutil.h"
+#include "3dgfx/3dgfx.h"
 
 void (*overlay_alpha)(struct image *dest, int x, int y, const struct image *src,
 		int width, int height);
@@ -354,4 +355,35 @@ static void overlay_alpha_c(struct image *dest, int x, int y, const struct image
 static void overlay_alpha_mmx(struct image *dest, int x, int y, const struct image *src,
 		int width, int height)
 {
+}
+
+void draw_billboard(float x, float y, float z, float size, int r, int g, int b, int a)
+{
+	float m[16];
+	size *= 0.5f;
+
+	g3d_matrix_mode(G3D_MODELVIEW);
+	g3d_push_matrix();
+
+	g3d_translate(x, y, z);
+
+	g3d_get_modelview(m);
+	/* make the upper 3x3 part of the matrix identity */
+	m[0] = m[5] = m[10] = 1.0f;
+	m[1] = m[2] = m[3] = m[4] = m[6] = m[7] = m[8] = m[9] = 0.0f;
+	g3d_load_matrix(m);
+
+	g3d_begin(G3D_QUADS);
+	g3d_color4b(r, g, b, a);
+	g3d_texcoord(0, 0);
+	g3d_vertex(-size, -size, 0);
+	g3d_texcoord(1, 0);
+	g3d_vertex(size, -size, 0);
+	g3d_texcoord(1, 1);
+	g3d_vertex(size, size, 0);
+	g3d_texcoord(0, 1);
+	g3d_vertex(-size, size, 0);
+	g3d_end();
+
+	g3d_pop_matrix();
 }

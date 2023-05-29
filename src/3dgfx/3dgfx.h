@@ -115,6 +115,8 @@ void g3d_mult_matrix(const float *m);
 void g3d_push_matrix(void);
 void g3d_pop_matrix(void);
 
+void g3d_get_modelview(float *m);
+
 void g3d_translate(float x, float y, float z);
 void g3d_rotate(float angle, float x, float y, float z);
 void g3d_scale(float x, float y, float z);

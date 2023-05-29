@@ -289,6 +289,18 @@ void g3d_pop_matrix(void)
 	--st->mtop[st->mmode];
 }
 
+void g3d_get_modelview(float *m)
+{
+	int top = st->mtop[G3D_MODELVIEW];
+	memcpy(m, st->mat[G3D_MODELVIEW][top], 16 * sizeof(float));
+}
+
+void g3d_get_projection(float *m)
+{
+	int top = st->mtop[G3D_PROJECTION];
+	memcpy(m, st->mat[G3D_PROJECTION][top], 16 * sizeof(float));
+}
+
 void g3d_translate(float x, float y, float z)
 {
 	float m[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};

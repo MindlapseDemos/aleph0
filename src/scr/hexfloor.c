@@ -1,10 +1,12 @@
 #include <stdlib.h>
 #include <math.h>
+#include "cgmath/cgmath.h"
 #include "demo.h"
 #include "3dgfx.h"
 #include "mesh.h"
 #include "screen.h"
 #include "util.h"
+#include "gfxutil.h"
 
 #define VFOV	50.0f
 #define HFOV	(VFOV * 1.333333f)
@@ -13,6 +15,8 @@
 struct hextile {
 	float x, y, height;
 	float rad;
+	float vvel;
+	float lt;
 	unsigned char r, g, b;
 };
 
@@ -32,12 +36,10 @@ static struct screen scr = {
 	draw
 };
 
-static float cam_theta = 0, cam_phi = 0;
-static float cam_dist = 10;
+static float cam_theta = 45, cam_phi = 20;
+static float cam_dist = 12;
 
 static long part_start;
-
-static struct g3d_mesh foomesh;
 
 static struct g3d_vertex hextop[12];
 static uint16_t hextop_idx[12] = {
@@ -53,8 +55,11 @@ static uint16_t hexsides_idx[] = {
 };
 
 #define TILES_XSZ	8
-#define TILES_YSZ	16
-static struct hextile tiles[TILES_XSZ * TILES_YSZ];
+#define TILES_YSZ	32
+#define NUM_TILES	(TILES_XSZ * TILES_YSZ)
+static struct hextile tiles[NUM_TILES];
+
+#define OBJ_HEIGHT	3.0f
 
 
 struct screen *hexfloor_screen(void)
@@ -95,14 +100,11 @@ static int init(void)
 			tile->b = rand() & 0xff;
 
 			tile->rad = sqrt(tile->x * tile->x + tile->y * tile->y);
+			tile->vvel = 0.0f;
 
 			tile++;
 		}
 	}
-
-
-	gen_torus_mesh(&foomesh, 3, 1, 20, 10);
-
 
 	return 0;
 }
@@ -140,7 +142,12 @@ static void draw(void)
 {
 	int i;
 	struct hextile *tile;
-	float tm = (float)(time_msec - part_start) / 100.0f;
+	static float prev_tm;
+	float dt, tm = (float)(time_msec - part_start) / 1000.0f;
+	cgm_vec3 pos;
+
+	dt = tm - prev_tm;
+	prev_tm = tm;
 
 	update();
 
@@ -155,25 +162,59 @@ static void draw(void)
 
 	g3d_clear(G3D_COLOR_BUFFER_BIT | G3D_DEPTH_BUFFER_BIT);
 
+	pos.x = cos(tm * 0.5f) * 4.0f;
+	pos.y = OBJ_HEIGHT;
+	pos.z = sin(tm * 1.0f) * 4.0f;
+
 	tile = tiles;
-	for(i=0; i<TILES_XSZ * TILES_YSZ; i++) {
-		float r = tile->rad;
-		tile->height = (1.5 + sin(r + tm)) * 2.0 * (r ? 1.0 / r : 1.0f);
+	for(i=0; i<NUM_TILES; i++) {
+		float dx = pos.x - tile->x;
+		float dy = pos.z - tile->y;
+		float rdsq = rsqrt(dx * dx + dy * dy);
+		float force;
+
+		force = rdsq * 5.0f - 2.0f;
+
+		tile->vvel = (tile->vvel * 0.9 + force) * dt;
+		tile->height += tile->vvel;
+		if(tile->height > OBJ_HEIGHT * 0.9f) {
+			tile->height = OBJ_HEIGHT * 0.9f;
+			tile->vvel = 0.0f;
+		}
+		if(tile->height < 0.0f) {
+			tile->height = 0.0f;
+			tile->vvel = 0.0f;
+		}
+
 		draw_hextile(tile++);
 	}
+
+	draw_billboard(pos.x, pos.y, pos.z, 0.5f, 255, 255, 255, 255);
 
 	swap_buffers(fb_pixels);
 }
 
+static INLINE int clamp(int x, int a, int b)
+{
+	if(x < a) return a;
+	if(x > b) return b;
+	return x;
+}
+
 static void draw_hextile(struct hextile *tile)
 {
-	int i;
+	int i, r, g, b;
 
-	for(i=0; i<6; i++) {
-		hextop[i].y = tile->height;
-		hextop[i].r = tile->r;
-		hextop[i].g = tile->g;
-		hextop[i].b = tile->b;
+	for(i=0; i<12; i++) {
+		if(i < 6) {
+			hextop[i].y = tile->height;
+		}
+		r = (int)(tile->r * tile->height);
+		g = (int)(tile->g * tile->height);
+		b = (int)(tile->b * tile->height);
+		hextop[i].r = clamp(r, 16, 255);
+		hextop[i].g = clamp(g, 16, 255);
+		hextop[i].b = clamp(b, 16, 255);
 	}
 
 	g3d_push_matrix();

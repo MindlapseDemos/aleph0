@@ -367,7 +367,7 @@ void draw_billboard(float x, float y, float z, float size, int r, int g, int b, 
 
 	g3d_translate(x, y, z);
 
-	g3d_get_modelview(m);
+	g3d_get_matrix(G3D_MODELVIEW, m);
 	/* make the upper 3x3 part of the matrix identity */
 	m[0] = m[5] = m[10] = 1.0f;
 	m[1] = m[2] = m[3] = m[4] = m[6] = m[7] = m[8] = m[9] = 0.0f;

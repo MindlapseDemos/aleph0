@@ -224,8 +224,8 @@ static void draw(void)
 	
 	memset(polkaBuffer, 0, FB_WIDTH * FB_HEIGHT);
 
-	//updateDotsVolumeBufferPlasma(t);
-	updateDotsVolumeBufferBlobs(t);
+	updateDotsVolumeBufferPlasma(t);
+	//updateDotsVolumeBufferBlobs(t);
 
 	Opt3Drun(polkaBuffer, t);
 

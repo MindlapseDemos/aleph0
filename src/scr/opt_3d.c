@@ -46,7 +46,7 @@ static Vertex3D *objectGridVertices;
 static Vertex3D *transformedGridVertices;
 static Vertex3D *objectAxesVertices;
 static Vertex3D *transformedAxesVertices;
-static ScreenPoints *screenPoints;
+static ScreenPoints screenPoints;
 
 static Vertex3D *axisVerticesX, *axisVerticesY, *axisVerticesZ;
 
@@ -133,8 +133,8 @@ static void rotateVertices(Vertex3D *src, Vertex3D *dst, int count, int t)
 
 static void renderVertices(unsigned char *buffer)
 {
-	Vertex3D *src = screenPoints->v;
-	const int count = screenPoints->num;
+	Vertex3D *src = screenPoints.v;
+	const int count = screenPoints.num;
 
 	int i;
 	for (i = 0; i < count; i++) {
@@ -159,7 +159,7 @@ static void transformAndProjectAxesBoxDotsEffect()
 	const int offsetX = (int)(FB_WIDTH >> 1);
 	const int offsetY = (int)(FB_HEIGHT >> 1);
 
-	Vertex3D *dst = screenPoints->v;
+	Vertex3D *dst = screenPoints.v;
 	Vertex3D *axisZ = axisVerticesZ;
 	int countZ = VERTICES_DEPTH;
 	do {
@@ -181,7 +181,7 @@ static void transformAndProjectAxesBoxDotsEffect()
 						dst->x = sx;
 						dst->y = sy;
 						dst->z = c;
-						screenPoints->num++;
+						screenPoints.num++;
 						++dst;
 					}
 				}
@@ -249,8 +249,8 @@ static void initAxes3D()
 
 static void initScreenPoints(Vertex3D *src)
 {
-	screenPoints->num = 0;
-	screenPoints->v = src;
+	screenPoints.num = 0;
+	screenPoints.v = src;
 }
 
 void Opt3Dinit()
@@ -294,11 +294,10 @@ void Opt3Drun(unsigned char *buffer, int ticks)
 	ticks >>= 1;
 
 	initScreenPoints(transformedGridVertices);
-
 	rotateVertices(objectAxesVertices, transformedAxesVertices, 3, ticks);
 	generateAxesVertices(transformedAxesVertices);
 
 	transformAndProjectAxesBoxDotsEffect();
 
-	drawBlobs(screenPoints->v, screenPoints->num, buffer);
+	drawBlobs(screenPoints.v, screenPoints.num, buffer);
 }

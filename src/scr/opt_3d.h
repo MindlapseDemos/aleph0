@@ -25,5 +25,6 @@ void Opt3Dfree(void);
 void Opt3Drun(unsigned char *buffer, int ticks);
 
 unsigned char *getDotsVolumeBuffer();
+void drawBoxLines();
 
 #endif

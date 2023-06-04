@@ -109,15 +109,13 @@ static void MulManyVec3Mat33(Vertex3D *dst, Vertex3D *src, int *m, int count)
 static void translateAndProjectVertices(Vertex3D *src, Vertex3D *dst, int count)
 {
 	int i;
-	const int offsetX = (int)(FB_WIDTH >> 1);
-	const int offsetY = (int)(FB_HEIGHT >> 1);
 
 	for (i=0; i<count; i++) {
 		const int vz = src[i].z + OBJECT_POS_Z;
 		dst[i].z = vz;
 		if (vz > 0) {
-			dst[i].x = offsetX + (src[i].x * PROJ_MUL) / vz;
-			dst[i].y = offsetY + (src[i].y * PROJ_MUL) / vz;
+			dst[i].x = FB_WIDTH / 2 + (src[i].x * PROJ_MUL) / vz;
+			dst[i].y = FB_HEIGHT / 2 + (src[i].y * PROJ_MUL) / vz;
 		}
 	}
 }
@@ -156,9 +154,6 @@ static void transformAndProjectAxesBoxDotsEffect()
 {
 	unsigned char *src = volumeData;
 
-	const int offsetX = (int)(FB_WIDTH >> 1);
-	const int offsetY = (int)(FB_HEIGHT >> 1);
-
 	Vertex3D *dst = screenPoints.v;
 	Vertex3D *axisZ = axisVerticesZ;
 	int countZ = VERTICES_DEPTH;
@@ -175,8 +170,8 @@ static void transformAndProjectAxesBoxDotsEffect()
 					const int sz = AFTER_MUL_ADDS(axisX->z + axisY->z + axisZ->z, FP_CORE) + OBJECT_POS_Z;
 					if (sz > 0 && sz < REC_DIV_Z_MAX) {
 						const int recZ = recDivZ[(int)sz];
-						const int sx = offsetX + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);
-						const int sy = offsetY + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);
+						const int sx = FB_WIDTH / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);
+						const int sy = FB_HEIGHT / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);
 
 						dst->x = sx;
 						dst->y = sy;
@@ -289,6 +284,48 @@ void Opt3Dfree()
 	}
 }
 
+static void drawQuadLines(Vertex3D *v0, Vertex3D *v1, Vertex3D *v2, Vertex3D *v3, unsigned char *buffer, int orderSign)
+{
+	if (orderSign * ((v0->x - v1->x) * (v2->y - v1->y) - (v2->x - v1->x) * (v0->y - v1->y)) <= 0) {
+		const int shadeShift = 3 - orderSign;
+		drawAntialiasedLine(v0, v1, shadeShift, buffer);
+		drawAntialiasedLine(v1, v2, shadeShift, buffer);
+		drawAntialiasedLine(v2, v3, shadeShift, buffer);
+		drawAntialiasedLine(v3, v0, shadeShift, buffer); 
+	}
+}
+
+void drawBoxLines(unsigned char *buffer, int orderSign)
+{
+	Vertex3D v[8];
+	int x,y,z,i=0;
+
+	for (z=0; z<=1; ++z) {
+		Vertex3D *axisZ = &axisVerticesZ[z * (VERTICES_DEPTH-1)];
+		for (y=0; y<=1; ++y) {
+			Vertex3D *axisY = &axisVerticesY[y * (VERTICES_HEIGHT-1)];
+			for (x=0; x<=1; ++x) {
+				Vertex3D *axisX = &axisVerticesX[x * (VERTICES_WIDTH-1)];
+				const int sz = AFTER_MUL_ADDS(axisX->z + axisY->z + axisZ->z, FP_CORE) + OBJECT_POS_Z;
+				if (sz > 0 && sz < REC_DIV_Z_MAX) {
+					const int recZ = recDivZ[(int)sz];
+					v[i].x = FB_WIDTH / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);
+					v[i].y = FB_HEIGHT / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);
+					v[i].z = sz;
+				}
+				++i;
+			}
+		}
+	}
+
+	drawQuadLines(&v[0], &v[1], &v[3], &v[2], buffer, orderSign);
+	drawQuadLines(&v[1], &v[5], &v[7], &v[3], buffer, orderSign);
+	drawQuadLines(&v[5], &v[4], &v[6], &v[7], buffer, orderSign);
+	drawQuadLines(&v[4], &v[0], &v[2], &v[6], buffer, orderSign);
+	drawQuadLines(&v[2], &v[3], &v[7], &v[6], buffer, orderSign);
+	drawQuadLines(&v[4], &v[5], &v[1], &v[0], buffer, orderSign);
+}
+
 void Opt3Drun(unsigned char *buffer, int ticks)
 {
 	ticks >>= 1;
@@ -299,5 +336,9 @@ void Opt3Drun(unsigned char *buffer, int ticks)
 
 	transformAndProjectAxesBoxDotsEffect();
 
+	drawBoxLines(buffer, -1);
+
 	drawBlobs(screenPoints.v, screenPoints.num, buffer);
+
+	drawBoxLines(buffer, 1);
 }

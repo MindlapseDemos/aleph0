@@ -11,6 +11,9 @@
 #define BLOB_SIZEX_PAD 4
 #define MAX_BLOB_COLOR 15
 
+#define LN_BASE 8
+#define LN_AND ((1 << LN_BASE) - 1)
+
 
 static BlobData blobData[BLOB_SIZES_NUM_MAX][BLOB_SIZEX_PAD];
 
@@ -156,6 +159,83 @@ void drawBlob(int posX, int posY, int size, int shift, unsigned char *blobBuffer
 			}
 			src += wordsX;
 			dst += FB_WIDTH / 4;
+		}
+	}
+}
+
+void drawAntialiasedLine(Vertex3D *v1, Vertex3D *v2, int shadeShift, unsigned char *buffer)
+{
+	int x1 = v1->x;
+	int y1 = v1->y;
+	int x2 = v2->x;
+	int y2 = v2->y;
+
+	int vramofs;
+	int frac, shade;
+
+    int chdx, chdy;
+
+	int dx = x2 - x1;
+	int dy = y2 - y1;
+
+	if (dx==0 && dy==0) return;
+
+    chdx = dx;
+	chdy = dy;
+    if (dx<0) chdx = -dx;
+    if (dy<0) chdy = -dy;
+
+	if (chdy < chdx) {
+		int x, yy, ddy;
+		if (x1 > x2) {
+			int temp = x1; x1 = x2; x2 = temp;
+			y1 = y2;
+		}
+
+		if (dx==0) return;
+        ddy = (dy << LN_BASE) / dx;
+        yy = y1 << LN_BASE;
+		for (x=x1; x<x2; x++) {
+			const int yp = yy >> LN_BASE;
+
+			if (x >= 0 && x < FB_WIDTH && yp >=0 && yp < FB_HEIGHT - 1) {
+				vramofs = yp*FB_WIDTH + x;
+				frac = yy & LN_AND;
+
+				shade = (LN_AND - frac) >> shadeShift;
+				*(buffer + vramofs) |= shade;
+
+				shade = frac >> shadeShift;
+				*(buffer + vramofs+FB_WIDTH) |= shade;
+			}
+            yy+=ddy;
+		}
+	}
+	else {
+		int y, xx, ddx;
+		if (y1 > y2) {
+			int temp = y1; y1 = y2; y2 = temp;
+			x1 = x2;
+		}
+
+		if (dy==0) return;
+        ddx = (dx << LN_BASE) / dy;
+        xx = x1 << LN_BASE;
+
+		for (y=y1; y<y2; y++) {
+			const int xp = xx >> LN_BASE;
+
+			if (y >= 0 && y < FB_HEIGHT && xp >=0 && xp < FB_WIDTH - 1) {
+				vramofs = y*FB_WIDTH + xp;
+				frac = xx & LN_AND;
+
+				shade = (LN_AND - frac) >> shadeShift;
+				*(buffer + vramofs) |= shade;
+
+				shade = frac >> shadeShift;
+				*(buffer + vramofs + 1) |= shade;
+			}
+            xx+=ddx;
 		}
 	}
 }

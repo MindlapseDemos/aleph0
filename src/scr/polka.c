@@ -30,6 +30,9 @@ static unsigned char *psin1, *psin2, *psin3;
 static unsigned char *blob3D;
 static Vertex3D blobPos[NUM_BLOBS];
 
+static int *radius;
+static int *latitude;
+static int *longitude;
 
 static struct screen scr = {
 	"polka",
@@ -71,6 +74,56 @@ static void updateDotsVolumeBufferPlasma(int t)
 			} while(--countX != 0);
 		} while(--countY != 0);
 	} while(--countZ != 0);
+}
+
+static void updateDotsVolumeBufferRadial(int t)
+{
+	int i;
+	const int tt = t >> 4;
+	const int size = VERTICES_WIDTH * VERTICES_HEIGHT * VERTICES_DEPTH;
+	const int thres1 = VERTICES_WIDTH / 2;
+	const int thres2 = thres1 + 3;
+
+	unsigned char *dst = getDotsVolumeBuffer();
+
+	for (i=0; i<size; ++i) {
+		const int r1 = latitude[i];
+		const int r2 = longitude[i];
+		const int r = radius[i] + (psin1[(r1-tt) & 2047] >> 5) + (psin2[(r2+tt) & 2047] >> 5);
+
+		if (r >= thres1 && r <= thres2) {
+			const int rr = 32 + ((r - thres1) << 4);
+			*dst = rr;
+		} else {
+			*dst = 0;
+		}
+
+		++dst;
+	}
+}
+
+static void updateDotsVolumeBufferFireball(int t)
+{
+	int i;
+	const int size = VERTICES_WIDTH * VERTICES_HEIGHT * VERTICES_DEPTH;
+	const int thres1 = (VERTICES_WIDTH * VERTICES_WIDTH) / 8;
+	const int thres2 = thres1 + 64;
+
+	unsigned char *dst = getDotsVolumeBuffer();
+
+	for (i=0; i<size; ++i) {
+		const int r = radius[i];
+		if (r >= thres1 && r <= thres2) {
+			*dst = 255;
+		} else {
+			*dst = 0;
+		}
+		++dst;
+	}
+}
+
+static void updateDotsVolumeBufferRandomWalk(int t)
+{
 }
 
 static void drawBlob3D(Vertex3D *pos, unsigned char *buffer)
@@ -166,6 +219,33 @@ static void initBlobs3D()
 	}
 }
 
+static void initRadialEffects()
+{
+	int x,y,z,i;
+	const int size = VERTICES_WIDTH * VERTICES_HEIGHT * VERTICES_DEPTH;
+
+	radius = (int*)malloc(size * sizeof(int));
+	latitude = (int*)malloc(size * sizeof(int));
+	longitude = (int*)malloc(size * sizeof(int));
+
+	i = 0;
+	for (z=0; z<VERTICES_DEPTH; ++z) {
+		const float zc = (float)z - VERTICES_DEPTH/2;
+		for (y=0; y<VERTICES_HEIGHT; ++y) {
+			const float yc = (float)y - VERTICES_HEIGHT/2;
+			for (x=0; x<VERTICES_WIDTH; ++x) {
+				const float xc = (float)x - VERTICES_WIDTH/2;
+				const float r = sqrt(xc*xc + yc*yc + zc*zc);
+
+				radius[i] = (int)r;
+				latitude[i] = (int)((atan2(yc,xc) * 256) / (2.0 * M_PI)) + 128;
+				longitude[i] = (int)((acos(zc / r) * 256) / M_PI);
+				++i;
+			}
+		}
+	}
+}
+
 static int init(void)
 {
 	int i;
@@ -194,6 +274,7 @@ static int init(void)
 
 	initPlasma3D();
 	initBlobs3D();
+	initRadialEffects();
 
 	return 0;
 }
@@ -211,6 +292,10 @@ static void destroy(void)
 	free(psin3);
 
 	free(blob3D);
+
+	free(radius);
+	free(latitude);
+	free(longitude);
 }
 
 static void start(long trans_time)
@@ -224,8 +309,11 @@ static void draw(void)
 	
 	memset(polkaBuffer, 0, FB_WIDTH * FB_HEIGHT);
 
-	updateDotsVolumeBufferPlasma(t);
+	//updateDotsVolumeBufferPlasma(t);
 	//updateDotsVolumeBufferBlobs(t);
+	updateDotsVolumeBufferRadial(t);
+	//updateDotsVolumeBufferFireball(t);
+	//updateDotsVolumeBufferRandomWalk(t);
 
 	Opt3Drun(polkaBuffer, t);
 

@@ -239,3 +239,33 @@ void drawAntialiasedLine(Vertex3D *v1, Vertex3D *v2, int shadeShift, unsigned ch
 		}
 	}
 }
+
+void setPalGradient(int c0, int c1, int r0, int g0, int b0, int r1, int g1, int b1, unsigned short* pal)
+{
+	int i;
+	const int dc = (c1 - c0);
+	const int dr = ((r1 - r0) << 16) / dc;
+	const int dg = ((g1 - g0) << 16) / dc;
+	const int db = ((b1 - b0) << 16) / dc;
+
+	r0 <<= 16;
+	g0 <<= 16;
+	b0 <<= 16;
+
+	for (i = c0; i <= c1; i++)
+	{
+		int r = r0 >> 16;
+		int g = g0 >> 16;
+		int b = b0 >> 16;
+
+		if (r < 0) r = 0; if (r > 31) r = 31;
+		if (g < 0) g = 0; if (g > 63) g = 63;
+		if (b < 0) b = 0; if (b > 31) b = 31;
+
+		pal[i] = (r<<11) | (g<<5) | b;
+
+		r0 += dr;
+		g0 += dg;
+		b0 += db;
+	}
+}

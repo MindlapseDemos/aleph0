@@ -102,6 +102,33 @@ static void updateDotsVolumeBufferRadial(int t)
 	}
 }
 
+static void updateDotsVolumeBufferRadialRays(int t)
+{
+	int i;
+	const int tt = t >> 4;
+	const int size = VERTICES_WIDTH * VERTICES_HEIGHT * VERTICES_DEPTH;
+	const int thres = 192;
+
+	unsigned char *dst = getDotsVolumeBuffer();
+
+	for (i=0; i<size; ++i) {
+		const int r1 = latitude[i];
+		const int r2 = longitude[i];
+		const int r = radius[i];
+		const int d = (psin1[(r1-tt) & 2047] + psin2[(r2+tt) & 2047] + psin3[(r1+r2+tt) & 2047]) & 255;
+
+		if (d >= thres) {
+			int rr = 255 - ((r*r) >> 1);
+			if (rr < 0) rr = 0;
+			*dst = rr;
+		} else {
+			*dst = 0;
+		}
+
+		++dst;
+	}
+}
+
 static void updateDotsVolumeBufferFireball(int t)
 {
 	int i;
@@ -256,19 +283,8 @@ static int init(void)
 	polkaBuffer = (unsigned char*)malloc(FB_WIDTH * FB_HEIGHT);
 	polkaPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
 
-	for (i=0; i<128; i++) {
-		int r = i >> 2;
-		int g = i >> 1;
-		int b = i >> 1;
-		if (b > 31) b = 31;
-		polkaPal[i] = (r<<11) | (g<<5) | b;
-	}
-	for (i=128; i<256; i++) {
-		int r = 31 - ((i-128) >> 4);
-		int g = 63 - ((i-128) >> 2);
-		int b = 31 - ((i-128) >> 3);
-		polkaPal[i] = (r<<11) | (g<<5) | b;
-	}
+	setPalGradient(0,127, 0,0,0, 31,63,63, polkaPal);
+	setPalGradient(128,255, 31,63,31, 23,15,7, polkaPal);
 
 	polkaPal32 = createColMap16to32(polkaPal);
 
@@ -311,7 +327,8 @@ static void draw(void)
 
 	//updateDotsVolumeBufferPlasma(t);
 	//updateDotsVolumeBufferBlobs(t);
-	updateDotsVolumeBufferRadial(t);
+	//updateDotsVolumeBufferRadial(t);
+	updateDotsVolumeBufferRadialRays(t);
 	//updateDotsVolumeBufferFireball(t);
 	//updateDotsVolumeBufferRandomWalk(t);
 

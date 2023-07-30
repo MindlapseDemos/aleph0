@@ -90,19 +90,8 @@ static int init(void)
 	blobBuffer = (unsigned char*)malloc(FB_WIDTH * FB_HEIGHT);
 	blobsPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
 
-	for (i=0; i<128; i++) {
-		int r = i >> 2;
-		int g = i >> 1;
-		int b = i >> 1;
-		if (b > 31) b = 31;
-		blobsPal[i] = (r<<11) | (g<<5) | b;
-	}
-	for (i=128; i<256; i++) {
-		int r = 31 - ((i-128) >> 4);
-		int g = 63 - ((i-128) >> 2);
-		int b = 31 - ((i-128) >> 3);
-		blobsPal[i] = (r<<11) | (g<<5) | b;
-	}
+	setPalGradient(0,127, 0,0,0, 31,63,63, blobsPal);
+	setPalGradient(128,255, 31,63,31, 23,15,7, blobsPal);
 
 	blobsPal32 = createColMap16to32(blobsPal);
 

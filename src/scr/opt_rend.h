@@ -22,4 +22,6 @@ void drawBlob(int posX, int posY, int size, int shift, unsigned char *blobBuffer
 void drawBlobs(Vertex3D *v, int count, unsigned char *blobBuffer);
 void drawAntialiasedLine(Vertex3D *v1, Vertex3D *v2, int shadeShift, unsigned char *buffer);
 
+void setPalGradient(int c0, int c1, int r0, int g0, int b0, int r1, int g1, int b1, unsigned short* pal);
+
 #endif

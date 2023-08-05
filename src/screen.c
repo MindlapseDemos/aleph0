@@ -35,6 +35,7 @@ struct screen *blobgrid_screen(void);
 struct screen *break_screen(void);
 struct screen *polka_screen(void);
 struct screen *dott_screen(void);
+struct screen *water_screen(void);
 
 void start_loadscr(void);
 void end_loadscr(void);
@@ -75,6 +76,7 @@ void populate_screens(void)
 	scr[idx++] = break_screen();
 	scr[idx++] = polka_screen();
 	scr[idx++] = dott_screen();
+	scr[idx++] = water_screen();
 
 	num_screens = idx;
 	assert(num_screens <= NUM_SCR);

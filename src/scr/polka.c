@@ -153,6 +153,68 @@ static void updateDotsVolumeBufferRandomWalk(int t)
 {
 }
 
+static float qp[13*4] = {	-1.0f, 0.2f, 0.0f, 0.0f, 
+						-0.291f, -0.399f, 0.339f, 0.437f, 
+						-0.2f, 0.4f, -0.4f, -0.4f, 
+						-0.213f, -0.041f, -0.563f, -0.56f,
+						-0.2f, 0.6f, 0.2f, 0.2f, 
+						-0.162f, 0.163f, 0.56f, -0.599f, 
+						-0.2f, 0.8f, 0.0f, 0.0f, 
+						-0.445f, 0.339f, -0.0889f, -0.562f, 
+						0.185f, 0.478f, 0.125f, -0.392f, 
+						-0.45f, -0.447f, 0.181f, 0.306f, 
+						-0.218f, -0.113f, -0.181f, -0.496f, 
+						-0.137f, -0.630f, -0.475f, -0.046f, 
+						-0.125f, -0.256f, 0.847f, 0.0895f };
+
+static void updateDotsVolumeBufferQuaternionJulia(int t)
+{
+	int x,y,z;
+
+	unsigned char *dst = getDotsVolumeBuffer();
+
+	const int index = (t >> 9) % 13;
+
+	const float xp = qp[4*index];
+	const float yp = qp[4*index+1];
+	const float zp = qp[4*index+2];
+	const float wp = qp[4*index+3];
+
+	/*const float xp = sin(t * 0.0004f) * 0.4f;
+	const float yp = sin(t * 0.0003f) * 0.4f;
+	const float zp = sin(t * 0.0002f) * 0.4f;
+	const float wp = sin(t * 0.0001f) * 0.6f;*/
+
+	for (z=0; z<VERTICES_DEPTH; ++z) {
+		for (y=0; y<VERTICES_HEIGHT; ++y) {
+			for (x=0; x<VERTICES_WIDTH; ++x) {
+				float xc = ((float)x - VERTICES_WIDTH/2) / (VERTICES_WIDTH/2);
+				float yc = ((float)y - VERTICES_HEIGHT/2) / (VERTICES_HEIGHT/2);
+				float zc = ((float)z - VERTICES_DEPTH/2) / (VERTICES_DEPTH/2);
+				float wc = 0;//zc;
+
+				int i;
+				for (i=0; i<16; ++i) {
+					const float xd = xc*xc - yc*yc - zc*zc - wc*wc + xp;
+					const float yd = 2 * xc * yc + yp;
+					const float zd = 2 * xc * zc + zp;
+					const float wd = 2 * xc * wc + wp;
+
+					const float r = xd*xd + yd*yd + zd*zd + wd*wd;
+					if (r > 2.0f) break;
+					
+					xc = xd;
+					yc = yd;
+					zc = zd;
+					wc = wd;
+				}
+				if (i < 12) i = 0;
+				*dst++ = i << 2;
+			}
+		}
+	}
+}
+
 static void drawBlob3D(Vertex3D *pos, unsigned char *buffer)
 {
 	int x,y,z;
@@ -328,9 +390,12 @@ static void draw(void)
 	//updateDotsVolumeBufferPlasma(t);
 	//updateDotsVolumeBufferBlobs(t);
 	//updateDotsVolumeBufferRadial(t);
-	updateDotsVolumeBufferRadialRays(t);
+	//updateDotsVolumeBufferRadialRays(t);
+
 	//updateDotsVolumeBufferFireball(t);
 	//updateDotsVolumeBufferRandomWalk(t);
+
+	updateDotsVolumeBufferQuaternionJulia(t);
 
 	Opt3Drun(polkaBuffer, t);
 

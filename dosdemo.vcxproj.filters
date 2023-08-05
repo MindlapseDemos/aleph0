@@ -141,6 +141,9 @@
     <ClCompile Include="src\scr\plasma.c">
       <Filter>src\screens</Filter>
     </ClCompile>
+    <ClCompile Include="src\scr\water.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
     <ClCompile Include="src\scr\polytest.c">
       <Filter>src\screens</Filter>
     </ClCompile>

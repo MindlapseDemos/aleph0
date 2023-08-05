@@ -173,17 +173,16 @@ static void updateDotsVolumeBufferQuaternionJulia(int t)
 
 	unsigned char *dst = getDotsVolumeBuffer();
 
-	const int index = (t >> 9) % 13;
-
+	const int index = (t >> 10) % 13;
 	const float xp = qp[4*index];
 	const float yp = qp[4*index+1];
 	const float zp = qp[4*index+2];
 	const float wp = qp[4*index+3];
 
-	/*const float xp = sin(t * 0.0004f) * 0.4f;
-	const float yp = sin(t * 0.0003f) * 0.4f;
-	const float zp = sin(t * 0.0002f) * 0.4f;
-	const float wp = sin(t * 0.0001f) * 0.6f;*/
+	/*const float xp = sin(t * 0.004f) * 0.4f;
+	const float yp = sin(t * 0.003f) * 0.4f;
+	const float zp = sin(t * 0.002f) * 0.4f;
+	const float wp = sin(t * 0.001f) * 0.6f;*/
 
 	for (z=0; z<VERTICES_DEPTH; ++z) {
 		for (y=0; y<VERTICES_HEIGHT; ++y) {
@@ -324,7 +323,9 @@ static void initRadialEffects()
 			const float yc = (float)y - VERTICES_HEIGHT/2;
 			for (x=0; x<VERTICES_WIDTH; ++x) {
 				const float xc = (float)x - VERTICES_WIDTH/2;
-				const float r = sqrt(xc*xc + yc*yc + zc*zc);
+
+				float r = sqrt(xc*xc + yc*yc + zc*zc);
+				if (r<0.001f) r = 0.001f;
 
 				radius[i] = (int)r;
 				latitude[i] = (int)((atan2(yc,xc) * 256) / (2.0 * M_PI)) + 128;
@@ -384,18 +385,29 @@ static void start(long trans_time)
 static void draw(void)
 {
 	const int t = time_msec - startingTime;
+	const int tt = (t >> 13) & 3;
 	
 	memset(polkaBuffer, 0, FB_WIDTH * FB_HEIGHT);
 
 	//updateDotsVolumeBufferPlasma(t);
 	//updateDotsVolumeBufferBlobs(t);
-	//updateDotsVolumeBufferRadial(t);
-	//updateDotsVolumeBufferRadialRays(t);
+
+	switch(tt) {
+		case 0:
+			updateDotsVolumeBufferRadial(t);
+		break;
+
+		case 1:
+			updateDotsVolumeBufferRadialRays(t);
+		break;
+
+		default:
+			updateDotsVolumeBufferQuaternionJulia(t);
+		break;
+	}
 
 	//updateDotsVolumeBufferFireball(t);
 	//updateDotsVolumeBufferRandomWalk(t);
-
-	updateDotsVolumeBufferQuaternionJulia(t);
 
 	Opt3Drun(polkaBuffer, t);
 

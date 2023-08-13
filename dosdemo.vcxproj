@@ -112,9 +112,10 @@
     <ClCompile Include="src\screen.c" />
     <ClCompile Include="src\scr\bump.c" />
     <ClCompile Include="src\scr\cybersun.c" />
-	<ClCompile Include="src\scr\dott.c" />
-	<ClCompile Include="src\scr\polka.c" />
-	<ClCompile Include="src\scr\opt_3d.c" />
+    <ClCompile Include="src\scr\dott.c" />
+	 <ClCompile Include="src\scr\polka.c" />
+	 <ClCompile Include="src\scr\opt_3d.c" />
+	 <ClCompile Include="src\scr\opt_rend.c" />
     <ClCompile Include="src\scr\fract.c" />
     <ClCompile Include="src\scr\greets.c" />
     <ClCompile Include="src\scr\grise.c" />
@@ -123,6 +124,7 @@
     <ClCompile Include="src\scr\metaball.c" />
     <ClCompile Include="src\scr\minifx.c" />
     <ClCompile Include="src\scr\plasma.c" />
+	<ClCompile Include="src\scr\water.c" />
     <ClCompile Include="src\scr\polytest.c" />
     <ClCompile Include="src\scr\raytrace.c" />
     <ClCompile Include="src\scr\smoketxt.c" />

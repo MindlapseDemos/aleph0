@@ -53,4 +53,6 @@ void overlay_add_full(uint16_t *dest, uint16_t *src);
 extern void (*overlay_alpha)(struct image *dest, int x, int y, const struct image *src,
 		int width, int height);
 
+void draw_billboard(float x, float y, float z, float size, int r, int g, int b, int a);
+
 #endif	/* GFXUTIL_H_ */

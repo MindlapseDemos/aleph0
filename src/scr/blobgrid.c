@@ -7,6 +7,9 @@
 #include "demo.h"
 #include "screen.h"
 
+#include "opt_rend.h"
+
+
 typedef struct BlobGridParams
 {
 	int effectIndex;
@@ -20,21 +23,14 @@ typedef struct BlobGridParams
 
 //#define STARS_NORMAL
 
-#define BLOB_SIZES_NUM_MAX 16
-#define BLOB_SIZEX_PAD 4
-#define MAX_BLOB_COLOR 15
-#define BLOB_SHIFT_MAX 2
 #define MAX_NUM_POINTS 256
-
 #define NUM_STARS MAX_NUM_POINTS
 #define STARS_CUBE_LENGTH 1024
 #define STARS_CUBE_DEPTH 512
 
-#define CLAMP01(v) if (v < 0.0f) v = 0.0f; if (v > 1.0f) v = 1.0f;
-
 BlobGridParams bgParams0 = { 0, 64, 10, 8192, 32};
 BlobGridParams bgParams1 = { 1, 80, 8, 4096, 32};
-BlobGridParams bgParamsStars = { 2, NUM_STARS, 6, 4096, 16};
+BlobGridParams bgParamsStars = { 2, NUM_STARS, 7, 4096, 16};
 
 
 typedef struct Pos3D
@@ -50,14 +46,6 @@ static unsigned long startingTime;
 static unsigned short *blobsPal;
 static unsigned int *blobsPal32;
 static unsigned char *blobBuffer;
-
-typedef struct BlobData
-{
-	int sizeX, sizeY;
-	unsigned char *data;
-} BlobData;
-
-BlobData blobData[BLOB_SIZES_NUM_MAX][BLOB_SIZEX_PAD];
 
 
 static int init(void);
@@ -79,43 +67,6 @@ struct screen *blobgrid_screen(void)
 	return &scr;
 }
 
-static void initBlobGfx()
-{
-	int i,j,x,y;
-	float r;
-
-	for (i=0; i<BLOB_SIZES_NUM_MAX; ++i) {
-		const int blobSizeY = i+3;	// 3 to 15
-		const int blobSizeX = (((blobSizeY+3) >> 2) << 2) + BLOB_SIZEX_PAD;    // We are padding this, as we generate four pixels offset (for dword rendering)
-		const float blobSizeYhalf = blobSizeY / 2.0f;
-		const float blobSizeXhalf = blobSizeX / 2.0f;
-
-		for (j=0; j<BLOB_SIZEX_PAD; ++j) {
-			unsigned char *dst;
-
-			blobData[i][j].sizeX = blobSizeX;
-			blobData[i][j].sizeY = blobSizeY;
-
-			blobData[i][j].data = (unsigned char*)malloc(blobSizeX * blobSizeY);
-			dst = blobData[i][j].data;
-
-			for (y=0; y<blobSizeY; ++y) {
-				const float yc = (float)y - blobSizeYhalf + 0.5f;
-				float yci = fabs(yc / (blobSizeYhalf - 0.5f));
-
-				for (x=0; x<blobSizeX; ++x) {
-					const int xc = (float)(x - j) - blobSizeXhalf + 0.5f;
-					float xci = fabs(xc / (blobSizeYhalf - 0.5f));
-
-					r = 1.0f - (xci*xci + yci*yci);
-					CLAMP01(r)
-					*dst++ = (int)(pow(r, 2.0f) * MAX_BLOB_COLOR);
-				}
-			}
-		}
-	}
-}
-
 static void initStars(void)
 {
 	int i;
@@ -133,36 +84,16 @@ static int init(void)
 {
 	int i,j,k;
 
-	blobsPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
-	blobsPal32 = (unsigned int*)malloc(sizeof(unsigned int) * 256 * 256);
-
 	origPos = (Pos3D*)malloc(sizeof(Pos3D) * MAX_NUM_POINTS);
 	screenPos = (Pos3D*)malloc(sizeof(Pos3D) * MAX_NUM_POINTS);
 
-	for (i=0; i<128; i++) {
-		int r = i >> 2;
-		int g = i >> 1;
-		int b = i >> 1;
-		if (b > 31) b = 31;
-		blobsPal[i] = (r<<11) | (g<<5) | b;
-	}
-	for (i=128; i<256; i++) {
-		int r = 31 - ((i-128) >> 4);
-		int g = 63 - ((i-128) >> 2);
-		int b = 31 - ((i-128) >> 3);
-		blobsPal[i] = (r<<11) | (g<<5) | b;
-	}
-
-	k = 0;
-	for (j=0; j<256; ++j) {
-		const int c0 = blobsPal[j];
-		for (i=0; i<256; ++i) {
-			const int c1 = blobsPal[i];
-			blobsPal32[k++] = (c0 << 16) | c1;
-		}
-	}
-
 	blobBuffer = (unsigned char*)malloc(FB_WIDTH * FB_HEIGHT);
+	blobsPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
+
+	setPalGradient(0,127, 0,0,0, 31,63,63, blobsPal);
+	setPalGradient(128,255, 31,63,31, 23,15,7, blobsPal);
+
+	blobsPal32 = createColMap16to32(blobsPal);
 
 	initBlobGfx();
 
@@ -182,77 +113,6 @@ static void destroy(void)
 static void start(long trans_time)
 {
 	startingTime = time_msec;
-}
-
-static void drawBlob(int posX, int posY, int size, int shift)
-{
-	int x,y;
-	
-	BlobData *bd = &blobData[size][0];
-	const int sizeX = bd->sizeX;
-	const int sizeY = bd->sizeY;
-
-	unsigned char *dst = (unsigned char*)blobBuffer + (posY - sizeY / 2) * FB_WIDTH + posX - sizeX / 2;
-
-	unsigned char *src = bd->data;
-
-	for (y=0; y<sizeY; ++y) {
-		for (x=0; x<sizeX; ++x) {
-			int c = *(dst + x) + *(src + x);
-			if (c > 255) c = 255;
-			*(dst + x) = c;
-		}
-		src += sizeX;
-		dst += FB_WIDTH;
-	}
-}
-
-static void drawBlob32(int posX, int posY, int size, int shift)
-{
-	int x,y;
-	const int posX32 = posX & ~(BLOB_SIZEX_PAD-1);
-	
-	BlobData *bd = &blobData[size][posX & (BLOB_SIZEX_PAD-1)];
-	const int sizeX = bd->sizeX;
-	const int sizeY = bd->sizeY;
-
-	unsigned int *dst = (unsigned int*)(blobBuffer + (posY - sizeY / 2) * FB_WIDTH + (posX32 - sizeX / 2));
-
-	const int wordsX = sizeX / 4;
-	unsigned int *src = (unsigned int*)bd->data;
-
-	if (posX <= sizeX / 2 || posX >= FB_WIDTH - sizeX / 2 || posY <= sizeY / 2 || posY >= FB_HEIGHT - sizeY / 2) return;
-
-	for (y=0; y<sizeY; ++y) {
-		for (x=0; x<wordsX; ++x) {
-			unsigned int c = *(dst+x) + (*(src+x) << shift);
-			*(dst+x) = c;
-		}
-		src += wordsX;
-		dst += FB_WIDTH / 4;
-	}
-}
-
-static void blobBufferToVram32()
-{
-	int i;
-	unsigned short *src = (unsigned short*)blobBuffer;
-	unsigned int *dst = (unsigned int*)fb_pixels;
-
-	for (i=0; i<FB_WIDTH * FB_HEIGHT / 2; ++i) {
-		*dst++ = blobsPal32[*src++];
-	}
-}
-
-static void blobBufferToVram()
-{
-	int i;
-	unsigned char *src = blobBuffer;
-	unsigned short *dst = (unsigned short*)fb_pixels;
-
-	for (i=0; i<FB_WIDTH * FB_HEIGHT; ++i) {
-		*dst++ = blobsPal[*src++];
-	}
 }
 
 static void drawConnections(BlobGridParams *params)
@@ -289,7 +149,7 @@ static void drawConnections(BlobGridParams *params)
 						if (iii < 0) iii = 0; if (iii > blobSizesNum-1) iii = blobSizesNum-1;
 						px += dx;
 						py += dy;
-						drawBlob32(px>>FP_PT, py>>FP_PT,blobSizesNum - 1 - iii, 0);
+						drawBlob(px>>FP_PT, py>>FP_PT,blobSizesNum - 1 - iii, 0, blobBuffer);
 					}
 				}
 			}
@@ -353,7 +213,7 @@ static void drawConnections3D(BlobGridParams *params)
 						px += dx;
 						py += dy;
 						ti += dl;
-						drawBlob32(px>>FP_PT, py>>FP_PT, size, 0);
+						drawBlob(px>>FP_PT, py>>FP_PT, size, 0, blobBuffer);
 					}
 				}
 			}
@@ -382,7 +242,7 @@ static void drawStars(BlobGridParams *params)
 			int size = ((blobSizesNum - 1) * (STARS_CUBE_DEPTH - z)) / STARS_CUBE_DEPTH;
 			int shifter = (4 * (STARS_CUBE_DEPTH - z)) / STARS_CUBE_DEPTH;
 
-			drawBlob32(xp,yp,size,shifter);
+			drawBlob(xp,yp,size,shifter,blobBuffer);
 
 			dst->x = xp;
 			dst->y = yp;
@@ -404,7 +264,7 @@ static void drawPoints(BlobGridParams *params, int t)
 			do {
 				dst->x = FB_WIDTH / 2 + (int)(sin((t + 478*count)/2924.0) * 148);
 				dst->y = FB_HEIGHT / 2 + (int)(sin((t + 524*count)/2638.0) * 96);
-				drawBlob32(dst->x,dst->y,blobSizesNum>>1,2);
+				drawBlob(dst->x,dst->y,blobSizesNum>>1,2,blobBuffer);
 				++dst;
 			} while(--count != 0);
 			drawConnections(params);
@@ -414,7 +274,7 @@ static void drawPoints(BlobGridParams *params, int t)
 			do {
 				dst->x = FB_WIDTH / 2 + (int)(sin((t/2 + 768*count)/2624.0) * 148);
 				dst->y = FB_HEIGHT / 2 + (int)(sin((t/2 + 624*count)/1238.0) * 96);
-				drawBlob32(dst->x,dst->y,blobSizesNum>>1,3);
+				drawBlob(dst->x,dst->y,blobSizesNum>>1,3,blobBuffer);
 				++dst;
 			} while(--count != 0);
 			drawConnections(params);
@@ -449,7 +309,8 @@ static void moveStars(int t)
 static void drawEffect(BlobGridParams *params, int t)
 {
 	static int prevT = 0;
-	if (t - prevT > 20) {
+	const int dt = t - prevT;
+	if (dt < 0 || dt > 20) {
 		moveStars(t);
 		prevT = t;
 	}
@@ -463,12 +324,11 @@ static void draw(void)
 	const int t = time_msec - startingTime;
 
 	memset(blobBuffer, 0, FB_WIDTH * FB_HEIGHT);
-	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
 
 	//drawEffect(&bgParams1, t);
 	drawEffect(&bgParamsStars, t);
 
-	blobBufferToVram32();
+	buffer8bppToVram(blobBuffer, blobsPal32);
 
 	swap_buffers(0);
 }

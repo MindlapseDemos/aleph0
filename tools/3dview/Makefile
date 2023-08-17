@@ -12,11 +12,11 @@ obj = $(src:.c=.o)
 bin = 3dview
 
 incdir = -I$(demosrcdir) -I$(demosrcdir)/3dgfx -I$(demosrcdir)/glut \
-		 -I$(libs_dir)/goat3d/include -I$(libs_dir)/imago/src
+		 -I$(libs_dir) -I$(libs_dir)/goat3d/include -I$(libs_dir)/imago/src
 libdir = -L$(libs_dir)/goat3d -L$(libs_dir)/imago
 
 CFLAGS = $(arch) -pedantic -Wall -g $(incdir)
-LDFLAGS = $(arch) -no-pie -Wl,-rpath,. $(libdir) $(libgl) -lgoat3d -lzlibstatic -lassimp \
+LDFLAGS = $(arch) -no-pie -Wl,-rpath,. $(libdir) $(libgl) -lgoat3d -lassimp \
 		  -limago -lm
 
 cpu ?= $(shell uname -m | sed 's/i.86/i386/')
@@ -26,7 +26,7 @@ endif
 
 sys ?= $(shell uname -s | sed 's/MINGW.*/mingw/')
 ifeq ($(sys), mingw)
-	libgl = -lopengl32 -lglu32 -lwinmm
+	libgl = -lopengl32 -lglu32 -lwinmm -lgdi32
 	bin = 3dview.exe
 
 	objdir = outw32

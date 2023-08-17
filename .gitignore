@@ -24,7 +24,6 @@ demo
 *.ZIP
 data
 *.a
-*.dll
 *.occ
 *.OCC
 *.map
@@ -61,3 +60,9 @@ RUN
 *.data
 *.conf
 *.bat
+.cache
+*.json
+core
+*.so*
+*.dll*
+tools/3dview/3dview

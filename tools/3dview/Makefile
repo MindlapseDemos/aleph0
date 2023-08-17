@@ -6,8 +6,8 @@ libs_dir = ../../libs
 demosrc = $(wildcard $(demosrcdir)/3dgfx/*.c) $(demosrcdir)/glut/miniglut.c \
 		  $(demosrcdir)/gfxutil.c $(demosrcdir)/util.c $(demosrcdir)/dynarr.c \
 		  $(demosrcdir)/darray.c $(demosrcdir)/rbtree.c $(demosrcdir)/treestor.c \
-		  $(demosrcdir)/ts_text.o
-src = src/main.c $(demosrc)
+		  $(demosrcdir)/ts_text.o $(demosrcdir)/image.c
+src = src/main.c src/ass2goat.c $(demosrc)
 obj = $(src:.c=.o)
 bin = 3dview
 
@@ -16,7 +16,8 @@ incdir = -I$(demosrcdir) -I$(demosrcdir)/3dgfx -I$(demosrcdir)/glut \
 libdir = -L$(libs_dir)/goat3d -L$(libs_dir)/imago
 
 CFLAGS = $(arch) -pedantic -Wall -g $(incdir)
-LDFLAGS = $(arch) -no-pie $(libdir) $(libgl) -lgoat3d -limago -lm
+LDFLAGS = $(arch) -no-pie -Wl,-rpath,. $(libdir) $(libgl) -lgoat3d -lzlibstatic -lassimp \
+		  -limago -lm
 
 cpu ?= $(shell uname -m | sed 's/i.86/i386/')
 ifeq ($(cpu), x86_64)
@@ -36,7 +37,7 @@ else
 endif
 
 $(bin): $(obj) imago goat3d
-	$(CC) -o $@ $(obj) $(LDFLAGS)
+	$(CXX) -o $@ $(obj) $(LDFLAGS)
 
 -include $(dep)
 

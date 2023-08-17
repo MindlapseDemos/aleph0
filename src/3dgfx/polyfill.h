@@ -66,7 +66,7 @@ struct pvertex {
 	int32_t x, y; /* 24.8 fixed point */
 	int32_t u, v; /* 16.16 fixed point */
 	int32_t r, g, b, a;  /* int 0-255 */
-	int32_t z;	/* 0-65535 */
+	int32_t z;	/* 0-(2^24-1) */
 };
 
 struct pimage {
@@ -79,7 +79,7 @@ struct pimage {
 
 extern struct pimage pfill_fb;
 extern struct pimage pfill_tex;
-extern uint16_t *pfill_zbuf;
+extern uint32_t *pfill_zbuf;
 
 void polyfill_fbheight(int height);
 

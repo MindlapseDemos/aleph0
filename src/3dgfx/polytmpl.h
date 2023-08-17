@@ -26,7 +26,7 @@ void POLYFILL(struct pvertex *varr, int vnum)
 #endif
 #ifdef ZBUF
 	int32_t z, dz, zslope;
-	uint16_t *zptr;
+	uint32_t *zptr;
 #endif
 
 #if !defined(GOURAUD)
@@ -216,7 +216,7 @@ void POLYFILL(struct pvertex *varr, int vnum)
 			int alpha, inv_alpha;
 #endif
 #ifdef ZBUF
-			uint16_t cz = z;
+			uint32_t cz = z;
 			z += zslope;
 
 			if(cz <= *zptr) {

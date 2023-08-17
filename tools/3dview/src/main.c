@@ -11,6 +11,10 @@
 #include "3dgfx/scene.h"
 #include "ass2goat.h"
 
+#ifndef GL_UNSIGNED_SHORT_5_6_5
+#define GL_UNSIGNED_SHORT_5_6_5	0x8363
+#endif
+
 static int init(void);
 static void cleanup(void);
 static void display(void);

@@ -12,7 +12,7 @@ obj = $(src:.c=.o)
 bin = 3dview
 
 incdir = -I$(demosrcdir) -I$(demosrcdir)/3dgfx -I$(demosrcdir)/glut \
-		 -I$(libs_dir)/goat3d/include
+		 -I$(libs_dir)/goat3d/include -I$(libs_dir)/imago/src
 libdir = -L$(libs_dir)/goat3d -L$(libs_dir)/imago
 
 CFLAGS = $(arch) -pedantic -Wall -g $(incdir)
@@ -72,4 +72,4 @@ cleandep:
 
 .PHONY: crosswin
 crosswin:
-	$(MAKE) CC=i686-w64-mingw32-gcc sys=mingw
+	$(MAKE) CC=i686-w64-mingw32-gcc CXX=i686-w64-mingw32-g++ sys=mingw

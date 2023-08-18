@@ -313,7 +313,7 @@ int conv_goat3d_mesh(struct g3d_scene *scn, struct g3d_mesh *dstmesh, struct goa
 
 		if((vsrc = goat3d_get_mesh_attrib(srcmesh, GOAT3D_MESH_ATTR_TEXCOORD, i))) {
 			vdst->u = vsrc[0];
-			vdst->v = vsrc[1];
+			vdst->v = 1.0f - vsrc[1];
 		} else {
 			vdst->u = vdst->v = 0;
 		}
@@ -347,10 +347,12 @@ int conv_goat3d_mesh(struct g3d_scene *scn, struct g3d_mesh *dstmesh, struct goa
 int conv_goat3d_mtl(struct g3d_material *dstmtl, struct goat3d_material *srcmtl)
 {
 	const float *mattr;
-	const char *fname;
+	const char *str;
 
 	init_g3dmtl(dstmtl);
-	dstmtl->name = strdup_nf(goat3d_get_mtl_name(srcmtl));
+	if((str = goat3d_get_mtl_name(srcmtl))) {
+		dstmtl->name = strdup_nf(str);
+	}
 
 	if((mattr = goat3d_get_mtl_attrib(srcmtl, GOAT3D_MAT_ATTR_DIFFUSE))) {
 		dstmtl->r = mattr[0];
@@ -369,9 +371,9 @@ int conv_goat3d_mtl(struct g3d_material *dstmtl, struct goat3d_material *srcmtl)
 		dstmtl->shin = *mattr;
 	}
 
-	if((fname = goat3d_get_mtl_attrib_map(srcmtl, GOAT3D_MAT_ATTR_DIFFUSE))) {
+	if((str = goat3d_get_mtl_attrib_map(srcmtl, GOAT3D_MAT_ATTR_DIFFUSE))) {
 		dstmtl->texmap = malloc_nf(sizeof *dstmtl->texmap);
-		if(load_image(dstmtl->texmap, fname) == -1) {
+		if(load_image(dstmtl->texmap, str) == -1) {
 			free(dstmtl->texmap);
 			dstmtl->texmap = 0;
 		}

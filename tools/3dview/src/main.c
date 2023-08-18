@@ -42,7 +42,8 @@ static int fbscale = 1;
 static float znear = 0.5f;
 static float zfar = 500.0f;
 
-static int opt_lowres, opt_lighting = 1;
+static int opt_lowres, opt_wireframe;
+static int opt_lighting = 1;
 
 int main(int argc, char **argv)
 {
@@ -209,6 +210,18 @@ static void keypress(unsigned char key, int x, int y)
 			g3d_light_ambient(0.1, 0.1, 0.1);
 		} else {
 			g3d_light_ambient(1, 1, 1);
+		}
+		glutPostRedisplay();
+		break;
+
+	case 'w':
+		opt_wireframe ^= 1;
+		if(opt_wireframe) {
+			g3d_disable(G3D_LIGHTING);
+			g3d_polygon_mode(G3D_WIRE);
+		} else {
+			g3d_enable(G3D_LIGHTING);
+			g3d_polygon_mode(G3D_GOURAUD);
 		}
 		glutPostRedisplay();
 		break;

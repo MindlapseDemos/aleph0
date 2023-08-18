@@ -6,7 +6,7 @@
 #include "image.h"
 #include "cfgopt.h"
 
-/*extern int fb_width, fb_height, fb_bpp;*/
+extern int fb_width, fb_height, fb_bpp;
 #define FB_WIDTH	320
 #define FB_HEIGHT	240
 #define FB_ASPECT	((float)FB_WIDTH / (float)FB_HEIGHT)

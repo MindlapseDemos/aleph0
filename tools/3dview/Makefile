@@ -15,7 +15,7 @@ incdir = -I$(demosrcdir) -I$(demosrcdir)/3dgfx -I$(demosrcdir)/glut \
 		 -I$(libs_dir)/goat3d/include -I$(libs_dir)/imago/src
 libdir = -L$(libs_dir)/goat3d -L$(libs_dir)/imago
 
-CFLAGS = $(arch) -pedantic -Wall -g $(incdir)
+CFLAGS = $(arch) -pedantic -Wall -g $(incdir) -MMD
 LDFLAGS = $(arch) -no-pie -Wl,-rpath,. $(libdir) $(libgl) -lgoat3d -lzlibstatic -lassimp \
 		  -limago -lm
 

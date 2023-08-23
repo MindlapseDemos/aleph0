@@ -99,6 +99,14 @@ float imtk_get_focus_factor(void);
 void imtk_set_press_factor(float fact);
 float imtk_get_press_factor(void);
 
+/* internal drawing functions */
+void imtk_draw_rect(int x, int y, int w, int h, float *ctop, float *cbot);
+void imtk_draw_frame(int x, int y, int w, int h, int style);
+void imtk_draw_disc(int x, int y, float rad, int subdiv, float *ctop, float *cbot);
+void imtk_draw_disc_frame(int x, int y, float inner, float outer, int subdiv, int style);
+void imtk_draw_string(int x, int y, const char *str);
+int imtk_string_size(const char *str);
+
 #ifdef __cplusplus
 }
 #endif

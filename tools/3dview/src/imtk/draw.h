@@ -1,11 +1,7 @@
 #ifndef DRAW_H_
 #define DRAW_H_
 
-#ifndef __APPLE__
-#include <GL/glut.h>
-#else
-#include <GLUT/glut.h>
-#endif
+#include "miniglut.h"
 #include "imtk.h"
 
 enum {

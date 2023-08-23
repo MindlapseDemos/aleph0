@@ -3,11 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
-#ifndef __APPLE__
-#include <GL/glut.h>
-#else
-#include <GLUT/glut.h>
-#endif
+#include "miniglut.h"
 #include "imtk.h"
 #include "state.h"
 #include "draw.h"

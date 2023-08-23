@@ -57,11 +57,16 @@ static void draw_button(int id, const char *label, int x, int y, int over)
 	memcpy(tcol, imtk_get_color(IMTK_TOP_COLOR | attr), sizeof tcol);
 	memcpy(bcol, imtk_get_color(IMTK_BOTTOM_COLOR | attr), sizeof bcol);
 
-	imtk_draw_rect(x, y, width, height, tcol, bcol);
-	imtk_draw_frame(x, y, width, height, active ? FRAME_INSET : FRAME_OUTSET);
+	if(active) {
+		imtk_draw_rect(x, y, width, height, bcol, tcol);
+		imtk_draw_frame(x, y, width, height, FRAME_INSET);
+	} else {
+		imtk_draw_rect(x, y, width, height, tcol, bcol);
+		imtk_draw_frame(x, y, width, height, FRAME_OUTSET);
+	}
 
 	glColor4fv(imtk_get_color(IMTK_TEXT_COLOR));
-	imtk_draw_string(x + 20, y + 15, label);
+	imtk_draw_string(x + (active ? 21 : 20), y + (active ? 16 : 15), label);
 }
 
 static void calc_button_size(const char *label, int *wret, int *hret)

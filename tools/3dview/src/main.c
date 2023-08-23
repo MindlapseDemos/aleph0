@@ -10,6 +10,8 @@
 #include "3dgfx/3dgfx.h"
 #include "3dgfx/scene.h"
 #include "ass2goat.h"
+#include "imtk.h"
+#include "drawtext.h"
 
 #ifndef GL_UNSIGNED_SHORT_5_6_5
 #define GL_UNSIGNED_SHORT_5_6_5	0x8363
@@ -18,8 +20,10 @@
 static int init(void);
 static void cleanup(void);
 static void display(void);
+static void gui(void);
 static void reshape(int x, int y);
 static void keypress(unsigned char key, int x, int y);
+static void keyrelease(unsigned char key, int x, int y);
 static void mouse(int bn, int st, int x, int y);
 static void motion(int x, int y);
 
@@ -28,7 +32,10 @@ static int parse_args(int argc, char **argv);
 uint16_t *fb_pixels;
 int fb_width, fb_height;
 
-static int win_width, win_height;
+int win_width, win_height;
+
+struct dtx_font *uifont;
+int uifontsz;
 
 static struct g3d_scene *scn;
 static const char *scenefile;
@@ -39,6 +46,7 @@ static float cam_pan[3];
 static unsigned int bnstate;
 static int prev_mx, prev_my;
 static int fbscale = 1;
+static unsigned int fbtex;
 static float znear = 0.5f;
 static float zfar = 500.0f;
 
@@ -60,8 +68,10 @@ int main(int argc, char **argv)
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
 	glutKeyboardFunc(keypress);
+	glutKeyboardUpFunc(keyrelease);
 	glutMouseFunc(mouse);
 	glutMotionFunc(motion);
+	glutPassiveMotionFunc(motion);
 
 	if(init() == -1) {
 		return 1;
@@ -74,12 +84,32 @@ int main(int argc, char **argv)
 
 static int init(void)
 {
+	char *last_slash;
 	float bmin[3], bmax[3], dx, dy, dz;
 	struct goat3d *gscn;
 
+	glGenTextures(1, &fbtex);
+	glBindTexture(GL_TEXTURE_2D, fbtex);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glEnable(GL_TEXTURE_2D);
+
+	if(!(uifont = dtx_open_font_glyphmap("font.glyphmap"))) {
+		fprintf(stderr, "failed to open font\n");
+		return -1;
+	}
+	uifontsz = dtx_get_glyphmap_ptsize(dtx_get_glyphmap(uifont, 0));
+	dtx_use_font(uifont, uifontsz);
+
+
+	if(((last_slash = strrchr(scenefile, '/')) || (last_slash = strrchr(scenefile, '\\'))) && last_slash[1]) {
+		dirname = strdup_nf(scenefile);
+		dirname[last_slash - scenefile] = 0;
+		scenefile = last_slash + 1;
+
+		chdir(dirname);
+	}
+
 
 	if(g3d_init() == -1) {
 		return -1;
@@ -134,6 +164,7 @@ static void display(void)
 	scn_draw(scn);
 
 	/* present */
+	glBindTexture(GL_TEXTURE_2D, fbtex);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, fb_width, fb_height, GL_RGB,
 			GL_UNSIGNED_SHORT_5_6_5, fb_pixels);
 
@@ -147,8 +178,58 @@ static void display(void)
 	glVertex2f(0, win_height * 2);
 	glEnd();
 
+	gui();
+
 	glutSwapBuffers();
 	assert(glGetError() == GL_NO_ERROR);
+}
+
+static void gui(void)
+{
+	int val;
+
+	imtk_begin();
+
+	glBegin(GL_QUADS);
+	glColor3f(0.7, 0.7, 0.7);
+	glVertex2f(0, 0);
+	glVertex2f(0, 80);
+	glVertex2f(128, 80);
+	glVertex2f(128, 0);
+	glEnd();
+
+	imtk_layout_start(10, 0);
+	imtk_layout_spacing(10);
+	imtk_layout_dir(IMTK_VERTICAL);
+
+	if((val = imtk_checkbox(IMUID, "low res", IMTK_AUTO, IMTK_AUTO, opt_lowres)) != opt_lowres) {
+		opt_lowres = val;
+		fbscale = opt_lowres ? 3 : 1;
+		reshape(win_width, win_height);
+		glutPostRedisplay();
+	}
+	if((val = imtk_checkbox(IMUID, "lighting", IMTK_AUTO, IMTK_AUTO, opt_lighting)) != opt_lighting) {
+		opt_lighting = val;
+		if(opt_lighting) {
+			g3d_light_ambient(0.1, 0.1, 0.1);
+		} else {
+			g3d_light_ambient(1, 1, 1);
+		}
+		glutPostRedisplay();
+	}
+	if((val = imtk_checkbox(IMUID, "wireframe", IMTK_AUTO, IMTK_AUTO, opt_wireframe)) != opt_wireframe) {
+		opt_wireframe = val;
+		if(opt_wireframe) {
+			g3d_disable(G3D_LIGHTING);
+			g3d_polygon_mode(G3D_WIRE);
+		} else {
+			g3d_enable(G3D_LIGHTING);
+			g3d_polygon_mode(G3D_GOURAUD);
+		}
+		glutPostRedisplay();
+	}
+
+	imtk_end();
 }
 
 static void reshape(int x, int y)
@@ -157,6 +238,7 @@ static void reshape(int x, int y)
 	win_height = y;
 
 	glViewport(0, 0, x, y);
+	imtk_set_viewport(x, y);
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -181,6 +263,7 @@ static void reshape(int x, int y)
 		}
 	}
 
+	glBindTexture(GL_TEXTURE_2D, fbtex);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGB,
 			GL_UNSIGNED_BYTE, 0);
 
@@ -225,7 +308,15 @@ static void keypress(unsigned char key, int x, int y)
 		}
 		glutPostRedisplay();
 		break;
+
+	default:
+		imtk_inp_key(key, IMTK_DOWN);
 	}
+}
+
+static void keyrelease(unsigned char key, int x, int y)
+{
+	imtk_inp_key(key, IMTK_UP);
 }
 
 static void zoom(float dz)
@@ -256,6 +347,8 @@ static void mouse(int bn, int st, int x, int y)
 	}
 	prev_mx = x;
 	prev_my = y;
+
+	imtk_inp_mouse(bidx, press ? IMTK_DOWN : IMTK_UP);
 }
 
 static void motion(int x, int y)
@@ -296,6 +389,8 @@ static void motion(int x, int y)
 	if(bnstate & 4) {
 		zoom(dy * 0.1f);
 	}
+
+	imtk_inp_motion(x, y);
 }
 
 static const char *usage_fmt = "Usage: %s [options] <scene file>\n"
@@ -305,7 +400,6 @@ static const char *usage_fmt = "Usage: %s [options] <scene file>\n"
 static int parse_args(int argc, char **argv)
 {
 	int i;
-	char *last_slash;
 
 	for(i=1; i<argc; i++) {
 		if(argv[i][0] == '-') {
@@ -334,15 +428,6 @@ static int parse_args(int argc, char **argv)
 #endif
 		return -1;
 	}
-
-	if(((last_slash = strrchr(scenefile, '/')) || (last_slash = strrchr(scenefile, '\\'))) && last_slash[1]) {
-		dirname = strdup_nf(scenefile);
-		dirname[last_slash - scenefile] = 0;
-		scenefile = last_slash + 1;
-
-		chdir(dirname);
-	}
-
 	return 0;
 }
 

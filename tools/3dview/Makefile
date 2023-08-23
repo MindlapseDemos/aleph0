@@ -7,15 +7,20 @@ demosrc = $(wildcard $(demosrcdir)/3dgfx/*.c) $(demosrcdir)/glut/miniglut.c \
 		  $(demosrcdir)/gfxutil.c $(demosrcdir)/util.c $(demosrcdir)/dynarr.c \
 		  $(demosrcdir)/darray.c $(demosrcdir)/rbtree.c $(demosrcdir)/treestor.c \
 		  $(demosrcdir)/ts_text.o $(demosrcdir)/image.c
-src = src/main.c src/ass2goat.c $(demosrc)
+src = $(wildcard src/*.c) $(wildcard src/imtk/*.c) $(wildcard src/dtx/*.c) $(demosrc)
 obj = $(src:.c=.o)
 bin = 3dview
 
-incdir = -I$(demosrcdir) -I$(demosrcdir)/3dgfx -I$(demosrcdir)/glut \
-		 -I$(libs_dir) -I$(libs_dir)/goat3d/include -I$(libs_dir)/imago/src
+incdir = -Isrc/imtk -Isrc/dtx -I$(demosrcdir) -I$(demosrcdir)/3dgfx \
+		 -I$(demosrcdir)/glut -I$(libs_dir) -I$(libs_dir)/goat3d/include \
+		 -I$(libs_dir)/imago/src
 libdir = -L$(libs_dir)/goat3d -L$(libs_dir)/imago
 
-CFLAGS = $(arch) -pedantic -Wall -g $(incdir) -MMD
+warn = -pedantic -Wall
+dbg = -g
+def = -DNO_FREETYPE
+
+CFLAGS = $(arch) $(warn) $(dbg) $(def) $(incdir) -MMD
 LDFLAGS = $(arch) -no-pie -Wl,-rpath,. $(libdir) $(libgl) -lgoat3d -lzlibstatic -lassimp \
 		  -limago -lm
 
@@ -36,13 +41,16 @@ else
 	objdir = outunix
 endif
 
-$(bin): $(obj) imago goat3d
+$(bin): $(obj) imago goat3d font.glyphmap
 	$(CXX) -o $@ $(obj) $(LDFLAGS)
 
 -include $(dep)
 
 %.w32.o: %.c
 	$(CC) -o $@ $(CFLAGS) -c $<
+
+font.glyphmap:
+	font2glyphmap -o $@ -size 18 -range 32-127 /usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf
 
 .PHONY: libs
 libs: imago anim mikmod goat3d

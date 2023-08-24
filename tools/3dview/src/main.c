@@ -23,6 +23,7 @@
 #define CON_TOP			(win_height - CON_HEIGHT)
 
 static int init(void);
+static struct g3d_scene *load_scene(const char *fname);
 static void cleanup(void);
 static void display(void);
 static void gui(void);
@@ -71,6 +72,8 @@ static float scene_size;
 static char conbuf[CON_BUFLINES][CON_LINELEN];
 static int con_nlines, con_tail_idx, con_scroll;
 
+static int reload_pending;
+
 
 int main(int argc, char **argv)
 {
@@ -109,8 +112,6 @@ extern int font_glyphmap_size;
 static int init(void)
 {
 	char *last_slash;
-	float bmin[3], bmax[3], dx, dy, dz;
-	struct goat3d *gscn;
 
 	init_console();
 
@@ -150,8 +151,23 @@ static int init(void)
 	g3d_enable(G3D_LIGHTING);
 	g3d_enable(G3D_LIGHT0);
 
-	if(!(gscn = ass2goat(scenefile))) {
+	if(!(scn = load_scene(scenefile))) {
 		return -1;
+	}
+	cam_dist = scene_size;
+	printf("cam dist: %f\n", cam_dist);
+
+	return 0;
+}
+
+static struct g3d_scene *load_scene(const char *fname)
+{
+	struct g3d_scene *scn;
+	struct goat3d *gscn;
+	float bmin[3], bmax[3], dx, dy, dz;
+
+	if(!(gscn = ass2goat(scenefile))) {
+		return 0;
 	}
 	scn = scn_create();
 	conv_goat3d_scene(scn, gscn);
@@ -163,10 +179,9 @@ static int init(void)
 	dx = bmax[0] - bmin[0];
 	dy = bmax[1] - bmin[1];
 	dz = bmax[2] - bmin[2];
-	cam_dist = scene_size = sqrt(dx * dx + dy * dy + dz * dz);
-	printf("cam dist: %f\n", cam_dist);
+	scene_size = sqrt(dx * dx + dy * dy + dz * dz);
 
-	return 0;
+	return scn;
 }
 
 static void cleanup(void)
@@ -177,6 +192,20 @@ static void cleanup(void)
 
 static void display(void)
 {
+	if(reload_pending) {
+		printf("--- reloading %s ---\n", scenefile);
+		struct g3d_scene *newscn = load_scene(scenefile);
+		if(!newscn) {
+			fprintf(stderr, "reload failed\n");
+		} else {
+			scn_free(scn);
+			scn = newscn;
+			printf("reload successful\n");
+		}
+
+		reload_pending = 0;
+	}
+
 	g3d_clear_color(35, 35, 35);
 	g3d_clear(G3D_COLOR_BUFFER_BIT | G3D_DEPTH_BUFFER_BIT);
 
@@ -294,6 +323,11 @@ static void gui(void)
 
 	if(imtk_button(IMUID, "Help (F1)", IMTK_AUTO, IMTK_AUTO)) {
 		show_help ^= 1;
+		glutPostRedisplay();
+	}
+
+	if(imtk_button(IMUID, "Reload (F5)", IMTK_AUTO, IMTK_AUTO)) {
+		reload_pending = 1;
 		glutPostRedisplay();
 	}
 
@@ -429,6 +463,11 @@ static void skeypress(int key, int x, int y)
 	switch(key) {
 	case GLUT_KEY_F1:
 		show_help ^= 1;
+		glutPostRedisplay();
+		break;
+
+	case GLUT_KEY_F5:
+		reload_pending = 1;
 		glutPostRedisplay();
 		break;
 

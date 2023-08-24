@@ -1627,6 +1627,10 @@ static LRESULT CALLBACK handle_message(HWND win, unsigned int msg, WPARAM wparam
 		}
 		break;
 
+	case WM_MOUSEWHEEL:
+		handle_mbutton(wparam & 0x80000000 ? 4 : 3, 1, wparam & 0xffff, lparam);
+		break;
+
 	case WM_SYSCOMMAND:
 		wparam &= 0xfff0;
 		if(wparam == SC_KEYMENU || wparam == SC_SCREENSAVE || wparam == SC_MONITORPOWER) {
@@ -1683,9 +1687,8 @@ static int translate_vkey(int vkey)
 	if(vkey >= 'A' && vkey <= 'Z') {
 		vkey += 32;
 	} else if(vkey >= VK_F1 && vkey <= VK_F12) {
-		vkey -= VK_F1 + GLUT_KEY_F1;
+		vkey = (vkey - VK_F1) + GLUT_KEY_F1;
 	}
-
 	return vkey;
 }
 

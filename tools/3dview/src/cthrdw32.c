@@ -21,7 +21,7 @@ Main project site: https://github.com/jtsiomb/c11threads
 #include <crtdbg.h>
 #endif
 
-#include "c11threads.h"
+#include "cthreads.h"
 
 #include <assert.h>
 #include <stddef.h>

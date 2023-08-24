@@ -603,7 +603,11 @@ static int parse_args(int argc, char **argv)
 
 static thrd_t con_thread;
 static mtx_t con_mutex;
+#ifdef __WIN32
+static HANDLE orig_handle;
+#else
 static int orig_fd1;
+#endif
 
 static int con_thread_func(void *cls)
 {
@@ -642,7 +646,9 @@ static int con_thread_func(void *cls)
 					con_nlines++;
 					mtx_unlock(&con_mutex);
 
+#ifndef __WIN32
 					write(orig_fd1, buf, len);
+#endif
 
 					if(rdsize > 0) {
 						memmove(buf, endl, rdsize);
@@ -659,16 +665,40 @@ static int con_thread_func(void *cls)
 	return 0;
 }
 
+#ifdef __WIN32
+#include <windows.h>
+#include <fcntl.h>
+#endif
+
 static void init_console(void)
 {
 #ifdef __WIN32
+	int fd;
 	HANDLE prd, pwr;
 
-	if(!CreatePipe(&prd, &pwr, 0, 0)) {
+	if(!GetConsoleWindow()) {
+		fprintf(stderr, "Allocating console\n");
+		AllocConsole();
 		return;
 	}
-	SetStdHandle(STD_OUTPUT_HANDLE, pwr);
+
+	if(!CreatePipe(&prd, &pwr, 0, 0)) {
+		fprintf(stderr, "failed to create a console redirection pipe\n");
+		return;
+	}
+
+	orig_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+	if(!SetStdHandle(STD_OUTPUT_HANDLE, pwr)) {
+		fprintf(stderr, "failed to redirect stdout: %d\n", (int)GetLastError());
+		return;
+	}
 	SetStdHandle(STD_ERROR_HANDLE, pwr);
+
+	fd = _open_osfhandle((intptr_t)pwr, _O_TEXT);
+	close(1);
+	close(2);
+	dup2(fd, 1);
+	dup2(fd, 2);
 #else
 	int pfd[2], prd;
 
@@ -683,7 +713,7 @@ static void init_console(void)
 	prd = pfd[0];
 #endif
 	setvbuf(stdout, 0, _IOLBF, 0);
-	setvbuf(stderr, 0, _IONBF, 0);
+	setvbuf(stderr, 0, _IOLBF, 0);
 
 	mtx_init(&con_mutex, mtx_plain);
 

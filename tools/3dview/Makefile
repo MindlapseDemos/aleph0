@@ -38,10 +38,12 @@ else
 	libgl = -lGL -lGLU -lX11
 endif
 
-$(bin): $(obj) imago goat3d font.glyphmap
+$(bin): $(obj) imago goat3d
 	$(CXX) -o $@ $(obj) $(LDFLAGS)
 
 -include $(dep)
+
+src/data.o: src/data.s font.glyphmap
 
 %.w32.o: %.c
 	$(CC) -o $@ $(CFLAGS) -c $<

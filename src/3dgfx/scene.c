@@ -50,10 +50,14 @@ void scn_clear(struct g3d_scene *scn)
 	for(i=0; i<num; i++) {
 		if(scn->mtls[i]->texmap) {
 			destroy_image(scn->mtls[i]->texmap);
+			free(scn->mtls[i]->texmap);
 		}
 		if(scn->mtls[i]->envmap) {
 			destroy_image(scn->mtls[i]->envmap);
+			free(scn->mtls[i]->envmap);
 		}
+		free(scn->mtls[i]->name);
+		free(scn->mtls[i]);
 	}
 	darr_clear(scn->mtls);
 
@@ -107,6 +111,7 @@ void scn_destroy_anim(struct g3d_anim *anim)
 	num = darr_size(anim->tracks);
 	for(i=0; i<num; i++) {
 		scn_destroy_track(anim->tracks[i]);
+		free(anim->tracks[i]);
 	}
 	darr_free(anim->tracks);
 }
@@ -126,6 +131,7 @@ void scn_init_track(struct g3d_track *track)
 void scn_destroy_track(struct g3d_track *track)
 {
 	goat3d_destroy_track(track->trk);
+	free(track->trk);
 }
 
 void scn_add_mesh(struct g3d_scene *scn, struct g3d_mesh *mesh)

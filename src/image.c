@@ -264,6 +264,8 @@ void destroy_image(struct image *img)
 	if(img) {
 		img_free_pixels(img->pixels);
 		img->pixels = 0;
+		free(img->alpha);
+		img->alpha = 0;
 	}
 }
 

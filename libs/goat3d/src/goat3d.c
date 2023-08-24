@@ -136,8 +136,9 @@ void goat3d_clear(struct goat3d *g)
 
 	num = dynarr_size(g->anims);
 	for(i=0; i<num; i++) {
-		g3dimpl_anim_destroy(g->anims[i]);
+		goat3d_destroy_anim(g->anims[i]);
 	}
+	DYNARR_CLEAR(g->anims);
 
 	g->name = 0;
 	g->bbox_valid = 0;

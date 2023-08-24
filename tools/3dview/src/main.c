@@ -193,6 +193,7 @@ static void cleanup(void)
 static void display(void)
 {
 	if(reload_pending) {
+		static int num_reloads;
 		printf("--- reloading %s ---\n", scenefile);
 		struct g3d_scene *newscn = load_scene(scenefile);
 		if(!newscn) {
@@ -200,7 +201,7 @@ static void display(void)
 		} else {
 			scn_free(scn);
 			scn = newscn;
-			printf("reload successful\n");
+			printf("reload successful (%d)\n", ++num_reloads);
 		}
 
 		reload_pending = 0;

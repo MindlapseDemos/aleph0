@@ -679,12 +679,6 @@ static void init_console(void)
 	int fd;
 	HANDLE prd, pwr;
 
-	if(!GetConsoleWindow()) {
-		fprintf(stderr, "Allocating console\n");
-		AllocConsole();
-		return;
-	}
-
 	if(!CreatePipe(&prd, &pwr, 0, 0)) {
 		fprintf(stderr, "failed to create a console redirection pipe\n");
 		return;

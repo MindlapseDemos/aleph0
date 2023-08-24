@@ -743,7 +743,7 @@ static void *file_readline(void *buf, int bsz, struct io *io)
 
 static int mem_readchar(struct io *io)
 {
-	char *p = io->data;
+	unsigned char *p = io->data;
 
 	if(io->size-- <= 0) {
 		return -1;

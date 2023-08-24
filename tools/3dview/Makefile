@@ -1,14 +1,14 @@
-# $(patsubst pattern,replacement,text)
-
 demosrcdir = ../../src
 libs_dir = ../../libs
 
 demosrc = $(wildcard $(demosrcdir)/3dgfx/*.c) $(demosrcdir)/glut/miniglut.c \
 		  $(demosrcdir)/gfxutil.c $(demosrcdir)/util.c $(demosrcdir)/dynarr.c \
 		  $(demosrcdir)/darray.c $(demosrcdir)/rbtree.c $(demosrcdir)/treestor.c \
-		  $(demosrcdir)/ts_text.o $(demosrcdir)/image.c
+		  $(demosrcdir)/ts_text.c $(demosrcdir)/image.c
 src = $(wildcard src/*.c) $(wildcard src/imtk/*.c) $(wildcard src/dtx/*.c) $(demosrc)
-obj = $(src:.c=.o)
+asmsrc = src/data.s
+obj = $(src:.c=.o) $(asmsrc:.s=.o)
+dep = $(src:.c=.d)
 bin = 3dview
 
 incdir = -Isrc/imtk -Isrc/dtx -I$(demosrcdir) -I$(demosrcdir)/3dgfx \
@@ -27,18 +27,15 @@ LDFLAGS = $(arch) -no-pie -Wl,-rpath,. $(libdir) $(libgl) -lgoat3d -lzlibstatic 
 cpu ?= $(shell uname -m | sed 's/i.86/i386/')
 ifeq ($(cpu), x86_64)
 	arch = -m32
+	ASFLAGS = --32
 endif
 
 sys ?= $(shell uname -s | sed 's/MINGW.*/mingw/')
 ifeq ($(sys), mingw)
 	libgl = -lopengl32 -lglu32 -lwinmm -lgdi32
 	bin = 3dview.exe
-
-	objdir = outw32
 else
 	libgl = -lGL -lGLU -lX11
-
-	objdir = outunix
 endif
 
 $(bin): $(obj) imago goat3d font.glyphmap

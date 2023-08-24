@@ -103,6 +103,9 @@ int main(int argc, char **argv)
 	return 0;
 }
 
+extern char font_glyphmap[];
+extern int font_glyphmap_size;
+
 static int init(void)
 {
 	char *last_slash;
@@ -117,7 +120,7 @@ static int init(void)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glEnable(GL_TEXTURE_2D);
 
-	if(!(uifont = dtx_open_font_glyphmap("font.glyphmap"))) {
+	if(!(uifont = dtx_open_font_glyphmap_mem(font_glyphmap, font_glyphmap_size))) {
 		fprintf(stderr, "failed to open font\n");
 		return -1;
 	}

@@ -1,10 +1,12 @@
 /* Water effect */
 
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 
 #include "demo.h"
 #include "screen.h"
+#include "opt_rend.h"
 
 static int init(void);
 static void destroy(void);

@@ -87,6 +87,8 @@ void g3dimpl_obj_destroy(struct object *o)
 {
 	struct goat3d_mesh *m;
 
+	free(o->name);
+
 	switch(o->type) {
 	case OBJTYPE_MESH:
 		m = (struct goat3d_mesh*)o;
@@ -144,6 +146,7 @@ void g3dimpl_mtl_destroy(struct goat3d_material *mtl)
 		free(mtl->attrib[i].map);
 	}
 	dynarr_free(mtl->attrib);
+	free(mtl->name);
 }
 
 struct material_attrib *g3dimpl_mtl_findattr(struct goat3d_material *mtl, const char *name)

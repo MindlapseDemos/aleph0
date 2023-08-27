@@ -6,6 +6,15 @@
 #include "3dgfx.h"
 #include "util.h"
 
+void init_g3dmtl(struct g3d_material *mtl)
+{
+	mtl->name = 0;
+	mtl->r = mtl->g = mtl->b = mtl->a = 1.0f;
+	mtl->sr = mtl->sg = mtl->sb = 0.0f;
+	mtl->shin = 60.0f;
+	mtl->texmap = mtl->envmap = 0;
+}
+
 int init_mesh(struct g3d_mesh *mesh, int prim, int num_verts, int num_idx)
 {
 	mesh->name = 0;
@@ -22,6 +31,7 @@ int init_mesh(struct g3d_mesh *mesh, int prim, int num_verts, int num_idx)
 	}
 	mesh->vcount = num_verts;
 	mesh->icount = num_idx;
+	mesh->mtl = 0;
 	return 0;
 }
 
@@ -129,10 +139,29 @@ void zsort_mesh(struct g3d_mesh *m)
 
 void draw_mesh(struct g3d_mesh *mesh)
 {
+	struct g3d_material *mtl;
+
+	if((mtl = mesh->mtl)) {
+		g3d_mtl_diffuse(mtl->r, mtl->g, mtl->b);
+		g3d_mtl_specular(mtl->sr, mtl->sg, mtl->sb);
+		g3d_mtl_shininess(mtl->shin);
+
+		if(mtl->texmap) {
+			g3d_enable(G3D_TEXTURE_2D);
+			g3d_set_texture(mtl->texmap->width, mtl->texmap->height, mtl->texmap->pixels);
+		}
+	}
+
 	if(mesh->iarr) {
 		g3d_draw_indexed(mesh->prim, mesh->varr, mesh->vcount, mesh->iarr, mesh->icount);
 	} else {
 		g3d_draw(mesh->prim, mesh->varr, mesh->vcount);
+	}
+
+	if(mtl) {
+		if(mtl->texmap) {
+			g3d_disable(G3D_TEXTURE_2D);
+		}
 	}
 }
 

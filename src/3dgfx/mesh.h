@@ -2,7 +2,16 @@
 #define MESH_H_
 
 #include "3dgfx.h"
+#include "image.h"
 #include "inttypes.h"
+
+struct g3d_material {
+	float r, g, b, a;
+	float sr, sg, sb, shin;
+
+	struct image *texmap, *envmap;
+	char *name;
+};
 
 struct g3d_mesh {
 	int prim;
@@ -10,7 +19,11 @@ struct g3d_mesh {
 	uint16_t *iarr;
 	int vcount, icount;
 	char *name;
+
+	struct g3d_material *mtl;
 };
+
+void init_g3dmtl(struct g3d_material *mtl);
 
 int init_mesh(struct g3d_mesh *mesh, int prim, int num_verts, int num_idx);
 

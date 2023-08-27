@@ -69,7 +69,7 @@ void (*fillfunc[])(struct pvertex*, int) = {
 };
 
 struct pimage pfill_fb, pfill_tex;
-uint16_t *pfill_zbuf;
+uint32_t *pfill_zbuf;
 
 #define EDGEPAD	8
 static struct pvertex *edgebuf, *left, *right;

@@ -40,6 +40,7 @@ void g3dimpl_anim_destroy(struct goat3d_anim *anim)
 	num = dynarr_size(anim->tracks);
 	for(i=0; i<num; i++) {
 		goat3d_destroy_track(anim->tracks[i]);
+		free(anim->tracks[i]);
 	}
 	dynarr_free(anim->tracks);
 }

@@ -8,6 +8,7 @@
 void scn_init(struct g3d_scene *scn)
 {
 	scn->meshes = darr_alloc(0, sizeof *scn->meshes);
+	scn->mtls = darr_alloc(0, sizeof *scn->mtls);
 	scn->nodes = darr_alloc(0, sizeof *scn->nodes);
 	scn->anims = darr_alloc(0, sizeof *scn->anims);
 }
@@ -16,6 +17,7 @@ void scn_destroy(struct g3d_scene *scn)
 {
 	scn_clear(scn);
 	darr_free(scn->meshes);
+	darr_free(scn->mtls);
 	darr_free(scn->nodes);
 	darr_free(scn->anims);
 }
@@ -43,6 +45,21 @@ void scn_clear(struct g3d_scene *scn)
 		free_mesh(scn->meshes[i]);
 	}
 	darr_clear(scn->meshes);
+
+	num = darr_size(scn->mtls);
+	for(i=0; i<num; i++) {
+		if(scn->mtls[i]->texmap) {
+			destroy_image(scn->mtls[i]->texmap);
+			free(scn->mtls[i]->texmap);
+		}
+		if(scn->mtls[i]->envmap) {
+			destroy_image(scn->mtls[i]->envmap);
+			free(scn->mtls[i]->envmap);
+		}
+		free(scn->mtls[i]->name);
+		free(scn->mtls[i]);
+	}
+	darr_clear(scn->mtls);
 
 	num = darr_size(scn->nodes);
 	for(i=0; i<num; i++) {
@@ -94,6 +111,7 @@ void scn_destroy_anim(struct g3d_anim *anim)
 	num = darr_size(anim->tracks);
 	for(i=0; i<num; i++) {
 		scn_destroy_track(anim->tracks[i]);
+		free(anim->tracks[i]);
 	}
 	darr_free(anim->tracks);
 }
@@ -113,11 +131,17 @@ void scn_init_track(struct g3d_track *track)
 void scn_destroy_track(struct g3d_track *track)
 {
 	goat3d_destroy_track(track->trk);
+	free(track->trk);
 }
 
 void scn_add_mesh(struct g3d_scene *scn, struct g3d_mesh *mesh)
 {
 	darr_push(scn->meshes, &mesh);
+}
+
+void scn_add_mtl(struct g3d_scene *scn, struct g3d_material *mtl)
+{
+	darr_push(scn->mtls, &mtl);
 }
 
 void scn_add_node(struct g3d_scene *scn, struct g3d_node *node)
@@ -133,6 +157,11 @@ void scn_add_anim(struct g3d_scene *scn, struct g3d_anim *anim)
 int scn_mesh_count(struct g3d_scene *scn)
 {
 	return darr_size(scn->meshes);
+}
+
+int scn_mtl_count(struct g3d_scene *scn)
+{
+	return darr_size(scn->mtls);
 }
 
 int scn_node_count(struct g3d_scene *scn)
@@ -151,6 +180,17 @@ struct g3d_mesh *scn_find_mesh(struct g3d_scene *scn, const char *name)
 	for(i=0; i<num; i++) {
 		if(strcmp(scn->meshes[i]->name, name) == 0) {
 			return scn->meshes[i];
+		}
+	}
+	return 0;
+}
+
+struct g3d_material *scn_find_mtl(struct g3d_scene *scn, const char *name)
+{
+	int i, num = darr_size(scn->mtls);
+	for(i=0; i<num; i++) {
+		if(strcmp(scn->mtls[i]->name, name) == 0) {
+			return scn->mtls[i];
 		}
 	}
 	return 0;
@@ -184,16 +224,27 @@ int conv_goat3d_scene(struct g3d_scene *scn, struct goat3d *g)
 	int i, num;
 	long count, nfaces;
 	struct g3d_mesh *mesh;
+	struct g3d_material *mtl;
 	struct g3d_node *node;
 	struct g3d_anim *anim;
 
 	printf("loaded goat3d scene: %s\n", goat3d_get_name(g));
 
+	num = goat3d_get_mtl_count(g);
+	for(i=0; i<num; i++) {
+		mtl = malloc_nf(sizeof *mtl);
+		if(conv_goat3d_mtl(mtl, goat3d_get_mtl(g, i)) != -1) {
+			scn_add_mtl(scn, mtl);
+		} else {
+			free(mtl);
+		}
+	}
+
 	count = nfaces = 0;
 	num = goat3d_get_mesh_count(g);
 	for(i=0; i<num; i++) {
 		mesh = malloc_nf(sizeof *mesh);
-		if(conv_goat3d_mesh(mesh, goat3d_get_mesh(g, i)) != -1) {
+		if(conv_goat3d_mesh(scn, mesh, goat3d_get_mesh(g, i)) != -1) {
 			scn_add_mesh(scn, mesh);
 			nfaces += mesh->icount / 3;
 			count++;
@@ -233,13 +284,14 @@ int conv_goat3d_scene(struct g3d_scene *scn, struct goat3d *g)
 	return 0;
 }
 
-int conv_goat3d_mesh(struct g3d_mesh *dstmesh, struct goat3d_mesh *srcmesh)
+int conv_goat3d_mesh(struct g3d_scene *scn, struct g3d_mesh *dstmesh, struct goat3d_mesh *srcmesh)
 {
 	int i, nverts, nfaces;
 	struct g3d_vertex *vdst;
 	float *vsrc;
 	int *idxsrc;
 	uint16_t *idxdst;
+	struct goat3d_material *gmtl;
 
 	nverts = goat3d_get_mesh_vertex_count(srcmesh);
 	nfaces = goat3d_get_mesh_face_count(srcmesh);
@@ -267,7 +319,7 @@ int conv_goat3d_mesh(struct g3d_mesh *dstmesh, struct goat3d_mesh *srcmesh)
 
 		if((vsrc = goat3d_get_mesh_attrib(srcmesh, GOAT3D_MESH_ATTR_TEXCOORD, i))) {
 			vdst->u = vsrc[0];
-			vdst->v = vsrc[1];
+			vdst->v = 1.0f - vsrc[1];
 		} else {
 			vdst->u = vdst->v = 0;
 		}
@@ -290,6 +342,49 @@ int conv_goat3d_mesh(struct g3d_mesh *dstmesh, struct goat3d_mesh *srcmesh)
 		idxdst[2] = idxsrc[2];
 		idxdst += 3;
 	}
+
+	if((gmtl = goat3d_get_mesh_mtl(srcmesh))) {
+		dstmesh->mtl = scn_find_mtl(scn, goat3d_get_mtl_name(gmtl));
+	}
+
+	return 0;
+}
+
+int conv_goat3d_mtl(struct g3d_material *dstmtl, struct goat3d_material *srcmtl)
+{
+	const float *mattr;
+	const char *str;
+
+	init_g3dmtl(dstmtl);
+	if((str = goat3d_get_mtl_name(srcmtl))) {
+		dstmtl->name = strdup_nf(str);
+	}
+
+	if((mattr = goat3d_get_mtl_attrib(srcmtl, GOAT3D_MAT_ATTR_DIFFUSE))) {
+		dstmtl->r = mattr[0];
+		dstmtl->g = mattr[1];
+		dstmtl->b = mattr[2];
+	}
+	if((mattr = goat3d_get_mtl_attrib(srcmtl, GOAT3D_MAT_ATTR_ALPHA))) {
+		dstmtl->a = *mattr;
+	}
+	if((mattr = goat3d_get_mtl_attrib(srcmtl, GOAT3D_MAT_ATTR_SPECULAR))) {
+		dstmtl->sr = mattr[0];
+		dstmtl->sg = mattr[1];
+		dstmtl->sb = mattr[2];
+	}
+	if((mattr = goat3d_get_mtl_attrib(srcmtl, GOAT3D_MAT_ATTR_SHININESS))) {
+		dstmtl->shin = *mattr;
+	}
+
+	if((str = goat3d_get_mtl_attrib_map(srcmtl, GOAT3D_MAT_ATTR_DIFFUSE))) {
+		dstmtl->texmap = malloc_nf(sizeof *dstmtl->texmap);
+		if(load_image(dstmtl->texmap, str) == -1) {
+			free(dstmtl->texmap);
+			dstmtl->texmap = 0;
+		}
+	}
+
 	return 0;
 }
 
@@ -387,7 +482,9 @@ int conv_goat3d_track(struct g3d_scene *scn, struct g3d_track *dsttrk, struct go
 		return -1;
 	}
 
-	goat3d_set_track_name(dsttrk->trk, goat3d_get_track_name(srctrk));
+	if((name = goat3d_get_track_name(srctrk))) {
+		goat3d_set_track_name(dsttrk->trk, name);
+	}
 	goat3d_set_track_type(dsttrk->trk, goat3d_get_track_type(srctrk));
 	goat3d_set_track_interp(dsttrk->trk, goat3d_get_track_interp(srctrk));
 	goat3d_set_track_extrap(dsttrk->trk, goat3d_get_track_extrap(srctrk));
@@ -501,7 +598,7 @@ void scn_draw(struct g3d_scene *scn)
 		num = darr_size(scn->nodes);
 		for(i=0; i<num; i++) {
 			node = scn->nodes[i];
-			if(!node->mesh || node->parent) continue;
+			if(node->parent) continue;
 
 			scn_draw_node(node);
 		}
@@ -519,7 +616,9 @@ void scn_draw_node(struct g3d_node *node)
 	g3d_push_matrix();
 	g3d_mult_matrix(node->xform);
 
-	draw_mesh(node->mesh);
+	if(node->mesh) {
+		draw_mesh(node->mesh);
+	}
 
 	n = node->child;
 	while(n) {

@@ -14,7 +14,7 @@
 
 #define ENABLE_ZBUFFER
 
-#define STACK_SIZE	8
+#define STACK_SIZE	16
 typedef float g3d_matrix[16];
 
 #define MAX_LIGHTS		4
@@ -65,7 +65,8 @@ struct g3d_state {
 
 	int vport[4];
 
-	uint16_t clear_color, clear_depth;
+	uint16_t clear_color;
+	uint32_t clear_depth;
 
 	/* immediate mode */
 	int imm_prim;
@@ -131,7 +132,7 @@ void g3d_reset(void)
 
 	g3d_mtl_diffuse(1, 1, 1);
 
-	st->clear_depth = 65535;
+	st->clear_depth = 0xffffff;
 }
 
 void g3d_framebuffer(int width, int height, void *pixels)
@@ -183,9 +184,12 @@ void g3d_clear_color(unsigned char r, unsigned char g, unsigned char b)
 	st->clear_color = PACK_RGB16(r, g, b);
 }
 
-void g3d_clear_depth(uint16_t zval)
+void g3d_clear_depth(float z)
 {
-	st->clear_depth = zval;
+	int iz = (int)(z * (float)0xffffff);
+	if(iz < 0) iz = 0;
+	if(iz > 0xffffff) iz = 0xffffff;
+	st->clear_depth = iz;
 }
 
 void g3d_clear(unsigned int mask)
@@ -194,7 +198,7 @@ void g3d_clear(unsigned int mask)
 		memset16(pfill_fb.pixels, st->clear_color, pfill_fb.width * pfill_fb.height);
 	}
 	if(mask & G3D_DEPTH_BUFFER_BIT) {
-		memset16(pfill_zbuf, st->clear_depth, pfill_fb.width * pfill_fb.height);
+		memset16(pfill_zbuf, st->clear_depth, pfill_fb.width * pfill_fb.height * sizeof *pfill_zbuf / 2);
 	}
 }
 
@@ -272,7 +276,7 @@ void g3d_mult_matrix(const float *m2)
 void g3d_push_matrix(void)
 {
 	int top = st->mtop[st->mmode];
-	if(top >= G3D_NUM_MATRICES) {
+	if(top >= STACK_SIZE) {
 		fprintf(stderr, "g3d_push_matrix overflow\n");
 		return;
 	}
@@ -585,8 +589,8 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 			pv[i].y = cround64(v[i].y * 256.0f);
 #ifdef ENABLE_ZBUFFER
 			if(st->opt & G3D_DEPTH_TEST) {
-				/* after div/w z is in [-1, 1], remap it to [0, 65535] */
-				pv[i].z = cround64(v[i].z * 32767.5f + 32767.5f);
+				/* after div/w z is in [-1, 1], remap it to [0, 0xffffff] */
+				pv[i].z = cround64(v[i].z * 8388607.5f + 8388607.5f);
 			}
 #endif
 			/* convert tex coords to 16.16 fixed point */
@@ -814,7 +818,6 @@ static void shade(struct g3d_vertex *v)
 		color[1] += st->mtl.kd[1] * st->lt[i].g * ndotl;
 		color[2] += st->mtl.kd[2] * st->lt[i].b * ndotl;
 
-		/*
 		if(st->opt & G3D_SPECULAR) {
 			float ndoth;
 			ldir[2] += 1.0f;
@@ -828,7 +831,6 @@ static void shade(struct g3d_vertex *v)
 			color[1] += st->mtl.ks[1] * st->lt[i].g * ndoth;
 			color[2] += st->mtl.ks[2] * st->lt[i].b * ndoth;
 		}
-		*/
 	}
 
 	r = cround64(color[0] * 255.0);

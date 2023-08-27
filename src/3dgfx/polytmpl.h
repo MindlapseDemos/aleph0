@@ -6,6 +6,9 @@
 #define NOLERP
 #endif
 
+/* texture coordinate interpolation precision experiment, define to use floating point */
+#undef FLTUV
+
 void POLYFILL(struct pvertex *varr, int vnum)
 {
 	int i, line, top, bot;
@@ -20,13 +23,17 @@ void POLYFILL(struct pvertex *varr, int vnum)
 #endif
 #endif	/* GOURAUD */
 #ifdef TEXMAP
+#ifdef FLTUV
+	float tu, tv, du, dv, uslope, vslope;
+#else
 	int32_t tu, tv, du, dv, uslope, vslope;
+#endif
 	int tx, ty;
 	g3d_pixel texel;
 #endif
 #ifdef ZBUF
 	int32_t z, dz, zslope;
-	uint16_t *zptr;
+	uint32_t *zptr;
 #endif
 
 #if !defined(GOURAUD)
@@ -43,7 +50,7 @@ void POLYFILL(struct pvertex *varr, int vnum)
 		v = varr + i;
 		vn = VNEXT(v);
 
-		if(vn->y == v->y) continue;	// XXX ???
+		if(vn->y == v->y) continue;	/* XXX ??? */
 
 		if(vn->y >= v->y) {
 			/* inrementing Y: left side */
@@ -77,12 +84,21 @@ void POLYFILL(struct pvertex *varr, int vnum)
 #endif	/* BLEND_ALPHA */
 #endif	/* GOURAUD */
 #ifdef TEXMAP
+#ifdef FLTUV
+		tu = v->u / 65536.0f;
+		tv = v->v / 65536.0f;
+		du = vn->u / 65536.0f - tu;
+		dv = vn->v / 65536.0f - tv;
+		uslope = du / (dy / 256.0f);
+		vslope = dv / (dy / 256.0f);
+#else
 		tu = v->u;
 		tv = v->v;
 		du = vn->u - tu;
 		dv = vn->v - tv;
 		uslope = (du << 8) / dy;
 		vslope = (dv << 8) / dy;
+#endif
 #endif	/* TEXMAP */
 #ifdef ZBUF
 		z = v->z;
@@ -106,9 +122,14 @@ void POLYFILL(struct pvertex *varr, int vnum)
 #endif	/* BLEND_ALPHA */
 #endif	/* GOURAUD */
 #ifdef TEXMAP
+#ifdef FLTUV
+		tu += uslope * (fy / 256.0f);
+		tv += vslope * (fy / 256.0f);
+#else
 		tu += (fy * uslope) >> 8;
 		tv += (fy * vslope) >> 8;
 #endif
+#endif	/* TEXMAP */
 #ifdef ZBUF
 		z += (fy * zslope) >> 8;
 #endif
@@ -132,9 +153,14 @@ void POLYFILL(struct pvertex *varr, int vnum)
 #endif	/* BLEND_ALPHA */
 #endif	/* GOURAUD */
 #ifdef TEXMAP
+#ifdef FLTUV
+				tab->u = (int32_t)(tu * 65536.0f);
+				tab->v = (int32_t)(tv * 65536.0f);
+#else
 				tab->u = tu;
 				tab->v = tv;
 #endif
+#endif	/* TEXMAP */
 #ifdef ZBUF
 				tab->z = z;
 #endif
@@ -190,12 +216,21 @@ void POLYFILL(struct pvertex *varr, int vnum)
 #endif	/* BLEND_ALPHA */
 #endif	/* GOURAUD */
 #ifdef TEXMAP
+#ifdef FLTUV
+		tu = left[i].u / 65536.0f;
+		tv = left[i].v / 65536.0f;
+		du = right[i].u / 65536.0f - tu;
+		dv = right[i].v / 65536.0f - tv;
+		uslope = du / (dx / 256.0f);
+		vslope = dv / (dx / 256.0f);
+#else
 		tu = left[i].u;
 		tv = left[i].v;
 		du = right[i].u - tu;
 		dv = right[i].v - tv;
 		uslope = (du << 8) / dx;
 		vslope = (dv << 8) / dx;
+#endif
 #endif	/* TEXMAP */
 #ifdef ZBUF
 		z = left[i].z;
@@ -216,7 +251,7 @@ void POLYFILL(struct pvertex *varr, int vnum)
 			int alpha, inv_alpha;
 #endif
 #ifdef ZBUF
-			uint16_t cz = z;
+			uint32_t cz = z;
 			z += zslope;
 
 			if(cz <= *zptr) {
@@ -254,8 +289,13 @@ void POLYFILL(struct pvertex *varr, int vnum)
 			b += bslope;
 #endif	/* GOURAUD */
 #ifdef TEXMAP
+#ifdef FLTUV
+			tx = (int32_t)(tu * (float)pfill_tex.width) & pfill_tex.xmask;
+			ty = (int32_t)(tv * (float)pfill_tex.height) & pfill_tex.ymask;
+#else
 			tx = (tu >> (16 - pfill_tex.xshift)) & pfill_tex.xmask;
 			ty = (tv >> (16 - pfill_tex.yshift)) & pfill_tex.ymask;
+#endif
 			texel = pfill_tex.pixels[(ty << pfill_tex.xshift) + tx];
 
 			tu += uslope;

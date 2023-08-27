@@ -14,31 +14,47 @@
 #include "rlebmap.h"
 #include "util.h"
 
-/* APPROX. 170 FPS Minimum */
-
-static void updatePropeller(float t);
-
-#define BG_FILENAME "data/grise.png"
-#define GROBJ_01_FILENAME "data/grobj_01.png"
-
-#define BB_SIZE 512 /* Let's use a power of 2. Maybe we'll zoom/rotate the effect */
-
-/* Every backBuffer scanline is guaranteed to have that many dummy pixels before and after */
-#define PIXEL_PADDING 32
-
-/* Make sure this is less than PIXEL_PADDING*/
-#define MAX_DISPLACEMENT 16
-
-#define MIN_SCROLL PIXEL_PADDING
-#define MAX_SCROLL (backgroundW - FB_WIDTH - MIN_SCROLL)
-
+#define ART_FILENAME "data/grise/art.png"
+#define NORMAL_FILENAME "data/grise/normal.png"
+#define MAX_DISPLACEMENT 16 /* Maximum horizontal displacement for a reflection pixel. */
+#define EFFECT_BUFFER_PADDING MAX_DISPLACEMENT
+#define EFFECT_BUFFER_W (FB_WIDTH + 2 * EFFECT_BUFFER_PADDING)
+#define EFFECT_BUFFER_H (FB_HEIGHT + 1)
+#define REFLECTION_HEIGHT 91
+#define HORIZON_HEIGHT (FB_HEIGHT - REFLECTION_HEIGHT)
+#define MIN_SCROLL EFFECT_BUFFER_PADDING
+#define MAX_SCROLL (artW- FB_WIDTH - MIN_SCROLL)
 #define FAR_SCROLL_SPEED 15.0f
 #define NEAR_SCROLL_SPEED 120.0f
 
-#define HORIZON_HEIGHT 100
-#define REFLECTION_HEIGHT (240 - HORIZON_HEIGHT)
+static int allSystemsGo = 0;
+static unsigned short *artBuffer = 0; /* Loaded from file - contains the background */
+static unsigned short *effectBuffer = 0; /* FB-sized buffer plus some padding to optimize the effect. */
+static short *displacementMap = 0; /* Preprocessed normal - only x component distance-scaled. */
 
-#define NORMALMAP_SCANLINE 372
+/* Scrolling */
+static float scrollScaleTable[REFLECTION_HEIGHT];
+static float scrollTable[REFLECTION_HEIGHT];
+static int scrollTableRounded[REFLECTION_HEIGHT];
+static int scrollModTable[REFLECTION_HEIGHT];
+static float nearScrollAmount = 0.0f;
+
+static int loadAndProcessNormal();
+static void updateScrollTables(float dt);
+
+
+
+
+
+
+
+
+
+
+
+
+
+static void updatePropeller(float t);
 
 static int init(void);
 static void destroy(void);
@@ -47,30 +63,17 @@ static void stop(long trans_time);
 static void draw(void);
 
 static void convert32To16(unsigned int *src32, unsigned short *dst16, unsigned int pixelCount);
-static void processNormal();
 static void initScrollTables();
-static void updateScrollTables(float dt);
-
-static unsigned short *background = 0;
-static int backgroundW = 0;
-static int backgroundH = 0;
+static int artW = 0;
+static int artH = 0;
 
 static unsigned int lastFrameTime = 0;
 static float lastFrameDuration = 0.0f;
 
-static short *displacementMap;
 
-static unsigned short *backBuffer;
-
-static float scrollScaleTable[REFLECTION_HEIGHT];
-static float scrollTable[REFLECTION_HEIGHT];
-static int scrollTableRounded[REFLECTION_HEIGHT];
-static int scrollModTable[REFLECTION_HEIGHT];
-static float nearScrollAmount = 0.0f;
 
 static unsigned char miniFXBuffer[1024];
 
-static RleBitmap *grobj = 0;
 static RleBitmap *rlePropeller = 0;
 
 static struct screen scr = {"galaxyrise", init, destroy, start, 0, draw};
@@ -81,24 +84,28 @@ struct screen *grise_screen(void) {
 	return &scr;
 }
 
+#ifdef _WIN32
+#define INIT_ERROR exit(0); return 1
+#else
+#define INIT_ERROR return 1
+#endif /* WIN32 */
+
 static int init(void) {
-	unsigned char *tmpBitmap;
-	int tmpBitmapW, tmpBitmapH;
 	char *propsFile = "data/grise/props.txt";
 	struct ts_node *node = 0;
 	struct ts_node *props = 0;
 	struct ts_attr *attr = 0;
+	int i=0;
 	
 	struct rbnode *bitmap_node = 0;
 	char *filename = 0;
 	char tb[100];
-	int i;
 
 	/* Load props file */
 	props = ts_load(propsFile);
 	if (!props) {
 		printf("Failed to load props file: %s\n", propsFile);
-		return 1;
+		INIT_ERROR;
 	}
 
 	/* Keep all bitmaps to be loaded */
@@ -110,7 +117,7 @@ static int init(void) {
 			attr = ts_lookup(node, "image.file");
 			if (!attr) {
 				printf("Cannot find attribute 'file' for %s node\n", node->name);
-				return 1;
+				INIT_ERROR;
 			}
 			printf("\tFile: %s\n", attr->val.str);
 			rb_insert(bitmap_props, attr->val.str, attr->val.str);
@@ -132,45 +139,36 @@ static int init(void) {
 	// TODO: Free the config file and bitmap tree
 
 	/* Allocate back buffer */
-	backBuffer = (unsigned short *)calloc(BB_SIZE * BB_SIZE, sizeof(unsigned short));
+	effectBuffer = (unsigned short *)calloc(EFFECT_BUFFER_W * EFFECT_BUFFER_H, sizeof(unsigned short));
 
-	/* grise.png contains the background (horizon), baked reflection and normalmap for
-	 * displacement */
-	if (!(background =
-		  img_load_pixels(BG_FILENAME, &backgroundW, &backgroundH, IMG_FMT_RGBA32))) {
-		fprintf(stderr, "failed to load image " BG_FILENAME "\n");
-		return -1;
+	if (!(artBuffer =
+		  img_load_pixels(ART_FILENAME, &artW, &artH, IMG_FMT_RGB565))) {
+		fprintf(stderr, "failed to load image " ART_FILENAME "\n");
+		INIT_ERROR;
 	}
 
-	/* Convert to 16bpp */
-	convert32To16((unsigned int *)background, background,
-		      backgroundW * NORMALMAP_SCANLINE); /* Normalmap will keep its 32 bit color */
-
-	/* Load reflected objects */
-	if (!(tmpBitmap =
-		  img_load_pixels(GROBJ_01_FILENAME, &tmpBitmapW, &tmpBitmapH, IMG_FMT_GREY8))) {
-		fprintf(stderr, "failed to load image " GROBJ_01_FILENAME "\n");
-		return -1;
-	}
-
-	grobj = rleEncode(0, tmpBitmap, tmpBitmapW, tmpBitmapH);
-
-	img_free_pixels(tmpBitmap);
-
+	
 	initScrollTables();
+	if (loadAndProcessNormal()) {
+		fprintf(stderr, "failed to process normalmap\n");
+		INIT_ERROR;
+	}
 
-	processNormal();
-
+	allSystemsGo = 1;
 	return 0;
 }
 
 static void destroy(void) {
-	free(backBuffer);
-	backBuffer = 0;
+	free(artBuffer);
+	artBuffer = 0;
 
-	img_free_pixels(background);
+	free(effectBuffer);
+	effectBuffer = 0;
 
-	rleDestroy(grobj);
+	free(displacementMap);
+	displacementMap = 0;
+
+	img_free_pixels(artBuffer);
 }
 
 static void start(long trans_time) { lastFrameTime = time_msec; }
@@ -285,9 +283,9 @@ float bScale(int scanline, float t)
 
 static void draw(void) {
 	float time_sec = time_msec / 1000.0f;
-	int scroll = MIN_SCROLL + (MAX_SCROLL - MIN_SCROLL) * mouse_x / FB_WIDTH;
-	unsigned short *dst = backBuffer + PIXEL_PADDING;
-	unsigned short *src = background + scroll;
+	int scroll = 0;
+	unsigned short *dst = 0;
+	unsigned short *src = 0;
 	int scanline = 0;
 	int i = 0;
 	short *dispScanline;
@@ -295,19 +293,31 @@ static void draw(void) {
 	int accum = 0;
 	int md, sc;
 	int scrolledIndex;
-	struct rbnode *node, *bitmap_node = 0;
+	struct rbnode *bitmap_node = 0;
+
+	/*******************************************************************************/
+	if (!allSystemsGo) {
+		for (i=0; i<FB_WIDTH * FB_HEIGHT; i++) {
+			fb_pixels[i] = rand();
+		}
+		swap_buffers(0);
+		return;
+	}
+	/*******************************************************************************/
 
 	lastFrameDuration = (time_msec - lastFrameTime) / 1000.0f;
 	lastFrameTime = time_msec;
 
-	/* Update mini-effects here */
-	updatePropeller(4.0f * time_msec / 1000.0f);
+	/* Update scroll */
+	scroll = MIN_SCROLL + (MAX_SCROLL - MIN_SCROLL) * mouse_x / FB_WIDTH;
 
 	/* First, render the horizon */
+	dst = effectBuffer + EFFECT_BUFFER_PADDING;
+	src = artBuffer + scroll;
 	for (scanline = 0; scanline < HORIZON_HEIGHT; scanline++) {
 		memcpy(dst, src, FB_WIDTH * 2);
-		src += backgroundW;
-		dst += BB_SIZE;
+		src += artW;
+		dst += EFFECT_BUFFER_W;
 	}
 
 	/* Create scroll offsets for all scanlines of the normalmap */
@@ -316,22 +326,26 @@ static void draw(void) {
 	/* Render the baked reflection one scanline below its place, so that
 	 * the displacement that follows will be done in a cache-friendly way
 	 */
-	src -= PIXEL_PADDING; /* We want to also fill the PADDING pixels here */
-	dst = backBuffer + (HORIZON_HEIGHT + 1) * BB_SIZE;
+	src -= EFFECT_BUFFER_PADDING; /* We want to also fill the PADDING pixels here */
+	dst = effectBuffer + (HORIZON_HEIGHT + 1) * EFFECT_BUFFER_W;
 	for (scanline = 0; scanline < REFLECTION_HEIGHT; scanline++) {
-		memcpy(dst, src, (FB_WIDTH + PIXEL_PADDING) * 2);
-		src += backgroundW;
-		dst += BB_SIZE;
+		memcpy(dst, src, EFFECT_BUFFER_W * 2);
+		src += artW;
+		dst += EFFECT_BUFFER_W;
 	}
 
-	/* Blit reflections first, to be  displaced */
-	for (i = 0; i < 5; i++)
-		/*rleBlitScaleInv(rlePropeller, backBuffer + PIXEL_PADDING, FB_WIDTH, FB_HEIGHT,
-				BB_SIZE, 134 + (i - 3) * 60, 200, 1.0f, 1.8f);*/
+	/* Update mini-effects here */
+	updatePropeller(4.0f * time_msec / 1000.0f);
+
+	/* Blit minifx reflections first, to be  displaced */
+	for (i = 0; i < 5; i++) {
+		rleBlitScale(rlePropeller, effectBuffer + EFFECT_BUFFER_PADDING, FB_WIDTH, FB_HEIGHT, EFFECT_BUFFER_W,
+                  134 + (i - 3) * 60, 200, 1.0f, -1.8f);
+	}
 
 	/* Perform displacement */
-	dst = backBuffer + HORIZON_HEIGHT * BB_SIZE + PIXEL_PADDING;
-	src = dst + BB_SIZE; /* The pixels to be displaced are 1 scanline below */
+	dst = effectBuffer + HORIZON_HEIGHT * EFFECT_BUFFER_W + EFFECT_BUFFER_PADDING;
+	src = dst + EFFECT_BUFFER_W; /* The pixels to be displaced are 1 scanline below */
 	dispScanline = displacementMap;
 	for (scanline = 0; scanline < REFLECTION_HEIGHT; scanline++) {
 
@@ -341,37 +355,32 @@ static void draw(void) {
 
 		for (i = 0; i < FB_WIDTH; i++) {
 			/* Try to immitate modulo without the division */
-			if (i == md)
+			if (i == md) {
 				accum += md;
+			}
 			scrolledIndex = i - accum + sc;
-			if (scrolledIndex >= md)
+			if (scrolledIndex >= md) {
 				scrolledIndex -= md;
+			}
 
 			/* Displace */
 			d = dispScanline[scrolledIndex];
 			*dst++ = src[i + d];
 		}
-		src += backgroundW;
-		dst += BB_SIZE - FB_WIDTH;
-		dispScanline += backgroundW;
-	}
-
-	rb_begin(bitmap_props);
-	node = rb_next(bitmap_props);
-	while (node) {
-		RleBitmap *rle = node->data;
-		rleBlitScale(node->data, backBuffer + PIXEL_PADDING, FB_WIDTH, FB_HEIGHT, BB_SIZE,
-			100, 120, 2, 2);
-		node = rb_next(bitmap_props);
+		src += EFFECT_BUFFER_W;
+		dst += EFFECT_BUFFER_W - FB_WIDTH;
+		dispScanline += artW;
 	}
 
 	/* Then after displacement, blit the objects */
-	for (i = 0; i < 5; i++)
-		/*rleBlit(rlePropeller, backBuffer + PIXEL_PADDING, FB_WIDTH, FB_HEIGHT, BB_SIZE,
-			134 + (i - 3) * 60, 100);*/
+	for (i = 0; i < 5; i++) {
+		rleBlitScale(rlePropeller, effectBuffer + EFFECT_BUFFER_PADDING, FB_WIDTH, FB_HEIGHT, EFFECT_BUFFER_W,
+                  134 + (i - 3) * 60, 150, 1.0f, 1.0f);
+	}
 
+	/*******************************************************************************/
 	/* Blit effect to framebuffer */
-	src = backBuffer + PIXEL_PADDING;
+	src = effectBuffer + EFFECT_BUFFER_PADDING;
 	dst = fb_pixels;
 	for (scanline = 0; scanline < FB_HEIGHT; scanline++) {
 		memcpy(dst, src, FB_WIDTH * 2);
@@ -381,9 +390,27 @@ static void draw(void) {
 			gScale(scanline, time_sec), gShift(scanline, time_sec),
 			bScale(scanline, time_sec), bShift(scanline, time_sec));
 			*/
-		src += BB_SIZE;
+		src += EFFECT_BUFFER_W;
 		dst += FB_WIDTH;
 	}
+	swap_buffers(0);
+	return;
+	/*******************************************************************************/
+	
+	
+
+	rb_begin(bitmap_props);
+	struct rbnode *node = rb_next(bitmap_props);
+	while (node) {
+		RleBitmap *rle = node->data;
+		rleBlitScale(node->data, effectBuffer + EFFECT_BUFFER_PADDING, FB_WIDTH, FB_HEIGHT, EFFECT_BUFFER_W,
+			100, 120, 2, 2);
+		node = rb_next(bitmap_props);
+	}
+
+	
+
+	
 
 	swap_buffers(0);
 }
@@ -400,9 +427,12 @@ static void convert32To16(unsigned int *src32, unsigned short *dst16, unsigned i
 	}
 }
 
-/* Normal map preprocessing */
-/* Scale normal with depth and unpack R component (horizontal component) */
-static void processNormal() {
+/* Normal map loading & preprocessing.
+/* Scale down normalmap scans by depth scale. Maximum scale down around the horizon (e.g. 8x scale down)
+ * and minimum (1x) at the bottom (closest to the viewer). Rest of the scan set to black.
+ * This way close scans appear smoother. Also unpack R (horizontal) component of the normal.
+ */
+static int loadAndProcessNormal() {
 	int scanline;
 	int i;
 	int x;
@@ -410,18 +440,48 @@ static void processNormal() {
 	short minDisplacement = 256;
 	unsigned short *dst;
 	short *dst2;
-	unsigned int *normalmap = (unsigned int *)background;
-	normalmap += NORMALMAP_SCANLINE * backgroundW;
-	dst = (unsigned short *)normalmap;
-	displacementMap = (short *)dst;
+	unsigned int *normalmap = 0;
+	unsigned int *src = 0;
+	int normalmapW = 0;
+	int normalmapH = 0;
+
+	/* Load normalmap */
+	if (!(normalmap =
+		  img_load_pixels(NORMAL_FILENAME, &normalmapW, &normalmapH, IMG_FMT_RGBA32))) {
+		fprintf(stderr, "failed to load image " NORMAL_FILENAME "\n");
+		return 1;
+	}
+
+	/* Make sure the dimensions are acceptable */
+	if (normalmapW != artW) {
+		fprintf(stderr, "Normalmap width is not the same as art width: %d != %d\n", normalmapW, artW);
+		return 1;
+	}
+	if (normalmapH != REFLECTION_HEIGHT) {
+		fprintf(stderr, "Normalmap height is not correct: %d !< %d\n", normalmapH, REFLECTION_HEIGHT);
+		return 1;
+	}
+
+
+	/* Allocate displacement map */
+	displacementMap = (short *)calloc(normalmapW * normalmapH, sizeof(short));
+	
+
+	
+	/* Set up destination pointers for pass 1 and 2 */
+	src = normalmap;
+	dst = (unsigned short *)displacementMap;
 	dst2 = displacementMap;
 
+	/* Pass 1 - scale normal with depth. */
 	for (scanline = 0; scanline < REFLECTION_HEIGHT; scanline++) {
-		scrollModTable[scanline] = (int)(backgroundW / scrollScaleTable[scanline] + 0.5f);
-		for (i = 0; i < backgroundW; i++) {
+		for (i = 0; i < normalmapW; i++) {
 			x = (int)(i * scrollScaleTable[scanline] + 0.5f);
-			if (x < backgroundW) {
-				*dst = (unsigned short)(normalmap[x] >> 8) & 0xFF;
+			if (x < artW) {
+				/* Extract R (horizontal component of the normal) */
+				*dst = (unsigned short)(src[x] >> 8) & 0xFF;
+				
+				/* Find bounds */
 				if ((short)*dst > maxDisplacement)
 					maxDisplacement = (short)(*dst);
 				if ((short)*dst < minDisplacement)
@@ -431,27 +491,34 @@ static void processNormal() {
 			}
 			dst++;
 		}
-		normalmap += backgroundW;
+		src += artW;
 	}
 
 	if (maxDisplacement == minDisplacement) {
-		printf("Warning: grise normalmap fucked up\n");
-		return; 
+		printf("Grise normalmap fucked up\n");
+		return 1;
 	}
+
+	free(normalmap);
 
 	/* Second pass - subtract half maximum displacement to displace in both directions */
 	for (scanline = 0; scanline < REFLECTION_HEIGHT; scanline++) {
-		for (i = 0; i < backgroundW; i++) {
-			/* Remember that MIN_SCROLL is the padding around the screen, so ti's the
-			 * maximum displacement we can get (positive & negative) */
+		for (i = 0; i < artW; i++) {
+			/* Scale displacement to fit our MAX_DISPLACEMENT requirement. */
 			*dst2 = 2 * MAX_DISPLACEMENT * (*dst2 - minDisplacement) /
 				    (maxDisplacement - minDisplacement) -
-				MAX_DISPLACEMENT;
+					MAX_DISPLACEMENT;
+			
+			/* Further scale down displacements with distance. */
 			*dst2 = (short)((float)*dst2 / scrollScaleTable[scanline] +
-					0.5f); /* Displacements must also scale with distance*/
+					0.5f);
 			dst2++;
 		}
 	}
+
+	
+
+	return 0;
 }
 
 static float distanceScale(int scanline) {
@@ -465,6 +532,7 @@ static void initScrollTables() {
 	int i = 0;
 	for (i = 0; i < REFLECTION_HEIGHT; i++) {
 		scrollScaleTable[i] = distanceScale(i);
+		scrollModTable[i] = (int)(artW / scrollScaleTable[i] + 0.5f);
 		scrollTable[i] = 0.0f;
 		scrollTableRounded[i] = 0;
 	}

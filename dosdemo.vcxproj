@@ -124,7 +124,8 @@
     <ClCompile Include="src\scr\metaball.c" />
     <ClCompile Include="src\scr\minifx.c" />
     <ClCompile Include="src\scr\plasma.c" />
-	<ClCompile Include="src\scr\water.c" />
+    <ClCompile Include="src\scr\water.c" />
+    <ClCompile Include="src\scr\3dzoom.c" />
     <ClCompile Include="src\scr\polytest.c" />
     <ClCompile Include="src\scr\raytrace.c" />
     <ClCompile Include="src\scr\smoketxt.c" />

@@ -15,7 +15,7 @@
 
 /* For now, keep a static fill color. We can change this. Not that much about
  * speed, but let's keep function definitions more compact. */
-#define RLE_FILL_COLOR 0xFFFF
+#define RLE_FILL_COLOR 0
 
 /* Two entries of RLE_FILL_COLOR (16 bits) packed one after the other. */
 #define RLE_FILL_COLOR_32 ((RLE_FILL_COLOR << 16) | RLE_FILL_COLOR)

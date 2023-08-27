@@ -37,6 +37,8 @@ struct g3d_scene {
 	struct g3d_node **nodes;
 	struct g3d_anim **anims;
 	struct g3d_material **mtls;
+
+	char *texpath;
 };
 
 void scn_init(struct g3d_scene *scn);
@@ -75,7 +77,7 @@ struct g3d_anim *scn_find_anim(struct g3d_scene *scn, const char *name);
 
 int conv_goat3d_scene(struct g3d_scene *scn, struct goat3d *g);
 int conv_goat3d_mesh(struct g3d_scene *scn, struct g3d_mesh *dstmesh, struct goat3d_mesh *srcmesh);
-int conv_goat3d_mtl(struct g3d_material *destmtl, struct goat3d_material *srcmtl);
+int conv_goat3d_mtl(struct g3d_scene *scn, struct g3d_material *destmtl, struct goat3d_material *srcmtl);
 int conv_goat3d_node(struct g3d_scene *scn, struct g3d_node *dstnode, struct goat3d_node *srcnode);
 int link_goat3d_node(struct g3d_scene *scn, struct g3d_node *dstnode, struct goat3d_node *srcnode);
 int conv_goat3d_anim(struct g3d_scene *scn, struct g3d_anim *dstanim, struct goat3d_anim *srcanim);

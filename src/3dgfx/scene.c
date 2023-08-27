@@ -11,6 +11,8 @@ void scn_init(struct g3d_scene *scn)
 	scn->mtls = darr_alloc(0, sizeof *scn->mtls);
 	scn->nodes = darr_alloc(0, sizeof *scn->nodes);
 	scn->anims = darr_alloc(0, sizeof *scn->anims);
+
+	scn->texpath = 0;
 }
 
 void scn_destroy(struct g3d_scene *scn)
@@ -233,7 +235,7 @@ int conv_goat3d_scene(struct g3d_scene *scn, struct goat3d *g)
 	num = goat3d_get_mtl_count(g);
 	for(i=0; i<num; i++) {
 		mtl = malloc_nf(sizeof *mtl);
-		if(conv_goat3d_mtl(mtl, goat3d_get_mtl(g, i)) != -1) {
+		if(conv_goat3d_mtl(scn, mtl, goat3d_get_mtl(g, i)) != -1) {
 			scn_add_mtl(scn, mtl);
 		} else {
 			free(mtl);
@@ -350,7 +352,7 @@ int conv_goat3d_mesh(struct g3d_scene *scn, struct g3d_mesh *dstmesh, struct goa
 	return 0;
 }
 
-int conv_goat3d_mtl(struct g3d_material *dstmtl, struct goat3d_material *srcmtl)
+int conv_goat3d_mtl(struct g3d_scene *scn, struct g3d_material *dstmtl, struct goat3d_material *srcmtl)
 {
 	const float *mattr;
 	const char *str;
@@ -378,6 +380,11 @@ int conv_goat3d_mtl(struct g3d_material *dstmtl, struct goat3d_material *srcmtl)
 	}
 
 	if((str = goat3d_get_mtl_attrib_map(srcmtl, GOAT3D_MAT_ATTR_DIFFUSE))) {
+		if(scn->texpath) {
+			char *buf = alloca(strlen(str) + strlen(scn->texpath) + 2);
+			sprintf(buf, "%s/%s", scn->texpath, str);
+			str = buf;
+		}
 		dstmtl->texmap = malloc_nf(sizeof *dstmtl->texmap);
 		if(load_image(dstmtl->texmap, str) == -1) {
 			free(dstmtl->texmap);

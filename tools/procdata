@@ -33,3 +33,12 @@ if [ ! -f cspr/confont.asm -o data/console.fnt -nt cspr/confont.asm ]; then
 	echo 'csprite: confont'
 	csprite -n cs_confont -s 6x7 -pad 1 -conv565 -nasm data/console.fnt >cspr/confont.asm || exit 1
 fi
+
+# convert goat3d scenes
+mkdir -p data/3dzoom
+if [ ! -f data/3dzoom/techroom.g3d -o data/src/3dzoom/techroom.obj -nt data/3dzoom/techroom.g3d ]; then
+	if ass2goat data/src/3dzoom/techroom.obj; then
+		mv data/src/3dzoom/techroom.goat3d data/3dzoom/techroom.g3d
+		cp data/src/3dzoom/*.png data/3dzoom
+	fi
+fi

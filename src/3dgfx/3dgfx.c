@@ -12,6 +12,12 @@
 #include "demo.h"
 #include "util.h"
 
+
+#undef CORRECT_NORMAL_MATRIX
+#ifdef CORRECT_NORMAL_MATRIX
+#include <cgmath/cgmath.h>
+#endif
+
 #define ENABLE_ZBUFFER
 
 #define STACK_SIZE	16
@@ -430,8 +436,14 @@ void g3d_light_dir(int idx, float x, float y, float z)
 	st->lt[idx].z = z;
 
 	/* calc the normal matrix */
+#ifdef CORRECT_NORMAL_MATRIX
+	memcpy(st->norm_mat, st->mat[G3D_MODELVIEW][mvtop], 16 * sizeof(float));
+	cgm_minverse(st->norm_mat);
+	cgm_mtranspose(st->norm_mat);
+#else
 	memcpy(st->norm_mat, st->mat[G3D_MODELVIEW][mvtop], 16 * sizeof(float));
 	st->norm_mat[12] = st->norm_mat[13] = st->norm_mat[14] = 0.0f;
+#endif
 
 	xform4_vec3(st->norm_mat, &st->lt[idx].x);
 
@@ -504,11 +516,6 @@ void g3d_draw(int prim, const struct g3d_vertex *varr, int varr_size)
 }
 
 #define NEED_NORMALS	(st->opt & (G3D_LIGHTING | G3D_TEXTURE_GEN))
-
-#undef CORRECT_NORMAL_MATRIX
-#ifdef CORRECT_NORMAL_MATRIX
-#include <cgmath/cgmath.h>
-#endif
 
 void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 		const uint16_t *iarr, int iarr_size)

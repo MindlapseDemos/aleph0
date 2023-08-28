@@ -18,6 +18,7 @@ scrobj = src/scr/bump.obj src/scr/fract.obj src/scr/greets.obj &
 	src/scr/tunnel.obj src/scr/cybersun.obj src/scr/raytrace.obj &
 	src/scr/minifx.obj src/scr/voxscape.obj src/scr/hexfloor.obj &
 	src/scr/juliatun.obj src/scr/blobgrid.obj src/scr/break.obj &
+	src/scr/3dzoom.obj &
 	src/scr/opt_rend.obj src/scr/opt_3d.obj src/scr/polka.obj src/scr/dott.obj &
 	src/scr/water.obj
 csprobj = cspr/dbgfont.obj cspr/confont.obj
@@ -46,6 +47,7 @@ scrobj = src\scr\bump.obj src\scr\fract.obj src\scr\greets.obj &
 	src\scr\tunnel.obj src\scr\cybersun.obj src\scr\raytrace.obj &
 	src\scr\minifx.obj src\scr\voxscape.obj src\scr\hexfloor.obj &
 	src\scr\juliatun.obj src\scr\blobgrid.obj src\scr\break.obj &
+	src\scr\3dzoom.obj &
 	src\scr\opt_rend.obj src\scr\opt_3d.obj src\scr\polka.obj src\scr\dott.obj &
 	src\scr\water.obj
 csprobj = cspr\dbgfont.obj cspr\confont.obj

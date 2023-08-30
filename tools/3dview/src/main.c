@@ -63,7 +63,7 @@ static float zfar = 500.0f;
 
 static int show_ui, show_help, show_con = 1, uibox[4], bnbox[4];
 static int opt_lowres, opt_wireframe;
-static int opt_lighting = 1;
+static int opt_lighting;
 
 static float scene_size;
 
@@ -150,6 +150,9 @@ static int init(void)
 	g3d_enable(G3D_DEPTH_TEST);
 	g3d_enable(G3D_LIGHTING);
 	g3d_enable(G3D_LIGHT0);
+	g3d_light_ambient(1, 1, 1);
+
+	g3d_light_dir(0, 0, 0, 1);
 
 	if(!(scn = load_scene(scenefile))) {
 		return -1;

@@ -6,13 +6,10 @@
 #define NOLERP
 #endif
 
-/* texture coordinate interpolation precision experiment, define to use floating point */
-#undef FLTUV
-
-void POLYFILL(struct pvertex *varr, int vnum)
+void POLYFILL(struct pvertex *varr)
 {
 	int i, line, top, bot;
-	struct pvertex *vlast, *v, *vn, *tab;
+	struct pvertex *v, *vn, *tab;
 	int32_t x, y0, y1, dx, dy, slope, fx, fy;
 	int start, len;
 	g3d_pixel *fbptr, *pptr, color;
@@ -23,11 +20,7 @@ void POLYFILL(struct pvertex *varr, int vnum)
 #endif
 #endif	/* GOURAUD */
 #ifdef TEXMAP
-#ifdef FLTUV
-	float tu, tv, du, dv, uslope, vslope;
-#else
 	int32_t tu, tv, du, dv, uslope, vslope;
-#endif
 	int tx, ty;
 	g3d_pixel texel;
 #endif
@@ -41,11 +34,10 @@ void POLYFILL(struct pvertex *varr, int vnum)
 	color = G3D_PACK_RGB(varr[0].r, varr[0].g, varr[0].b);
 #endif
 
-	vlast = varr + vnum - 1;
 	top = pfill_fb.height;
 	bot = 0;
 
-	for(i=0; i<vnum; i++) {
+	for(i=0; i<3; i++) {
 		/* scan the edge between the current and next vertex */
 		v = varr + i;
 		vn = VNEXT(v);
@@ -84,21 +76,12 @@ void POLYFILL(struct pvertex *varr, int vnum)
 #endif	/* BLEND_ALPHA */
 #endif	/* GOURAUD */
 #ifdef TEXMAP
-#ifdef FLTUV
-		tu = v->u / 65536.0f;
-		tv = v->v / 65536.0f;
-		du = vn->u / 65536.0f - tu;
-		dv = vn->v / 65536.0f - tv;
-		uslope = du / (dy / 256.0f);
-		vslope = dv / (dy / 256.0f);
-#else
 		tu = v->u;
 		tv = v->v;
 		du = vn->u - tu;
 		dv = vn->v - tv;
 		uslope = (du << 8) / dy;
 		vslope = (dv << 8) / dy;
-#endif
 #endif	/* TEXMAP */
 #ifdef ZBUF
 		z = v->z;
@@ -153,13 +136,8 @@ void POLYFILL(struct pvertex *varr, int vnum)
 #endif	/* BLEND_ALPHA */
 #endif	/* GOURAUD */
 #ifdef TEXMAP
-#ifdef FLTUV
-				tab->u = (int32_t)(tu * 65536.0f);
-				tab->v = (int32_t)(tv * 65536.0f);
-#else
 				tab->u = tu;
 				tab->v = tv;
-#endif
 #endif	/* TEXMAP */
 #ifdef ZBUF
 				tab->z = z;
@@ -203,39 +181,16 @@ void POLYFILL(struct pvertex *varr, int vnum)
 		r = left[i].r;
 		g = left[i].g;
 		b = left[i].b;
-		dr = right[i].r - r;
-		dg = right[i].g - g;
-		db = right[i].b - b;
-		rslope = (dr << 8) / dx;
-		gslope = (dg << 8) / dx;
-		bslope = (db << 8) / dx;
 #ifdef BLEND_ALPHA
 		a = left[i].a;
-		da = right[i].a - a;
-		aslope = (da << 8) / dx;
 #endif	/* BLEND_ALPHA */
 #endif	/* GOURAUD */
 #ifdef TEXMAP
-#ifdef FLTUV
-		tu = left[i].u / 65536.0f;
-		tv = left[i].v / 65536.0f;
-		du = right[i].u / 65536.0f - tu;
-		dv = right[i].v / 65536.0f - tv;
-		uslope = du / (dx / 256.0f);
-		vslope = dv / (dx / 256.0f);
-#else
 		tu = left[i].u;
 		tv = left[i].v;
-		du = right[i].u - tu;
-		dv = right[i].v - tv;
-		uslope = (du << 8) / dx;
-		vslope = (dv << 8) / dx;
-#endif
 #endif	/* TEXMAP */
 #ifdef ZBUF
 		z = left[i].z;
-		dz = right[i].z - z;
-		zslope = (dz << 8) / dx;
 		zptr = pfill_zbuf + i * pfill_fb.width + start;
 #endif	/* ZBUF */
 
@@ -252,23 +207,23 @@ void POLYFILL(struct pvertex *varr, int vnum)
 #endif
 #ifdef ZBUF
 			uint32_t cz = z;
-			z += zslope;
+			z += pgrad.dzdx;
 
 			if(cz <= *zptr) {
 				*zptr++ = cz;
 			} else {
 				/* ZFAIL: advance all attributes and continue */
 #ifdef GOURAUD
-				r += rslope;
-				g += gslope;
-				b += bslope;
+				r += pgrad.drdx;
+				g += pgrad.dgdx;
+				b += pgrad.dbdx;
 #ifdef BLEND_ALPHA
-				a += aslope;
+				a += pgrad.dadx;
 #endif
 #endif	/* GOURAUD */
 #ifdef TEXMAP
-				tu += uslope;
-				tv += vslope;
+				tu += pgrad.dudx;
+				tv += pgrad.dvdx;
 #endif	/* TEXMAP */
 				/* skip pixel */
 				pptr++;
@@ -284,22 +239,17 @@ void POLYFILL(struct pvertex *varr, int vnum)
 			cr = r < 0 ? 0 : (r >> COLOR_SHIFT);
 			cg = g < 0 ? 0 : (g >> COLOR_SHIFT);
 			cb = b < 0 ? 0 : (b >> COLOR_SHIFT);
-			r += rslope;
-			g += gslope;
-			b += bslope;
+			r += pgrad.drdx;
+			g += pgrad.dgdx;
+			b += pgrad.dbdx;
 #endif	/* GOURAUD */
 #ifdef TEXMAP
-#ifdef FLTUV
-			tx = (int32_t)(tu * (float)pfill_tex.width) & pfill_tex.xmask;
-			ty = (int32_t)(tv * (float)pfill_tex.height) & pfill_tex.ymask;
-#else
 			tx = (tu >> (16 - pfill_tex.xshift)) & pfill_tex.xmask;
 			ty = (tv >> (16 - pfill_tex.yshift)) & pfill_tex.ymask;
-#endif
 			texel = pfill_tex.pixels[(ty << pfill_tex.xshift) + tx];
 
-			tu += uslope;
-			tv += vslope;
+			tu += pgrad.dudx;
+			tv += pgrad.dvdx;
 
 #ifndef GOURAUD
 			/* for flat textured, cr,cg,cb would not be initialized */
@@ -319,7 +269,7 @@ void POLYFILL(struct pvertex *varr, int vnum)
 #ifdef GOURAUD
 			alpha = a >> COLOR_SHIFT;
 			inv_alpha = 255 - alpha;
-			a += aslope;
+			a += pgrad.dadx;
 #else
 			alpha = varr[0].a;
 #endif

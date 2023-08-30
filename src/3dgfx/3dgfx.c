@@ -81,6 +81,8 @@ struct g3d_state {
 	struct g3d_vertex imm_vbuf[IMM_VBUF_SIZE];
 };
 
+static void calc_grad(struct g3d_vertex *v);
+
 static void imm_flush(void);
 static __inline void xform4_vec3(const float *mat, float *vec);
 static __inline void xform3_vec3(const float *mat, float *vec);
@@ -520,9 +522,9 @@ void g3d_draw(int prim, const struct g3d_vertex *varr, int varr_size)
 void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 		const uint16_t *iarr, int iarr_size)
 {
-	int i, j, vnum, nfaces, fill_mode;
-	struct pvertex pv[16];
-	struct g3d_vertex v[16];
+	int i, j, vnum, nfaces, fill_mode, num_tri;
+	struct pvertex pv[16], *pvtri;
+	struct g3d_vertex v[16], *vtri;
 	int mvtop = st->mtop[G3D_MODELVIEW];
 	int ptop = st->mtop[G3D_PROJECTION];
 	struct g3d_vertex *tmpv;
@@ -684,8 +686,73 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 				fill_mode |= POLYFILL_ZBUF_BIT;
 			}
 #endif
-			polyfill(fill_mode, pv, vnum);
+			num_tri = vnum - 2;
+			vtri = v;
+			pvtri = pv;
+			for(;;) {
+				calc_grad(vtri);
+				polyfill(fill_mode, pvtri);
+				if(--num_tri == 0) break;
+				vtri[1] = vtri[0];
+				pvtri[1] = pvtri[0];
+				vtri++;
+				pvtri++;
+			}
 		}
+	}
+}
+
+#define ATTR_DELTAS(attr) \
+	float d##attr##02 = v[0].attr - v[2].attr; \
+	float d##attr##12 = v[1].attr - v[2].attr
+
+#define DFDX(attr)	\
+	(dx ? (d##attr##12 * dy02 - d##attr##02 * dy12) / dx : 0)
+#define DFDY(attr)	\
+	(dy ? (d##attr##12 * dx02 - d##attr##02 * dx12) / dy : 0)
+
+static void calc_grad(struct g3d_vertex *v)
+{
+	float dx01 = v[0].x - v[1].x;
+	float dx02 = v[0].x - v[2].x;
+	float dx12 = v[1].x - v[2].x;
+	float dy01 = v[0].y - v[1].y;
+	float dy02 = v[0].y - v[2].y;
+	float dy12 = v[1].y - v[2].y;
+
+	float dx = dx12 * dy02 - dx02 * dy12;
+	float dy = dx02 * dy12 - dx12 * dy02;
+
+	if(st->polymode == POLYFILL_GOURAUD) {
+		ATTR_DELTAS(r);
+		ATTR_DELTAS(g);
+		ATTR_DELTAS(b);
+		pgrad.drdx = cround64(DFDX(r) * 4096.0f);
+		pgrad.drdy = cround64(DFDY(r) * 4096.0f);
+		pgrad.dgdx = cround64(DFDX(g) * 4096.0f);
+		pgrad.dgdy = cround64(DFDY(g) * 4096.0f);
+		pgrad.dbdx = cround64(DFDX(b) * 4096.0f);
+		pgrad.dbdy = cround64(DFDY(b) * 4096.0f);
+		if(st->opt & G3D_ALPHA_BLEND) {
+			ATTR_DELTAS(a);
+			pgrad.dadx = cround64(DFDX(a));
+			pgrad.dady = cround64(DFDY(a));
+		}
+	}
+
+	if(st->opt & G3D_DEPTH_TEST) {
+		ATTR_DELTAS(z);
+		pgrad.dzdx = cround64(DFDX(z) * 8388607.5f);
+		pgrad.dzdy = cround64(DFDY(z) * 8388607.5f);
+	}
+
+	if(st->opt & G3D_TEXTURE_2D) {
+		ATTR_DELTAS(u);
+		ATTR_DELTAS(v);
+		pgrad.dudx = cround64(DFDX(u) * 65536.0f);
+		pgrad.dudy = cround64(DFDY(u) * 65536.0f);
+		pgrad.dvdx = cround64(DFDX(v) * 65536.0f);
+		pgrad.dvdy = cround64(DFDY(v) * 65536.0f);
 	}
 }
 

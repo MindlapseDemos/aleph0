@@ -103,74 +103,32 @@ static void waterBufferToVram32()
 }
 
 #ifdef __WATCOMC__
-	static void updateWaterAsm5(void *buffer1, void *buffer2, void *vramStart)
-	{
-		_asm
-		{
-			push ebp
-
-			mov esi,buffer1
-			mov edi,buffer2
-
-			mov ecx,(FB_WIDTH / 4) * (FB_HEIGHT - 2) - 2;
-			waterI:
-				mov eax,[esi-1]
-				mov ebx,[esi+1]
-				add eax,[esi-FB_WIDTH]
-				add ebx,[esi+FB_WIDTH]
-				add eax,ebx
-				shr eax,1
-				and eax,0x7f7f7f7f
-				mov edx,[edi]
-				sub eax,edx
-
-				mov ebx,eax
-				and ebx,0x80808080
-
-				mov edx,ebx
-				shr edx,7
-
-				mov ebp,ebx
-				sub ebp,edx
-				or ebx,ebp
-				xor eax,ebx
-				add eax,edx
-
-				add esi,4
-				mov [edi],eax
-				add edi,4
-
-			dec ecx
-			jnz waterI
-
-			pop ebp
-		}
-	}
+void updateWaterAsm5(void *buffer1, void *buffer2, void *vramStart);
 #else
-	static void updateWater32(unsigned char *buffer1, unsigned char *buffer2)
-	{
-		int count = (FB_WIDTH / 4) * (FB_HEIGHT - 2) - 2;
+static void updateWater32(unsigned char *buffer1, unsigned char *buffer2)
+{
+	int count = (FB_WIDTH / 4) * (FB_HEIGHT - 2) - 2;
 
-		unsigned int *src1 = (unsigned int*)buffer1;
-		unsigned int *src2 = (unsigned int*)buffer2;
-		unsigned int *vram = (unsigned int*)((unsigned char*)wb1 + FB_WIDTH + 4);
+	unsigned int *src1 = (unsigned int*)buffer1;
+	unsigned int *src2 = (unsigned int*)buffer2;
+	unsigned int *vram = (unsigned int*)((unsigned char*)wb1 + FB_WIDTH + 4);
 
-		do {
-			const unsigned int c0 = *(unsigned int*)((unsigned char*)src1-1);
-			const unsigned int c1 = *(unsigned int*)((unsigned char*)src1+1);
-			const unsigned int c2 = *(src1-(FB_WIDTH / 4));
-			const unsigned int c3 = *(src1+(FB_WIDTH / 4));
+	do {
+		const unsigned int c0 = *(unsigned int*)((unsigned char*)src1-1);
+		const unsigned int c1 = *(unsigned int*)((unsigned char*)src1+1);
+		const unsigned int c2 = *(src1-(FB_WIDTH / 4));
+		const unsigned int c3 = *(src1+(FB_WIDTH / 4));
 
-			// Subtract and then absolute value of 4 bytes packed in 8bits (From Hacker's Delight)
-			const unsigned int c = (((c0 + c1 + c2 + c3) >> 1) & 0x7f7f7f7f) - *src2;
-			const unsigned int a = c & 0x80808080;
-			const unsigned int b = a >> 7;
-			const unsigned int cc = (c ^ ((a - b) | a)) + b;
+		// Subtract and then absolute value of 4 bytes packed in 8bits (From Hacker's Delight)
+		const unsigned int c = (((c0 + c1 + c2 + c3) >> 1) & 0x7f7f7f7f) - *src2;
+		const unsigned int a = c & 0x80808080;
+		const unsigned int b = a >> 7;
+		const unsigned int cc = (c ^ ((a - b) | a)) + b;
 
-			*src2++ = cc;
-			src1++;
-		} while (--count > 0);
-	}
+		*src2++ = cc;
+		src1++;
+	} while (--count > 0);
+}
 #endif
 
 static void renderBlob(int xp, int yp, unsigned char *buffer)

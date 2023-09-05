@@ -20,7 +20,7 @@ scrobj = src/scr/bump.obj src/scr/fract.obj src/scr/greets.obj &
 	src/scr/juliatun.obj src/scr/blobgrid.obj src/scr/break.obj &
 	src/scr/3dzoom.obj &
 	src/scr/opt_rend.obj src/scr/opt_3d.obj src/scr/polka.obj src/scr/dott.obj &
-	src/scr/water.obj
+	src/scr/water.obj src/scr/waterasm.obj
 csprobj = cspr/dbgfont.obj cspr/confont.obj
 
 incpath = -Isrc -Isrc/dos -Isrc/3dgfx -Isrc/rt -Ilibs -Ilibs/imago/src &
@@ -49,7 +49,7 @@ scrobj = src\scr\bump.obj src\scr\fract.obj src\scr\greets.obj &
 	src\scr\juliatun.obj src\scr\blobgrid.obj src\scr\break.obj &
 	src\scr\3dzoom.obj &
 	src\scr\opt_rend.obj src\scr\opt_3d.obj src\scr\polka.obj src\scr\dott.obj &
-	src\scr\water.obj
+	src\scr\water.obj src\scr\waterasm.obj
 csprobj = cspr\dbgfont.obj cspr\confont.obj
 
 incpath = -Isrc -Isrc\dos -Isrc\3dgfx -Isrc\rt -Ilibs -Ilibs\imago\src &

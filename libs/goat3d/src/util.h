@@ -21,12 +21,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "goat3d.h"
 
 #ifndef _MSC_VER
+
 #ifdef __sgi
 #include <inttypes.h>
 #else
+#if defined(__WATCOMC__) && __WATCOMC__ < 1200
+typedef unsigned long uint32_t;
+#else
 #include <stdint.h>
 #endif
-#else
+#endif
+
+#else	/* _MSC_VER */
 typedef unsigned __int32 uint32_t;
 #endif
 

@@ -735,8 +735,8 @@ static void calc_grad(struct g3d_vertex *v)
 		pgrad.dbdy = cround64(DFDY(b) * 4096.0f);
 		if(st->opt & G3D_ALPHA_BLEND) {
 			ATTR_DELTAS(a);
-			pgrad.dadx = cround64(DFDX(a));
-			pgrad.dady = cround64(DFDY(a));
+			pgrad.dadx = cround64(DFDX(a) * 4096.0f);
+			pgrad.dady = cround64(DFDY(a) * 4096.0f);
 		}
 	}
 

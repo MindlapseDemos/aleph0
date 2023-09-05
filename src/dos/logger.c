@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include "logger.h"
 #include "util.h"
+#include "dosutil.h"
 
 #ifdef __WATCOMC__
 #include <i86.h>

@@ -21,6 +21,8 @@ jpeglib = jpeglib/jcapimin.obj jpeglib/jcapistd.obj jpeglib/jccoefct.obj &
 obj = src/conv.obj src/filejpeg.obj src/filepng.obj src/fileppm.obj src/filergbe.obj &
 	src/filetga.obj src/ftmodule.obj src/imago2.obj src/imago_gl.obj src/modules.obj &
 	$(libpng) $(zlib) $(jpeglib)
+
+alib = ../../imago.lib
 !else
 libpng = libpng\png.obj libpng\pngerror.obj libpng\pngget.obj libpng\pngmem.obj &
 	libpng\pngpread.obj libpng\pngread.obj libpng\pngrio.obj libpng\pngrtran.obj &
@@ -44,17 +46,14 @@ jpeglib = jpeglib\jcapimin.obj jpeglib\jcapistd.obj jpeglib\jccoefct.obj &
 obj = src\conv.obj src\filejpeg.obj src\filepng.obj src\fileppm.obj src\filergbe.obj &
 	src\filetga.obj src\ftmodule.obj src\imago2.obj src\imago_gl.obj src\modules.obj &
 	$(libpng) $(zlib) $(jpeglib)
+
+alib = ..\..\imago.lib
 !endif
 
-alib = imago.lib
-
-#opt = -5 -fp5 -od
-opt = -5 -fp5 -otexan
-dbg = -d1
 def = -DPNG_NO_SNPRINTF
 
 CC = wcc386
-CFLAGS = $(dbg) $(opt) $(def) -zq -bt=dos -Ilibpng -Izlib -Ijpeglib
+CFLAGS = $(cfg_dbg) $(cfg_opt) $(def) -zq -bt=dos -Ilibpng -Izlib -Ijpeglib
 
 $(alib): $(obj)
 	%write objects.lbc $(obj)

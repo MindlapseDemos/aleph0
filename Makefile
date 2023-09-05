@@ -60,9 +60,9 @@ libpath = libpath libs\imago libpath libs\anim libpath libs\midas libpath libs\g
 obj = $(dosobj) $(3dobj) $(rtobj) $(scrobj) $(srcobj) $(csprobj)
 bin = demo.exe
 
-opt = -otexan
-#opt = -od
-def = -dM_PI=3.141592653589793 -dUSE_HLT -dNO_SOUND
+!include watcfg.mk
+
+def = -dM_PI=3.141592653589793 -dUSE_HLT $(cfg_def)
 libs = imago.lib anim.lib goat3d.lib
 # midas.lib
 
@@ -70,10 +70,10 @@ AS = nasm
 CC = wcc386
 LD = wlink
 ASFLAGS = -fobj
-CFLAGS = -d3 -5 -fp5 $(opt) $(def) -s -zq -bt=dos $(incpath)
+CFLAGS = $(cfg_dbg) $(cfg_opt) $(def) -s -zq -bt=dos $(incpath)
 LDFLAGS = option map $(libpath) library { $(libs) }
 
-$(bin): cflags.occ $(obj) libs/imago/imago.lib libs/anim/anim.lib libs/goat3d/goat3d.lib
+$(bin): cflags.occ $(obj) $(libs)
 	%write objects.lnk $(obj)
 	%write ldflags.lnk $(LDFLAGS)
 	$(LD) debug all name $@ system dos4g file { @objects } @ldflags
@@ -102,6 +102,29 @@ clean: .symbolic
 	rm -f $(obj)
 	rm -f $(bin)
 	rm -f cflags.occ *.lnk
+
+imago.lib:
+	cd libs/imago
+	wmake
+	cd ../..
+
+anim.lib:
+	cd libs/anim
+	wmake
+	cd ../..
+
+goat3d.lib:
+	cd libs/goat3d
+	wmake
+	cd ../..
+
+cleanlibs: .symbolic
+	cd libs/imago
+	wmake clean
+	cd ../anim
+	wmake clean
+	cd ../goat3d
+	wmake clean
 !else
 clean: .symbolic
 	del src\*.obj
@@ -112,4 +135,27 @@ clean: .symbolic
 	del *.lnk
 	del cflags.occ
 	del $(bin)
+
+imago.lib:
+	cd libs\imago
+	wmake
+	cd ..\..
+
+anim.lib:
+	cd libs\anim
+	wmake
+	cd ..\..
+
+goat3d.lib:
+	cd libs\goat3d
+	wmake
+	cd ..\..
+
+cleanlibs: .symbolic
+	cd libs\imago
+	wmake clean
+	cd ..\anim
+	wmake clean
+	cd ..\goat3d
+	wmake clean
 !endif

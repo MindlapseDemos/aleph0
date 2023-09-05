@@ -23,7 +23,6 @@ static int use_sball;
 static vec3_t pos = {0, 0, 0};
 static quat_t rot = {0, 0, 0, 1};
 
-int dblsize;
 
 int main(int argc, char **argv)
 {
@@ -69,12 +68,11 @@ int main(int argc, char **argv)
 	}
 
 	if((vmidx = match_video_mode(FB_WIDTH, FB_HEIGHT, FB_BPP)) == -1) {
-		/*if((vmidx = match_video_mode(FB_WIDTH * 2, FB_HEIGHT * 2, FB_BPP)) == -1) {*/
+		if((vmidx = match_video_mode(FB_WIDTH, 200, FB_BPP)) == -1) {
 			demo_abort();
-		/*}
-		dblsize = 1;
-		printf("Warning: failed to find suitable, %dx%d video mode. Will use 2x scaling, performance might suffer\n",
-				FB_WIDTH, FB_HEIGHT);*/
+		}
+		printf("Warning: failed to find suitable, %dx%d video mode. fallback to a 200-line mode, part of the image will be cropped\n",
+				FB_WIDTH, FB_HEIGHT);
 	}
 	if(!(vmem = set_video_mode(vmidx, 1))) {
 		demo_abort();

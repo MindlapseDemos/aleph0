@@ -91,6 +91,7 @@ void memcpy64(void *dest, void *src, int count);
 #define memcpy64(dest, src, count)	memcpy(dest, src, (count) << 3)
 #endif
 
+#ifndef NO_PENTIUM
 void perf_start(void);
 #pragma aux perf_start = \
 	"xor eax, eax" \
@@ -107,6 +108,7 @@ void perf_end(void);
 	"sub eax, [perf_start_count]" \
 	"mov [perf_interval_count], eax" \
 	modify [eax ebx ecx edx];
+#endif	/* !def NO_PENTIUM */
 
 void debug_break(void);
 #pragma aux debug_break = "int 3";
@@ -161,6 +163,7 @@ static void INLINE memset16(void *dest, uint16_t val, int count)
 #define memcpy64(dest, src, count)	memcpy(dest, src, (count) << 3)
 #endif
 
+#ifndef NO_PENTIUM
 #define perf_start()  asm volatile ( \
 	"xor %%eax, %%eax\n" \
 	"cpuid\n" \
@@ -178,6 +181,7 @@ static void INLINE memset16(void *dest, uint16_t val, int count)
 	: "=m"(perf_interval_count) \
 	: "m"(perf_start_count) \
 	: "%eax", "%ebx", "%ecx", "%edx")
+#endif	/* !def NO_PENTIUM */
 
 #define debug_break() \
 	asm volatile("int $3")
@@ -208,6 +212,7 @@ static void __inline memset16(void *dest, uint16_t val, int count)
 	}
 }
 
+#ifdef NO_PENTIUM
 #define perf_start() \
 	do { \
 		__asm { \
@@ -228,6 +233,7 @@ static void __inline memset16(void *dest, uint16_t val, int count)
 			mov [perf_interval_count], eax \
 		} \
 	} while(0)
+#endif	/* !def NO_PENTIUM */
 
 #define debug_break() \
 	do { \

@@ -61,19 +61,11 @@ static int init(void)
 	wb2 = waterBuffer2;
 
 	waterPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
-	waterPal32 = (unsigned int*)malloc(sizeof(unsigned int) * 256 * 256);
 
 	setPalGradient(0,127, 0,0,0, 31,63,31, waterPal);
 	setPalGradient(128,255, 0,0,0, 0,0,0, waterPal);
 
-	k = 0;
-	for (j=0; j<256; ++j) {
-		const int c0 = waterPal[j];
-		for (i=0; i<256; ++i) {
-			const int c1 = waterPal[i];
-			waterPal32[k++] = (c0 << 16) | c1;
-		}
-	}
+	waterPal32 = createColMap16to32(waterPal);
 
 	return 0;
 }

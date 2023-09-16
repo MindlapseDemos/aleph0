@@ -365,6 +365,7 @@ static void destroy(void)
 
 	free(polkaBuffer);
 	free(polkaPal);
+	free(polkaPal32);
 
 	free(psin1);
 	free(psin2);

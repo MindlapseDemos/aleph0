@@ -320,12 +320,32 @@ void *page_flip(int vsync)
 }
 
 
+static void conv555(uint32_t *dst, uint32_t *src, int npix)
+{
+	long i, count = npix >> 3;
+	uint32_t pix;
+
+	for(i=0; i<count; i++) {
+		pix = src[0]; dst[0] = ((pix & 0xffc0ffc0) >> 1) | (pix & 0x1f001f);
+		pix = src[1]; dst[1] = ((pix & 0xffc0ffc0) >> 1) | (pix & 0x1f001f);
+		pix = src[2]; dst[2] = ((pix & 0xffc0ffc0) >> 1) | (pix & 0x1f001f);
+		pix = src[3]; dst[3] = ((pix & 0xffc0ffc0) >> 1) | (pix & 0x1f001f);
+		src += 4;
+		dst += 4;
+	}
+}
+
 static void blit_frame_lfb(void *pixels, int vsync)
 {
 	demo_post_draw(pixels);
 
 	if(vsync) wait_vsync();
-	memcpy64(vpgaddr[frontidx], pixels, pgsize >> 3);
+
+	if(curmode->gbits == 5) {
+		conv555(vpgaddr[frontidx], pixels, pgsize >> 1);
+	} else {
+		memcpy64(vpgaddr[frontidx], pixels, pgsize >> 3);
+	}
 }
 
 static void blit_frame_banked(void *pixels, int vsync)
@@ -343,7 +363,11 @@ static void blit_frame_banked(void *pixels, int vsync)
 	while(pending > 0) {
 		sz = pending > 65536 ? 65536 : pending;
 		/*memcpy64(VMEM_PTR, pptr, sz >> 3);*/
-		memcpy(VMEM_PTR, pptr, sz);
+		if(curmode->gbits == 5) {
+			conv555(VMEM_PTR, (uint32_t*)pptr, sz >> 1);
+		} else {
+			memcpy(VMEM_PTR, pptr, sz);
+		}
 		pptr += sz;
 		pending -= sz;
 		offs += curmode->win_64k_step;

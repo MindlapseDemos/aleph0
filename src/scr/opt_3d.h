@@ -27,4 +27,6 @@ void Opt3Drun(unsigned char *buffer, int ticks);
 unsigned char *getDotsVolumeBuffer();
 void drawBoxLines();
 
+int isqrt(int x);
+
 #endif

@@ -56,6 +56,26 @@ static unsigned char *volumeData;
 
 static int isOpt3Dinit = 0;
 
+int isqrt(int x)
+{
+    long long int q = 1;	// very high numbers over ((1<<30)-1) will freeze in while if this wasn't 64bit
+	int r = 0;
+    while (q <= x) {
+        q <<= 2;
+    }
+    while (q > 1) {
+        int t;
+        q >>= 2;
+        t = (int)(x - r - q);
+        r >>= 1;
+        if (t >= 0) {
+            x = t;
+            r += (int)q;
+        }
+    }
+    return r;
+} 
+
 
 unsigned char *getDotsVolumeBuffer()
 {

@@ -171,49 +171,52 @@ static void drawConnections3D(BlobGridParams *params)
 		const int xpj = origPos[j].x;
 		const int ypj = origPos[j].y;
 		const int zpj = origPos[j].z;
-		for (i=j+1; i<numPoints; ++i) {
-			const int xpi = origPos[i].x;
-			const int ypi = origPos[i].y;
-			const int zpi = origPos[i].z;
+		if (zpj > 0) {
+			for (i=j+1; i<numPoints; ++i) {
+				const int xpi = origPos[i].x;
+				const int ypi = origPos[i].y;
+				const int zpi = origPos[i].z;
 
-			if (i!=j || (zpi > 0 && zpj > 0)) {
-				const int lx = xpi - xpj;
-				const int ly = ypi - ypj;
-				const int lz = zpi - zpj;
-				const int dst = lx*lx + ly*ly + lz*lz;
+				if (i!=j && zpi > 0) {
+					const int lx = xpi - xpj;
+					const int ly = ypi - ypj;
+					const int lz = zpi - zpj;
+					const int dst = lx*lx + ly*ly + lz*lz;
 
-				if (bp > 0 && dst < connectionDist) {
-					const int xsi = screenPos[i].x;
-					const int ysi = screenPos[i].y;
-					const int xsj = screenPos[j].x;
-					const int ysj = screenPos[j].y;
+					if (bp > 0 && dst < connectionDist) {
+						const int xsi = screenPos[i].x;
+						const int ysi = screenPos[i].y;
+						const int xsj = screenPos[j].x;
+						const int ysj = screenPos[j].y;
 
-					//int steps = (((xsi - xsj)*(xsi - xsj) + (ysi - ysj)*(ysi - ysj)) / bp);
-					int length = sqrt((xsi - xsj)*(xsi - xsj) + (ysi - ysj)*(ysi - ysj));
+						//int steps = (((xsi - xsj)*(xsi - xsj) + (ysi - ysj)*(ysi - ysj)) / bp);
+						int length = isqrt((xsi - xsj)*(xsi - xsj) + (ysi - ysj)*(ysi - ysj));
 
-					int px = xsi << FP_PT;
-					int py = ysi << FP_PT;
-					//const int dx = ((xsj - xsi) << FP_PT) / steps;
-					//const int dy = ((ysj - ysi) << FP_PT) / steps;
+						int px = xsi << FP_PT;
+						int py = ysi << FP_PT;
+						//const int dx = ((xsj - xsi) << FP_PT) / steps;
+						//const int dy = ((ysj - ysi) << FP_PT) / steps;
 
-					int dx, dy, dl, ti;
+						int dx, dy, dl, ti;
 
-					//length >>= 1;
-					if (length<=1) continue;	// ==0 crashes, possibly overflow from sqrt giving a NaN?
-					dl = (1 << FP_PT) / length;
-					dx = (xsj - xsi) * dl;
-					dy = (ysj - ysi) * dl;
+						//length >>= 1;
 
-					ti = 0;
-					for (k=0; k<length-1; ++k) {
-						int size = ((blobSizesNum-1) * 1 * ti) >> FP_PT;
-						//if (size > blobSizesNum-1) size = blobSizesNum-1 - size;
-						if (size < 1) size = 1;
-						//if (size > blobSizesNum-1) size = blobSizesNum-1;
-						px += dx;
-						py += dy;
-						ti += dl;
-						drawBlob(px>>FP_PT, py>>FP_PT, size, 0, blobBuffer);
+						if (length<=1) continue;	// ==0 crashes, possibly overflow from sqrt giving a NaN?
+						dl = (1 << FP_PT) / length;
+						dx = (xsj - xsi) * dl;
+						dy = (ysj - ysi) * dl;
+
+						ti = 0;
+						for (k=0; k<length-1; ++k) {
+							int size = ((blobSizesNum-1) * 1 * ti) >> FP_PT;
+							//if (size > blobSizesNum-1) size = blobSizesNum-1 - size;
+							if (size < 1) size = 1;
+							//if (size > blobSizesNum-1) size = blobSizesNum-1;
+							px += dx;
+							py += dy;
+							ti += dl;
+							drawBlob(px>>FP_PT, py>>FP_PT, size, 0, blobBuffer);
+						}
 					}
 				}
 			}
@@ -236,16 +239,19 @@ static void drawStars(BlobGridParams *params)
 
 		dst->z = z;
 		if (z > 0) {
-			const int xp = (FB_WIDTH / 2) + (x << 6) / z;
-			const int yp = (FB_HEIGHT / 2) + (y << 6) / z;
+			int xp = (FB_WIDTH / 2) + (x << 6) / z;
+			int yp = (FB_HEIGHT / 2) + (y << 6) / z;
 
 			int size = ((blobSizesNum - 1) * (STARS_CUBE_DEPTH - z)) / STARS_CUBE_DEPTH;
 			int shifter = (4 * (STARS_CUBE_DEPTH - z)) / STARS_CUBE_DEPTH;
 
-			drawBlob(xp,yp,size,shifter,blobBuffer);
+			if (xp < 0) xp = 0; if (xp > FB_WIDTH-1) xp = FB_WIDTH-1;
+			if (yp < 0) yp = 0; if (yp > FB_HEIGHT-1) yp = FB_HEIGHT-1;
 
 			dst->x = xp;
 			dst->y = yp;
+
+			drawBlob(xp,yp,size,shifter,blobBuffer);
 		}
 		++src;
 		++dst;
@@ -288,7 +294,7 @@ static void drawPoints(BlobGridParams *params, int t)
 }
 
 
-static void moveStars(int t)
+static void moveStars()
 {
 	int count = NUM_STARS;
 	Pos3D *src = origPos;
@@ -311,7 +317,7 @@ static void drawEffect(BlobGridParams *params, int t)
 	static int prevT = 0;
 	const int dt = t - prevT;
 	if (dt < 0 || dt > 20) {
-		moveStars(t);
+		moveStars();
 		prevT = t;
 	}
 
@@ -321,7 +327,10 @@ static void drawEffect(BlobGridParams *params, int t)
 static void draw(void)
 {
 	int i,y=0;
-	const int t = time_msec - startingTime;
+
+	int t = time_msec - startingTime;
+	//t >>= 6;
+
 
 	memset(blobBuffer, 0, FB_WIDTH * FB_HEIGHT);
 

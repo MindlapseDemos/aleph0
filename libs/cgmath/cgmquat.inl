@@ -1,12 +1,12 @@
 /* gph-cmath - C graphics math library
- * Copyright (C) 2018 John Tsiombikas <nuclear@member.fsf.org>
+ * Copyright (C) 2018-2023 John Tsiombikas <nuclear@member.fsf.org>
  *
  * This program is free software. Feel free to use, modify, and/or redistribute
  * it under the terms of the MIT/X11 license. See LICENSE for details.
  * If you intend to redistribute parts of the code without the LICENSE file
  * replace this paragraph with the full contents of the LICENSE file.
  */
-static inline void cgm_qcons(cgm_quat *q, float x, float y, float z, float w)
+static CGM_INLINE void cgm_qcons(cgm_quat *q, float x, float y, float z, float w)
 {
 	q->x = x;
 	q->y = y;
@@ -15,7 +15,7 @@ static inline void cgm_qcons(cgm_quat *q, float x, float y, float z, float w)
 }
 
 
-static inline void cgm_qneg(cgm_quat *q)
+static CGM_INLINE void cgm_qneg(cgm_quat *q)
 {
 	q->x = -q->x;
 	q->y = -q->y;
@@ -23,7 +23,7 @@ static inline void cgm_qneg(cgm_quat *q)
 	q->w = -q->w;
 }
 
-static inline void cgm_qadd(cgm_quat *a, const cgm_quat *b)
+static CGM_INLINE void cgm_qadd(cgm_quat *a, const cgm_quat *b)
 {
 	a->x += b->x;
 	a->y += b->y;
@@ -31,7 +31,7 @@ static inline void cgm_qadd(cgm_quat *a, const cgm_quat *b)
 	a->w += b->w;
 }
 
-static inline void cgm_qsub(cgm_quat *a, const cgm_quat *b)
+static CGM_INLINE void cgm_qsub(cgm_quat *a, const cgm_quat *b)
 {
 	a->x -= b->x;
 	a->y -= b->y;
@@ -39,7 +39,7 @@ static inline void cgm_qsub(cgm_quat *a, const cgm_quat *b)
 	a->w -= b->w;
 }
 
-static inline void cgm_qmul(cgm_quat *a, const cgm_quat *b)
+static CGM_INLINE void cgm_qmul(cgm_quat *a, const cgm_quat *b)
 {
 	float x, y, z, dot;
 	cgm_vec3 cross;
@@ -56,17 +56,17 @@ static inline void cgm_qmul(cgm_quat *a, const cgm_quat *b)
 	a->z = z;
 }
 
-static inline float cgm_qlength(const cgm_quat *q)
+static CGM_INLINE float cgm_qlength(const cgm_quat *q)
 {
 	return sqrt(q->x * q->x + q->y * q->y + q->z * q->z + q->w * q->w);
 }
 
-static inline float cgm_qlength_sq(const cgm_quat *q)
+static CGM_INLINE float cgm_qlength_sq(const cgm_quat *q)
 {
 	return q->x * q->x + q->y * q->y + q->z * q->z + q->w * q->w;
 }
 
-static inline void cgm_qnormalize(cgm_quat *q)
+static CGM_INLINE void cgm_qnormalize(cgm_quat *q)
 {
 	float len = cgm_qlength(q);
 	if(len != 0.0f) {
@@ -78,14 +78,14 @@ static inline void cgm_qnormalize(cgm_quat *q)
 	}
 }
 
-static inline void cgm_qconjugate(cgm_quat *q)
+static CGM_INLINE void cgm_qconjugate(cgm_quat *q)
 {
 	q->x = -q->x;
 	q->y = -q->y;
 	q->z = -q->z;
 }
 
-static inline void cgm_qinvert(cgm_quat *q)
+static CGM_INLINE void cgm_qinvert(cgm_quat *q)
 {
 	float len_sq = cgm_qlength_sq(q);
 	cgm_qconjugate(q);
@@ -98,7 +98,7 @@ static inline void cgm_qinvert(cgm_quat *q)
 	}
 }
 
-static inline void cgm_qrotation(cgm_quat *q, float angle, float x, float y, float z)
+static CGM_INLINE void cgm_qrotation(cgm_quat *q, float angle, float x, float y, float z)
 {
 	float hangle = angle * 0.5f;
 	float sin_ha = sin(hangle);
@@ -108,14 +108,14 @@ static inline void cgm_qrotation(cgm_quat *q, float angle, float x, float y, flo
 	q->z = z * sin_ha;
 }
 
-static inline void cgm_qrotate(cgm_quat *q, float angle, float x, float y, float z)
+static CGM_INLINE void cgm_qrotate(cgm_quat *q, float angle, float x, float y, float z)
 {
 	cgm_quat qrot;
 	cgm_qrotation(&qrot, angle, x, y, z);
 	cgm_qmul(q, &qrot);
 }
 
-static inline void cgm_qslerp(cgm_quat *res, const cgm_quat *quat1, const cgm_quat *q2, float t)
+static CGM_INLINE void cgm_qslerp(cgm_quat *res, const cgm_quat *quat1, const cgm_quat *q2, float t)
 {
 	float angle, dot, a, b, sin_angle;
 	cgm_quat q1 = *quat1;
@@ -150,7 +150,7 @@ static inline void cgm_qslerp(cgm_quat *res, const cgm_quat *quat1, const cgm_qu
 	res->w = q1.w * a + q2->w * b;
 }
 
-static inline void cgm_qlerp(cgm_quat *res, const cgm_quat *a, const cgm_quat *b, float t)
+static CGM_INLINE void cgm_qlerp(cgm_quat *res, const cgm_quat *a, const cgm_quat *b, float t)
 {
 	res->x = a->x + (b->x - a->x) * t;
 	res->y = a->y + (b->y - a->y) * t;

@@ -1,29 +1,29 @@
 /* gph-cmath - C graphics math library
- * Copyright (C) 2018 John Tsiombikas <nuclear@member.fsf.org>
+ * Copyright (C) 2018-2023 John Tsiombikas <nuclear@member.fsf.org>
  *
  * This program is free software. Feel free to use, modify, and/or redistribute
  * it under the terms of the MIT/X11 license. See LICENSE for details.
  * If you intend to redistribute parts of the code without the LICENSE file
  * replace this paragraph with the full contents of the LICENSE file.
  */
-static inline void cgm_mcopy(float *dest, const float *src)
+static CGM_INLINE void cgm_mcopy(float *dest, const float *src)
 {
 	memcpy(dest, src, 16 * sizeof(float));
 }
 
-static inline void cgm_mzero(float *m)
+static CGM_INLINE void cgm_mzero(float *m)
 {
 	static float z[16];
 	cgm_mcopy(m, z);
 }
 
-static inline void cgm_midentity(float *m)
+static CGM_INLINE void cgm_midentity(float *m)
 {
 	static float id[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
 	cgm_mcopy(m, id);
 }
 
-static inline void cgm_mmul(float *a, const float *b)
+static CGM_INLINE void cgm_mmul(float *a, const float *b)
 {
 	int i, j;
 	float res[16];
@@ -40,7 +40,7 @@ static inline void cgm_mmul(float *a, const float *b)
 	cgm_mcopy(a, res);
 }
 
-static inline void cgm_mpremul(float *a, const float *b)
+static CGM_INLINE void cgm_mpremul(float *a, const float *b)
 {
 	int i, j;
 	float res[16];
@@ -57,7 +57,7 @@ static inline void cgm_mpremul(float *a, const float *b)
 	cgm_mcopy(a, res);
 }
 
-static inline void cgm_msubmatrix(float *m, int row, int col)
+static CGM_INLINE void cgm_msubmatrix(float *m, int row, int col)
 {
 	float orig[16];
 	int i, j, subi, subj;
@@ -80,13 +80,13 @@ static inline void cgm_msubmatrix(float *m, int row, int col)
 	cgm_mupper3(m);
 }
 
-static inline void cgm_mupper3(float *m)
+static CGM_INLINE void cgm_mupper3(float *m)
 {
 	m[3] = m[7] = m[11] = m[12] = m[13] = m[14] = 0.0f;
 	m[15] = 1.0f;
 }
 
-static inline float cgm_msubdet(const float *m, int row, int col)
+static CGM_INLINE float cgm_msubdet(const float *m, int row, int col)
 {
 	float tmp[16];
 	float subdet00, subdet01, subdet02;
@@ -101,19 +101,19 @@ static inline float cgm_msubdet(const float *m, int row, int col)
 	return tmp[0] * subdet00 - tmp[1] * subdet01 + tmp[2] * subdet02;
 }
 
-static inline float cgm_mcofactor(const float *m, int row, int col)
+static CGM_INLINE float cgm_mcofactor(const float *m, int row, int col)
 {
 	float min = cgm_msubdet(m, row, col);
 	return (row + col) & 1 ? -min : min;
 }
 
-static inline float cgm_mdet(const float *m)
+static CGM_INLINE float cgm_mdet(const float *m)
 {
 	return m[0] * cgm_msubdet(m, 0, 0) - m[1] * cgm_msubdet(m, 0, 1) +
 		m[2] * cgm_msubdet(m, 0, 2) - m[3] * cgm_msubdet(m, 0, 3);
 }
 
-static inline void cgm_mtranspose(float *m)
+static CGM_INLINE void cgm_mtranspose(float *m)
 {
 	int i, j;
 	for(i=0; i<4; i++) {
@@ -127,7 +127,7 @@ static inline void cgm_mtranspose(float *m)
 	}
 }
 
-static inline void cgm_mcofmatrix(float *m)
+static CGM_INLINE void cgm_mcofmatrix(float *m)
 {
 	float tmp[16];
 	int i, j;
@@ -141,7 +141,7 @@ static inline void cgm_mcofmatrix(float *m)
 	}
 }
 
-static inline int cgm_minverse(float *m)
+static CGM_INLINE int cgm_minverse(float *m)
 {
 	int i, j;
 	float tmp[16];
@@ -160,7 +160,7 @@ static inline int cgm_minverse(float *m)
 	return 0;
 }
 
-static inline void cgm_mtranslation(float *m, float x, float y, float z)
+static CGM_INLINE void cgm_mtranslation(float *m, float x, float y, float z)
 {
 	cgm_midentity(m);
 	m[12] = x;
@@ -168,7 +168,7 @@ static inline void cgm_mtranslation(float *m, float x, float y, float z)
 	m[14] = z;
 }
 
-static inline void cgm_mscaling(float *m, float sx, float sy, float sz)
+static CGM_INLINE void cgm_mscaling(float *m, float sx, float sy, float sz)
 {
 	cgm_mzero(m);
 	m[0] = sx;
@@ -177,7 +177,7 @@ static inline void cgm_mscaling(float *m, float sx, float sy, float sz)
 	m[15] = 1.0f;
 }
 
-static inline void cgm_mrotation_x(float *m, float angle)
+static CGM_INLINE void cgm_mrotation_x(float *m, float angle)
 {
 	float sa = sin(angle);
 	float ca = cos(angle);
@@ -189,7 +189,7 @@ static inline void cgm_mrotation_x(float *m, float angle)
 	m[10] = ca;
 }
 
-static inline void cgm_mrotation_y(float *m, float angle)
+static CGM_INLINE void cgm_mrotation_y(float *m, float angle)
 {
 	float sa = sin(angle);
 	float ca = cos(angle);
@@ -201,7 +201,7 @@ static inline void cgm_mrotation_y(float *m, float angle)
 	m[10] = ca;
 }
 
-static inline void cgm_mrotation_z(float *m, float angle)
+static CGM_INLINE void cgm_mrotation_z(float *m, float angle)
 {
 	float sa = sin(angle);
 	float ca = cos(angle);
@@ -213,7 +213,7 @@ static inline void cgm_mrotation_z(float *m, float angle)
 	m[5] = ca;
 }
 
-static inline void cgm_mrotation_axis(float *m, int idx, float angle)
+static CGM_INLINE void cgm_mrotation_axis(float *m, int idx, float angle)
 {
 	switch(idx) {
 	case 0:
@@ -228,7 +228,7 @@ static inline void cgm_mrotation_axis(float *m, int idx, float angle)
 	}
 }
 
-static inline void cgm_mrotation(float *m, float angle, float x, float y, float z)
+static CGM_INLINE void cgm_mrotation(float *m, float angle, float x, float y, float z)
 {
 	float sa = sin(angle);
 	float ca = cos(angle);
@@ -253,7 +253,7 @@ static inline void cgm_mrotation(float *m, float angle, float x, float y, float 
 	m[10] = zsq + (1.0f - zsq) * ca;
 }
 
-static inline void cgm_mrotation_euler(float *m, float a, float b, float c, int mode)
+static CGM_INLINE void cgm_mrotation_euler(float *m, float a, float b, float c, int mode)
 {
 	/* this array must match the EulerMode enum */
 	static const int axis[][3] = {
@@ -273,7 +273,7 @@ static inline void cgm_mrotation_euler(float *m, float a, float b, float c, int 
 	cgm_mmul(m, ma);
 }
 
-static inline void cgm_mrotation_quat(float *m, const cgm_quat *q)
+static CGM_INLINE void cgm_mrotation_quat(float *m, const cgm_quat *q)
 {
 	float xsq2 = 2.0f * q->x * q->x;
 	float ysq2 = 2.0f * q->y * q->y;
@@ -296,63 +296,63 @@ static inline void cgm_mrotation_quat(float *m, const cgm_quat *q)
 	m[10] = sz;
 }
 
-static inline void cgm_mtranslate(float *m, float x, float y, float z)
+static CGM_INLINE void cgm_mtranslate(float *m, float x, float y, float z)
 {
 	float tm[16];
 	cgm_mtranslation(tm, x, y, z);
 	cgm_mmul(m, tm);
 }
 
-static inline void cgm_mscale(float *m, float sx, float sy, float sz)
+static CGM_INLINE void cgm_mscale(float *m, float sx, float sy, float sz)
 {
 	float sm[16];
 	cgm_mscaling(sm, sx, sy, sz);
 	cgm_mmul(m, sm);
 }
 
-static inline void cgm_mrotate_x(float *m, float angle)
+static CGM_INLINE void cgm_mrotate_x(float *m, float angle)
 {
 	float rm[16];
 	cgm_mrotation_x(rm, angle);
 	cgm_mmul(m, rm);
 }
 
-static inline void cgm_mrotate_y(float *m, float angle)
+static CGM_INLINE void cgm_mrotate_y(float *m, float angle)
 {
 	float rm[16];
 	cgm_mrotation_y(rm, angle);
 	cgm_mmul(m, rm);
 }
 
-static inline void cgm_mrotate_z(float *m, float angle)
+static CGM_INLINE void cgm_mrotate_z(float *m, float angle)
 {
 	float rm[16];
 	cgm_mrotation_z(rm, angle);
 	cgm_mmul(m, rm);
 }
 
-static inline void cgm_mrotate_axis(float *m, int idx, float angle)
+static CGM_INLINE void cgm_mrotate_axis(float *m, int idx, float angle)
 {
 	float rm[16];
 	cgm_mrotation_axis(rm, idx, angle);
 	cgm_mmul(m, rm);
 }
 
-static inline void cgm_mrotate(float *m, float angle, float x, float y, float z)
+static CGM_INLINE void cgm_mrotate(float *m, float angle, float x, float y, float z)
 {
 	float rm[16];
 	cgm_mrotation(rm, angle, x, y, z);
 	cgm_mmul(m, rm);
 }
 
-static inline void cgm_mrotate_euler(float *m, float a, float b, float c, int mode)
+static CGM_INLINE void cgm_mrotate_euler(float *m, float a, float b, float c, int mode)
 {
 	float rm[16];
 	cgm_mrotation_euler(rm, a, b, c, mode);
 	cgm_mmul(m, rm);
 }
 
-static inline void cgm_mrotate_quat(float *m, const cgm_quat *q)
+static CGM_INLINE void cgm_mrotate_quat(float *m, const cgm_quat *q)
 {
 	float rm[16];
 	cgm_mrotation_quat(rm, q);
@@ -360,63 +360,63 @@ static inline void cgm_mrotate_quat(float *m, const cgm_quat *q)
 }
 
 
-static inline void cgm_mpretranslate(float *m, float x, float y, float z)
+static CGM_INLINE void cgm_mpretranslate(float *m, float x, float y, float z)
 {
 	float tm[16];
 	cgm_mtranslation(tm, x, y, z);
 	cgm_mpremul(m, tm);
 }
 
-static inline void cgm_mprescale(float *m, float sx, float sy, float sz)
+static CGM_INLINE void cgm_mprescale(float *m, float sx, float sy, float sz)
 {
 	float sm[16];
 	cgm_mscaling(sm, sx, sy, sz);
 	cgm_mpremul(m, sm);
 }
 
-static inline void cgm_mprerotate_x(float *m, float angle)
+static CGM_INLINE void cgm_mprerotate_x(float *m, float angle)
 {
 	float rm[16];
 	cgm_mrotation_x(rm, angle);
 	cgm_mpremul(m, rm);
 }
 
-static inline void cgm_mprerotate_y(float *m, float angle)
+static CGM_INLINE void cgm_mprerotate_y(float *m, float angle)
 {
 	float rm[16];
 	cgm_mrotation_y(rm, angle);
 	cgm_mpremul(m, rm);
 }
 
-static inline void cgm_mprerotate_z(float *m, float angle)
+static CGM_INLINE void cgm_mprerotate_z(float *m, float angle)
 {
 	float rm[16];
 	cgm_mrotation_z(rm, angle);
 	cgm_mpremul(m, rm);
 }
 
-static inline void cgm_mprerotate_axis(float *m, int idx, float angle)
+static CGM_INLINE void cgm_mprerotate_axis(float *m, int idx, float angle)
 {
 	float rm[16];
 	cgm_mrotation_axis(rm, idx, angle);
 	cgm_mpremul(m, rm);
 }
 
-static inline void cgm_mprerotate(float *m, float angle, float x, float y, float z)
+static CGM_INLINE void cgm_mprerotate(float *m, float angle, float x, float y, float z)
 {
 	float rm[16];
 	cgm_mrotation(rm, angle, x, y, z);
 	cgm_mpremul(m, rm);
 }
 
-static inline void cgm_mprerotate_euler(float *m, float a, float b, float c, int mode)
+static CGM_INLINE void cgm_mprerotate_euler(float *m, float a, float b, float c, int mode)
 {
 	float rm[16];
 	cgm_mrotation_euler(rm, a, b, c, mode);
 	cgm_mpremul(m, rm);
 }
 
-static inline void cgm_mprerotate_quat(float *m, const cgm_quat *q)
+static CGM_INLINE void cgm_mprerotate_quat(float *m, const cgm_quat *q)
 {
 	float rm[16];
 	cgm_mrotation_quat(rm, q);
@@ -424,7 +424,7 @@ static inline void cgm_mprerotate_quat(float *m, const cgm_quat *q)
 }
 
 
-static inline void cgm_mget_translation(const float *m, cgm_vec3 *res)
+static CGM_INLINE void cgm_mget_translation(const float *m, cgm_vec3 *res)
 {
 	res->x = m[12];
 	res->y = m[13];
@@ -435,7 +435,7 @@ static inline void cgm_mget_translation(const float *m, cgm_vec3 *res)
  * article "Quaternion Calculus and Fast Animation".
  * adapted from: http://www.geometrictools.com/LibMathematics/Algebra/Wm5Quaternion.inl
  */
-static inline void cgm_mget_rotation(const float *m, cgm_quat *res)
+static CGM_INLINE void cgm_mget_rotation(const float *m, cgm_quat *res)
 {
 	static const int next[3] = {1, 2, 0};
 	float quat[4];
@@ -477,32 +477,76 @@ static inline void cgm_mget_rotation(const float *m, cgm_quat *res)
 	}
 }
 
-static inline void cgm_mget_scaling(const float *m, cgm_vec3 *res)
+static CGM_INLINE void cgm_mget_scaling(const float *m, cgm_vec3 *res)
 {
 	res->x = sqrt(m[0] * m[0] + m[4] * m[4] + m[8] * m[8]);
 	res->y = sqrt(m[1] * m[1] + m[5] * m[5] + m[9] * m[9]);
 	res->z = sqrt(m[2] * m[2] + m[6] * m[6] + m[10] * m[10]);
 }
 
-static inline void cgm_mget_frustum_plane(const float *m, int p, cgm_vec4 *res)
+static CGM_INLINE void cgm_mget_frustum_plane(const float *m, int p, cgm_vec4 *res)
 {
-	int row = p >> 1;
-	const float *rowptr = m + row * 4;
+	switch(p) {
+	case 0:
+		res->x = m[3] + m[0];
+		res->y = m[7] + m[4];
+		res->z = m[11] + m[8];
+		res->w = m[15] + m[12];
+		break;
 
-	if((p & 1) == 0) {
-		res->x = m[12] + rowptr[0];
-		res->y = m[13] + rowptr[1];
-		res->z = m[14] + rowptr[2];
-		res->w = m[15] + rowptr[3];
-	} else {
-		res->x = m[12] - rowptr[0];
-		res->y = m[13] - rowptr[1];
-		res->z = m[14] - rowptr[2];
-		res->w = m[15] - rowptr[3];
+	case 1:
+		res->x = m[3] - m[0];
+		res->y = m[7] - m[4];
+		res->z = m[11] - m[8];
+		res->w = m[15] - m[12];
+		break;
+
+	case 2:
+		res->x = m[3] + m[1];
+		res->y = m[7] + m[5];
+		res->z = m[11] + m[9];
+		res->w = m[15] + m[13];
+		break;
+
+	case 3:
+		res->x = m[3] - m[1];
+		res->y = m[7] - m[5];
+		res->z = m[11] - m[9];
+		res->w = m[15] - m[13];
+		break;
+
+	case 4:
+		res->x = m[3] + m[2];
+		res->y = m[7] + m[6];
+		res->z = m[11] + m[10];
+		res->w = m[15] + m[14];
+		break;
+
+	case 5:
+		res->x = m[3] - m[2];
+		res->y = m[7] - m[6];
+		res->z = m[11] - m[10];
+		res->w = m[15] - m[14];
+		break;
+
+	default:
+		break;
 	}
 }
 
-static inline void cgm_mlookat(float *m, const cgm_vec3 *pos, const cgm_vec3 *targ,
+static CGM_INLINE void cgm_normalize_plane(cgm_vec4 *p)
+{
+	float len = cgm_vlength((cgm_vec3*)p);
+	if(len != 0.0f) {
+		float s = 1.0f / len;
+		p->x *= s;
+		p->y *= s;
+		p->z *= s;
+		p->w *= s;
+	}
+}
+
+static CGM_INLINE void cgm_mlookat(float *m, const cgm_vec3 *pos, const cgm_vec3 *targ,
 		const cgm_vec3 *up)
 {
 	float trans[16];
@@ -530,7 +574,7 @@ static inline void cgm_mlookat(float *m, const cgm_vec3 *pos, const cgm_vec3 *ta
 	cgm_mmul(m, trans);
 }
 
-static inline void cgm_minv_lookat(float *m, const cgm_vec3 *pos, const cgm_vec3 *targ,
+static CGM_INLINE void cgm_minv_lookat(float *m, const cgm_vec3 *pos, const cgm_vec3 *targ,
 		const cgm_vec3 *up)
 {
 	float rot[16];
@@ -558,7 +602,7 @@ static inline void cgm_minv_lookat(float *m, const cgm_vec3 *pos, const cgm_vec3
 	cgm_mmul(m, rot);
 }
 
-static inline void cgm_mortho(float *m, float left, float right, float bot, float top,
+static CGM_INLINE void cgm_mortho(float *m, float left, float right, float bot, float top,
 		float znear, float zfar)
 {
 	float dx = right - left;
@@ -574,7 +618,7 @@ static inline void cgm_mortho(float *m, float left, float right, float bot, floa
 	m[14] = -(zfar + znear) / dz;
 }
 
-static inline void cgm_mfrustum(float *m, float left, float right, float bot, float top,
+static CGM_INLINE void cgm_mfrustum(float *m, float left, float right, float bot, float top,
 		float znear, float zfar)
 {
 	float dx = right - left;
@@ -591,7 +635,7 @@ static inline void cgm_mfrustum(float *m, float left, float right, float bot, fl
 	m[11] = -1.0f;
 }
 
-static inline void cgm_mperspective(float *m, float vfov, float aspect, float znear, float zfar)
+static CGM_INLINE void cgm_mperspective(float *m, float vfov, float aspect, float znear, float zfar)
 {
 	float s = 1.0f / (float)tan(vfov / 2.0f);
 	float range = znear - zfar;
@@ -604,7 +648,7 @@ static inline void cgm_mperspective(float *m, float vfov, float aspect, float zn
 	m[11] = -1.0f;
 }
 
-static inline void cgm_mmirror(float *m, float a, float b, float c, float d)
+static CGM_INLINE void cgm_mmirror(float *m, float a, float b, float c, float d)
 {
 	m[0] = 1.0f - 2.0f * a * a;
 	m[5] = 1.0f - 2.0f * b * b;

@@ -1,5 +1,5 @@
 /* gph-cmath - C graphics math library
- * Copyright (C) 2018 John Tsiombikas <nuclear@member.fsf.org>
+ * Copyright (C) 2018-2023 John Tsiombikas <nuclear@member.fsf.org>
  *
  * This program is free software. Feel free to use, modify, and/or redistribute
  * it under the terms of the MIT/X11 license. See LICENSE for details.
@@ -8,17 +8,17 @@
  */
 #include <stdlib.h>
 
-static inline float cgm_deg_to_rad(float deg)
+static CGM_INLINE float cgm_deg_to_rad(float deg)
 {
 	return M_PI * deg / 180.0f;
 }
 
-static inline float cgm_rad_to_deg(float rad)
+static CGM_INLINE float cgm_rad_to_deg(float rad)
 {
 	return 180.0f * rad / M_PI;
 }
 
-static inline float cgm_smoothstep(float a, float b, float x)
+static CGM_INLINE float cgm_smoothstep(float a, float b, float x)
 {
 	if(x < a) return 0.0f;
 	if(x >= b) return 1.0f;
@@ -27,12 +27,18 @@ static inline float cgm_smoothstep(float a, float b, float x)
 	return x * x * (3.0f - 2.0f * x);
 }
 
-static inline float cgm_lerp(float a, float b, float t)
+static CGM_INLINE float cgm_lerp(float a, float b, float t)
 {
 	return a + (b - a) * t;
 }
 
-static inline float cgm_bezier(float a, float b, float c, float d, float t)
+static CGM_INLINE float cgm_logerp(float a, float b, float t)
+{
+	if(a == 0.0f) return 0.0f;
+	return a * pow(b / a, t);
+}
+
+static CGM_INLINE float cgm_bezier(float a, float b, float c, float d, float t)
 {
 	float omt, omt3, t3, f;
 	t3 = t * t * t;
@@ -43,7 +49,7 @@ static inline float cgm_bezier(float a, float b, float c, float d, float t)
 	return (a * omt3) + (b * f * omt) + (c * f * t) + (d * t3);
 }
 
-static inline float cgm_bspline(float a, float b, float c, float d, float t)
+static CGM_INLINE float cgm_bspline(float a, float b, float c, float d, float t)
 {
 	static const float mat[] = {
 		-1, 3, -3, 1,
@@ -61,7 +67,7 @@ static inline float cgm_bspline(float a, float b, float c, float d, float t)
 	return cgm_wdot(&tmp, &qfact);
 }
 
-static inline float cgm_spline(float a, float b, float c, float d, float t)
+static CGM_INLINE float cgm_spline(float a, float b, float c, float d, float t)
 {
 	static const float mat[] = {
 		-1, 2, -1, 0,
@@ -79,21 +85,21 @@ static inline float cgm_spline(float a, float b, float c, float d, float t)
 	return cgm_wdot(&tmp, &qfact);
 }
 
-static inline void cgm_discrand(cgm_vec3 *pt, float rad)
+static CGM_INLINE void cgm_discrand(cgm_vec3 *pt, float rad)
 {
-	float theta = 2.0f * M_PI * (float)rand() / (float)RAND_MAX;
-	float r = sqrt((float)rand() / (float)RAND_MAX) * rad;
+	float theta = 2.0f * M_PI * (float)rand() / RAND_MAX;
+	float r = sqrt((float)rand() / RAND_MAX) * rad;
 	pt->x = cos(theta) * r;
 	pt->y = sin(theta) * r;
 	pt->z = 0.0f;
 }
 
-static inline void cgm_sphrand(cgm_vec3 *pt, float rad)
+static CGM_INLINE void cgm_sphrand(cgm_vec3 *pt, float rad)
 {
 	float u, v, theta, phi;
 
-	u = (float)rand() / (float)RAND_MAX;
-	v = (float)rand() / (float)RAND_MAX;
+	u = (float)rand() / RAND_MAX;
+	v = (float)rand() / RAND_MAX;
 
 	theta = 2.0f * M_PI * u;
 	phi = acos(2.0f * v - 1.0f);
@@ -103,7 +109,7 @@ static inline void cgm_sphrand(cgm_vec3 *pt, float rad)
 	pt->z = cos(phi) * rad;
 }
 
-static inline void cgm_unproject(cgm_vec3 *res, const cgm_vec3 *norm_scrpos,
+static CGM_INLINE void cgm_unproject(cgm_vec3 *res, const cgm_vec3 *norm_scrpos,
 		const float *inv_viewproj)
 {
 	cgm_vec4 pos;
@@ -120,15 +126,16 @@ static inline void cgm_unproject(cgm_vec3 *res, const cgm_vec3 *norm_scrpos,
 	res->z = pos.z / pos.w;
 }
 
-static inline void cgm_glu_unproject(float winx, float winy, float winz,
+static CGM_INLINE void cgm_glu_unproject(float winx, float winy, float winz,
 		const float *view, const float *proj, const int *vp,
 		float *objx, float *objy, float *objz)
 {
 	cgm_vec3 npos, res;
 	float inv_pv[16];
 
-	cgm_mcopy(inv_pv, proj);
-	cgm_mmul(inv_pv, view);
+	cgm_mcopy(inv_pv, view);
+	cgm_mmul(inv_pv, proj);
+	cgm_minverse(inv_pv);
 
 	npos.x = (winx - vp[0]) / vp[2];
 	npos.y = (winy - vp[1]) / vp[4];
@@ -141,14 +148,15 @@ static inline void cgm_glu_unproject(float winx, float winy, float winz,
 	*objz = res.z;
 }
 
-static inline void cgm_pick_ray(cgm_ray *ray, float nx, float ny,
+static CGM_INLINE void cgm_pick_ray(cgm_ray *ray, float nx, float ny,
 		const float *viewmat, const float *projmat)
 {
 	cgm_vec3 npos, farpt;
 	float inv_pv[16];
 
-	cgm_mcopy(inv_pv, projmat);
-	cgm_mmul(inv_pv, viewmat);
+	cgm_mcopy(inv_pv, viewmat);
+	cgm_mmul(inv_pv, projmat);
+	cgm_minverse(inv_pv);
 
 	cgm_vcons(&npos, nx, ny, 0.0f);
 	cgm_unproject(&ray->origin, &npos, inv_pv);
@@ -160,14 +168,14 @@ static inline void cgm_pick_ray(cgm_ray *ray, float nx, float ny,
 	ray->dir.z = farpt.z - ray->origin.z;
 }
 
-static inline void cgm_raypos(cgm_vec3 *p, const cgm_ray *ray, float t)
+static CGM_INLINE void cgm_raypos(cgm_vec3 *p, const cgm_ray *ray, float t)
 {
 	p->x = ray->origin.x + ray->dir.x * t;
 	p->y = ray->origin.y + ray->dir.y * t;
 	p->z = ray->origin.z + ray->dir.z * t;
 }
 
-static inline void cgm_bary(cgm_vec3 *bary, const cgm_vec3 *a,
+static CGM_INLINE void cgm_bary(cgm_vec3 *bary, const cgm_vec3 *a,
 		const cgm_vec3 *b, const cgm_vec3 *c, const cgm_vec3 *pt)
 {
 	float d00, d01, d11, d20, d21, denom;
@@ -187,4 +195,17 @@ static inline void cgm_bary(cgm_vec3 *bary, const cgm_vec3 *a,
 	bary->y = (d11 * d20 - d01 * d21) / denom;
 	bary->z = (d00 * d21 - d01 * d20) / denom;
 	bary->x = 1.0f - bary->y - bary->z;
+}
+
+static CGM_INLINE void cgm_uvec_to_sph(float *theta, float *phi, const cgm_vec3 *v)
+{
+	*theta = atan2(v->z, v->x);
+	*phi = acos(v->y);
+}
+
+static CGM_INLINE void cgm_sph_to_uvec(cgm_vec3 *v, float theta, float phi)
+{
+	v->x = sin(theta) * cos(phi);
+	v->y = sin(phi);
+	v->z = cos(theta) * cos(phi);
 }

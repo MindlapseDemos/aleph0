@@ -393,9 +393,9 @@ int gen_sphere_mesh(struct g3d_mesh *mesh, float rad, int usub, int vsub)
 			if(i < usub && j < vsub) {
 				int idx = i * vverts + j;
 				*iptr++ = idx;
-				*iptr++ = idx + 1;
-				*iptr++ = idx + vverts + 1;
 				*iptr++ = idx + vverts;
+				*iptr++ = idx + vverts + 1;
+				*iptr++ = idx + 1;
 			}
 		}
 	}

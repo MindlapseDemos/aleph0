@@ -43,9 +43,10 @@ else
 	mkdir -p $destdir/data
 	cp demo.exe $destdir
 	rm -f $destdir/data/*
-	cp data/* $destdir/data/
+	cp -r data/* $destdir/data/
 	mkdir -p $destdir/libs/midas
 	cp libs/midas/midas.lib libs/midas/libmidas.a $destdir/libs/midas
+	cp watcfg.mk $destdir/watcfg.mk
 fi
 
 findsrc()

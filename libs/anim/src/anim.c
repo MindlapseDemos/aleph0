@@ -536,7 +536,7 @@ static anm_time_t animation_time(struct anm_node *node, anm_time_t tm, int which
 {
 	float t;
 
-	if(node->blend_dur >= 0) {
+	if(node->blend_dur > 0) {
 		/* we're in transition... */
 		t = (float)(tm - BLEND_START_TM) / (float)node->blend_dur;
 		if(t < 0.0) t = 0.0;

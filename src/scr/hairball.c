@@ -23,7 +23,7 @@
 #define TENT_UVERTS		5
 #define TENT_NVERTS		(TENT_UVERTS * TENT_NODES + 1)
 #define TENT_NTRIS		(TENT_UVERTS * (TENT_NODES - 1) * 2 + TENT_UVERTS)
-#define TENT_RAD0		0.26f
+#define TENT_RAD0		0.25f
 
 static cgm_vec3 root_pos[NUM_TENT] = {
 	{-0.707, -0.707, 0}, {0.707, -0.707, 0}, {0, -0.707, -0.707}, {0, -0.707, 0.707},
@@ -100,7 +100,7 @@ static int init(void)
 	int i, j, numpt = 0;
 	struct anm_animation *anim;
 
-	if(load_image(&envmap, "data/refmap1.jpg") == -1) {
+	if(load_image(&envmap, "data/myenvmap.jpg") == -1) {
 		fprintf(stderr, "hairball: failed to load envmap\n");
 		return -1;
 	}
@@ -175,16 +175,20 @@ static void start(long trans_time)
 		vert = tentmesh[i].varr;
 		for(j=0; j<TENT_NODES; j++) {
 			for(k=0; k<TENT_UVERTS; k++) {
+				int chess = (k & 1) == (j & 1);
 				vert->u = (float)k / (float)TENT_NVERTS;
 				vert->v = (float)j / (float)TENT_NODES;
 				vert->w = 1.0f;
-				vert->r = vert->g = vert->b = vert->a = 1.0f;
+				vert->r = chess ? 255 : 128;
+				vert->g = 128;
+				vert->b = chess ? 128 : 255;
+				vert->a = 255;
 				vert++;
 			}
 		}
 		vert->u = 0;
 		vert->v = 1.0f;
-		vert->r = vert->g = vert->b = vert->a = 1.0f;
+		vert->r = vert->g = vert->b = vert->a = 255;
 
 		vidx = 0;
 		idxptr = tentmesh[i].iarr;
@@ -352,7 +356,7 @@ static void draw_thing(void)
 	cgm_vec3 *p, *pp;
 	struct tentacle *tent;
 
-	g3d_enable(G3D_LIGHTING);
+	//g3d_enable(G3D_LIGHTING);
 
 	g3d_push_matrix();
 	g3d_mult_matrix(thing.xform);
@@ -365,7 +369,7 @@ static void draw_thing(void)
 		draw_mesh(tentmesh + i);
 	}
 
-	g3d_disable(G3D_LIGHTING);
+	//g3d_disable(G3D_LIGHTING);
 
 	/*
 	for(i=0; i<NUM_TENT; i++) {

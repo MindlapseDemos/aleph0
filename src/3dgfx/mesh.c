@@ -333,9 +333,9 @@ void calc_mesh_centroid(struct g3d_mesh *mesh, float *cent)
 static void sphvec(float *res, float theta, float phi, float rad)
 {
 	theta = -theta;
-	res[0] = sin(theta) * sin(phi);
-	res[1] = cos(phi);
-	res[2] = cos(theta) * sin(phi);
+	res[0] = sin(theta) * sin(phi) * rad;
+	res[1] = cos(phi) * rad;
+	res[2] = cos(theta) * sin(phi) * rad;
 }
 
 int gen_sphere_mesh(struct g3d_mesh *mesh, float rad, int usub, int vsub)

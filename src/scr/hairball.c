@@ -15,12 +15,12 @@
 
 #define NUM_TENT		8
 #define TENT_NODES		6
-#define NODE_DIST		0.4f
+#define NODE_DIST		0.35f
 #define NUM_FRAMES		32
 
 #define THING_RAD		0.6f
 
-#define TENT_UVERTS		6
+#define TENT_UVERTS		5
 #define TENT_NVERTS		(TENT_UVERTS * TENT_NODES + 1)
 #define TENT_NTRIS		(TENT_UVERTS * (TENT_NODES - 1) * 2 + TENT_UVERTS)
 #define TENT_RAD0		0.26f
@@ -105,7 +105,7 @@ static int init(void)
 		return -1;
 	}
 
-	gen_sphere_mesh(&sphmesh, THING_RAD * 1.2, 8, 4);
+	gen_sphere_mesh(&sphmesh, THING_RAD * 1.2, 6, 3);
 	sphmesh.mtl = &thingmtl;
 
 	init_g3dmtl(&thingmtl);
@@ -149,7 +149,7 @@ static void start(long trans_time)
 
 	thing.cur_frm = 0;
 	for(i=0; i<NUM_TENT; i++) {
-		cgm_vnormalize(root_pos + i);
+		fast_vnormalize(root_pos + i);
 
 		thing.orig_tent[i].node[0] = root_pos[i];
 		cgm_vscale(thing.orig_tent[i].node, THING_RAD);
@@ -208,7 +208,7 @@ static void start(long trans_time)
 			idxptr += 3;
 		}
 
-		update_tentacle(tentmesh + i, 0);
+		update_tentacle(tentmesh + i, i);
 	}
 
 	printf("thing triangles: %d\n", TENT_NTRIS * NUM_TENT + sphmesh.icount / 4);
@@ -361,7 +361,7 @@ static void draw_thing(void)
 	g3d_pop_matrix();
 
 	for(i=0; i<NUM_TENT; i++) {
-		zsort_mesh(tentmesh + i);
+		/*zsort_mesh(tentmesh + i);*/
 		draw_mesh(tentmesh + i);
 	}
 
@@ -417,14 +417,14 @@ static void update_tentacle(struct g3d_mesh *mesh, int tidx)
 
 		vk = next;
 		cgm_vsub(&vk, &prev);
-		cgm_vnormalize(&vk);
+		fast_vnormalize(&vk);
 		if(fabs(vk.y) > fabs(vk.x) && fabs(vk.y) > fabs(vk.z)) {
 			cgm_vcons(&vj, 0, 0, -1);
 		} else {
 			cgm_vcons(&vj, 0, 1, 0);
 		}
 		cgm_vcross(&vi, &vj, &vk);
-		cgm_vnormalize(&vi);
+		fast_vnormalize(&vi);
 		cgm_vcross(&vj, &vk, &vi);
 
 		xform[0] = vi.x; xform[1] = vi.y; xform[2] = vi.z;
@@ -455,9 +455,9 @@ static void update_tentacle(struct g3d_mesh *mesh, int tidx)
 	vptr->nx = vk.x;
 	vptr->ny = vk.y;
 	vptr->nz = vk.z;
-	vptr->x = cent.x + vk.x;
-	vptr->y = cent.y + vk.y;
-	vptr->z = cent.z + vk.z;
+	vptr->x = cent.x + vk.x * 0.5f;
+	vptr->y = cent.y + vk.y * 0.5f;
+	vptr->z = cent.z + vk.z * 0.5f;
 }
 
 static int load_anim(struct anm_animation *anm, const char *fname)

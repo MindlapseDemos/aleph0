@@ -4,7 +4,6 @@
 #include <float.h>
 #include "demo.h"
 #include "3dgfx.h"
-#include "track.h"
 #include "vmath.h"
 #include "screen.h"
 #include "util.h"

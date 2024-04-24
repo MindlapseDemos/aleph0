@@ -1497,26 +1497,26 @@ GOAT3DAPI void goat3d_set_track_interp(struct goat3d_track *trk, enum goat3d_int
 {
 	int i;
 	for(i=0; i<4; i++) {
-		anm_set_track_interpolator(trk->trk + i, in);
+		anm_set_track_interpolator(trk->trk + i, (enum anm_interpolator)in);
 	}
 }
 
 GOAT3DAPI enum goat3d_interp goat3d_get_track_interp(const struct goat3d_track *trk)
 {
-	return trk->trk[0].interp;
+	return (enum goat3d_interp)trk->trk[0].interp;
 }
 
 GOAT3DAPI void goat3d_set_track_extrap(struct goat3d_track *trk, enum goat3d_extrap ex)
 {
 	int i;
 	for(i=0; i<4; i++) {
-		anm_set_track_extrapolator(trk->trk + i, ex);
+		anm_set_track_extrapolator(trk->trk + i, (enum anm_extrapolator)ex);
 	}
 }
 
 GOAT3DAPI enum goat3d_extrap goat3d_get_track_extrap(const struct goat3d_track *trk)
 {
-	return trk->trk[0].extrap;
+	return (enum goat3d_extrap)trk->trk[0].extrap;
 }
 
 GOAT3DAPI int goat3d_set_track_key(struct goat3d_track *trk, const struct goat3d_key *key)

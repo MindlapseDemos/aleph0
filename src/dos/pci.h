@@ -39,7 +39,7 @@ struct pci_config_data {
 	uint8_t intr_line, intr_pin;
 	uint8_t min_grant, max_latency;
 } PACKED;
-#pragma pop (push)
+#pragma pack (pop)
 
 struct pci_device {
 	int bus, dev, func;

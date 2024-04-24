@@ -87,8 +87,8 @@ static CGM_INLINE float cgm_spline(float a, float b, float c, float d, float t)
 
 static CGM_INLINE void cgm_discrand(cgm_vec3 *pt, float rad)
 {
-	float theta = 2.0f * M_PI * (float)rand() / RAND_MAX;
-	float r = sqrt((float)rand() / RAND_MAX) * rad;
+	float theta = 2.0f * M_PI * (float)rand() / (float)RAND_MAX;
+	float r = sqrt((float)rand() / (float)RAND_MAX) * rad;
 	pt->x = cos(theta) * r;
 	pt->y = sin(theta) * r;
 	pt->z = 0.0f;
@@ -98,8 +98,8 @@ static CGM_INLINE void cgm_sphrand(cgm_vec3 *pt, float rad)
 {
 	float u, v, theta, phi;
 
-	u = (float)rand() / RAND_MAX;
-	v = (float)rand() / RAND_MAX;
+	u = (float)rand() / (float)RAND_MAX;
+	v = (float)rand() / (float)RAND_MAX;
 
 	theta = 2.0f * M_PI * u;
 	phi = acos(2.0f * v - 1.0f);

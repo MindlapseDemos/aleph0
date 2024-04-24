@@ -623,20 +623,6 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 			pv[i].a = v[i].a;
 		}
 
-		/* backface culling */
-		if(vnum > 2 && st->opt & G3D_CULL_FACE) {
-			int32_t ax = pv[1].x - pv[0].x;
-			int32_t ay = pv[1].y - pv[0].y;
-			int32_t bx = pv[2].x - pv[0].x;
-			int32_t by = pv[2].y - pv[0].y;
-			int32_t cross_z = (ax >> 4) * (by >> 4) - (ay >> 4) * (bx >> 4);
-			int sign = (cross_z >> 31) & 1;
-
-			if(!(sign ^ st->frontface)) {
-				continue;	/* back-facing */
-			}
-		}
-
 		switch(vnum) {
 		case 1:
 			if(st->opt & (G3D_ALPHA_BLEND | G3D_ADD_BLEND)) {
@@ -688,8 +674,23 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 			vtri = v;
 			pvtri = pv;
 			for(;;) {
+				/* backface culling */
+				if(st->opt & G3D_CULL_FACE) {
+					int32_t ax = pvtri[1].x - pvtri[0].x;
+					int32_t ay = pvtri[1].y - pvtri[0].y;
+					int32_t bx = pvtri[2].x - pvtri[0].x;
+					int32_t by = pvtri[2].y - pvtri[0].y;
+					int32_t cross_z = (ax >> 4) * (by >> 4) - (ay >> 4) * (bx >> 4);
+					int sign = (cross_z >> 31) & 1;
+
+					if(!(sign ^ st->frontface)) {
+						goto skip_triangle;	/* back-facing */
+					}
+				}
+
 				calc_grad(vtri);
 				polyfill(fill_mode, pvtri);
+skip_triangle:
 				if(--num_tri == 0) break;
 				vtri[1] = vtri[0];
 				pvtri[1] = pvtri[0];

@@ -10,12 +10,12 @@
 
 static CGM_INLINE float cgm_deg_to_rad(float deg)
 {
-	return M_PI * deg / 180.0f;
+	return CGM_PI * deg / 180.0f;
 }
 
 static CGM_INLINE float cgm_rad_to_deg(float rad)
 {
-	return 180.0f * rad / M_PI;
+	return 180.0f * rad / CGM_PI;
 }
 
 static CGM_INLINE float cgm_smoothstep(float a, float b, float x)
@@ -87,7 +87,7 @@ static CGM_INLINE float cgm_spline(float a, float b, float c, float d, float t)
 
 static CGM_INLINE void cgm_discrand(cgm_vec3 *pt, float rad)
 {
-	float theta = 2.0f * M_PI * (float)rand() / (float)RAND_MAX;
+	float theta = 2.0f * CGM_PI * (float)rand() / (float)RAND_MAX;
 	float r = sqrt((float)rand() / (float)RAND_MAX) * rad;
 	pt->x = cos(theta) * r;
 	pt->y = sin(theta) * r;
@@ -101,7 +101,7 @@ static CGM_INLINE void cgm_sphrand(cgm_vec3 *pt, float rad)
 	u = (float)rand() / (float)RAND_MAX;
 	v = (float)rand() / (float)RAND_MAX;
 
-	theta = 2.0f * M_PI * u;
+	theta = 2.0f * CGM_PI * u;
 	phi = acos(2.0f * v - 1.0f);
 
 	pt->x = cos(theta) * sin(phi) * rad;

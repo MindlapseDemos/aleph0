@@ -19,6 +19,9 @@
     <Filter Include="compiled_sprites">
       <UniqueIdentifier>{e144806a-dd28-4127-b341-45bfdc482559}</UniqueIdentifier>
     </Filter>
+    <Filter Include="cgmath">
+      <UniqueIdentifier>{68a6a879-b742-414a-a895-5cc7e7f1dcc0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\glut\audio.c">
@@ -180,6 +183,18 @@
     <ClCompile Include="src\scr\dott.c">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\scr\break.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\opt_3d.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\opt_rend.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scr\polka.c">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\glut\gfx.h">
@@ -284,6 +299,9 @@
     <ClInclude Include="src\scr\tilemaze.h">
       <Filter>src\screens</Filter>
     </ClInclude>
+    <ClInclude Include="libs\cgmath\cgmath.h">
+      <Filter>cgmath</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\data.asm">
@@ -301,5 +319,25 @@
     <CustomBuild Include="cspr\dbgfont.asm">
       <Filter>compiled_sprites</Filter>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="libs\cgmath\cgmmat.inl">
+      <Filter>cgmath</Filter>
+    </None>
+    <None Include="libs\cgmath\cgmmisc.inl">
+      <Filter>cgmath</Filter>
+    </None>
+    <None Include="libs\cgmath\cgmquat.inl">
+      <Filter>cgmath</Filter>
+    </None>
+    <None Include="libs\cgmath\cgmray.inl">
+      <Filter>cgmath</Filter>
+    </None>
+    <None Include="libs\cgmath\cgmvec3.inl">
+      <Filter>cgmath</Filter>
+    </None>
+    <None Include="libs\cgmath\cgmvec4.inl">
+      <Filter>cgmath</Filter>
+    </None>
   </ItemGroup>
 </Project>

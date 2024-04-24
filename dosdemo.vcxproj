@@ -52,14 +52,14 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_USE_MATH_DEFINES;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-		<AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\src\3dgfx;$(ProjectDir)\src\rt;$(ProjectDir)\src\glut;$(ProjectDir)\libs;$(ProjectDir)\libs\imago\src;$(ProjectDir)\libs\anim\src;$(ProjectDir)\libs\mikmod\include;$(ProjectDir)\libs\goat3d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\src\3dgfx;$(ProjectDir)\src\rt;$(ProjectDir)\src\glut;$(ProjectDir)\libs;$(ProjectDir)\libs\imago\src;$(ProjectDir)\libs\anim\src;$(ProjectDir)\libs\mikmod\include;$(ProjectDir)\libs\goat3d\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4996;4244;4305</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>dsound.lib;imago.lib;anim.lib;mikmod.lib;goat3d.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(IntDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -80,7 +80,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>dsound.lib;imago.lib;anim.lib;mikmod.lib;goat3d.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(IntDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -113,9 +113,9 @@
     <ClCompile Include="src\scr\bump.c" />
     <ClCompile Include="src\scr\cybersun.c" />
     <ClCompile Include="src\scr\dott.c" />
-	 <ClCompile Include="src\scr\polka.c" />
-	 <ClCompile Include="src\scr\opt_3d.c" />
-	 <ClCompile Include="src\scr\opt_rend.c" />
+    <ClCompile Include="src\scr\polka.c" />
+    <ClCompile Include="src\scr\opt_3d.c" />
+    <ClCompile Include="src\scr\opt_rend.c" />
     <ClCompile Include="src\scr\fract.c" />
     <ClCompile Include="src\scr\greets.c" />
     <ClCompile Include="src\scr\grise.c" />
@@ -143,6 +143,7 @@
     <ClCompile Include="src\util.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="libs\cgmath\cgmath.h" />
     <ClInclude Include="src\3dgfx\3dgfx.h" />
     <ClInclude Include="src\3dgfx\mesh.h" />
     <ClInclude Include="src\3dgfx\polyclip.h" />
@@ -226,6 +227,14 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">nasm -o .%(Filename).obj -f win32 %(FullPath)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.%(Filename).obj</Outputs>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="libs\cgmath\cgmmat.inl" />
+    <None Include="libs\cgmath\cgmmisc.inl" />
+    <None Include="libs\cgmath\cgmquat.inl" />
+    <None Include="libs\cgmath\cgmray.inl" />
+    <None Include="libs\cgmath\cgmvec3.inl" />
+    <None Include="libs\cgmath\cgmvec4.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

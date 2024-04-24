@@ -124,7 +124,7 @@ static const char *cpuvendor(struct cpuid_info *cpu)
 		{"Vortex86 SoC", "DM&P"},
 		{"  Shanghai  ", "Zhaoxin"},
 		{"HygonGenuine", "Hygon"},
-		{"E2K MACHINE", "MCST Elbrus"},
+		{"E2K MACHINE ", "MCST Elbrus"},
 		{"MiSTer A0486", "ao486"},
 		{"bhyve bhyve ", "bhyve"},
 		{" KVMKVMKVM  ", "KVM"},

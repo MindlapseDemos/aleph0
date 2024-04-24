@@ -67,8 +67,8 @@ static PROC wgl_swap_interval_ext;
 #endif
 
 static int use_sball;
-static cgm_vec3 pos = {0, 0, 0};
-static cgm_quat rot = {0, 0, 0, 1};
+cgm_vec3 sball_pos = {0, 0, 0};
+cgm_quat sball_rot = {0, 0, 0, 1};
 
 
 int main(int argc, char **argv)
@@ -483,9 +483,9 @@ static void mouse_motion(int x, int y)
 
 static void sball_motion(int x, int y, int z)
 {
-	pos.x += x * 0.001f;
-	pos.y += y * 0.001f;
-	pos.z -= z * 0.001f;
+	sball_pos.x += x * 0.001f;
+	sball_pos.y += y * 0.001f;
+	sball_pos.z -= z * 0.001f;
 
 }
 
@@ -493,23 +493,23 @@ static void sball_rotate(int rx, int ry, int rz)
 {
 	if(rx | ry | rz) {
 		float s = (float)rsqrt(rx * rx + ry * ry + rz * rz);
-		cgm_qrotate(&rot, 0.001f / s, rx * s, ry * s, -rz * s);
+		cgm_qrotate(&sball_rot, 0.001f / s, rx * s, ry * s, -rz * s);
 	}
 }
 
 static void sball_button(int bn, int st)
 {
-	pos.x = pos.y = pos.z = 0;
-	rot.x = rot.y = rot.z = 0;
-	rot.w = 1;
+	sball_pos.x = sball_pos.y = sball_pos.z = 0;
+	sball_rot.x = sball_rot.y = sball_rot.z = 0;
+	sball_rot.w = 1;
 }
 
 static void recalc_sball_matrix(float *xform)
 {
-	cgm_mrotation_quat(xform, &rot);
-	xform[12] = pos.x;
-	xform[13] = pos.y;
-	xform[14] = pos.z;
+	cgm_mrotation_quat(xform, &sball_rot);
+	xform[12] = sball_pos.x;
+	xform[13] = sball_pos.y;
+	xform[14] = sball_pos.z;
 }
 
 

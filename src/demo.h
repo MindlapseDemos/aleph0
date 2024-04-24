@@ -5,6 +5,7 @@
 #include "gfx.h"
 #include "image.h"
 #include "cfgopt.h"
+#include "cgmath/cgmath.h"
 
 extern int fb_width, fb_height, fb_bpp;
 #define FB_WIDTH	320
@@ -55,6 +56,8 @@ enum {
 
 
 extern float sball_matrix[16];
+extern cgm_vec3 sball_pos;
+extern cgm_quat sball_rot;
 
 /* initialize options (arguments & config file)
  * this should be called before entering graphics mode

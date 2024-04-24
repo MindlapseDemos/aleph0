@@ -9,15 +9,16 @@ asmsrc += cspr/dbgfont.asm cspr/confont.asm
 bindata = data/loading.img
 
 inc = -I/usr/local/include -Isrc -Isrc/3dgfx -Isrc/rt -Isrc/scr -Isrc/utils \
-	  -Isrc/glut -Ilibs -Ilibs/imago/src -Ilibs/mikmod/include -Ilibs/goat3d/include
+	  -Isrc/glut -Ilibs -Ilibs/imago/src -Ilibs/anim/src -Ilibs/mikmod/include \
+	  -Ilibs/goat3d/include
 def = -DMINIGLUT_USE_LIBC -DMIKMOD_STATIC
 warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function -Wno-address
 #opt = -O3 -ffast-math
 dbg = -g
 
 CFLAGS = $(arch) $(warn) -MMD $(opt) -fno-pie -fno-strict-aliasing $(dbg) $(inc)
-LDFLAGS = $(arch) -no-pie -Llibs/imago -Llibs/mikmod -Llibs/goat3d -limago \
-		  -lmikmod -lgoat3d $(sndlib_$(sys)) -lm
+LDFLAGS = $(arch) -no-pie -Llibs/imago -Llibs/anim -Llibs/mikmod -Llibs/goat3d \
+		  -limago -lanim -lmikmod -lgoat3d $(sndlib_$(sys)) -lm
 
 cpu ?= $(shell uname -m | sed 's/i.86/i386/')
 
@@ -44,7 +45,7 @@ sndlib_mingw = -ldsound
 .PHONY: all
 all: data $(bin)
 
-$(bin): $(obj) imago mikmod goat3d
+$(bin): $(obj) imago anim mikmod goat3d
 	$(CC) -o $@ $(obj) $(LDFLAGS)
 
 -include $(dep)

@@ -149,6 +149,10 @@ void draw_mesh(struct g3d_mesh *mesh)
 		if(mtl->texmap) {
 			g3d_enable(G3D_TEXTURE_2D);
 			g3d_set_texture(mtl->texmap->width, mtl->texmap->height, mtl->texmap->pixels);
+		} else if(mtl->envmap) {
+			g3d_enable(G3D_TEXTURE_2D);
+			g3d_set_texture(mtl->envmap->width, mtl->envmap->height, mtl->envmap->pixels);
+			g3d_enable(G3D_TEXTURE_GEN);
 		}
 	}
 
@@ -161,6 +165,9 @@ void draw_mesh(struct g3d_mesh *mesh)
 	if(mtl) {
 		if(mtl->texmap) {
 			g3d_disable(G3D_TEXTURE_2D);
+		} else if(mtl->envmap) {
+			g3d_disable(G3D_TEXTURE_2D);
+			g3d_disable(G3D_TEXTURE_GEN);
 		}
 	}
 }

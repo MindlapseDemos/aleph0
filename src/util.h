@@ -55,6 +55,15 @@ static INLINE float rsqrt(float x)
 	return x;
 }
 
+#define fast_vnormalize(vptr)	fast_normalize((float*)(vptr))
+static INLINE void fast_normalize(float *v)
+{
+	float s = rsqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+	v[0] *= s;
+	v[1] *= s;
+	v[2] *= s;
+}
+
 extern uint32_t perf_start_count, perf_interval_count;
 
 #ifdef __WATCOMC__

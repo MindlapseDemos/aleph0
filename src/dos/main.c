@@ -20,8 +20,8 @@ static void recalc_sball_matrix(float *xform);
 static int quit;
 
 static int use_sball;
-static vec3_t pos = {0, 0, 0};
-static quat_t rot = {0, 0, 0, 1};
+cgm_vec3 sball_pos = {0, 0, 0};
+cgm_quat sball_rot = {0, 0, 0, 1};
 
 
 int main(int argc, char **argv)
@@ -160,22 +160,20 @@ static int handle_sball_event(sball_event *ev)
 			float rx = (float)RX(ev);
 			float ry = (float)RY(ev);
 			float rz = (float)RZ(ev);
-			float axis_len = sqrt(rx * rx + ry * ry + rz * rz);
-			if(axis_len > 0.0) {
-				rot = quat_rotate(rot, axis_len * 0.001, -rx / axis_len,
-						-ry / axis_len, -rz / axis_len);
-			}
+
+			float s = (float)rsqrt(rx * rx + ry * ry + rz * rz);
+			cgm_qrotate(&sball_rot, 0.001 / s, -rx * s, -ry * s, - rz * s);
 		}
 
-		pos.x += TX(ev) * 0.001;
-		pos.y += TY(ev) * 0.001;
-		pos.z += TZ(ev) * 0.001;
+		sball_pos.x += TX(ev) * 0.001;
+		sball_pos.y += TY(ev) * 0.001;
+		sball_pos.z += TZ(ev) * 0.001;
 		break;
 
 	case SBALL_EV_BUTTON:
 		if(ev->button.pressed) {
-			pos = v3_cons(0, 0, 0);
-			rot = quat_cons(1, 0, 0, 0);
+			cgm_vcons(&sball_pos, 0, 0, 0);
+			cgm_qcons(&sball_rot, 0, 0, 0, 1);
 		}
 		break;
 	}
@@ -185,8 +183,8 @@ static int handle_sball_event(sball_event *ev)
 
 void recalc_sball_matrix(float *xform)
 {
-	quat_to_mat(xform, rot);
-	xform[12] = pos.x;
-	xform[13] = pos.y;
-	xform[14] = pos.z;
+	cgm_mrotation_quat(xform, &sball_rot);
+	xform[12] = sball_pos.x;
+	xform[13] = sball_pos.y;
+	xform[14] = sball_pos.z;
 }

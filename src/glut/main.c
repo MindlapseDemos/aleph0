@@ -493,7 +493,7 @@ static void sball_rotate(int rx, int ry, int rz)
 {
 	if(rx | ry | rz) {
 		float s = (float)rsqrt(rx * rx + ry * ry + rz * rz);
-		cgm_qrotate(&sball_rot, 0.001f / s, rx * s, ry * s, -rz * s);
+		cgm_qrotate(&sball_rot, -0.001f / s, rx * s, ry * s, -rz * s);
 	}
 }
 
@@ -507,6 +507,7 @@ static void sball_button(int bn, int st)
 static void recalc_sball_matrix(float *xform)
 {
 	cgm_mrotation_quat(xform, &sball_rot);
+	cgm_mtranspose(xform);
 	xform[12] = sball_pos.x;
 	xform[13] = sball_pos.y;
 	xform[14] = sball_pos.z;

@@ -10,7 +10,6 @@
 #include "audio.h"
 #include "mouse.h"
 #include "sball.h"
-#include "vmath.h"
 #include "cpuid.h"
 #include "pci.h"
 

@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <float.h>
+#include <assert.h>
 #include "demo.h"
 #include "3dgfx.h"
 #include "vmath.h"
@@ -11,6 +13,7 @@
 #include "mesh.h"
 #include "cgmath/cgmath.h"
 #include "anim.h"
+#include "dynarr.h"
 
 #define NUM_TENT		8
 #define TENT_NODES		6
@@ -61,6 +64,7 @@ static void update_thing(float dt);
 static void draw_thing(void);
 static void update_tentacle(struct g3d_mesh *mesh, int tidx);
 
+static void clear_anim(struct anm_animation *anm);
 static int load_anim(struct anm_animation *anm, const char *fname);
 static int save_anim(struct anm_animation *anm, const char *fname);
 
@@ -319,9 +323,15 @@ static void keypress(int key)
 		if(record) {
 			playanim = 0;
 
-			/* XXX handle repeated recordings */
+			clear_anim(thing.anim);
 
 			anim_start_time = time_msec;
+		}
+		break;
+
+	case 's':
+		if(thing.anim->tracks[0].count) {
+			save_anim(thing.anim, "thing.anm");
 		}
 		break;
 	}
@@ -463,12 +473,145 @@ static void update_tentacle(struct g3d_mesh *mesh, int tidx)
 	vptr->z = cent.z + vk.z * 0.5f;
 }
 
+static void clear_anim(struct anm_animation *anm)
+{
+	int i;
+	for(i=0; i<ANM_NUM_TRACKS; i++) {
+		dynarr_clear(anm->tracks[i].keys);
+		anm->tracks[i].count = 0;
+	}
+}
+
 static int load_anim(struct anm_animation *anm, const char *fname)
 {
+	FILE *fp;
+	int i, nposkeys, nrotkeys;
+	float x, y, z, w;
+	unsigned int tm;
+	char buf[256];
+	char *ptr;
+	struct anm_keyframe key;
+
+	if(!(fp = fopen(fname, "rb"))) {
+		fprintf(stderr, "failed to open %s\n", fname);
+		return -1;
+	}
+
+	if(!fgets(buf, sizeof buf, fp) || memcmp(buf, "ANIMDUMP", 8) != 0) {
+		fprintf(stderr, "%s is not an animation dump\n", fname);
+		fclose(fp);
+		return -1;
+	}
+	if(!fgets(buf, sizeof buf, fp) || sscanf(buf, "keys t%d r%d", &nposkeys, &nrotkeys) != 2) {
+		fprintf(stderr, "%s: invalid animation dump\n", fname);
+		fclose(fp);
+		return -1;
+	}
+
+	while(fgets(buf, sizeof buf, fp)) {
+		ptr = buf;
+		while(*ptr && isspace(*ptr)) ptr++;
+
+		switch(*ptr) {
+		case 't':
+			if(sscanf(ptr, "t(%u): %f %f %f", &tm, &x, &y, &z) != 4) {
+				goto inval;
+			}
+			key.time = tm;
+			key.val = x;
+			anm_set_keyframe(anm->tracks + ANM_TRACK_POS_X, &key);
+			key.val = y;
+			anm_set_keyframe(anm->tracks + ANM_TRACK_POS_Y, &key);
+			key.val = z;
+			anm_set_keyframe(anm->tracks + ANM_TRACK_POS_Z, &key);
+			break;
+
+		case 'r':
+			if(sscanf(ptr, "r(%u): %f %f %f %f", &tm, &x, &y, &z, &w) != 5) {
+				goto inval;
+			}
+			key.time = tm;
+			key.val = x;
+			anm_set_keyframe(anm->tracks + ANM_TRACK_ROT_X, &key);
+			key.val = y;
+			anm_set_keyframe(anm->tracks + ANM_TRACK_ROT_Y, &key);
+			key.val = z;
+			anm_set_keyframe(anm->tracks + ANM_TRACK_ROT_Z, &key);
+			key.val = w;
+			anm_set_keyframe(anm->tracks + ANM_TRACK_ROT_W, &key);
+			break;
+
+		case '#':
+			break;
+
+		default:
+			goto inval;
+		}
+	}
+
+	if(anm->tracks[ANM_TRACK_POS_X].count != nposkeys) {
+		fprintf(stderr, "%s: expected %d position keys, found %d\n", fname,
+				nposkeys, anm->tracks[ANM_TRACK_POS_X].count);
+	}
+	if(anm->tracks[ANM_TRACK_ROT_X].count != nrotkeys) {
+		fprintf(stderr, "%s: expected %d rotation keys, found %d\n", fname,
+				nrotkeys, anm->tracks[ANM_TRACK_ROT_X].count);
+	}
+
+	fclose(fp);
+	return 0;
+
+inval:
+	fprintf(stderr, "%s: invalid animation dump line: %s\n", fname, ptr);
+	fclose(fp);
 	return -1;
 }
 
 static int save_anim(struct anm_animation *anm, const char *fname)
 {
-	return -1;
+	FILE *fp;
+	int i, nposkeys, nrotkeys;
+	float x, y, z, w;
+	unsigned int tm;
+
+	if(!(fp = fopen(fname, "wb"))) {
+		fprintf(stderr, "failed to open %s for writing\n", fname);
+		return -1;
+	}
+
+	nposkeys = anm->tracks[ANM_TRACK_POS_X].count;
+	assert(anm->tracks[ANM_TRACK_POS_Y].count == nposkeys);
+	assert(anm->tracks[ANM_TRACK_POS_Z].count == nposkeys);
+	nrotkeys = anm->tracks[ANM_TRACK_ROT_X].count;
+	assert(anm->tracks[ANM_TRACK_ROT_Y].count == nrotkeys);
+	assert(anm->tracks[ANM_TRACK_ROT_Z].count == nrotkeys);
+	assert(anm->tracks[ANM_TRACK_ROT_W].count == nrotkeys);
+
+	fprintf(fp, "ANIMDUMP\n");
+	fprintf(fp, "keys t%d r%d\n", nposkeys, nrotkeys);
+
+	for(i=0; i<nposkeys; i++) {
+		tm = anm->tracks[ANM_TRACK_POS_X].keys[i].time;
+		assert(anm->tracks[ANM_TRACK_POS_Y].keys[i].time == tm);
+		assert(anm->tracks[ANM_TRACK_POS_Z].keys[i].time == tm);
+		x = anm->tracks[ANM_TRACK_POS_X].keys[i].val;
+		y = anm->tracks[ANM_TRACK_POS_Y].keys[i].val;
+		z = anm->tracks[ANM_TRACK_POS_Z].keys[i].val;
+		fprintf(fp, "t(%u): %f %f %f\n", tm, x, y, z);
+	}
+
+	for(i=0; i<nrotkeys; i++) {
+		tm = anm->tracks[ANM_TRACK_ROT_X].keys[i].time;
+		assert(anm->tracks[ANM_TRACK_ROT_Y].keys[i].time == tm);
+		assert(anm->tracks[ANM_TRACK_ROT_Z].keys[i].time == tm);
+		assert(anm->tracks[ANM_TRACK_ROT_W].keys[i].time == tm);
+		x = anm->tracks[ANM_TRACK_ROT_X].keys[i].val;
+		y = anm->tracks[ANM_TRACK_ROT_Y].keys[i].val;
+		z = anm->tracks[ANM_TRACK_ROT_Z].keys[i].val;
+		w = anm->tracks[ANM_TRACK_ROT_W].keys[i].val;
+		fprintf(fp, "r(%u): %f %f %f %f\n", tm, x, y, z, w);
+	}
+
+	fclose(fp);
+	return 0;
 }

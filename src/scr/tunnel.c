@@ -14,9 +14,11 @@
 
 #define VSCALE	1.5
 
-#define TEX_FNAME	"data/grid.png"
-#define TEX_USCALE	4
-#define TEX_VSCALE	2
+#define TEX_FNAME	"data/tunnel.png"
+#define TEX_USCALE	3
+#define TEX_VSCALE	1
+
+/* TODO: with the new texture, try purple fog, dstar used rgb 20,0,29 */
 
 static int init(void);
 static void destroy(void);

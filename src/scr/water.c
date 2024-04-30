@@ -48,8 +48,6 @@ struct screen *water_screen(void)
 
 static int init(void)
 {
-	int i,j,k;
-
 	const int size = FB_WIDTH * FB_HEIGHT;
 
 	waterBuffer1 = (unsigned char*)malloc(size);
@@ -136,37 +134,50 @@ static void renderBlob(int xp, int yp, unsigned char *buffer)
 	}
 }
 
-static void makeRipples(unsigned char *buff)
+static void makeRipples(unsigned char *buff, int t)
 {
 	int i;
 
 	renderBlob(32 + (rand() & 255), 32 + (rand() & 127), buff);
 
 	for (i=0; i<3; ++i) {
-		const int xp = FB_WIDTH / 2 + (int)(sin((time_msec + 64*i)/24.0) * 128);
-		const int yp = FB_HEIGHT / 2 + (int)(sin((time_msec + 64*i)/16.0) * 64);
+		const int xp = FB_WIDTH / 2 + (int)(sin((t / 32 + 64*i)/24.0) * 128);
+		const int yp = FB_HEIGHT / 2 + (int)(sin((t / 32 + 64*i)/16.0) * 64);
 
 		renderBlob(xp,yp,buff);
 	}
 }
 
+void runWaterEffect(int t)
+{
+	static int prevT = 0;
+	const int dt = t - prevT;
+	if (dt < 0 || dt > 20) {
+		unsigned char* buff1 = wb1 + FB_WIDTH + 4;
+		unsigned char* buff2 = wb2 + FB_WIDTH + 4;
+		unsigned char* vramOffset = (unsigned char*)buff1 + FB_WIDTH + 4;
+
+		makeRipples(buff1, t);
+
+		#ifdef __WATCOMC__
+				updateWaterAsm5(buff1, buff2, vramOffset);
+		#else
+				updateWater32(buff1, buff2);
+		#endif
+
+		waterBufferToVram32();
+
+		swapWaterBuffers();
+
+		prevT = t;
+	}
+}
+
 static void draw(void)
 {
-	unsigned char *buff1 = wb1 + FB_WIDTH + 4;
-	unsigned char *buff2 = wb2 + FB_WIDTH + 4;
-	unsigned char *vramOffset = (unsigned char*)buff1 + FB_WIDTH + 4;
+	const int t = time_msec - startingTime;
 
-	makeRipples(buff1);
-	
-	#ifdef __WATCOMC__
-		updateWaterAsm5(buff1, buff2, vramOffset);
-	#else
-		updateWater32(buff1, buff2);
-	#endif
-
-	waterBufferToVram32();
-
-	swapWaterBuffers();
+	runWaterEffect(t);
 
 	swap_buffers(0);
 }

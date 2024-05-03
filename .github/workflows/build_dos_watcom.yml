@@ -36,6 +36,7 @@ jobs:
       run: |
         svn export svn://mutantstargoat.com/datadirs/dosdemo data
         tools/procdata
+        ln data/bin/midas.lib .
     - name: build libs/imago
       run: |
         source ow/owsetenv-dos.sh

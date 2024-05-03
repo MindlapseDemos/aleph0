@@ -36,6 +36,7 @@ jobs:
       run: |
         svn export svn://mutantstargoat.com/datadirs/dosdemo data
         tools/procdata
+        ln data/bin/libmidas.a libs/midas/libmidas.a
 
     - name: build demo
       run: |

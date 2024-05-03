@@ -387,6 +387,7 @@ RleBitmap *rleFromFile(char *filename)
 
     /* Encode */
     result = rleEncode(0, alpha, w, h);
+	/*
     for (i=0; i<result->h; i++) {
         printf("(%d, %d) ", result->scans[i].streaks[0].start, result->scans[i].streaks[0].length);
         printf("(%d, %d) ", result->scans[i].streaks[1].start, result->scans[i].streaks[1].length);
@@ -394,6 +395,7 @@ RleBitmap *rleFromFile(char *filename)
         printf("(%d, %d) ", result->scans[i].streaks[3].start, result->scans[i].streaks[3].length);
         printf("\n");
     }
+	*/
 
     free(alpha);
 

@@ -9,6 +9,11 @@
 #include "util.h"
 #include "cfgopt.h"
 
+#ifdef __DJGPP__
+void allegro_irq_init(void);
+void allegro_irq_exit(void);
+#endif
+
 #define SET_MUS_VOL(vol) \
 	do { \
 		int mv = (vol) * vol_master >> 10; \
@@ -26,9 +31,13 @@ int au_init(void)
 	curmod = 0;
 	vol_master = vol_mus = vol_sfx = 255;
 
+#ifdef __DJGPP__
+	allegro_irq_init();
+#endif
+
 	MIDASstartup();
 
-	if(opt.sndconfig || (!MIDASloadConfig("sound.cfg") && !MIDASdetectSoundCard())) {
+	if(opt.sndsetup || (!MIDASloadConfig("sound.cfg") && !MIDASdetectSoundCard())) {
 		if(MIDASconfig()) {
 			if(!MIDASsaveConfig("sound.cfg")) {
 				fprintf(stderr, "failed to save sound card configuration\n");
@@ -50,6 +59,10 @@ void au_shutdown(void)
 	}
 	MIDASstopBackgroundPlay();
 	MIDASclose();
+
+#ifdef __DJGPP__
+	allegro_irq_exit();
+#endif
 }
 
 struct au_module *au_load_module(const char *fname)
@@ -222,6 +235,43 @@ void sleep_msec(unsigned long msec)
 #endif
 	}
 }
+
+#ifdef __DJGPP__
+#if 0
+#include <dpmi.h>
+#include <go32.h>
+
+static _go32_dpmi_seginfo orig_intr[16];
+
+/* MIDAS for GCC needs allegro's _install_irq/_remove_irq calls */
+int _install_irq(int num, int (*handler)(void))
+{
+	_go32_dpmi_seginfo intr;
+
+	printf("install_irq(%d): %p\n", num, (void*)handler);
+
+	if(!orig_intr[num].pm_offset) {
+		_go32_dpmi_get_protected_mode_interrupt_vector(num, orig_intr + num);
+	}
+
+	intr.pm_selector = _go32_my_cs();
+	intr.pm_offset = (uintptr_t)handler;
+	_go32_dpmi_allocate_iret_wrapper(&intr);
+	_go32_dpmi_set_protected_mode_interrupt_vector(num, &intr);
+	return 0;
+}
+
+void _remove_irq(int num)
+{
+	if(orig_intr[num].pm_offset) {
+		printf("restore irq %d\n", num);
+		_go32_dpmi_set_protected_mode_interrupt_vector(num, orig_intr + num);
+		_go32_dpmi_free_iret_wrapper(orig_intr + num);
+		orig_intr[num].pm_offset = 0;
+	}
+}
+#endif
+#endif	/* __DJGPP__ */
 
 #else	/* NO_SOUND */
 #include "audio.h"

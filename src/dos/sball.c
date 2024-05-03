@@ -205,11 +205,13 @@ int sball_getevent(sball_event *ev)
 
 static int init_smouse(void)
 {
+	int i;
 	/* try repeatedly zeroing the device until we get a response */
-	do {
-		delay(500);
+	for(i=0; i<5; i++) {
+		delay(250);
 		com_puts("z\r");
-	} while(BEMPTY(pktbuf));
+		if(!BEMPTY(pktbuf)) break;
+	}
 
 	/* then ask for id string and request motion updates */
 	com_puts("vQ\r");
@@ -297,6 +299,7 @@ static void com_setup(int port, int baud, unsigned int fmt)
 	intr.pm_selector = _go32_my_cs();
 	_go32_dpmi_allocate_iret_wrapper(&intr);
 	_go32_dpmi_set_protected_mode_interrupt_vector(uart_intr_num, &intr);
+	printf("com_setup: set interrupt vector: %d\n", uart_intr_num);
 #endif
 	/* unmask the appropriate interrupt */
 	outp(PIC1_DATA_PORT, inp(PIC1_DATA_PORT) & ~(1 << irq[port]));
@@ -321,6 +324,7 @@ static void com_close(void)
 	_dos_setvect(uart_intr_num, prev_recv_intr);
 #endif
 #ifdef __DJGPP__
+	printf("com_close: restore interrupt vector: %d\n", uart_intr_num);
 	_go32_dpmi_set_protected_mode_interrupt_vector(uart_intr_num, &prev_intr);
 	_go32_dpmi_free_iret_wrapper(&intr);
 #endif

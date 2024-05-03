@@ -99,6 +99,7 @@ int kb_init(int bufsz)
 	intr.pm_selector = _go32_my_cs();
 	_go32_dpmi_allocate_iret_wrapper(&intr);
 	_go32_dpmi_set_protected_mode_interrupt_vector(KB_INTR, &intr);
+	printf("kb_init: set interrupt vector: %d\n", KB_INTR);
 #endif
 	_enable();
 
@@ -117,6 +118,7 @@ void kb_shutdown(void)
 	_dos_setvect(KB_INTR, prev_handler);
 #endif
 #ifdef __DJGPP__
+	printf("kb_shutdown: restore interrupt vector: %d\n", KB_INTR);
 	_go32_dpmi_set_protected_mode_interrupt_vector(KB_INTR, &prev_intr);
 	_go32_dpmi_free_iret_wrapper(&intr);
 #endif

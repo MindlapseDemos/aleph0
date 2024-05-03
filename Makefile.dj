@@ -1,7 +1,8 @@
 src = $(wildcard src/*.c) $(wildcard src/3dgfx/*.c) $(wildcard src/rt/*.c) \
 	  $(wildcard src/scr/*.c) $(wildcard src/dos/*.c)
 asmsrc = $(wildcard src/*.asm) $(wildcard src/scr/*.asm) $(wildcard src/dos/*.asm)
-obj = $(src:.c=.odj) $(asmsrc:.asm=.odj)
+ssrc = $(wildcard src/dos/*.s)
+obj = $(src:.c=.odj) $(asmsrc:.asm=.odj) $(ssrc:.s=.odj)
 dep = $(src:.c=.d)
 bin = djdemo.exe
 
@@ -22,17 +23,17 @@ warn = -pedantic -Wall -Wno-unused-function -Wno-unused-variable -Wno-unknown-pr
 
 ifdef RELEASE
 	dbg = -g
-	def = -DNDEBUG -DNO_SOUND
+	def = -DNDEBUG# -DNO_SOUND
 else
-	def = -DNO_SOUND
+	#def = -DNO_SOUND
 endif
 #prof = -pg
 
 CC = $(TOOLPREFIX)gcc
 AR = $(TOOLPREFIX)ar
 CFLAGS = -march=pentium $(warn) -MMD $(dbg) $(opt) $(prof) $(inc) $(def)
-LDFLAGS = libs/imago/imago.dja libs/anim/anim.dja libs/goat3d/goat3d.dja
-#libs/midas/libmidas.a
+LDFLAGS = libs/imago/imago.dja libs/anim/anim.dja libs/goat3d/goat3d.dja \
+		  libs/midas/libmidas.a
 
 ifneq ($(hostsys), dos)
 .PHONY: all
@@ -51,6 +52,9 @@ src/data.odj: src/data.asm $(bindata)
 
 %.odj: %.c
 	$(CC) $(CFLAGS) -o $@ -c $<
+
+%.odj: %.s
+	$(TOOLPREFIX)as -o $@ -c $<
 
 .PHONY: imago
 imago:

@@ -63,8 +63,7 @@ bin = demo.exe
 !include watcfg.mk
 
 def = -dM_PI=3.141592653589793 -dUSE_HLT $(cfg_def)
-libs = imago.lib anim.lib goat3d.lib
-# midas.lib
+libs = imago.lib anim.lib goat3d.lib midas.lib
 
 AS = nasm
 CC = wcc386

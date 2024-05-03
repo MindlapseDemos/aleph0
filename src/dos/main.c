@@ -90,9 +90,9 @@ int main(int argc, char **argv)
 		goto break_evloop;
 	}
 
-	if(opt.sball && sball_init() == 0) {
+	/*if(opt.sball && sball_init() == 0) {
 		use_sball = 1;
-	}
+	}*/
 
 	fflush(stdout);
 	reset_timer();

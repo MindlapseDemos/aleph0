@@ -1,0 +1,9 @@
+#!/bin/sh
+
+outfile=/tmp/demo.massif.out
+
+[ ! -f ./demo ] && cd ..
+
+rm -f $outfile
+valgrind --tool=massif --massif-out-file=$outfile ./demo
+ms_print $outfile | gview -

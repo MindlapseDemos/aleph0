@@ -76,6 +76,7 @@ void init_timer(int res_hz)
 		intr.pm_selector = _go32_my_cs();
 		_go32_dpmi_allocate_iret_wrapper(&intr);
 		_go32_dpmi_set_protected_mode_interrupt_vector(inum, &intr);
+		printf("init_timer: set interrupt vector: %d\n", inum);
 #endif
 	} else {
 		tick_interval = 55;
@@ -111,6 +112,7 @@ static void cleanup(void)
 	_dos_setvect(inum, prev_timer_intr);
 #endif
 #ifdef __DJGPP__
+	printf("timer: restore interrupt vector: %d\n", inum);
 	_go32_dpmi_set_protected_mode_interrupt_vector(inum, &prev_intr);
 	_go32_dpmi_free_iret_wrapper(&intr);
 #endif

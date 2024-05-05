@@ -155,10 +155,14 @@ enum MIDASdsoundModes
 };
 
 
+/*
 enum MIDASpositions
 {
     MIDAS_POSITION_DEFAULT = 0xFFFFFFFF
 };
+*/
+/* silence warning about enums valid range up to INT_MAX */
+#define MIDAS_POSITION_DEFAULT	0xffffffff
 
 
 

@@ -40,7 +40,6 @@ if $rev; then
 	cd $destdir
 	destdir=$cwd
 else
-	wmake || exit 1
 	mkdir -p $destdir/data
 	cp demo.exe $destdir
 	cp djdemo.exe $destdir

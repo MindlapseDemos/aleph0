@@ -194,9 +194,9 @@ static void draw(void)
 	swap_buffers(0);
 }
 
-static unsigned int tunnel_color(long toffs, unsigned int tpacked, int fog)
+static void tunnel_color(int *rp, int *gp, int *bp, long toffs, unsigned int tpacked, int fog)
 {
-	unsigned int r, g, b;
+	int r, g, b;
 	unsigned int col;
 	unsigned int tx = (((tpacked >> 16) & 0xffff) << tex_xshift) >> 16;
 	unsigned int ty = ((tpacked & 0xffff) << tex_yshift) >> 16;
@@ -211,13 +211,9 @@ static unsigned int tunnel_color(long toffs, unsigned int tpacked, int fog)
 	g = (col >> 8) & 0xff;
 	b = (col >> 16) & 0xff;
 
-	r = (r * fog) >> 8;
-	g = (g * fog) >> 8;
-	b = (b * fog) >> 8;
-
-	col = PACK_RGB16(r, g, b);
-	
-	return col;
+	*rp = (r * fog) >> 8;
+	*gp = (g * fog) >> 8;
+	*bp = (b * fog) >> 8;
 }
 
 static void draw_tunnel_range(unsigned short *pix, int xoffs, int yoffs, int starty, int num_lines, long tm)
@@ -230,11 +226,14 @@ static void draw_tunnel_range(unsigned short *pix, int xoffs, int yoffs, int sta
 	unsigned int *pixels = (unsigned int*)pix + starty * (FB_WIDTH >> 1);
 
 	for(i=0; i<num_lines; i++) {
-		for(j=0; j<xsz; j+=2) {
+		for(j=0; j<(xsz>>1); j++) {
 			unsigned int col;
+			int r, g, b, idx = j << 1;
 
-			col = tunnel_color(toffs, tmap[j], fog[j]);
-			col |= (tunnel_color(toffs, tmap[j + 1], fog[j + 1]) << 16);
+			tunnel_color(&r, &g, &b, toffs, tmap[idx], fog[idx]);
+			col = PACK_RGB16(r, g, b);
+			tunnel_color(&r, &g, &b, toffs, tmap[idx + 1], fog[idx + 1]);
+			col |= PACK_RGB16(r, g, b) << 16;
 			*pixels++ = col;
 		}
 		tmap += vxsz;

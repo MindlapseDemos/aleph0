@@ -15,7 +15,6 @@
 	} while(0)
 
 struct screen *tunnel_screen(void);
-struct screen *fract_screen(void);
 struct screen *grise_screen(void);
 struct screen *polytest_screen(void);
 struct screen *plasma_screen(void);
@@ -32,7 +31,6 @@ struct screen *voxscape_screen(void);
 struct screen *hexfloor_screen(void);
 struct screen *juliatunnel_screen(void);
 struct screen *blobgrid_screen(void);
-struct screen *break_screen(void);
 struct screen *polka_screen(void);
 struct screen *dott_screen(void);
 struct screen *water_screen(void);
@@ -57,7 +55,6 @@ void populate_screens(void)
 	int idx = 0;
 
 	scr[idx++] = tunnel_screen();
-	scr[idx++] = fract_screen();
 	scr[idx++] = grise_screen();
 	scr[idx++] = polytest_screen();
 	scr[idx++] = plasma_screen();
@@ -74,7 +71,6 @@ void populate_screens(void)
 	scr[idx++] = hexfloor_screen();
 	scr[idx++] = juliatunnel_screen();
     scr[idx++] = blobgrid_screen();
-	scr[idx++] = break_screen();
 	scr[idx++] = polka_screen();
 	scr[idx++] = dott_screen();
 	scr[idx++] = water_screen();

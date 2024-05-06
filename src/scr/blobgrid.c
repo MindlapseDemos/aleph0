@@ -82,8 +82,6 @@ static void initStars(void)
 
 static int init(void)
 {
-	int i,j,k;
-
 	origPos = (Pos3D*)malloc(sizeof(Pos3D) * MAX_NUM_POINTS);
 	screenPos = (Pos3D*)malloc(sizeof(Pos3D) * MAX_NUM_POINTS);
 

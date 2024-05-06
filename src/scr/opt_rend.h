@@ -3,6 +3,7 @@
 
 #include "opt_3d.h"
 
+#define CLAMP(v,a,b) if (v < a) v = a; if (v > b) v = b;
 #define CLAMP01(v) if (v < 0.0f) v = 0.0f; if (v > 1.0f) v = 1.0f;
 
 

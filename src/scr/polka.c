@@ -338,8 +338,6 @@ static void initRadialEffects()
 
 static int init(void)
 {
-	int i;
-
 	Opt3Dinit();
 	initBlobGfx();
 

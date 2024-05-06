@@ -26,11 +26,11 @@ static struct screen scr = {
 	draw
 };
 
-#define CLOUD_TEX_WIDTH 512
+#define CLOUD_TEX_WIDTH 256
 #define CLOUD_TEX_HEIGHT 256
 #define CLOUD_PERM 7
 
-#define SKY_HEIGHT 8192
+#define SKY_HEIGHT 4096
 #define SKY_PROJ 256
 
 static unsigned long startingTime;
@@ -43,9 +43,11 @@ static unsigned char *waterBuffer2;
 
 unsigned char *wb1, *wb2;
 
-unsigned short *cloudTex;
+unsigned char *cloudTex;
+unsigned short *cloudPal;
 
-static int zLines[FB_HEIGHT];
+unsigned char* skyTex;
+
 
 static void swapWaterBuffers()
 {
@@ -61,21 +63,22 @@ struct screen *water_screen(void)
 
 static void initCloudTex()
 {
-	int x, y, i;
-	unsigned short* dst;
+	int x, y, i, n;
 
-	cloudTex = (unsigned short*)malloc(CLOUD_TEX_WIDTH * CLOUD_TEX_HEIGHT * sizeof(unsigned short));
+	cloudTex = (unsigned char*)malloc(CLOUD_TEX_WIDTH * CLOUD_TEX_HEIGHT);
+	cloudPal = (unsigned short*)malloc(256 * sizeof(unsigned short));
 
-	dst = cloudTex;
+	skyTex = (unsigned char*)malloc(CLOUD_TEX_WIDTH * CLOUD_TEX_HEIGHT);
+
+	i = 0;
 	for (y = 0; y < CLOUD_TEX_HEIGHT; ++y) {
 		int yp = y;
 		for (x = 0; x < CLOUD_TEX_WIDTH; ++x) {
-			float r,g,b;
 			float sumF = 0.0f;
 			int xp = x;
 			float d = 1.0f;
-			for (i = 0; i < CLOUD_PERM; ++i) {
-				float m = 1.0f / (CLOUD_PERM - i);
+			for (n = 0; n < CLOUD_PERM; ++n) {
+				float m = 1.0f / (CLOUD_PERM - n);
 				int repX = CLOUD_TEX_WIDTH * d;
 				int repY = CLOUD_TEX_HEIGHT * d;
 				if (repX != 0 && repY != 0) {
@@ -86,27 +89,21 @@ static void initCloudTex()
 
 			sumF += 0.25f;
 			CLAMP01(sumF)
-
-			r = sumF;
-			g = sumF - 0.5f;
-			b = sumF + 0.25f;
-
-			CLAMP01(r)
-			CLAMP01(g)
-			CLAMP01(b)
-
-			*dst++ = PACK_RGB16((int)(r * 255), (int)(g * 255), (int)(b * 255));
+			cloudTex[i++] = (unsigned char)(sumF * 127);
 		}
 	}
-}
 
-static void initPrecLines()
-{
-	int y;
-	for (y = 0; y < FB_HEIGHT; ++y) {
-		int yp = FB_HEIGHT / 2 - y;
-		if (yp == 0) yp = 1;
-		zLines[y] = (SKY_HEIGHT * SKY_PROJ) / yp;
+	i = 0;
+	for (n = 0; n < 255; ++n) {
+		int r = n;
+		int g = n - 128;
+		int b = n + 64;
+
+		CLAMP(r, 0, 255)
+		CLAMP(g, 0, 255)
+		CLAMP(b, 0, 255)
+
+		cloudPal[i++] = PACK_RGB16(r, g, b);
 	}
 }
 
@@ -130,7 +127,6 @@ static int init(void)
 	waterPal32 = createColMap16to32(waterPal);
 
 	initCloudTex();
-	initPrecLines();
 
 	return 0;
 }
@@ -138,6 +134,8 @@ static int init(void)
 static void destroy(void)
 {
 	free(cloudTex);
+	free(cloudPal);
+	free(skyTex);
 	free(waterBuffer1);
 	free(waterBuffer2);
 	free(waterPal);
@@ -241,29 +239,52 @@ static void runWaterEffect(int t)
 	}
 }
 
-static void renderBitmapLineX(int u, int du, int texWidth, int length, unsigned short* src, unsigned short* dst)
+static void renderBitmapLineX(int u, int du, int texWidth, int length, unsigned char* src, unsigned short *pal, unsigned short* dst)
 {
 	while (length-- > 0) {
 		int tu = (u >> FP_SCALE) & (texWidth - 1);
-		*dst++ = src[tu];
+		*dst++ = pal[src[tu]];
 		u += du;
 	};
 }
 
-static void testBlitCloudTex(int t)
+static void blendClouds(int t)
 {
-	unsigned short* src = cloudTex;
-	unsigned short* dst = (unsigned short*)fb_pixels;
+	int x, y;
+	unsigned char* dst = skyTex;
 
-	unsigned int y;
+	for (y = 0; y < CLOUD_TEX_HEIGHT; ++y) {
+		int v1 = (y + t) & (CLOUD_TEX_HEIGHT - 1);
+		int v2 = (y + t * 2) & (CLOUD_TEX_HEIGHT - 1);
+		unsigned char *src1 = &cloudTex[v1 * CLOUD_TEX_WIDTH];
+		unsigned char *src2 = &cloudTex[v2 * CLOUD_TEX_WIDTH];
+		for (x = 0; x < CLOUD_TEX_WIDTH; ++x) {
+			*dst++ = *src1++ + *src2++;
+		}
+	}
+}
+
+static void testBlitCloudTex()
+{
+	unsigned short* dst = (unsigned short*)fb_pixels;
+	int y;
 	for (y = 0; y < FB_HEIGHT/2; ++y) {
-		int z = zLines[y];
-		int du = z;
-		int u = (-FB_WIDTH / 2) * du;
-		int v = (z >> 9) & (CLOUD_TEX_HEIGHT - 1);
-		src = &cloudTex[((v + t) % CLOUD_TEX_HEIGHT) * CLOUD_TEX_WIDTH];
-		dst = (unsigned short*)(fb_pixels + y * FB_WIDTH);
-		renderBitmapLineX(u, du, CLOUD_TEX_WIDTH, FB_WIDTH, src, dst);
+		unsigned char *src;
+		int z, u, v, du;
+
+		int yp = FB_HEIGHT / 2 - y;
+		if (yp == 0) yp = 1;
+		z = (SKY_HEIGHT * SKY_PROJ) / yp;
+
+		du = z * 2;
+		u = (-FB_WIDTH / 2) * du;
+
+		v = (z >> 8) & (CLOUD_TEX_HEIGHT - 1);
+		src = &skyTex[v * CLOUD_TEX_WIDTH];
+
+		renderBitmapLineX(u, du, CLOUD_TEX_WIDTH, FB_WIDTH, src, cloudPal, dst);
+
+		dst += FB_WIDTH;
 	}
 }
 
@@ -273,7 +294,8 @@ static void draw(void)
 
 	runWaterEffect(t);
 
-	testBlitCloudTex(t >> 4);
+	blendClouds(t >> 4);
+	testBlitCloudTex();
 
 	swap_buffers(0);
 }

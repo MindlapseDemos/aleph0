@@ -7,6 +7,8 @@
 #include "demo.h"
 #include "screen.h"
 #include "opt_rend.h"
+#include "gfxutil.h"
+#include "noise.h"
 
 static int init(void);
 static void destroy(void);
@@ -22,6 +24,9 @@ static struct screen scr = {
 	draw
 };
 
+#define CLOUD_TEX_WIDTH 512
+#define CLOUD_TEX_HEIGHT 256
+#define CLOUD_PERM 7
 
 static unsigned long startingTime;
 
@@ -32,6 +37,8 @@ static unsigned char *waterBuffer1;
 static unsigned char *waterBuffer2;
 
 unsigned char *wb1, *wb2;
+
+unsigned short *cloudTex;
 
 
 static void swapWaterBuffers()
@@ -44,6 +51,47 @@ static void swapWaterBuffers()
 struct screen *water_screen(void)
 {
 	return &scr;
+}
+
+static void initCloudTex()
+{
+	int x, y, i;
+	unsigned short* dst;
+
+	cloudTex = (unsigned short*)malloc(CLOUD_TEX_WIDTH * CLOUD_TEX_HEIGHT * sizeof(unsigned short));
+
+	dst = cloudTex;
+	for (y = 0; y < CLOUD_TEX_HEIGHT; ++y) {
+		int yp = y;
+		for (x = 0; x < CLOUD_TEX_WIDTH; ++x) {
+			float r,g,b;
+			float sumF = 0.0f;
+			int xp = x;
+			float d = 1.0f;
+			for (i = 0; i < CLOUD_PERM; ++i) {
+				float m = 1.0f / (CLOUD_PERM - i);
+				int repX = CLOUD_TEX_WIDTH * d;
+				int repY = CLOUD_TEX_HEIGHT * d;
+				if (repX != 0 && repY != 0) {
+					sumF += pnoise2((float)xp * d, (float)yp * d, repX, repY) * m;
+				}
+				d /= 2.0f;
+			}
+
+			sumF += 0.25f;
+			CLAMP01(sumF)
+
+			r = sumF;
+			g = sumF - 0.5f;
+			b = sumF + 0.25f;
+
+			CLAMP01(r)
+			CLAMP01(g)
+			CLAMP01(b)
+
+			*dst++ = PACK_RGB16((int)(r * 255), (int)(g * 255), (int)(b * 255));
+		}
+	}
 }
 
 static int init(void)
@@ -65,11 +113,14 @@ static int init(void)
 
 	waterPal32 = createColMap16to32(waterPal);
 
+	initCloudTex();
+
 	return 0;
 }
 
 static void destroy(void)
 {
+	free(cloudTex);
 	free(waterBuffer1);
 	free(waterBuffer2);
 	free(waterPal);
@@ -148,7 +199,7 @@ static void makeRipples(unsigned char *buff, int t)
 	}
 }
 
-void runWaterEffect(int t)
+static void runWaterEffect(int t)
 {
 	static int prevT = 0;
 	const int dt = t - prevT;
@@ -173,11 +224,27 @@ void runWaterEffect(int t)
 	}
 }
 
+static void testBlitCloudTex()
+{
+	unsigned int x, y;
+
+	unsigned short* src = cloudTex;
+	unsigned short* dst = (unsigned short*)fb_pixels;
+
+	for (y = 0; y < FB_HEIGHT; ++y) {
+		for (x = 0; x < FB_WIDTH; ++x) {
+			*dst++ = *(src + (y % CLOUD_TEX_HEIGHT) * CLOUD_TEX_WIDTH + (x % CLOUD_TEX_WIDTH));
+		}
+	}
+}
+
 static void draw(void)
 {
 	const int t = time_msec - startingTime;
 
 	runWaterEffect(t);
+
+	testBlitCloudTex();
 
 	swap_buffers(0);
 }

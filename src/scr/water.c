@@ -29,8 +29,9 @@ static struct screen scr = {
 #define CLOUD_TEX_WIDTH 256
 #define CLOUD_TEX_HEIGHT 256
 #define CLOUD_PERM 7
+#define CLOUD_SHADES 32
 
-#define SKY_HEIGHT 4096
+#define SKY_HEIGHT 8192
 #define SKY_PROJ 256
 
 static unsigned long startingTime;
@@ -44,7 +45,7 @@ static unsigned char *waterBuffer2;
 unsigned char *wb1, *wb2;
 
 unsigned char *cloudTex;
-unsigned short *cloudPal;
+unsigned short *cloudPal[CLOUD_SHADES];
 
 unsigned char* skyTex;
 
@@ -66,8 +67,6 @@ static void initCloudTex()
 	int x, y, i, n;
 
 	cloudTex = (unsigned char*)malloc(CLOUD_TEX_WIDTH * CLOUD_TEX_HEIGHT);
-	cloudPal = (unsigned short*)malloc(256 * sizeof(unsigned short));
-
 	skyTex = (unsigned char*)malloc(CLOUD_TEX_WIDTH * CLOUD_TEX_HEIGHT);
 
 	i = 0;
@@ -93,17 +92,25 @@ static void initCloudTex()
 		}
 	}
 
-	i = 0;
-	for (n = 0; n < 255; ++n) {
-		int r = n;
-		int g = n - 128;
-		int b = n + 64;
+	for (i = 0; i < CLOUD_SHADES; ++i) {
+		unsigned short *pal;
+		cloudPal[i] = (unsigned short*)malloc(256 * sizeof(unsigned short));
+		pal = cloudPal[i];
+		for (n = 0; n < 255; ++n) {
+			int r = n;
+			int g = n - 128;
+			int b = n + 64;
 
-		CLAMP(r, 0, 255)
-		CLAMP(g, 0, 255)
-		CLAMP(b, 0, 255)
+			r = (r * (CLOUD_SHADES - i - 1)) / (CLOUD_SHADES / 2) + 8;
+			g = (g * (CLOUD_SHADES - i - 1)) / (CLOUD_SHADES / 2) + 4;
+			b = (b * (CLOUD_SHADES - i - 1)) / (CLOUD_SHADES / 2) + 16;
 
-		cloudPal[i++] = PACK_RGB16(r, g, b);
+			CLAMP(r, 0, 255);
+			CLAMP(g, 0, 255);
+			CLAMP(b, 0, 127);
+
+			*pal++ = PACK_RGB16(r, g, b);
+		}
 	}
 }
 
@@ -131,15 +138,24 @@ static int init(void)
 	return 0;
 }
 
+static void freePals()
+{
+	int i;
+	for (i = 0; i < CLOUD_SHADES; ++i) {
+		free(cloudPal[i]);
+	}
+}
+
 static void destroy(void)
 {
 	free(cloudTex);
-	free(cloudPal);
 	free(skyTex);
 	free(waterBuffer1);
 	free(waterBuffer2);
 	free(waterPal);
 	free(waterPal32);
+
+	freePals();
 }
 
 static void start(long trans_time)
@@ -271,18 +287,20 @@ static void testBlitCloudTex()
 	for (y = 0; y < FB_HEIGHT/2; ++y) {
 		unsigned char *src;
 		int z, u, v, du;
+		int palNum = (CLOUD_SHADES * y) / (FB_HEIGHT / 2);
 
 		int yp = FB_HEIGHT / 2 - y;
 		if (yp == 0) yp = 1;
 		z = (SKY_HEIGHT * SKY_PROJ) / yp;
 
-		du = z * 2;
+		du = z * 3;
 		u = (-FB_WIDTH / 2) * du;
 
 		v = (z >> 8) & (CLOUD_TEX_HEIGHT - 1);
 		src = &skyTex[v * CLOUD_TEX_WIDTH];
 
-		renderBitmapLineX(u, du, CLOUD_TEX_WIDTH, FB_WIDTH, src, cloudPal, dst);
+		CLAMP(palNum, 0, CLOUD_SHADES-1)
+		renderBitmapLineX(u, du, CLOUD_TEX_WIDTH, FB_WIDTH, src, cloudPal[palNum], dst);
 
 		dst += FB_WIDTH;
 	}

@@ -116,7 +116,6 @@
     <ClCompile Include="src\scr\polka.c" />
     <ClCompile Include="src\scr\opt_3d.c" />
     <ClCompile Include="src\scr\opt_rend.c" />
-    <ClCompile Include="src\scr\fract.c" />
     <ClCompile Include="src\scr\greets.c" />
     <ClCompile Include="src\scr\grise.c" />
     <ClCompile Include="src\scr\hairball.c" />
@@ -135,7 +134,6 @@
     <ClCompile Include="src\scr\voxscape.c" />
     <ClCompile Include="src\scr\hexfloor.c" />
     <ClCompile Include="src\scr\blobgrid.c" />
-    <ClCompile Include="src\scr\break.c" />
     <ClCompile Include="src\scr\juliatun.c" />
     <ClCompile Include="src\tinyfps.c" />
     <ClCompile Include="src\treestor.c" />

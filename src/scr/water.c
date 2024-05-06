@@ -26,18 +26,22 @@ static struct screen scr = {
 	draw
 };
 
+#define WATER_WIDTH 256
+#define WATER_HEIGHT 256
+
 #define CLOUD_TEX_WIDTH 256
 #define CLOUD_TEX_HEIGHT 256
 #define CLOUD_PERM 7
 #define CLOUD_SHADES 32
 
 #define SKY_HEIGHT 8192
+#define WATER_FLOOR 4096
+#define WATER_SHADES 16
 #define SKY_PROJ 256
 
 static unsigned long startingTime;
 
-static unsigned short *waterPal;
-static unsigned int *waterPal32;
+static unsigned short *waterPal[WATER_SHADES];
 
 static unsigned char *waterBuffer1;
 static unsigned char *waterBuffer2;
@@ -48,6 +52,7 @@ unsigned char *cloudTex;
 unsigned short *cloudPal[CLOUD_SHADES];
 
 unsigned char* skyTex;
+unsigned char* waterTex = NULL;
 
 
 static void swapWaterBuffers()
@@ -55,6 +60,8 @@ static void swapWaterBuffers()
 	unsigned char *temp = wb2;
 	wb2 = wb1;
 	wb1 = temp;
+
+	waterTex = wb1;
 }
 
 struct screen *water_screen(void)
@@ -116,7 +123,8 @@ static void initCloudTex()
 
 static int init(void)
 {
-	const int size = FB_WIDTH * FB_HEIGHT;
+	int i;
+	const int size = WATER_WIDTH * WATER_HEIGHT;
 
 	waterBuffer1 = (unsigned char*)malloc(size);
 	waterBuffer2 = (unsigned char*)malloc(size);
@@ -126,12 +134,13 @@ static int init(void)
 	wb1 = waterBuffer1;
 	wb2 = waterBuffer2;
 
-	waterPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
-
-	setPalGradient(0,127, 0,0,0, 31,63,31, waterPal);
-	setPalGradient(128,255, 0,0,0, 0,0,0, waterPal);
-
-	waterPal32 = createColMap16to32(waterPal);
+	for (i = 0; i < WATER_SHADES; ++i) {
+		float s = 1.0f - (float)(WATER_SHADES - i - 1) / (WATER_SHADES * 2.0);
+		CLAMP01(s)
+		waterPal[i] = (unsigned short*)malloc(sizeof(unsigned short) * 256);
+		setPalGradient(0, 127, 3*s, 3*s, 9*s, 31 * s, 63 * s, 31 * s, waterPal[i]);
+		setPalGradient(128, 255, 0, 0, 0, 0, 0, 0, waterPal[i]);
+	}
 
 	initCloudTex();
 
@@ -144,6 +153,9 @@ static void freePals()
 	for (i = 0; i < CLOUD_SHADES; ++i) {
 		free(cloudPal[i]);
 	}
+	for (i = 0; i < WATER_SHADES; ++i) {
+		free(waterPal[i]);
+	}
 }
 
 static void destroy(void)
@@ -152,8 +164,6 @@ static void destroy(void)
 	free(skyTex);
 	free(waterBuffer1);
 	free(waterBuffer2);
-	free(waterPal);
-	free(waterPal32);
 
 	freePals();
 }
@@ -163,33 +173,22 @@ static void start(long trans_time)
 	startingTime = time_msec;
 }
 
-static void waterBufferToVram32()
-{
-	int i;
-	unsigned short *src = (unsigned short*)wb1;
-	unsigned int *dst = (unsigned int*)fb_pixels;
-
-	for (i=0; i<FB_WIDTH * FB_HEIGHT / 2; ++i) {
-		*dst++ = waterPal32[*src++];
-	}
-}
-
 #ifdef __WATCOMC__
 void updateWaterAsm5(void *buffer1, void *buffer2, void *vramStart);
 #else
 static void updateWater32(unsigned char *buffer1, unsigned char *buffer2)
 {
-	int count = (FB_WIDTH / 4) * (FB_HEIGHT - 2) - 2;
+	int count = (WATER_WIDTH / 4) * (WATER_HEIGHT - 2) - 2;
 
 	unsigned int *src1 = (unsigned int*)buffer1;
 	unsigned int *src2 = (unsigned int*)buffer2;
-	unsigned int *vram = (unsigned int*)((unsigned char*)wb1 + FB_WIDTH + 4);
+	unsigned int *vram = (unsigned int*)((unsigned char*)wb1 + WATER_WIDTH + 4);
 
 	do {
 		const unsigned int c0 = *(unsigned int*)((unsigned char*)src1-1);
 		const unsigned int c1 = *(unsigned int*)((unsigned char*)src1+1);
-		const unsigned int c2 = *(src1-(FB_WIDTH / 4));
-		const unsigned int c3 = *(src1+(FB_WIDTH / 4));
+		const unsigned int c2 = *(src1-(WATER_WIDTH / 4));
+		const unsigned int c3 = *(src1+(WATER_WIDTH / 4));
 
 		// Subtract and then absolute value of 4 bytes packed in 8bits (From Hacker's Delight)
 		const unsigned int c = (((c0 + c1 + c2 + c3) >> 1) & 0x7f7f7f7f) - *src2;
@@ -206,28 +205,28 @@ static void updateWater32(unsigned char *buffer1, unsigned char *buffer2)
 static void renderBlob(int xp, int yp, unsigned char *buffer)
 {
 	int i,j;
-	unsigned char *dst = buffer + yp * FB_WIDTH + xp;
+	unsigned char *dst = buffer + yp * WATER_WIDTH + xp;
 
 	for (j=0; j<3; ++j) {
 		for (i=0; i<3; ++i) {
 			*(dst + i) = 0x3f;
 		}
-		dst += FB_WIDTH;
+		dst += WATER_WIDTH;
 	}
 }
 
 static void makeRipples(unsigned char *buff, int t)
 {
-	int i;
+	//int i;
 
-	renderBlob(32 + (rand() & 255), 32 + (rand() & 127), buff);
+	renderBlob(24 + (rand() % 224), 24 + (rand() % 224), buff);
 
-	for (i=0; i<3; ++i) {
-		const int xp = FB_WIDTH / 2 + (int)(sin((t / 32 + 64*i)/24.0) * 128);
-		const int yp = FB_HEIGHT / 2 + (int)(sin((t / 32 + 64*i)/16.0) * 64);
+	/*for (i = 0; i<3; ++i) {
+		const int xp = WATER_WIDTH / 2 + (int)(sin((t / 32 + 64*i)/24.0) * 96);
+		const int yp = WATER_HEIGHT / 2 + (int)(sin((t / 32 + 64*i)/16.0) * 64);
 
 		renderBlob(xp,yp,buff);
-	}
+	}*/
 }
 
 static void runWaterEffect(int t)
@@ -235,9 +234,9 @@ static void runWaterEffect(int t)
 	static int prevT = 0;
 	const int dt = t - prevT;
 	if (dt < 0 || dt > 20) {
-		unsigned char* buff1 = wb1 + FB_WIDTH + 4;
-		unsigned char* buff2 = wb2 + FB_WIDTH + 4;
-		unsigned char* vramOffset = (unsigned char*)buff1 + FB_WIDTH + 4;
+		unsigned char* buff1 = wb1 + WATER_WIDTH + 4;
+		unsigned char* buff2 = wb2 + WATER_WIDTH + 4;
+		unsigned char* vramOffset = (unsigned char*)buff1 + WATER_WIDTH + 4;
 
 		makeRipples(buff1, t);
 
@@ -246,8 +245,6 @@ static void runWaterEffect(int t)
 		#else
 				updateWater32(buff1, buff2);
 		#endif
-
-		waterBufferToVram32();
 
 		swapWaterBuffers();
 
@@ -306,6 +303,34 @@ static void testBlitCloudTex()
 	}
 }
 
+static void testBlitCloudWater()
+{
+	int y;
+
+	if (!waterTex) return;
+
+	for (y = FB_HEIGHT / 2; y < FB_HEIGHT; ++y) {
+		unsigned char* src;
+		unsigned short* dst = (unsigned short*)fb_pixels + y * FB_WIDTH;
+
+		int z, u, v, du;
+		int palNum = (WATER_SHADES * (y - FB_HEIGHT / 2)) / (FB_HEIGHT / 2);
+
+		int yp = FB_HEIGHT / 2 - y;
+		if (yp == 0) yp = 1;
+		z = (WATER_FLOOR * SKY_PROJ) / yp;
+
+		du = z * 2;
+		u = (-FB_WIDTH / 2) * du;
+
+		v = (z >> 7) & (WATER_HEIGHT - 1);
+		src = &waterTex[v * WATER_WIDTH];
+
+		CLAMP(palNum, 0, WATER_SHADES - 1)
+		renderBitmapLineX(u, du, WATER_WIDTH, FB_WIDTH, src, waterPal[palNum], dst);
+	}
+}
+
 static void draw(void)
 {
 	const int t = time_msec - startingTime;
@@ -314,6 +339,8 @@ static void draw(void)
 
 	blendClouds(t >> 4);
 	testBlitCloudTex();
+
+	testBlitCloudWater();
 
 	swap_buffers(0);
 }

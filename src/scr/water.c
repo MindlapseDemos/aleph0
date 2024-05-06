@@ -15,6 +15,8 @@ static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
 
+#define FP_SCALE 16
+
 static struct screen scr = {
 	"water",
 	init,
@@ -28,6 +30,9 @@ static struct screen scr = {
 #define CLOUD_TEX_HEIGHT 256
 #define CLOUD_PERM 7
 
+#define SKY_HEIGHT 8192
+#define SKY_PROJ 256
+
 static unsigned long startingTime;
 
 static unsigned short *waterPal;
@@ -40,6 +45,7 @@ unsigned char *wb1, *wb2;
 
 unsigned short *cloudTex;
 
+static int zLines[FB_HEIGHT];
 
 static void swapWaterBuffers()
 {
@@ -94,6 +100,16 @@ static void initCloudTex()
 	}
 }
 
+static void initPrecLines()
+{
+	int y;
+	for (y = 0; y < FB_HEIGHT; ++y) {
+		int yp = FB_HEIGHT / 2 - y;
+		if (yp == 0) yp = 1;
+		zLines[y] = (SKY_HEIGHT * SKY_PROJ) / yp;
+	}
+}
+
 static int init(void)
 {
 	const int size = FB_WIDTH * FB_HEIGHT;
@@ -114,6 +130,7 @@ static int init(void)
 	waterPal32 = createColMap16to32(waterPal);
 
 	initCloudTex();
+	initPrecLines();
 
 	return 0;
 }
@@ -224,17 +241,29 @@ static void runWaterEffect(int t)
 	}
 }
 
-static void testBlitCloudTex()
+static void renderBitmapLineX(int u, int du, int texWidth, int length, unsigned short* src, unsigned short* dst)
 {
-	unsigned int x, y;
+	while (length-- > 0) {
+		int tu = (u >> FP_SCALE) & (texWidth - 1);
+		*dst++ = src[tu];
+		u += du;
+	};
+}
 
+static void testBlitCloudTex(int t)
+{
 	unsigned short* src = cloudTex;
 	unsigned short* dst = (unsigned short*)fb_pixels;
 
-	for (y = 0; y < FB_HEIGHT; ++y) {
-		for (x = 0; x < FB_WIDTH; ++x) {
-			*dst++ = *(src + (y % CLOUD_TEX_HEIGHT) * CLOUD_TEX_WIDTH + (x % CLOUD_TEX_WIDTH));
-		}
+	unsigned int y;
+	for (y = 0; y < FB_HEIGHT/2; ++y) {
+		int z = zLines[y];
+		int du = z;
+		int u = (-FB_WIDTH / 2) * du;
+		int v = (z >> 9) & (CLOUD_TEX_HEIGHT - 1);
+		src = &cloudTex[((v + t) % CLOUD_TEX_HEIGHT) * CLOUD_TEX_WIDTH];
+		dst = (unsigned short*)(fb_pixels + y * FB_WIDTH);
+		renderBitmapLineX(u, du, CLOUD_TEX_WIDTH, FB_WIDTH, src, dst);
 	}
 }
 
@@ -244,7 +273,7 @@ static void draw(void)
 
 	runWaterEffect(t);
 
-	testBlitCloudTex();
+	testBlitCloudTex(t >> 4);
 
 	swap_buffers(0);
 }

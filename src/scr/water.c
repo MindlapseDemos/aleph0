@@ -217,16 +217,15 @@ static void renderBlob(int xp, int yp, unsigned char *buffer)
 
 static void makeRipples(unsigned char *buff, int t)
 {
-	//int i;
-
-	renderBlob(24 + (rand() % 224), 24 + (rand() % 224), buff);
-
-	/*for (i = 0; i<3; ++i) {
+	/*int i;
+	for (i = 0; i<3; ++i) {
 		const int xp = WATER_TEX_WIDTH / 2 + (int)(sin((t / 32 + 64*i)/24.0) * 96);
 		const int yp = WATER_TEX_HEIGHT / 2 + (int)(sin((t / 32 + 64*i)/16.0) * 64);
 
 		renderBlob(xp,yp,buff);
 	}*/
+
+	renderBlob(24 + (rand() % 224), 24 + (rand() % 224), buff);
 }
 
 static void runWaterEffect(int t)
@@ -266,8 +265,11 @@ static void renderBitmapLineX2(int u, int du, int texWidth1, int texWidth2, int 
 	while (length-- > 0) {
 		int tu = u >> FP_SCALE;
 		int tu1 = tu & (texWidth1 - 1);
-		int tu2 = tu & (texWidth2 - 1);
-		*dst++ = pal[src1[tu1]] + pal[src2[tu2]>>2];
+		int wat0 = src1[tu1];
+		int wat1 = src1[(tu1 + 2) & (texWidth1 - 1)];
+		int dx = (wat1 - wat0) << 1;
+		int tu2 = (tu + dx) & (texWidth2 - 1);
+		*dst++ = pal[src1[tu1] + (src2[tu2] >> 2)];
 		u += du;
 	};
 }
@@ -275,14 +277,14 @@ static void renderBitmapLineX2(int u, int du, int texWidth1, int texWidth2, int 
 static void blendClouds(int t)
 {
 	int x, y;
-	unsigned char* dst = skyTex;
+	unsigned int* dst = (unsigned int*)skyTex;
 
 	for (y = 0; y < CLOUD_TEX_HEIGHT; ++y) {
 		int v1 = (y + t) & (CLOUD_TEX_HEIGHT - 1);
 		int v2 = (y + t * 2) & (CLOUD_TEX_HEIGHT - 1);
-		unsigned char *src1 = &cloudTex[v1 * CLOUD_TEX_WIDTH];
-		unsigned char *src2 = &cloudTex[v2 * CLOUD_TEX_WIDTH];
-		for (x = 0; x < CLOUD_TEX_WIDTH; ++x) {
+		unsigned int *src1 = (unsigned int*)&cloudTex[v1 * CLOUD_TEX_WIDTH];
+		unsigned int *src2 = (unsigned int*)&cloudTex[v2 * CLOUD_TEX_WIDTH];
+		for (x = 0; x < CLOUD_TEX_WIDTH/4; ++x) {
 			*dst++ = *src1++ + *src2++;
 		}
 	}
@@ -350,7 +352,7 @@ static void draw(void)
 
 	runWaterEffect(t);
 
-	blendClouds(t >> 4);
+	blendClouds(t >> 5);
 	testBlitCloudTex();
 
 	testBlitCloudWater();

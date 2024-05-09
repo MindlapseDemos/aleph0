@@ -308,10 +308,10 @@ static void drawQuadLines(Vertex3D *v0, Vertex3D *v1, Vertex3D *v2, Vertex3D *v3
 {
 	if (orderSign * ((v0->x - v1->x) * (v2->y - v1->y) - (v2->x - v1->x) * (v0->y - v1->y)) <= 0) {
 		const int shadeShift = 3 - orderSign;
-		drawAntialiasedLine(v0, v1, shadeShift, buffer);
-		drawAntialiasedLine(v1, v2, shadeShift, buffer);
-		drawAntialiasedLine(v2, v3, shadeShift, buffer);
-		drawAntialiasedLine(v3, v0, shadeShift, buffer); 
+		drawAntialiasedLine8bpp(v0, v1, shadeShift, buffer);
+		drawAntialiasedLine8bpp(v1, v2, shadeShift, buffer);
+		drawAntialiasedLine8bpp(v2, v3, shadeShift, buffer);
+		drawAntialiasedLine8bpp(v3, v0, shadeShift, buffer);
 	}
 }
 

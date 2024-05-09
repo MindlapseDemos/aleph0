@@ -10,6 +10,10 @@
 #include "gfxutil.h"
 #include "noise.h"
 
+#include "opt_3d.h"
+#include "opt_rend.h"
+
+
 static int init(void);
 static void destroy(void);
 static void start(long trans_time);
@@ -37,7 +41,15 @@ static struct screen scr = {
 #define SKY_HEIGHT 8192
 #define WATER_FLOOR 2048
 #define WATER_SHADES 16
-#define SKY_PROJ 256
+#define PROJ_MUL 256
+
+#define NUM_RAINDROPS 128
+#define RAINDROPS_RANGE_X 1024
+#define RAINDROPS_RANGE_Z 1024
+#define RAINDROPS_RANGE_Y 1536
+#define RAINDROPS_HEIGHT_Y 384
+#define RAINDROPS_DIST 384
+#define RAIN_SPEED_Y 16
 
 static unsigned long startingTime;
 
@@ -54,6 +66,7 @@ unsigned short *cloudPal[CLOUD_SHADES];
 unsigned char* skyTex;
 unsigned char* waterTex = NULL;
 
+Vertex3D *rainDrops;
 
 static void swapWaterBuffers()
 {
@@ -121,6 +134,19 @@ static void initCloudTex()
 	}
 }
 
+static void initRainDrops()
+{
+	int i;
+
+	rainDrops = (Vertex3D*)malloc(sizeof(Vertex3D) * NUM_RAINDROPS);
+
+	for (i = 0; i < NUM_RAINDROPS; ++i) {
+		rainDrops[i].x = (rand() % RAINDROPS_RANGE_X) - RAINDROPS_RANGE_X / 2;
+		rainDrops[i].y = (rand() % RAINDROPS_RANGE_Y) + RAINDROPS_HEIGHT_Y;
+		rainDrops[i].z = (rand() % RAINDROPS_RANGE_Z) + RAINDROPS_DIST;
+	}
+}
+
 static int init(void)
 {
 	int i;
@@ -143,6 +169,7 @@ static int init(void)
 	}
 
 	initCloudTex();
+	initRainDrops();
 
 	return 0;
 }
@@ -228,6 +255,28 @@ static void makeRipples(unsigned char *buff, int t)
 	renderBlob(24 + (rand() % 224), 24 + (rand() % 224), buff);
 }
 
+static void moveRain()
+{
+	int i;
+
+	for (i = 0; i < NUM_RAINDROPS; ++i) {
+		int y = rainDrops[i].y;
+		int x = rainDrops[i].x;
+
+		y -= RAIN_SPEED_Y;
+		if (y < -WATER_FLOOR/8) {
+			y = (rand() % RAINDROPS_RANGE_Y) + RAINDROPS_HEIGHT_Y;
+		}
+		rainDrops[i].y = y;
+
+		x -= 2;
+		if (x < -RAINDROPS_RANGE_X / 2) {
+			x = RAINDROPS_RANGE_X / 2;
+		}
+		rainDrops[i].x = x;
+	}
+}
+
 static void runWaterEffect(int t)
 {
 	static int prevT = 0;
@@ -236,6 +285,8 @@ static void runWaterEffect(int t)
 		unsigned char* buff1 = wb1 + WATER_TEX_WIDTH + 4;
 		unsigned char* buff2 = wb2 + WATER_TEX_WIDTH + 4;
 		unsigned char* vramOffset = (unsigned char*)buff1 + WATER_TEX_WIDTH + 4;
+
+		moveRain();
 
 		makeRipples(buff1, t);
 
@@ -301,7 +352,7 @@ static void testBlitCloudTex()
 
 		int yp = FB_HEIGHT / 2 - y;
 		if (yp == 0) yp = 1;
-		z = (SKY_HEIGHT * SKY_PROJ) / yp;
+		z = (SKY_HEIGHT * PROJ_MUL) / yp;
 
 		du = z * 3;
 		u = (-FB_WIDTH / 2) * du;
@@ -331,7 +382,7 @@ static void testBlitCloudWater()
 
 		int yp = FB_HEIGHT / 2 - y;
 		if (yp == 0) yp = 1;
-		z = (WATER_FLOOR * SKY_PROJ) / yp;
+		z = (WATER_FLOOR * PROJ_MUL) / yp;
 
 		du = z * 8;
 		u = (-FB_WIDTH / 2) * du;
@@ -346,6 +397,26 @@ static void testBlitCloudWater()
 	}
 }
 
+static void drawRain()
+{
+	int i;
+
+	for (i = 0; i < NUM_RAINDROPS; ++i) {
+		int z = rainDrops[i].z;
+		if (z > 0) {
+			Vertex3D v1, v2;
+			int x = rainDrops[i].x;
+			int y = rainDrops[i].y;
+			v1.x = (x * PROJ_MUL) / z + FB_WIDTH / 2;
+			v1.y = FB_HEIGHT / 2 - (y * PROJ_MUL) / z;
+			v2.x = v1.x + 1;
+			v2.y = FB_HEIGHT / 2 - ((y + 2*RAIN_SPEED_Y) * PROJ_MUL) / z;
+
+			drawAntialiasedLine16bpp(&v1, &v2, 4, fb_pixels);
+		}
+	}
+}
+
 static void draw(void)
 {
 	const int t = time_msec - startingTime;
@@ -356,6 +427,8 @@ static void draw(void)
 	testBlitCloudTex();
 
 	testBlitCloudWater();
+
+	drawRain();
 
 	swap_buffers(0);
 }

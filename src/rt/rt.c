@@ -279,6 +279,7 @@ union rtobject *rt_add_plane(struct rtscene *scn, float nx, float ny, float nz, 
 	union rtobject *obj = add_object(scn, RT_PLANE);
 	cgm_vcons(&obj->p.n, nx, ny, nz);
 	obj->p.d = d;
+	obj->p.rad_sq = FLT_MAX;
 	return obj;
 }
 
@@ -383,9 +384,9 @@ static void shade(struct rayhit *hit, struct rtscene *scn, int lvl, cgm_vec3 *co
 		cgm_vreflect(&ray.dir, &hit->n);
 
 		if(ray_trace(&ray, scn, lvl + 1, &col)) {
-			color->x += col.x * mtl->refl;
-			color->y += col.y * mtl->refl;
-			color->z += col.z * mtl->refl;
+			color->x += col.x * mtl->ks.x * mtl->refl;
+			color->y += col.y * mtl->ks.y * mtl->refl;
+			color->z += col.z * mtl->ks.z * mtl->refl;
 		}
 	}
 }
@@ -498,8 +499,12 @@ static union rtobject *load_object(struct rtscene *scn, struct ts_node *node)
 	} else if(strcmp(node->name, "plane") == 0) {
 		float *n = ts_get_attr_vec(node, "n", defnorm);
 		float d = ts_get_attr_num(node, "d", 0);
+		float r = ts_get_attr_num(node, "rad", 0);
 
 		obj = rt_add_plane(scn, n[0], n[1], n[2], d);
+		if(r > 0.0f) {
+			obj->p.rad_sq = r * r;
+		}
 
 	} else if(strcmp(node->name, "box") == 0) {
 		float *pos = ts_get_attr_vec(node, "pos", zerovec);

@@ -171,13 +171,13 @@ int ray_cylinder(cgm_ray *ray, struct rtcylinder *cyl, float maxt, struct rayhit
 	t1 = (-b + sqrt_d) / a2;
 	t2 = (-b - sqrt_d) / a2;
 
-	if((t1 < 1e-5f && t2 < 1e-5f) || (t1 > maxt && t2 > maxt)) {
+	if((t1 < 1e-4f && t2 < 1e-4f) || (t1 > maxt && t2 > maxt)) {
 		return res;
 	}
 
-	if(t1 < 1e-5f) {
+	if(t1 < 1e-4f) {
 		t1 = t2;
-	} else if(t2 < 1e-5f) {
+	} else if(t2 < 1e-4f) {
 		t2 = t1;
 	} else {
 		if(t2 < t1) {
@@ -221,7 +221,7 @@ int ray_cylinder(cgm_ray *ray, struct rtcylinder *cyl, float maxt, struct rayhit
 
 int ray_plane(cgm_ray *ray, struct rtplane *plane, float maxt, struct rayhit *hit)
 {
-	cgm_vec3 vo;
+	cgm_vec3 vo, p;
 	float t, ndotdir;
 
 	ndotdir = cgm_vdot(&plane->n, &ray->dir);
@@ -236,9 +236,14 @@ int ray_plane(cgm_ray *ray, struct rtplane *plane, float maxt, struct rayhit *hi
 
 	if(t < 1e-5 || t > maxt) return 0;
 
+	cgm_raypos(&p, ray, t);
+	if(plane->rad_sq < cgm_vlength_sq(&p)) {
+		return 0;
+	}
+
 	if(hit) {
 		hit->t = t;
-		cgm_raypos(&hit->p, ray, t);
+		hit->p = p;
 		hit->n = plane->n;
 
 		if(plane->mtl.tex) {

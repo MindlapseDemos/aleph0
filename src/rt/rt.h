@@ -43,7 +43,7 @@ struct rtcylinder {
 struct rtplane {
 	OBJ_COMMON;
 	cgm_vec3 n;
-	float d;
+	float d, rad_sq;
 };
 
 struct rtbox {

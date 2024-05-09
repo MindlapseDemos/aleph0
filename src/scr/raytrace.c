@@ -7,7 +7,8 @@
 #include "cgmath/cgmath.h"
 #include "rt.h"
 
-#undef FULLRES
+/* define to see a visualization of the sub-sampling resolution */
+#undef SUBDBG
 
 static int init(void);
 static void destroy(void);
@@ -25,11 +26,15 @@ static struct screen scr = {
 
 struct tile {
 	int x, y;
+	int sz;
+	unsigned int valid;
 	uint16_t *fbptr;
 };
 
 #define TILESZ		16
 #define NUM_TILES	((320 / TILESZ) * (240 / TILESZ))
+/* 4 8x8 + 4^2 4x4 + 4^3 2x2 = 4 + 16 + 64 = 84 */
+#define MAX_TILESTACK_SIZE	84
 
 static cgm_vec3 raydir[240][320];
 static struct tile tiles[NUM_TILES];
@@ -41,6 +46,7 @@ static float cam_xform[16];
 
 static struct rtsphere *subsph;
 static struct rtbox *box;
+static struct rtcylinder *pillar[4];
 static union rtobject *obj;
 
 struct screen *raytrace_screen(void)
@@ -53,6 +59,7 @@ static int init(void)
 	int i, j, k;
 	float z = 1.0f / tan(cgm_deg_to_rad(25.0f));
 	struct tile *tptr = tiles;
+	char namebuf[64];
 
 	for(i=0; i<240; i++) {
 		cgm_vec3 *vptr = raydir[i];
@@ -66,7 +73,9 @@ static int init(void)
 			if(((j & (TILESZ-1)) | (i & (TILESZ-1))) == 0) {
 				tptr->x = j;
 				tptr->y = i;
+				tptr->sz = TILESZ;
 				tptr->fbptr = fb_pixels + i * 320 + j;
+				tptr->valid = 0;
 				tptr++;
 			}
 		}
@@ -80,6 +89,11 @@ static int init(void)
 	subsph = (struct rtsphere*)rt_find_object(&scn, "subsph");
 	box = (struct rtbox*)rt_find_object(&scn, "box");
 	obj = rt_find_object(&scn, "rootdiff");
+
+	for(i=0; i<4; i++) {
+		sprintf(namebuf, "pillar%d", i);
+		pillar[i] = (struct rtcylinder*)rt_find_object(&scn, namebuf);
+	}
 
 	return 0;
 }
@@ -116,126 +130,175 @@ static uint16_t INLINE rend_pixel(int x, int y)
 	return 0;
 }
 
-#define CMPMASK		0xe79c
-static void rend_tile(uint16_t *fbptr, int x0, int y0, int tsz, int valid)
+static void fillsq(uint16_t *ptr, int sz, uint16_t col)
 {
-	uint16_t *cptr[4];
-	uint16_t cpix[4], tmp;
-	uint32_t pp0, pp1, pp2, pp3, *fb32;
-	int i, x1, y1, offs;
+	int i;
+	uint32_t *ptr32 = (uint32_t*)ptr;
+	uint32_t colcol = col | ((uint32_t)col << 16);
 
-	fb32 = (uint32_t*)fbptr;
-
-#ifdef FULLRES
-	if(tsz <= 1) return;
-#else
-	if(tsz <= 2) {
-		switch(valid) {
-		case 0:
-			fbptr[1] = fbptr[320] = fbptr[321] = *fbptr;
-			break;
-		case 1:
-			fbptr[0] = fbptr[320] = fbptr[321] = fbptr[1];
-			break;
-		case 2:
-			fbptr[0] = fbptr[1] = fbptr[321] = fbptr[320];
-			break;
-		case 3:
-			fbptr[0] = fbptr[1] = fbptr[320] = fbptr[321];
-			break;
-		default:
-			printf("valid = %d\n", valid);
-			fbptr[0] = fbptr[1] = fbptr[320] = fbptr[321] = 0xff00;
-		}
-		return;
-	}
-#endif
-
-	offs = tsz - 1;
-	x1 = x0 + offs;
-	y1 = y0 + offs;
-
-	cptr[0] = fbptr;
-	cptr[1] = fbptr + tsz - 1;
-	cptr[2] = fbptr + (offs << 8) + (offs << 6);
-	cptr[3] = cptr[2] + tsz - 1;
-
-	cpix[0] = valid == 0 ? *cptr[0] : rend_pixel(x0, y0);
-	cpix[1] = valid == 1 ? *cptr[1] : rend_pixel(x1, y0);
-	cpix[2] = valid == 2 ? *cptr[2] : rend_pixel(x0, y1);
-	cpix[3] = valid == 3 ? *cptr[3] : rend_pixel(x1, y1);
-
-	tmp = cpix[0] & CMPMASK;
-	if((cpix[1] & CMPMASK) != tmp) goto subdiv;
-	if((cpix[2] & CMPMASK) != tmp) goto subdiv;
-	if((cpix[3] & CMPMASK) != tmp) goto subdiv;
-
-	pp0 = cpix[0] | ((uint32_t)cpix[0] << 16);
-	pp1 = cpix[1] | ((uint32_t)cpix[1] << 16);
-	pp2 = cpix[2] | ((uint32_t)cpix[2] << 16);
-	pp3 = cpix[3] | ((uint32_t)cpix[3] << 16);
-
-	switch(tsz) {
+	switch(sz) {
 	case 2:
 #ifdef SUBDBG
-		pp0 = 0x18ff;
+		colcol = 0x18ff18ff;
 #endif
-		fb32[0] = fb32[160] = pp0;
+		ptr32[0] = colcol;
+		ptr32[160] = colcol;
 		break;
 	case 4:
 #ifdef SUBDBG
-		pp0 = pp1 = pp2 = pp3 = 0x03800380;
+		colcol = 0x03800380;
 #endif
-		fb32[0] = fb32[160] = pp0;
-		fb32[1] = fb32[161] = pp1;
-		fb32[320] = fb32[480] = pp2;
-		fb32[321] = fb32[481] = pp3;
+		ptr32[0] = ptr32[1] = colcol;
+		ptr32[160] = ptr32[161] = colcol;
+		ptr32[320] = ptr32[321] = colcol;
+		ptr32[480] = ptr32[481] = colcol;
 		break;
 	case 8:
 #ifdef SUBDBG
-		pp1 = pp0 = pp2 = pp3 = 0xe00fe00f;
+		colcol = 0xe00fe00f;
 #endif
-		fb32[0] = fb32[1] = pp0; fb32[2] = fb32[3] = pp1;
-		fb32[160] = fb32[161] = pp0; fb32[162] = fb32[163] = pp1;
-		fb32[320] = fb32[321] = pp0; fb32[322] = fb32[323] = pp1;
-		fb32[480] = fb32[481] = pp0; fb32[482] = fb32[483] = pp1;
-		fb32[640] = fb32[641] = pp2; fb32[642] = fb32[643] = pp3;
-		fb32[800] = fb32[801] = pp2; fb32[802] = fb32[803] = pp3;
-		fb32[960] = fb32[961] = pp2; fb32[962] = fb32[963] = pp3;
-		fb32[1120] = fb32[1121] = pp2; fb32[1122] = fb32[1123] = pp3;
+		ptr32[0] = ptr32[1] = colcol; ptr32[2] = ptr32[3] = colcol;
+		ptr32[160] = ptr32[161] = colcol; ptr32[162] = ptr32[163] = colcol;
+		ptr32[320] = ptr32[321] = colcol; ptr32[322] = ptr32[323] = colcol;
+		ptr32[480] = ptr32[481] = colcol; ptr32[482] = ptr32[483] = colcol;
+		ptr32[640] = ptr32[641] = colcol; ptr32[642] = ptr32[643] = colcol;
+		ptr32[800] = ptr32[801] = colcol; ptr32[802] = ptr32[803] = colcol;
+		ptr32[960] = ptr32[961] = colcol; ptr32[962] = ptr32[963] = colcol;
+		ptr32[1120] = ptr32[1121] = colcol; ptr32[1122] = ptr32[1123] = colcol;
 		break;
-
 	case 16:
 #ifdef SUBDBG
-		pp0 = 0xff00ff00;
+		col = 0xff00;
 #endif
 		for(i=0; i<4; i++) {
-			memset16(fbptr, pp0, 16); fbptr += 320;
-			memset16(fbptr, pp0, 16); fbptr += 320;
-			memset16(fbptr, pp0, 16); fbptr += 320;
-			memset16(fbptr, pp0, 16); fbptr += 320;
+			memset16(ptr, col, 16); ptr += 320;
+			memset16(ptr, col, 16); ptr += 320;
+			memset16(ptr, col, 16); ptr += 320;
+			memset16(ptr, col, 16); ptr += 320;
 		}
 		break;
+	default:
+		break;
 	}
-	return;
+}
 
-subdiv:
-	*cptr[0] = cpix[0];
-	*cptr[1] = cpix[1];
-	*cptr[2] = cpix[2];
-	*cptr[3] = cpix[3];
 
-	tsz >>= 1;
-	rend_tile(fbptr, x0, y0, tsz, 0);
-	rend_tile(fbptr + tsz, x0 + tsz, y0, tsz, 1);
-	fbptr += (tsz << 8) + (tsz << 6);
-	y0 += tsz;
-	rend_tile(fbptr, x0, y0, tsz, 2);
-	rend_tile(fbptr + tsz, x0 + tsz, y0, tsz, 3);
+/* keep only some significant bits from R G and B for color comparisons */
+/* 11100 111100 11100 (1110 0111 1001 1100) */
+#define CMPMASK		0xe79c
+/* 11000 111000 11000 (1100 0111 0001 1000) */
+/*#define CMPMASK		0xc718*/
+
+static void rend_tile(struct tile *tile)
+{
+	int x0, y0, x1, y1, tsz, hsz, offs;
+	unsigned int valid;
+	uint16_t c0, c1, c2, c3, tmp, *fbptr;
+	struct tile tiles[MAX_TILESTACK_SIZE];
+	int tiles_top;
+
+	tiles[0] = *tile;
+	tiles_top = 1;
+	tile = tiles;
+
+	while(tiles_top > 0) {
+		tile = tiles + --tiles_top;
+
+		x0 = tile->x;
+		y0 = tile->y;
+		tsz = tile->sz;
+		hsz = tsz >> 1;
+		offs = tsz - 1;
+		x1 = x0 + offs;
+		y1 = y0 + offs;
+		fbptr = tile->fbptr;
+		valid = tile->valid;
+
+		switch(valid) {
+		case 1:
+			c0 = fbptr[0];
+			c1 = fbptr[offs] = rend_pixel(x1, y0);
+			c2 = fbptr[offs * 320] = rend_pixel(x0, y1);
+			c3 = fbptr[offs * 320 + offs] = rend_pixel(x1, y1);
+			break;
+		case 2:
+			c0 = fbptr[0] = rend_pixel(x0, y0);
+			c1 = fbptr[offs];
+			c2 = fbptr[offs * 320] = rend_pixel(x0, y1);
+			c3 = fbptr[offs * 320 + offs] = rend_pixel(x1, y1);
+			break;
+		case 3:
+			c0 = fbptr[0] = rend_pixel(x0, y0);
+			c1 = fbptr[offs] = rend_pixel(x1, y0);
+			c2 = fbptr[offs * 320];
+			c3 = fbptr[offs * 320 + offs] = rend_pixel(x1, y1);
+			break;
+		case 4:
+			c0 = fbptr[0] = rend_pixel(x0, y0);
+			c1 = fbptr[offs] = rend_pixel(x1, y0);
+			c2 = fbptr[offs * 320] = rend_pixel(x0, y1);
+			c3 = fbptr[offs * 320 + offs];
+			break;
+		default:
+			c0 = fbptr[0] = rend_pixel(x0, y0);
+			c1 = fbptr[offs] = rend_pixel(x1, y0);
+			c2 = fbptr[offs * 320] = rend_pixel(x0, y1);
+			c3 = fbptr[offs * 320 + offs] = rend_pixel(x1, y1);
+		}
+
+		if(tsz <= 2) {
+			/* we're at 2x2, write the 4 pixels and continue */
+			fbptr[0] = c0;
+			fbptr[1] = c1;
+			fbptr[320] = c2;
+			fbptr[321] = c3;
+			continue;
+		}
+
+		tmp = c0 & CMPMASK;
+		if((c1 & CMPMASK) == tmp && (c2 & CMPMASK) == tmp && (c3 & CMPMASK) == tmp) {
+			/* colors are the same, draw 4 quads and continue */
+			fillsq(fbptr, hsz, c0);
+			fillsq(fbptr + hsz, hsz, c1);
+			fillsq(fbptr + 320 * hsz, hsz, c2);
+			fillsq(fbptr + 320 * hsz + hsz, hsz, c3);
+			continue;
+		}
+
+		/* colors are not the same, push onto the stack to subdivide further */
+		tile = tiles + tiles_top++;
+		tile->x = x0;
+		tile->y = y0;
+		tile->sz = hsz;
+		tile->fbptr = fbptr;
+		tile->valid = 1;
+
+		tile = tiles + tiles_top++;
+		tile->x = x0 + hsz;
+		tile->y = y0;
+		tile->sz = hsz;
+		tile->fbptr = fbptr + hsz;
+		tile->valid = 2;
+
+		tile = tiles + tiles_top++;
+		tile->x = x0;
+		tile->y = y0 + hsz;
+		tile->sz = hsz;
+		tile->fbptr = fbptr + 320 * hsz;
+		tile->valid = 3;
+
+		tile = tiles + tiles_top++;
+		tile->x = x0 + hsz;
+		tile->y = y0 + hsz;
+		tile->sz = hsz;
+		tile->fbptr = fbptr + 320 * hsz + hsz;
+		tile->valid = 4;
+	}
 }
 
 static void update(void)
 {
+	int i;
 	float t, px;
 
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
@@ -257,6 +320,13 @@ static void update(void)
 		box->min.x = px - 0.3f;
 		box->max.x = px + 0.3f;
 	}
+
+	for(i=0; i<4; i++) {
+		if(pillar[i]) {
+			pillar[i]->p.x = (float)cos(t + (CGM_PI * 2.0f / 3.0f) * i) * 6.0f;
+			pillar[i]->p.z = (float)sin(t + (CGM_PI * 2.0f / 3.0f) * i) * 6.0f;
+		}
+	}
 }
 
 static void draw(void)
@@ -269,7 +339,7 @@ static void draw(void)
 
 	tile = tiles;
 	for(i=0; i<NUM_TILES; i++) {
-		rend_tile(tile->fbptr, tile->x, tile->y, TILESZ, -1);
+		rend_tile(tile);
 		tile++;
 	}
 

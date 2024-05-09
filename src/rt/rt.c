@@ -195,6 +195,9 @@ static union rtobject *add_object(struct rtscene *scn, enum rt_obj_type type)
 	obj->x.mtl.tex = cur_tex;
 	obj->x.mtl.uvscale = cur_uvscale;
 
+	obj->x.mtl.krefl = obj->x.mtl.ks;
+	cgm_vscale(&obj->x.mtl.krefl, obj->x.mtl.refl);
+
 	darr_push(scn->obj, &obj);
 	scn->num_obj = darr_size(scn->obj);
 	return obj;
@@ -384,9 +387,9 @@ static void shade(struct rayhit *hit, struct rtscene *scn, int lvl, cgm_vec3 *co
 		cgm_vreflect(&ray.dir, &hit->n);
 
 		if(ray_trace(&ray, scn, lvl + 1, &col)) {
-			color->x += col.x * mtl->ks.x * mtl->refl;
-			color->y += col.y * mtl->ks.y * mtl->refl;
-			color->z += col.z * mtl->ks.z * mtl->refl;
+			color->x += col.x * mtl->krefl.x;
+			color->y += col.y * mtl->krefl.y;
+			color->z += col.z * mtl->krefl.z;
 		}
 	}
 }
@@ -598,6 +601,9 @@ static int load_material(struct ts_node *node)
 	} else {
 		m.mtl.uvscale.x = m.mtl.uvscale.y = 1;
 	}
+
+	m.mtl.krefl = m.mtl.ks;
+	cgm_vscale(&m.mtl.krefl, m.mtl.refl);
 
 	darr_push(mtllist, &m);
 	return 0;

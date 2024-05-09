@@ -12,6 +12,7 @@ struct rtmaterial {
 	float refl;
 	struct image *tex;
 	cgm_vec2 uvscale;
+	cgm_vec3 krefl;	/* krefl is derived, precalc ks * refl */
 };
 
 enum rt_obj_type { RT_SPH, RT_CYL, RT_PLANE, RT_BOX, RT_CSG };
@@ -43,7 +44,7 @@ struct rtcylinder {
 struct rtplane {
 	OBJ_COMMON;
 	cgm_vec3 n;
-	float d;
+	float d, rad_sq;
 };
 
 struct rtbox {

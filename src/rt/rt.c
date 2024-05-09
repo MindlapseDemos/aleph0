@@ -195,6 +195,9 @@ static union rtobject *add_object(struct rtscene *scn, enum rt_obj_type type)
 	obj->x.mtl.tex = cur_tex;
 	obj->x.mtl.uvscale = cur_uvscale;
 
+	obj->x.mtl.krefl = obj->x.mtl.ks;
+	cgm_vscale(&obj->x.mtl.krefl, obj->x.mtl.refl);
+
 	darr_push(scn->obj, &obj);
 	scn->num_obj = darr_size(scn->obj);
 	return obj;
@@ -279,6 +282,7 @@ union rtobject *rt_add_plane(struct rtscene *scn, float nx, float ny, float nz, 
 	union rtobject *obj = add_object(scn, RT_PLANE);
 	cgm_vcons(&obj->p.n, nx, ny, nz);
 	obj->p.d = d;
+	obj->p.rad_sq = FLT_MAX;
 	return obj;
 }
 
@@ -383,9 +387,9 @@ static void shade(struct rayhit *hit, struct rtscene *scn, int lvl, cgm_vec3 *co
 		cgm_vreflect(&ray.dir, &hit->n);
 
 		if(ray_trace(&ray, scn, lvl + 1, &col)) {
-			color->x += col.x * mtl->refl;
-			color->y += col.y * mtl->refl;
-			color->z += col.z * mtl->refl;
+			color->x += col.x * mtl->krefl.x;
+			color->y += col.y * mtl->krefl.y;
+			color->z += col.z * mtl->krefl.z;
 		}
 	}
 }
@@ -498,8 +502,12 @@ static union rtobject *load_object(struct rtscene *scn, struct ts_node *node)
 	} else if(strcmp(node->name, "plane") == 0) {
 		float *n = ts_get_attr_vec(node, "n", defnorm);
 		float d = ts_get_attr_num(node, "d", 0);
+		float r = ts_get_attr_num(node, "rad", 0);
 
 		obj = rt_add_plane(scn, n[0], n[1], n[2], d);
+		if(r > 0.0f) {
+			obj->p.rad_sq = r * r;
+		}
 
 	} else if(strcmp(node->name, "box") == 0) {
 		float *pos = ts_get_attr_vec(node, "pos", zerovec);
@@ -593,6 +601,9 @@ static int load_material(struct ts_node *node)
 	} else {
 		m.mtl.uvscale.x = m.mtl.uvscale.y = 1;
 	}
+
+	m.mtl.krefl = m.mtl.ks;
+	cgm_vscale(&m.mtl.krefl, m.mtl.refl);
 
 	darr_push(mtllist, &m);
 	return 0;

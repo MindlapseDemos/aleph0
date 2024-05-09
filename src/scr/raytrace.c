@@ -7,6 +7,7 @@
 #include "cgmath/cgmath.h"
 #include "rt.h"
 
+#define HALFRES
 /* define to see a visualization of the sub-sampling resolution */
 #undef SUBDBG
 
@@ -246,6 +247,12 @@ static void rend_tile(struct tile *tile)
 			c3 = fbptr[offs * 320 + offs] = rend_pixel(x1, y1);
 		}
 
+#ifdef HALFRES
+		if(tsz <= 4) {
+			/* we're doing half-res and we're at 4x4, write the 4 quads and continue */
+			goto fillquads;
+		}
+#else
 		if(tsz <= 2) {
 			/* we're at 2x2, write the 4 pixels and continue */
 			fbptr[0] = c0;
@@ -254,9 +261,11 @@ static void rend_tile(struct tile *tile)
 			fbptr[321] = c3;
 			continue;
 		}
+#endif
 
 		tmp = c0 & CMPMASK;
 		if((c1 & CMPMASK) == tmp && (c2 & CMPMASK) == tmp && (c3 & CMPMASK) == tmp) {
+fillquads:
 			/* colors are the same, draw 4 quads and continue */
 			fillsq(fbptr, hsz, c0);
 			fillsq(fbptr + hsz, hsz, c1);

@@ -16,29 +16,12 @@
 #define AXIS_HEIGHT (VERTICES_HEIGHT<<AXIS_SHIFT)
 #define AXIS_DEPTH (VERTICES_DEPTH<<AXIS_SHIFT)
 
-
 #define FP_CORE 16
 #define FP_BASE 12
 #define FP_BASE_TO_CORE (FP_CORE - FP_BASE)
 #define PROJ_SHR 8
 #define PROJ_MUL (1 << PROJ_SHR)
 
-#define FLOAT_TO_FIXED(f,b) ((int)((f) * (1 << (b))))
-#define INT_TO_FIXED(i,b) ((i) * (1 << (b)))
-#define UINT_TO_FIXED(i,b) ((i) << (b))
-#define FIXED_TO_INT(x,b) ((x) >> (b))
-#define FIXED_TO_FLOAT(x,b) ((float)(x) / (1 << (b)))
-#define FIXED_MUL(x,y,b) (((x) * (y)) >> (b))
-#define FIXED_DIV(x,y,b) (((x) << (b)) / (y))
-#define FIXED_SQRT(x,b) (isqrt((x) << (b)))
-
-#define DEG_TO_RAD_256(x) (((2 * M_PI) * (x)) / 256)
-#define RAD_TO_DEG_256(x) ((256 * (x)) / (2 * M_PI))
-
-
-#define AFTER_MUL_ADDS(x,b)		FIXED_TO_INT(x,b)
-#define AFTER_RECZ_MUL(x,b)		FIXED_TO_INT(x,b)
-#define FLOAT_TO_int(x,b)		FLOAT_TO_FIXED(x,b)
 #define DOT_COLOR				0xFFFF
 
 
@@ -46,7 +29,9 @@ static Vertex3D *objectGridVertices;
 static Vertex3D *transformedGridVertices;
 static Vertex3D *objectAxesVertices;
 static Vertex3D *transformedAxesVertices;
-static ScreenPoints screenPoints;
+
+static ScreenPoints screenPointsGrid;
+static ScreenPoints screenPointsObject;
 
 static Vertex3D *axisVerticesX, *axisVerticesY, *axisVerticesZ;
 
@@ -54,7 +39,12 @@ static int *recDivZ;
 
 static unsigned char *volumeData;
 
+static Vertex3D* transformedObjectVertices;
+static int* currentIndexPtr;
+
 static int isOpt3Dinit = 0;
+
+
 
 int isqrt(int x)
 {
@@ -126,33 +116,33 @@ static void MulManyVec3Mat33(Vertex3D *dst, Vertex3D *src, int *m, int count)
 	}
 }
 
-static void translateAndProjectVertices(Vertex3D *src, Vertex3D *dst, int count)
+static void translateAndProjectVertices(Vertex3D *src, Vertex3D *dst, int count, int posX, int posY, int posZ)
 {
 	int i;
 
 	for (i=0; i<count; i++) {
-		const int vz = src[i].z + OBJECT_POS_Z;
+		const int vz = src[i].z + posZ;
 		dst[i].z = vz;
 		if (vz > 0) {
-			dst[i].x = FB_WIDTH / 2 + (src[i].x * PROJ_MUL) / vz;
-			dst[i].y = FB_HEIGHT / 2 + (src[i].y * PROJ_MUL) / vz;
+			dst[i].x = FB_WIDTH / 2 + posX + (src[i].x * PROJ_MUL) / vz;
+			dst[i].y = FB_HEIGHT / 2 - posY - (src[i].y * PROJ_MUL) / vz;
 		}
 	}
 }
 
-static void rotateVertices(Vertex3D *src, Vertex3D *dst, int count, int t)
+static void rotateVertices(Vertex3D *src, Vertex3D *dst, int count, int rx, int ry, int rz)
 {
 	static int rotMat[9];
 
-	createRotationMatrixValues(t, 2*t, 3*t, rotMat);
+	createRotationMatrixValues(rx, ry, rz, rotMat);
 
 	MulManyVec3Mat33(dst, src, rotMat, count);
 }
 
 static void renderVertices(unsigned char *buffer)
 {
-	Vertex3D *src = screenPoints.v;
-	const int count = screenPoints.num;
+	Vertex3D *src = screenPointsGrid.v;
+	const int count = screenPointsGrid.num;
 
 	int i;
 	for (i = 0; i < count; i++) {
@@ -174,7 +164,7 @@ static void transformAndProjectAxesBoxDotsEffect()
 {
 	unsigned char *src = volumeData;
 
-	Vertex3D *dst = screenPoints.v;
+	Vertex3D *dst = screenPointsGrid.v;
 	Vertex3D *axisZ = axisVerticesZ;
 	int countZ = VERTICES_DEPTH;
 	do {
@@ -196,7 +186,7 @@ static void transformAndProjectAxesBoxDotsEffect()
 						dst->x = sx;
 						dst->y = sy;
 						dst->z = c;
-						screenPoints.num++;
+						screenPointsGrid.num++;
 						++dst;
 					}
 				}
@@ -262,10 +252,10 @@ static void initAxes3D()
 	SET_OPT_VERTEX(0,0,AXIS_DEPTH,v)
 }
 
-static void initScreenPoints(Vertex3D *src)
+static void initScreenPointsGrid(Vertex3D *src)
 {
-	screenPoints.num = 0;
-	screenPoints.v = src;
+	screenPointsGrid.num = 0;
+	screenPointsGrid.v = src;
 }
 
 void Opt3Dinit()
@@ -280,6 +270,7 @@ void Opt3Dinit()
 		for (z=1; z<REC_DIV_Z_MAX; ++z) {
 			recDivZ[z] = FLOAT_TO_int(1/(float)z, FP_CORE);
 		}
+
 		isOpt3Dinit = 1;
 	}
 }
@@ -350,15 +341,176 @@ void Opt3Drun(unsigned char *buffer, int ticks)
 {
 	ticks >>= 1;
 
-	initScreenPoints(transformedGridVertices);
-	rotateVertices(objectAxesVertices, transformedAxesVertices, 3, ticks);
+	initScreenPointsGrid(transformedGridVertices);
+	rotateVertices(objectAxesVertices, transformedAxesVertices, 3, ticks, 2 * ticks, 3 * ticks);
 	generateAxesVertices(transformedAxesVertices);
 
 	transformAndProjectAxesBoxDotsEffect();
 
 	drawBoxLines(buffer, -1);
 
-	drawBlobs(screenPoints.v, screenPoints.num, buffer);
+	drawBlobs(screenPointsGrid.v, screenPointsGrid.num, buffer);
 
 	drawBoxLines(buffer, 1);
+}
+
+static void setVertexPos(int x, int y, int z, Vertex3D* v)
+{
+	v->x = x;
+	v->y = y;
+	v->z = z;
+}
+
+static void setElementCol(int c, Element* e)
+{
+	e->c = c;
+}
+
+static void setElementTexCoords(int u, int v, Element* e)
+{
+	e->u = u;
+	e->v = v;
+}
+
+
+static void addIndexedTriangle(int p0, int p1, int p2)
+{
+	*currentIndexPtr++ = p0;
+	*currentIndexPtr++ = p1;
+	*currentIndexPtr++ = p2;
+}
+
+static Mesh3D* newMesh(int vNum, int iNum)
+{
+	Mesh3D* mesh = (Mesh3D*)malloc(sizeof(Mesh3D));
+
+	mesh->verticesNum = vNum;
+	mesh->indicesNum = iNum;
+	mesh->vertex = (Vertex3D*)malloc(vNum * sizeof(Vertex3D));
+	mesh->index = (int*)malloc(iNum * sizeof(int));
+	mesh->element = (Element*)malloc(iNum * sizeof(Element));
+
+	return mesh;
+}
+
+void freeMesh(Mesh3D* mesh)
+{
+	free(mesh->vertex);
+	free(mesh->index);
+	free(mesh->element);
+
+	free(mesh);
+}
+
+Mesh3D* genMesh(int type, int length)
+{
+	int x, y, z;
+	const int halfLength = length / 2;
+
+	Mesh3D* mesh = 0;
+	Vertex3D* v;
+	Element* e;
+
+	switch (type) {
+		case GEN_OBJ_CUBE:
+		{
+			mesh = newMesh(8, 36);
+			v = mesh->vertex;
+			e = mesh->element;
+			for (z = -1; z <= 1; z += 2) {
+				for (y = -1; y <= 1; y += 2) {
+					for (x = -1; x <= 1; x += 2) {
+						setVertexPos(x * halfLength, y * halfLength, z * halfLength, v);
+						setElementCol(rand() & 255, e);
+						//setVertexTexCoords()
+						++v;
+						++e;
+					}
+				}
+			}
+
+
+			currentIndexPtr = mesh->index;
+
+			//			6		7
+			//		2		3
+			//			4		5
+			//		0		1
+
+			addIndexedTriangle(0, 3, 2);
+			addIndexedTriangle(0, 1, 3);
+			addIndexedTriangle(1, 7, 3);
+			addIndexedTriangle(1, 5, 7);
+			addIndexedTriangle(5, 6, 7);
+			addIndexedTriangle(5, 4, 6);
+			addIndexedTriangle(4, 2, 6);
+			addIndexedTriangle(4, 0, 2);
+			addIndexedTriangle(2, 7, 6);
+			addIndexedTriangle(2, 3, 7);
+			addIndexedTriangle(4, 1, 0);
+			addIndexedTriangle(4, 5, 1);
+		}
+		break;
+
+		default:
+			break;
+	}
+
+	return mesh;
+}
+
+void setObjectPos(int x, int y, int z, Object3D* obj)
+{
+	obj->pos.x = x;
+	obj->pos.y = y;
+	obj->pos.z = z;
+}
+
+void setObjectRot(int x, int y, int z, Object3D* obj)
+{
+	obj->rot.x = x;
+	obj->rot.y = y;
+	obj->rot.z = z;
+}
+
+static void setVerticesMaterial(Object3D* obj)
+{
+	const int count = obj->mesh->verticesNum;
+	Element* src = obj->mesh->element;
+	Vertex3D* dst = screenPointsObject.v;
+
+	int i;
+	for (i = 0; i < count; i++) {
+		dst->c = src->c;
+		dst->u = src->u;
+		dst->v = src->v;
+		++src;
+		++dst;
+	}
+}
+
+void transformObject3D(Object3D* obj)
+{
+	rotateVertices(obj->mesh->vertex, screenPointsObject.v, obj->mesh->verticesNum, obj->rot.x, obj->rot.y, obj->rot.z);
+	translateAndProjectVertices(screenPointsObject.v, screenPointsObject.v, obj->mesh->verticesNum, obj->pos.x, obj->pos.y, obj->pos.z);
+	setVerticesMaterial(obj);
+}
+
+void renderObject3D(Object3D* obj)
+{
+	renderPolygons(obj, screenPointsObject.v);
+}
+
+void initOptEngine(int maxPoints)
+{
+	screenPointsObject.v = (Vertex3D*)malloc(maxPoints * sizeof(Vertex3D));
+
+	initOptRasterizer();
+}
+
+void freeOptEngine()
+{
+	free(screenPointsObject.v);
+
+	freeOptRasterizer();
 }

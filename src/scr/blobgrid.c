@@ -324,8 +324,6 @@ static void drawEffect(BlobGridParams *params, int t)
 
 static void draw(void)
 {
-	int i,y=0;
-
 	int t = time_msec - startingTime;
 	//t >>= 6;
 

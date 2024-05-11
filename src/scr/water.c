@@ -68,6 +68,10 @@ unsigned char* waterTex = NULL;
 
 Vertex3D *rainDrops;
 
+Mesh3D* meshCube;
+Object3D objCube;
+
+
 static void swapWaterBuffers()
 {
 	unsigned char *temp = wb2;
@@ -147,6 +151,15 @@ static void initRainDrops()
 	}
 }
 
+static void initObjects()
+{
+	meshCube = genMesh(GEN_OBJ_CUBE, 256);
+
+	objCube.mesh = meshCube;
+	setObjectPos(0, 0, 512, &objCube);
+	setObjectRot(0, 0, 0, &objCube);
+}
+
 static int init(void)
 {
 	int i;
@@ -171,6 +184,9 @@ static int init(void)
 	initCloudTex();
 	initRainDrops();
 
+	initOptEngine(1024);
+	initObjects();
+
 	return 0;
 }
 
@@ -191,6 +207,9 @@ static void destroy(void)
 	free(skyTex);
 	free(waterBuffer1);
 	free(waterBuffer2);
+
+	freeMesh(meshCube);
+	freeOptEngine();
 
 	freePals();
 }
@@ -417,6 +436,14 @@ static void drawRain()
 	}
 }
 
+static void sceneRunCube(int t)
+{
+	setObjectRot(t, 2*t, 3*t, &objCube);
+
+	transformObject3D(&objCube);
+	renderObject3D(&objCube);
+}
+
 static void draw(void)
 {
 	const int t = time_msec - startingTime;
@@ -429,6 +456,8 @@ static void draw(void)
 	testBlitCloudWater();
 
 	drawRain();
+
+	sceneRunCube(t);
 
 	swap_buffers(0);
 }

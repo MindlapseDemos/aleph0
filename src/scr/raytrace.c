@@ -9,7 +9,7 @@
 
 #define HALFRES
 /* define to see a visualization of the sub-sampling resolution */
-#undef SUBDBG
+#define SUBDBG
 
 static int init(void);
 static void destroy(void);
@@ -33,12 +33,13 @@ struct tile {
 };
 
 #define TILESZ		16
-#define NUM_TILES	((320 / TILESZ) * (240 / TILESZ))
+#define MAX_NUM_TILES	((320 / TILESZ) * (240 / TILESZ))
 /* 4 8x8 + 4^2 4x4 + 4^3 2x2 = 4 + 16 + 64 = 84 */
 #define MAX_TILESTACK_SIZE	84
 
 static cgm_vec3 raydir[240][320];
-static struct tile tiles[NUM_TILES];
+static struct tile tiles[MAX_NUM_TILES];
+static int num_tiles;
 static struct rtscene scn;
 
 static float cam_theta = 10, cam_phi = 10;
@@ -71,6 +72,10 @@ static int init(void)
 			vptr->z = z;
 			vptr++;
 
+			if(i == 0 || j == 0 || i >= 240 - TILESZ || j >= 320 - TILESZ) {
+				continue;
+			}
+
 			if(((j & (TILESZ-1)) | (i & (TILESZ-1))) == 0) {
 				tptr->x = j;
 				tptr->y = i;
@@ -81,6 +86,7 @@ static int init(void)
 			}
 		}
 	}
+	num_tiles = tptr - tiles;
 
 	rt_init(&scn);
 	if(rt_load(&scn, "data/rayscn.rt") == -1) {
@@ -347,7 +353,7 @@ static void draw(void)
 	update();
 
 	tile = tiles;
-	for(i=0; i<NUM_TILES; i++) {
+	for(i=0; i<num_tiles; i++) {
 		rend_tile(tile);
 		tile++;
 	}

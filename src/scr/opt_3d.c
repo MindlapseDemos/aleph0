@@ -48,7 +48,7 @@ static int isOpt3Dinit = 0;
 
 int isqrt(int x)
 {
-    long long int q = 1;	// very high numbers over ((1<<30)-1) will freeze in while if this wasn't 64bit
+    long long int q = 1;	/* very high numbers over((1 << 30) - 1) will freeze in while if this wasn't 64bit */
 	int r = 0;
     while (q <= x) {
         q <<= 2;
@@ -121,11 +121,15 @@ static void translateAndProjectVertices(Vertex3D *src, Vertex3D *dst, int count,
 	int i;
 
 	for (i=0; i<count; i++) {
+		const int vx = src[i].x + posX;
+		const int vy = src[i].y + posY;
 		const int vz = src[i].z + posZ;
+		dst[i].x = vx;
+		dst[i].y = vy;
 		dst[i].z = vz;
 		if (vz > 0) {
-			dst[i].x = FB_WIDTH / 2 + posX + (src[i].x * PROJ_MUL) / vz;
-			dst[i].y = FB_HEIGHT / 2 - posY - (src[i].y * PROJ_MUL) / vz;
+			dst[i].xs = FB_WIDTH / 2 + (vx * PROJ_MUL) / vz;
+			dst[i].ys = FB_HEIGHT / 2 - (vy * PROJ_MUL) / vz;
 		}
 	}
 }
@@ -183,8 +187,8 @@ static void transformAndProjectAxesBoxDotsEffect()
 						const int sx = FB_WIDTH / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);
 						const int sy = FB_HEIGHT / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);
 
-						dst->x = sx;
-						dst->y = sy;
+						dst->xs = sx;
+						dst->ys = sy;
 						dst->z = c;
 						screenPointsGrid.num++;
 						++dst;
@@ -297,7 +301,7 @@ void Opt3Dfree()
 
 static void drawQuadLines(Vertex3D *v0, Vertex3D *v1, Vertex3D *v2, Vertex3D *v3, unsigned char *buffer, int orderSign)
 {
-	if (orderSign * ((v0->x - v1->x) * (v2->y - v1->y) - (v2->x - v1->x) * (v0->y - v1->y)) <= 0) {
+	if (orderSign * ((v0->xs - v1->xs) * (v2->ys - v1->ys) - (v2->xs - v1->xs) * (v0->ys - v1->ys)) <= 0) {
 		const int shadeShift = 3 - orderSign;
 		drawAntialiasedLine8bpp(v0, v1, shadeShift, buffer);
 		drawAntialiasedLine8bpp(v1, v2, shadeShift, buffer);
@@ -320,8 +324,8 @@ void drawBoxLines(unsigned char *buffer, int orderSign)
 				const int sz = AFTER_MUL_ADDS(axisX->z + axisY->z + axisZ->z, FP_CORE) + OBJECT_POS_Z;
 				if (sz > 0 && sz < REC_DIV_Z_MAX) {
 					const int recZ = recDivZ[(int)sz];
-					v[i].x = FB_WIDTH / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);
-					v[i].y = FB_HEIGHT / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);
+					v[i].xs = FB_WIDTH / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);
+					v[i].ys = FB_HEIGHT / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);
 					v[i].z = sz;
 				}
 				++i;
@@ -422,7 +426,7 @@ Mesh3D* genMesh(int type, int length)
 					for (x = -1; x <= 1; x += 2) {
 						setVertexPos(x * halfLength, y * halfLength, z * halfLength, v);
 						setElementCol(rand() & 255, e);
-						//setVertexTexCoords()
+						/* setVertexTexCoords() */
 						++v;
 						++e;
 					}
@@ -432,10 +436,12 @@ Mesh3D* genMesh(int type, int length)
 
 			currentIndexPtr = mesh->index;
 
-			//			6		7
-			//		2		3
-			//			4		5
-			//		0		1
+			/*
+						6		7
+					2		3
+						4		5
+					0		1
+			*/
 
 			addIndexedTriangle(0, 3, 2);
 			addIndexedTriangle(0, 1, 3);

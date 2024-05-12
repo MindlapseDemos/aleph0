@@ -21,10 +21,13 @@ static BlobData blobData[BLOB_SIZES_NUM_MAX][BLOB_SIZEX_PAD];
 
 static int isBlobGfxInit = 0;
 
+static int clipValY = 0;
+
 
 typedef struct Edge
 {
-	int x;
+	int xs;
+	int x, y, z;
 	int c, u, v;
 }Edge;
 
@@ -34,6 +37,11 @@ static Edge* rightEdge = 0;
 static int edgeYmin = 0;
 static int edgeYmax = 0;
 
+static void(*drawEdge)(int, int);
+static void drawEdgeFlat(int y, int dx);
+static void drawEdgeGouraud(int y, int dx);
+static void drawEdgeGouraudClipY(int y, int dx);
+
 static uint16_t polyColor = 0xffff;
 
 
@@ -41,6 +49,10 @@ void initOptRasterizer()
 {
 	leftEdge = (Edge*)malloc(FB_HEIGHT * sizeof(Edge));
 	rightEdge = (Edge*)malloc(FB_HEIGHT * sizeof(Edge));
+
+	/*drawEdge = drawEdgeFlat;*/
+	/*drawEdge = drawEdgeGouraud;*/
+	drawEdge = drawEdgeGouraudClipY;
 }
 
 void freeOptRasterizer()
@@ -49,53 +61,97 @@ void freeOptRasterizer()
 	free(rightEdge);
 }
 
-static void drawEdgeFlat(int y, int dx)
+void setClipValY(int y)
 {
-	const Edge* l = &leftEdge[y];
-	const Edge* r = &rightEdge[y];
+	clipValY = y;
+}
 
-	const int x0 = l->x;
-	const int x1 = r->x;
+static void drawEdgeFlat(int ys, int dx)
+{
+	const Edge* l = &leftEdge[ys];
+	const Edge* r = &rightEdge[ys];
 
-	uint16_t* vram = fb_pixels + y * FB_WIDTH + x0;
+	const int xs0 = l->xs;
+	const int xs1 = r->xs;
 
-	int x;
-	for (x = x0; x < x1; x++) {
+	uint16_t* vram = fb_pixels + ys * FB_WIDTH + xs0;
+
+	int xs;
+	for (xs = xs0; xs < xs1; xs++) {
 		*vram++ = polyColor;
 	}
 }
 
-static void drawEdgeGouraud(int y, int dx)
+static void drawEdgeGouraud(int ys, int dx)
 {
-	const Edge* l = &leftEdge[y];
-	const Edge* r = &rightEdge[y];
+	const Edge* l = &leftEdge[ys];
+	const Edge* r = &rightEdge[ys];
 
-	const int x0 = l->x;
-	const int x1 = r->x;
+	const int xs0 = l->xs;
+	const int xs1 = r->xs;
 	const int c0 = l->c;
 	const int c1 = r->c;
 
-	uint16_t* vram = fb_pixels + y * FB_WIDTH + x0;
+	uint16_t* vram = fb_pixels + ys * FB_WIDTH + xs0;
 
 	int c = INT_TO_FIXED(c0, FP_RAST);
 	const int dc = (INT_TO_FIXED(c1 - c0, FP_RAST) / dx);
 
-	int x;
-	for (x = x0; x < x1; x++) {
+	int xs;
+	for (xs = xs0; xs < xs1; xs++) {
 		const int cc = FIXED_TO_INT(c, FP_RAST);
 		const int r = cc >> 3;
-		const int g = cc >> 2;
-		const int b = cc >> 3;
+		const int g = cc >> (2 + 1);
+		const int b = cc >> (3 + 2);
 
 		*vram++ = (r << 11) | (g << 5) | b;
 		c += dc;
 	}
 }
 
+static void drawEdgeGouraudClipY(int ys, int dx)
+{
+	const Edge* l = &leftEdge[ys];
+	const Edge* r = &rightEdge[ys];
+
+	const int y = (l->y + r->y) >> 1;
+
+	const int xs0 = l->xs;
+	const int xs1 = r->xs;
+	const int c0 = l->c;
+	const int c1 = r->c;
+
+	uint16_t* vram = fb_pixels + ys * FB_WIDTH + xs0;
+
+	int c = INT_TO_FIXED(c0, FP_RAST);
+	const int dc = (INT_TO_FIXED(c1 - c0, FP_RAST) / dx);
+
+	int x;
+
+	for (x = xs0; x < xs1; x++) {
+		const int cc = FIXED_TO_INT(c, FP_RAST);
+		const int r = cc >> 3;
+		const int g = cc >> 2;
+		const int b = cc >> 3;
+
+		if (y >= clipValY) {
+			*vram++ = (r << 11) | (g << 5) | b;
+		} else {
+			const uint16_t cSrc = *vram;
+			int rSrc = (cSrc >> 11) & 31;
+			int gSrc = (cSrc >> 6) & 63;
+			int bSrc = cSrc & 31;
+			const uint16_t cDst = (((r + rSrc) >> 3) << 11) | ((((g + gSrc) >> 3)>>2) << 5) | ((b + bSrc) >> 1);
+			*vram++ = cSrc | cDst;
+		}
+		c += dc;
+	}
+}
+
 static void prepareEdgeList(Vertex3D* v0, Vertex3D* v1)
 {
-	const int yp0 = (int)v0->y;
-	const int yp1 = (int)v1->y;
+	const int yp0 = v0->ys;
+	const int yp1 = v1->ys;
 
 	Edge* edgeListToWrite;
 
@@ -114,84 +170,98 @@ static void prepareEdgeList(Vertex3D* v0, Vertex3D* v1)
 	}
 
 	{
-		const int x0 = v0->x; const int y0 = v0->y;
-		const int x1 = v1->x; const int y1 = v1->y;
+		const int xs0 = v0->xs; const int ys0 = v0->ys;
+		const int xs1 = v1->xs; const int ys1 = v1->ys;
 		const int c0 = v0->c; const int c1 = v1->c;
 		const int tc_u0 = v0->u; const int tc_u1 = v1->u;
 		const int tc_v0 = v0->v; const int tc_v1 = v1->v;
 
-		const int dy = y1 - y0;
-		const int dx = INT_TO_FIXED(x1 - x0, FP_RAST) / dy;
-		const int dc = INT_TO_FIXED(c1 - c0, FP_RAST) / dy;
-		const int du = INT_TO_FIXED(tc_u1 - tc_u0, FP_RAST) / dy;
-		const int dv = INT_TO_FIXED(tc_v1 - tc_v0, FP_RAST) / dy;
+		const int dys = ys1 - ys0;
 
-		int xp = INT_TO_FIXED(x0, FP_RAST);
+		const int dxs = INT_TO_FIXED(xs1 - xs0, FP_RAST) / dys;
+		const int dc = INT_TO_FIXED(c1 - c0, FP_RAST) / dys;
+		const int du = INT_TO_FIXED(tc_u1 - tc_u0, FP_RAST) / dys;
+		const int dv = INT_TO_FIXED(tc_v1 - tc_v0, FP_RAST) / dys;
+
+		int xp = INT_TO_FIXED(xs0, FP_RAST);
 		int c = INT_TO_FIXED(c0, FP_RAST);
 		int u = INT_TO_FIXED(tc_u0, FP_RAST);
 		int v = INT_TO_FIXED(tc_v0, FP_RAST);
-		int yp = y0;
+		int yp = ys0;
+
+		/* Extra interpolant to have 3D y interpolated only used for water floor object collision test */
+		/* If I reuse those functions for other 3D I don't need to interpolate everything, will see how I'll refactor if things get slow (or even code duplicate) */
+		const int y0 = v0->y; const int y1 = v1->y;
+		const int dy = INT_TO_FIXED(y1 - y0, FP_RAST) / dys;
+		int y = INT_TO_FIXED(y0, FP_RAST);
 
 		do {
 			if (yp >= 0 && yp < FB_HEIGHT) {
-				edgeListToWrite[yp].x = FIXED_TO_INT(xp, FP_RAST);
+				edgeListToWrite[yp].xs = FIXED_TO_INT(xp, FP_RAST);
 				edgeListToWrite[yp].c = FIXED_TO_INT(c, FP_RAST);
 				edgeListToWrite[yp].u = FIXED_TO_INT(u, FP_RAST);
 				edgeListToWrite[yp].v = FIXED_TO_INT(v, FP_RAST);
+
+				/* likewise */
+				edgeListToWrite[yp].y = FIXED_TO_INT(y, FP_RAST);
 			}
-			xp += dx;
+			xp += dxs;
 			c += dc;
 			u += du;
 			v += dv;
-		} while (yp++ < y1);
+
+			/* likewise */
+			y += dy;
+
+		} while (yp++ < ys1);
 	}
 }
 
 static void drawEdges()
 {
-	int y;
+	int ys;
 
-	for (y = edgeYmin; y <= edgeYmax; y++)
+	for (ys = edgeYmin; ys <= edgeYmax; ys++)
 	{
-		Edge* l = &leftEdge[y];
-		Edge* r = &rightEdge[y];
+		Edge* l = &leftEdge[ys];
+		Edge* r = &rightEdge[ys];
 
-		const int x0 = l->x;
-		const int x1 = r->x;
+		const int xs0 = l->xs;
+		const int xs1 = r->xs;
 
-		int dx = x1 - x0;
-		if (x0 < 0) {
-			if (x0 != x1) {
-				l->u += (((r->u - l->u) * -x0) / dx);
-				l->v += (((r->v - l->v) * -x0) / dx);
-				l->c += (((r->c - l->c) * -x0) / dx);
+		int dsx = xs1 - xs0;
+		if (xs0 < 0) {
+			if (xs0 != xs1) {
+				l->u += (((r->u - l->u) * -xs0) / dsx);
+				l->v += (((r->v - l->v) * -xs0) / dsx);
+				l->c += (((r->c - l->c) * -xs0) / dsx);
+				l->y += (((r->y - l->y) * -xs0) / dsx);
 			}
-			l->x = 0;
-			dx = x1;
+			l->xs = 0;
+			dsx = xs1;
 		}
-		if (x1 > FB_WIDTH - 1) {
-			r->x = FB_WIDTH - 1;
+		if (xs1 > FB_WIDTH - 1) {
+			r->xs = FB_WIDTH - 1;
 		}
 
-		if (l->x < r->x) {
-			//drawEdgeFlat(y, dx);
-			drawEdgeGouraud(y, dx);
+		if (l->xs < r->xs) {
+			drawEdge(ys, dsx);
 		}
 	}
 }
 
-void drawTriangle(Vertex3D* v0, Vertex3D* v1, Vertex3D* v2)
+static void drawTriangle(Vertex3D* v0, Vertex3D* v1, Vertex3D* v2)
 {
-	const int y0 = v0->y;
-	const int y1 = v1->y;
-	const int y2 = v2->y;
+	const int ys0 = v0->ys;
+	const int ys1 = v1->ys;
+	const int ys2 = v2->ys;
 
-	int yMin = y0;
+	int yMin = ys0;
 	int yMax = yMin;
-	if (y1 < yMin) yMin = y1;
-	if (y1 > yMax) yMax = y1;
-	if (y2 < yMin) yMin = y2;
-	if (y2 > yMax) yMax = y2;
+	if (ys1 < yMin) yMin = ys1;
+	if (ys1 > yMax) yMax = ys1;
+	if (ys2 < yMin) yMin = ys2;
+	if (ys2 > yMax) yMax = ys2;
 	edgeYmin = yMin;
 	edgeYmax = yMax;
 
@@ -218,15 +288,15 @@ void renderPolygons(Object3D* obj, Vertex3D* screenVertices)
 		Vertex3D* v1 = &screenVertices[*p++];
 		Vertex3D* v2 = &screenVertices[*p++];
 
-		n = (v0->x - v1->x) * (v2->y - v1->y) - (v2->x - v1->x) * (v0->y - v1->y);
-		if (n >= 0) {		// Is >= CCW? CW and CCW in the future?
+		n = (v0->xs - v1->xs) * (v2->ys - v1->ys) - (v2->xs - v1->xs) * (v0->ys - v1->ys);
+		if (n >= 0) {
 			polyColor = rand() & 32767;
 			drawTriangle(v0, v1, v2);
 		}
 	}
 }
 
-// Needs 8bpp chunky buffer and then permutations of two pixels (256*256) to 32bit (two 16bit pixels)
+/* Needs 8bpp chunky buffer and then permutations of two pixels(256 * 256) to 32bit(two 16bit pixels) */
 void buffer8bppToVram(unsigned char *buffer, unsigned int *colMap16to32)
 {
 	int i;
@@ -260,8 +330,8 @@ void initBlobGfx()
 		int i,j,x,y;
 
 		for (i=0; i<BLOB_SIZES_NUM_MAX; ++i) {
-			const int blobSizeY = i+3;	// 3 to 15
-			const int blobSizeX = (((blobSizeY+3) >> 2) << 2) + BLOB_SIZEX_PAD;    // We are padding this, as we generate four pixels offset (for dword rendering)
+			const int blobSizeY = i+3;	/* 3 to 15 */
+			const int blobSizeX = (((blobSizeY+3) >> 2) << 2) + BLOB_SIZEX_PAD;    /* We are padding this, as we generate four pixels offset(for dword rendering) */
 			const float blobSizeYhalf = blobSizeY / 2.0f;
 			const float blobSizeXhalf = blobSizeX / 2.0f;
 
@@ -313,8 +383,8 @@ void drawBlobs(Vertex3D *v, int count, unsigned char *blobBuffer)
 	do {
 		const int size = 1 + (v->z >> 6);
 		if (size < BLOB_SIZES_NUM_MAX) {
-			const int posX = v->x;
-			const int posY = v->y;
+			const int posX = v->xs;
+			const int posY = v->ys;
 			BlobData *bd = &blobData[size][posX & (BLOB_SIZEX_PAD-1)];
 			const int sizeX = bd->sizeX;
 			const int sizeY = bd->sizeY;
@@ -372,10 +442,10 @@ void drawBlob(int posX, int posY, int size, int shift, unsigned char *blobBuffer
 
 void drawAntialiasedLine8bpp(Vertex3D *v1, Vertex3D *v2, int shadeShift, unsigned char *buffer)
 {
-	int x1 = v1->x;
-	int y1 = v1->y;
-	int x2 = v2->x;
-	int y2 = v2->y;
+	int x1 = v1->xs;
+	int y1 = v1->ys;
+	int x2 = v2->xs;
+	int y2 = v2->ys;
 
 	int vramofs;
 	int frac, shade;
@@ -466,10 +536,10 @@ static unsigned short unpackBlend(unsigned short c, unsigned char shade)
 
 void drawAntialiasedLine16bpp(Vertex3D* v1, Vertex3D* v2, int shadeShift, unsigned short* vram)
 {
-	int x1 = v1->x;
-	int y1 = v1->y;
-	int x2 = v2->x;
-	int y2 = v2->y;
+	int x1 = v1->xs;
+	int y1 = v1->ys;
+	int x2 = v2->xs;
+	int y2 = v2->ys;
 
 	int vramofs;
 	int frac, shade;

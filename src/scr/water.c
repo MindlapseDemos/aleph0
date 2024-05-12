@@ -153,11 +153,13 @@ static void initRainDrops()
 
 static void initObjects()
 {
-	meshCube = genMesh(GEN_OBJ_CUBE, 256);
+	meshCube = genMesh(GEN_OBJ_CUBE, 128);
 
 	objCube.mesh = meshCube;
-	setObjectPos(0, 0, 512, &objCube);
+	setObjectPos(0, -128, 512, &objCube);
 	setObjectRot(0, 0, 0, &objCube);
+
+	setClipValY(-WATER_FLOOR / 16);
 }
 
 static int init(void)
@@ -236,7 +238,7 @@ static void updateWater32(unsigned char *buffer1, unsigned char *buffer2)
 		const unsigned int c2 = *(src1-(WATER_TEX_WIDTH / 4));
 		const unsigned int c3 = *(src1+(WATER_TEX_WIDTH / 4));
 
-		// Subtract and then absolute value of 4 bytes packed in 8bits (From Hacker's Delight)
+		/* Subtract and then absolute value of 4 bytes packed in 8bits(From Hacker's Delight) */
 		const unsigned int c = (((c0 + c1 + c2 + c3) >> 1) & 0x7f7f7f7f) - *src2;
 		const unsigned int a = c & 0x80808080;
 		const unsigned int b = a >> 7;
@@ -416,22 +418,22 @@ static void testBlitCloudWater()
 	}
 }
 
-static void drawRain()
+static void drawRain(int zRangeMin, int zRangeMax)
 {
 	int i;
 
 	for (i = 0; i < NUM_RAINDROPS; ++i) {
 		int z = rainDrops[i].z;
-		if (z > 0) {
+		if (z >= zRangeMin && z < zRangeMax) {
 			Vertex3D v1, v2;
 			int x = rainDrops[i].x;
 			int y = rainDrops[i].y;
-			v1.x = (x * PROJ_MUL) / z + FB_WIDTH / 2;
-			v1.y = FB_HEIGHT / 2 - (y * PROJ_MUL) / z;
-			v2.x = v1.x + 1;
-			v2.y = FB_HEIGHT / 2 - ((y + 2*RAIN_SPEED_Y) * PROJ_MUL) / z;
+			v1.xs = (x * PROJ_MUL) / z + FB_WIDTH / 2;
+			v1.ys = FB_HEIGHT / 2 - (y * PROJ_MUL) / z;
+			v2.xs = v1.xs + 1;
+			v2.ys = FB_HEIGHT / 2 - ((y + 2*RAIN_SPEED_Y) * PROJ_MUL) / z;
 
-			drawAntialiasedLine16bpp(&v1, &v2, 4, fb_pixels);
+			drawAntialiasedLine16bpp(&v1, &v2, 4 + ((z - RAINDROPS_DIST) >> 9), fb_pixels);
 		}
 	}
 }
@@ -447,6 +449,7 @@ static void sceneRunCube(int t)
 static void draw(void)
 {
 	const int t = time_msec - startingTime;
+	const int frontRainZ = 640;
 
 	runWaterEffect(t);
 
@@ -455,9 +458,9 @@ static void draw(void)
 
 	testBlitCloudWater();
 
-	drawRain();
-
+	drawRain(frontRainZ, 16384);
 	sceneRunCube(t);
+	drawRain(0, frontRainZ);
 
 	swap_buffers(0);
 }

@@ -39,6 +39,7 @@ typedef struct Vector3D
 
 typedef struct Vertex3D
 {
+	int xs,ys;
 	int x,y,z;
 	unsigned char c, a, u, v;
 }Vertex3D;

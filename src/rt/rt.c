@@ -267,13 +267,14 @@ union rtobject *rt_add_sphere(struct rtscene *scn, float x, float y, float z, fl
 	return obj;
 }
 
-union rtobject *rt_add_cylinder(struct rtscene *scn, float x, float y, float z, float r, float y0, float y1)
+union rtobject *rt_add_cylinder(struct rtscene *scn, float x, float y, float z, float r, float y0, float y1, int caps)
 {
 	union rtobject *obj = add_object(scn, RT_CYL);
 	cgm_vcons(&obj->c.p, x, y, z);
 	obj->c.r = r;
 	obj->c.y0 = y0;
 	obj->c.y1 = y1;
+	obj->c.capped = caps;
 	return obj;
 }
 
@@ -496,8 +497,9 @@ static union rtobject *load_object(struct rtscene *scn, struct ts_node *node)
 		float *pos = ts_get_attr_vec(node, "pos", zerovec);
 		float y0 = ts_get_attr_num(node, "y0", 0);
 		float y1 = ts_get_attr_num(node, "y1", 1);
+		int caps = ts_get_attr_num(node, "caps", 0);
 
-		obj = rt_add_cylinder(scn, pos[0], pos[1], pos[2], rad, y0, y1);
+		obj = rt_add_cylinder(scn, pos[0], pos[1], pos[2], rad, y0, y1, caps);
 
 	} else if(strcmp(node->name, "plane") == 0) {
 		float *n = ts_get_attr_vec(node, "n", defnorm);

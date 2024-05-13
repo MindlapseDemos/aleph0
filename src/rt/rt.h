@@ -39,6 +39,7 @@ struct rtcylinder {
 	OBJ_COMMON;
 	cgm_vec3 p;
 	float r, y0, y1;
+	int capped;
 };
 
 struct rtplane {
@@ -116,7 +117,7 @@ int rt_remove_object(struct rtscene *scn, union rtobject *obj);
 int rt_disable_object(struct rtscene *scn, union rtobject *obj);
 
 union rtobject *rt_add_sphere(struct rtscene *scn, float x, float y, float z, float r);
-union rtobject *rt_add_cylinder(struct rtscene *scn, float x, float y, float z, float r, float y0, float y1);
+union rtobject *rt_add_cylinder(struct rtscene *scn, float x, float y, float z, float r, float y0, float y1, int caps);
 union rtobject *rt_add_plane(struct rtscene *scn, float nx, float ny, float nz, float d);
 union rtobject *rt_add_box(struct rtscene *scn, float x, float y, float z, float dx, float dy, float dz);
 union rtobject *rt_add_csg(struct rtscene *scn, enum rt_csg_op op, union rtobject *a, union rtobject *b);

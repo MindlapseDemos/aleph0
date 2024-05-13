@@ -9,12 +9,24 @@
 
 #define HALFRES
 /* define to see a visualization of the sub-sampling resolution */
-#define SUBDBG
+#undef SUBDBG
+
+struct tile {
+	int x, y;
+	int sz;
+	unsigned int valid;
+	uint16_t *fbptr;
+};
 
 static int init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
+
+static uint16_t INLINE rend_pixel(int x, int y);
+static void rend_tile(struct tile *tile);
+static void fillsq(uint16_t *ptr, int sz, uint16_t col);
+
 
 static struct screen scr = {
 	"raytrace",
@@ -23,13 +35,6 @@ static struct screen scr = {
 	start,
 	0,
 	draw
-};
-
-struct tile {
-	int x, y;
-	int sz;
-	unsigned int valid;
-	uint16_t *fbptr;
 };
 
 #define TILESZ		16
@@ -112,7 +117,71 @@ static void destroy(void)
 
 static void start(long start_time)
 {
+	memset16(fb_pixels, 0, 320 * 240);
 }
+
+static void update(void)
+{
+	int i;
+	float t, px;
+
+	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
+
+	cgm_midentity(cam_xform);
+	cgm_mtranslate(cam_xform, 0, 0, -cam_dist);
+	cgm_mrotate_x(cam_xform, cgm_deg_to_rad(cam_phi));
+	cgm_mrotate_y(cam_xform, cgm_deg_to_rad(cam_theta));
+
+	t = (float)time_msec / 1000.0f;
+	if(subsph) {
+		subsph->p.x = (float)cos(t) * 0.5f;
+		subsph->p.y = (float)sin(t) * 0.5f;
+		subsph->p.z = -0.5f;
+	}
+
+	if(box) {
+		px = (float)sin(t) * 1.5;
+		box->min.x = px - 0.3f;
+		box->max.x = px + 0.3f;
+	}
+
+	for(i=0; i<4; i++) {
+		if(pillar[i]) {
+			pillar[i]->p.x = (float)cos(t + (CGM_PI * 2.0f / 3.0f) * i) * 6.0f;
+			pillar[i]->p.z = (float)sin(t + (CGM_PI * 2.0f / 3.0f) * i) * 6.0f;
+		}
+	}
+}
+
+static void draw(void)
+{
+	int i, j, xbound, ybound;
+	uint16_t *fbptr;
+	struct tile *tile;
+
+	update();
+
+	tile = tiles;
+	for(i=0; i<num_tiles; i++) {
+		rend_tile(tile);
+		tile++;
+	}
+
+	if(opt.dbgmode) {
+		/* clear the spot where we'll be drawing the fps counter */
+		fbptr = fb_pixels + (240 - 16) * 320;
+		for(i=0; i<4; i++) {
+			memset16(fbptr, 0, 24);
+			memset16(fbptr + 320, 0, 24);
+			memset16(fbptr + 640, 0, 24);
+			memset16(fbptr + 960, 0, 24);
+			fbptr += 1280;
+		}
+	}
+
+	swap_buffers(0);
+}
+
 
 static uint16_t INLINE rend_pixel(int x, int y)
 {
@@ -136,59 +205,6 @@ static uint16_t INLINE rend_pixel(int x, int y)
 	}
 	return 0;
 }
-
-static void fillsq(uint16_t *ptr, int sz, uint16_t col)
-{
-	int i;
-	uint32_t *ptr32 = (uint32_t*)ptr;
-	uint32_t colcol = col | ((uint32_t)col << 16);
-
-	switch(sz) {
-	case 2:
-#ifdef SUBDBG
-		colcol = 0x18ff18ff;
-#endif
-		ptr32[0] = colcol;
-		ptr32[160] = colcol;
-		break;
-	case 4:
-#ifdef SUBDBG
-		colcol = 0x03800380;
-#endif
-		ptr32[0] = ptr32[1] = colcol;
-		ptr32[160] = ptr32[161] = colcol;
-		ptr32[320] = ptr32[321] = colcol;
-		ptr32[480] = ptr32[481] = colcol;
-		break;
-	case 8:
-#ifdef SUBDBG
-		colcol = 0xe00fe00f;
-#endif
-		ptr32[0] = ptr32[1] = colcol; ptr32[2] = ptr32[3] = colcol;
-		ptr32[160] = ptr32[161] = colcol; ptr32[162] = ptr32[163] = colcol;
-		ptr32[320] = ptr32[321] = colcol; ptr32[322] = ptr32[323] = colcol;
-		ptr32[480] = ptr32[481] = colcol; ptr32[482] = ptr32[483] = colcol;
-		ptr32[640] = ptr32[641] = colcol; ptr32[642] = ptr32[643] = colcol;
-		ptr32[800] = ptr32[801] = colcol; ptr32[802] = ptr32[803] = colcol;
-		ptr32[960] = ptr32[961] = colcol; ptr32[962] = ptr32[963] = colcol;
-		ptr32[1120] = ptr32[1121] = colcol; ptr32[1122] = ptr32[1123] = colcol;
-		break;
-	case 16:
-#ifdef SUBDBG
-		col = 0xff00;
-#endif
-		for(i=0; i<4; i++) {
-			memset16(ptr, col, 16); ptr += 320;
-			memset16(ptr, col, 16); ptr += 320;
-			memset16(ptr, col, 16); ptr += 320;
-			memset16(ptr, col, 16); ptr += 320;
-		}
-		break;
-	default:
-		break;
-	}
-}
-
 
 /* keep only some significant bits from R G and B for color comparisons */
 /* 11100 111100 11100 (1110 0111 1001 1100) */
@@ -311,52 +327,56 @@ fillquads:
 	}
 }
 
-static void update(void)
+static void fillsq(uint16_t *ptr, int sz, uint16_t col)
 {
 	int i;
-	float t, px;
+	uint32_t *ptr32 = (uint32_t*)ptr;
+	uint32_t colcol = col | ((uint32_t)col << 16);
 
-	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
-
-	cgm_midentity(cam_xform);
-	cgm_mtranslate(cam_xform, 0, 0, -cam_dist);
-	cgm_mrotate_x(cam_xform, cgm_deg_to_rad(cam_phi));
-	cgm_mrotate_y(cam_xform, cgm_deg_to_rad(cam_theta));
-
-	t = (float)time_msec / 1000.0f;
-	if(subsph) {
-		subsph->p.x = (float)cos(t) * 0.5f;
-		subsph->p.y = (float)sin(t) * 0.5f;
-		subsph->p.z = -0.5f;
-	}
-
-	if(box) {
-		px = (float)sin(t) * 1.5;
-		box->min.x = px - 0.3f;
-		box->max.x = px + 0.3f;
-	}
-
-	for(i=0; i<4; i++) {
-		if(pillar[i]) {
-			pillar[i]->p.x = (float)cos(t + (CGM_PI * 2.0f / 3.0f) * i) * 6.0f;
-			pillar[i]->p.z = (float)sin(t + (CGM_PI * 2.0f / 3.0f) * i) * 6.0f;
+	switch(sz) {
+	case 2:
+#ifdef SUBDBG
+		colcol = 0x18ff18ff;
+#endif
+		ptr32[0] = colcol;
+		ptr32[160] = colcol;
+		break;
+	case 4:
+#ifdef SUBDBG
+		colcol = 0x03800380;
+#endif
+		ptr32[0] = ptr32[1] = colcol;
+		ptr32[160] = ptr32[161] = colcol;
+		ptr32[320] = ptr32[321] = colcol;
+		ptr32[480] = ptr32[481] = colcol;
+		break;
+	case 8:
+#ifdef SUBDBG
+		colcol = 0xe00fe00f;
+#endif
+		ptr32[0] = ptr32[1] = colcol; ptr32[2] = ptr32[3] = colcol;
+		ptr32[160] = ptr32[161] = colcol; ptr32[162] = ptr32[163] = colcol;
+		ptr32[320] = ptr32[321] = colcol; ptr32[322] = ptr32[323] = colcol;
+		ptr32[480] = ptr32[481] = colcol; ptr32[482] = ptr32[483] = colcol;
+		ptr32[640] = ptr32[641] = colcol; ptr32[642] = ptr32[643] = colcol;
+		ptr32[800] = ptr32[801] = colcol; ptr32[802] = ptr32[803] = colcol;
+		ptr32[960] = ptr32[961] = colcol; ptr32[962] = ptr32[963] = colcol;
+		ptr32[1120] = ptr32[1121] = colcol; ptr32[1122] = ptr32[1123] = colcol;
+		break;
+	case 16:
+#ifdef SUBDBG
+		col = 0xff00;
+#endif
+		for(i=0; i<4; i++) {
+			memset16(ptr, col, 16); ptr += 320;
+			memset16(ptr, col, 16); ptr += 320;
+			memset16(ptr, col, 16); ptr += 320;
+			memset16(ptr, col, 16); ptr += 320;
 		}
+		break;
+	default:
+		break;
 	}
 }
 
-static void draw(void)
-{
-	int i, j, xbound, ybound;
-	uint16_t *fbptr;
-	struct tile *tile;
 
-	update();
-
-	tile = tiles;
-	for(i=0; i<num_tiles; i++) {
-		rend_tile(tile);
-		tile++;
-	}
-
-	swap_buffers(0);
-}

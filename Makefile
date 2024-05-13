@@ -69,7 +69,7 @@ AS = nasm
 CC = wcc386
 LD = wlink
 ASFLAGS = -fobj
-CFLAGS = $(cfg_dbg) $(cfg_opt) $(def) -s -zq -bt=dos $(incpath)
+CFLAGS = $(cfg_dbg) $(cfg_opt) $(cfg_prof) $(def) -s -zq -bt=dos $(incpath)
 LDFLAGS = option map $(libpath) library { $(libs) }
 
 $(bin): cflags.occ $(obj) $(libs)

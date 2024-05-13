@@ -149,7 +149,7 @@ int ray_cylinder(cgm_ray *ray, struct rtcylinder *cyl, float maxt, struct rayhit
 	float a, a2, b, c, d, sqrt_d, t, tcaps, t1, t2;
 	cgm_vec3 p;
 
-	if(ray_cylcaps(ray, cyl, maxt, hit)) {
+	if(cyl->capped && ray_cylcaps(ray, cyl, maxt, hit)) {
 		if(!hit) return 1;
 		tcaps = hit->t;
 		res = 1;

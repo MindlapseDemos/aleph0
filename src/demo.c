@@ -95,6 +95,9 @@ int demo_init(void)
 		return -1;
 	}
 
+	/* clear the framebuffer at least once */
+	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * FB_BPP / CHAR_BIT);
+
 	if(opt.start_scr) {
 		scr = scr_lookup(opt.start_scr);
 	} else {
@@ -105,9 +108,6 @@ int demo_init(void)
 		fprintf(stderr, "screen %s not found\n", opt.start_scr ? opt.start_scr : "0");
 		return -1;
 	}
-
-	/* clear the framebuffer at least once */
-	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * FB_BPP / CHAR_BIT);
 
 	if(opt.music) {
 		au_play_module(mod);

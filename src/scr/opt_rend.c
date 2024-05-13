@@ -48,6 +48,8 @@ static void drawEdgeGouraudClipY(int y, int dx);
 
 static uint16_t polyColor = 0xffff;
 
+static unsigned short* zBufferPtr;
+
 
 void initOptRasterizer()
 {
@@ -57,6 +59,8 @@ void initOptRasterizer()
 	/*drawEdge = drawEdgeFlat;*/
 	/*drawEdge = drawEdgeGouraud;*/
 	drawEdge = drawEdgeGouraudClipY;
+
+	zBufferPtr = getZbuffer();
 }
 
 void freeOptRasterizer()
@@ -124,14 +128,20 @@ static void drawEdgeGouraudClipY(int ys, int dx)
 	const int c1 = r->c;
 	const int y0 = l->y;
 	const int y1 = r->y;
+	const int z0 = l->z;
+	const int z1 = r->z;
 
 	uint16_t* vram = fb_pixels + ys * FB_WIDTH + xs0;
+	unsigned short* zBuff = zBufferPtr + ys * FB_WIDTH + xs0;
 
 	int c = INT_TO_FIXED(c0, FP_RAST);
 	const int dc = (INT_TO_FIXED(c1 - c0, FP_RAST) / dx);
 
 	int y = INT_TO_FIXED(y0, FP_RAST);
 	const int dy = (INT_TO_FIXED(y1 - y0, FP_RAST) / dx);
+
+	int z = INT_TO_FIXED(z0, FP_RAST);
+	const int dz = (INT_TO_FIXED(z1 - z0, FP_RAST) / dx);
 
 	int x;
 	for (x = xs0; x < xs1; x++) {
@@ -140,27 +150,34 @@ static void drawEdgeGouraudClipY(int ys, int dx)
 		const int g = cc >> 2;
 		const int b = cc >> 3;
 
-		const int yy = FIXED_TO_INT(y, FP_RAST);
-		/* yy is not perspective correct so expect some weirdness between the triangle edges but with more smaller polygons it might be unoticable */
-		if (yy >= clipValY) {
-			*vram++ = (r << 11) | (g << 5) | b;
-		} else {
-			const uint16_t cSrc = *vram;
-			int rSrc = (cSrc >> 11) & 31;
-			int gSrc = (cSrc >> 6) & 63;
-			int bSrc = cSrc & 31;
-			const uint16_t cDst = (((r + rSrc) >> (1 + R_UNDER_SHIFT)) << 11) | ((((g + gSrc) >> (1 + G_UNDER_SHIFT))) << 5) | ((b + bSrc) >> (1 + B_UNDER_SHIFT));
-			*vram++ = cSrc | cDst;
+		const unsigned short zz = (unsigned short)(FIXED_TO_INT(z, FP_RAST));
+		if (zz <= *zBuff) {
+			const int yy = FIXED_TO_INT(y, FP_RAST);
+			/* yy is not perspective correct so expect some weirdness between the triangle edges but with more smaller polygons it might be unoticable */
+			if (yy >= clipValY) {
+				*vram++ = (r << 11) | (g << 5) | b;
+			}
+			else {
+				const uint16_t cSrc = *vram;
+				int rSrc = (cSrc >> 11) & 31;
+				int gSrc = (cSrc >> 6) & 63;
+				int bSrc = cSrc & 31;
+				const uint16_t cDst = (((r + rSrc) >> (1 + R_UNDER_SHIFT)) << 11) | ((((g + gSrc) >> (1 + G_UNDER_SHIFT))) << 5) | ((b + bSrc) >> (1 + B_UNDER_SHIFT));
+				*vram++ = cSrc | cDst;
+			}
+			*zBuff = zz;
 		}
+		zBuff++;
 		c += dc;
 		y += dy;
+		z += dz;
 	}
 }
 
 static void prepareEdgeList(Vertex3D* v0, Vertex3D* v1)
 {
 	const int yp0 = v0->ys;
-	const int yp1 = v1->ys;
+	int yp1 = v1->ys;
 
 	Edge* edgeListToWrite;
 
@@ -204,6 +221,11 @@ static void prepareEdgeList(Vertex3D* v0, Vertex3D* v1)
 		const int dy = INT_TO_FIXED(y1 - y0, FP_RAST) / dys;
 		int y = INT_TO_FIXED(y0, FP_RAST);
 
+		/* for z-buffer */
+		const int z0 = v0->z; const int z1 = v1->z;
+		const int dz = INT_TO_FIXED(z1 - z0, FP_RAST) / dys;
+		int z = INT_TO_FIXED(z0, FP_RAST);
+
 		do {
 			if (yp >= 0 && yp < FB_HEIGHT) {
 				edgeListToWrite[yp].xs = FIXED_TO_INT(xp, FP_RAST);
@@ -213,6 +235,7 @@ static void prepareEdgeList(Vertex3D* v0, Vertex3D* v1)
 
 				/* likewise */
 				edgeListToWrite[yp].y = FIXED_TO_INT(y, FP_RAST);
+				edgeListToWrite[yp].z = FIXED_TO_INT(z, FP_RAST);
 			}
 			xp += dxs;
 			c += dc;
@@ -221,6 +244,7 @@ static void prepareEdgeList(Vertex3D* v0, Vertex3D* v1)
 
 			/* likewise */
 			y += dy;
+			z += dz;
 
 		} while (yp++ < ys1);
 	}
@@ -299,7 +323,6 @@ void renderPolygons(Object3D* obj, Vertex3D* screenVertices)
 
 		n = (v0->xs - v1->xs) * (v2->ys - v1->ys) - (v2->xs - v1->xs) * (v0->ys - v1->ys);
 		if (n >= 0) {
-			polyColor = rand() & 32767;
 			drawTriangle(v0, v1, v2);
 		}
 	}

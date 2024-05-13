@@ -27,7 +27,8 @@
 
 
 enum {
-	GEN_OBJ_CUBE
+	GEN_OBJ_CUBE,
+	GEN_OBJ_SPHERICAL
 };
 
 
@@ -89,6 +90,9 @@ void setObjectRot(int x, int y, int z, Object3D* obj);
 
 void transformObject3D(Object3D* obj);
 void renderObject3D(Object3D* obj);
+
+void clearZbuffer();
+unsigned short* getZbuffer();
 
 void initOptEngine(int maxPoints);
 void freeOptEngine();

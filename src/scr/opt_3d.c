@@ -23,6 +23,7 @@
 #define PROJ_MUL (1 << PROJ_SHR)
 
 #define DOT_COLOR				0xFFFF
+#define D2R (180.0 / M_PI)
 
 
 static Vertex3D *objectGridVertices;
@@ -42,8 +43,9 @@ static unsigned char *volumeData;
 static Vertex3D* transformedObjectVertices;
 static int* currentIndexPtr;
 
-static int isOpt3Dinit = 0;
+static unsigned short* zBuffer = 0;
 
+static int isOpt3Dinit = 0;
 
 
 int isqrt(int x)
@@ -406,9 +408,64 @@ void freeMesh(Mesh3D* mesh)
 	free(mesh);
 }
 
+static Mesh3D* generateSpherical(int spx, int spy, float f1, float f2, float k1, float k2, float kk)
+{
+	int x, y;
+	float ro, phi, theta;
+
+	int numVertices = spx * spy;
+	int numPolys = 2 * spx * spy - 2 * spy;
+	int numIndices = 3 * numPolys;
+	Mesh3D* mesh = newMesh(numVertices, numIndices);
+
+	Vertex3D* vrtx = mesh->vertex;
+	int* index = mesh->index;
+
+	for (theta = 0.0f; theta < 360.0f; theta += (360.0f / (float)spx)) {
+		float ro0 = sin((theta * f1) / D2R * 4) * k1;
+		float cth = cos(theta / D2R);
+		float sth = sin(theta / D2R);
+		for (phi = 0.0; phi < 180.0; phi += (180.0 / spy)) {
+			ro = ro0 + sin((phi * f2) / D2R * 4) * k2 + kk;
+			vrtx->x = (int)(ro * sin(phi / D2R) * cth);
+			vrtx->y = (int)(ro * sin(phi / D2R) * sth);
+			vrtx->z = (int)(ro * cos(phi / D2R));
+			vrtx++;
+		}
+	}
+
+	for (x = 0; x < spx; x++) {
+		for (y = 0; y < spy - 1; y++) {
+			*index++ = (y % spy) + (x % spx) * spy;
+			*index++ = (y % spy) + 1 + (x % spx) * spy;
+			*index++ = (y % spy) + ((x + 1) % spx) * spy;
+
+			*index++ = (y % spy) + ((x + 1) % spx) * spy;
+			*index++ = ((y + 1) % spy) + (x % spx) * spy;
+			*index++ = ((y + 1) % spy) + ((x + 1) % spx) * spy;
+		}
+	}
+
+	/* CalcNorms(obj, 0);
+	   CalcPtNorms(obj); */
+
+	return mesh;
+}
+
+static void reversePolygonOrder(Mesh3D *mesh)
+{
+	int i, temp;
+	for (i = 0; i < mesh->indicesNum; i+=3)
+	{
+		temp = mesh->index[i + 2];
+		mesh->index[i + 2] = mesh->index[i];
+		mesh->index[i] = temp;
+	}
+}
+
 Mesh3D* genMesh(int type, int length)
 {
-	int x, y, z;
+	int x, y, z, i;
 	const int halfLength = length / 2;
 
 	Mesh3D* mesh = 0;
@@ -458,6 +515,20 @@ Mesh3D* genMesh(int type, int length)
 		}
 		break;
 
+		case GEN_OBJ_SPHERICAL:
+		{
+			float kk = (float)length;
+			mesh = generateSpherical(24, 24, 1.5f, 2.0f, kk / 2.0f, kk / 2.0f, kk);
+			/* mesh = generateSpherical(24, 24, 1.5f, 2.0f, kk / 4.0f, kk / 4.0f, kk); */
+
+			reversePolygonOrder(mesh);
+
+			for (i = 0; i < mesh->indicesNum; ++i) {
+				mesh->element[i].c = 64 + (rand() % 127);
+			}
+		}
+		break;
+
 		default:
 			break;
 	}
@@ -495,6 +566,16 @@ static void setVerticesMaterial(Object3D* obj)
 	}
 }
 
+unsigned short* getZbuffer()
+{
+	return zBuffer;
+}
+
+void clearZbuffer()
+{
+	memset(zBuffer, 255, FB_WIDTH * FB_HEIGHT * sizeof(unsigned short));
+}
+
 void transformObject3D(Object3D* obj)
 {
 	rotateVertices(obj->mesh->vertex, screenPointsObject.v, obj->mesh->verticesNum, obj->rot.x, obj->rot.y, obj->rot.z);
@@ -510,6 +591,7 @@ void renderObject3D(Object3D* obj)
 void initOptEngine(int maxPoints)
 {
 	screenPointsObject.v = (Vertex3D*)malloc(maxPoints * sizeof(Vertex3D));
+	zBuffer = (unsigned short*)malloc(FB_WIDTH * FB_HEIGHT * sizeof(unsigned short)); /* comes before initOptRasterizer */
 
 	initOptRasterizer();
 }
@@ -517,6 +599,7 @@ void initOptEngine(int maxPoints)
 void freeOptEngine()
 {
 	free(screenPointsObject.v);
+	free(zBuffer);
 
 	freeOptRasterizer();
 }

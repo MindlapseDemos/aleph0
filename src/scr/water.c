@@ -153,10 +153,11 @@ static void initRainDrops()
 
 static void initObjects()
 {
-	meshCube = genMesh(GEN_OBJ_CUBE, 128);
+	/* meshCube = genMesh(GEN_OBJ_CUBE, 128); */
+	meshCube = genMesh(GEN_OBJ_SPHERICAL, 80);
 
 	objCube.mesh = meshCube;
-	setObjectPos(0, -128, 512, &objCube);
+	setObjectPos(0, -64, 512, &objCube);
 	setObjectRot(0, 0, 0, &objCube);
 
 	setClipValY(-WATER_FLOOR / 16);
@@ -186,7 +187,7 @@ static int init(void)
 	initCloudTex();
 	initRainDrops();
 
-	initOptEngine(1024);
+	initOptEngine(4096);
 	initObjects();
 
 	return 0;
@@ -440,6 +441,8 @@ static void drawRain(int zRangeMin, int zRangeMax)
 
 static void sceneRunCube(int t)
 {
+	clearZbuffer();
+
 	setObjectRot(t, 2*t, 3*t, &objCube);
 
 	transformObject3D(&objCube);

@@ -16,6 +16,10 @@
 
 #define FP_RAST 16
 
+#define R_UNDER_SHIFT 2
+#define G_UNDER_SHIFT 3
+#define B_UNDER_SHIFT 1
+
 
 static BlobData blobData[BLOB_SIZES_NUM_MAX][BLOB_SIZEX_PAD];
 
@@ -114,37 +118,42 @@ static void drawEdgeGouraudClipY(int ys, int dx)
 	const Edge* l = &leftEdge[ys];
 	const Edge* r = &rightEdge[ys];
 
-	const int y = (l->y + r->y) >> 1;
-
 	const int xs0 = l->xs;
 	const int xs1 = r->xs;
 	const int c0 = l->c;
 	const int c1 = r->c;
+	const int y0 = l->y;
+	const int y1 = r->y;
 
 	uint16_t* vram = fb_pixels + ys * FB_WIDTH + xs0;
 
 	int c = INT_TO_FIXED(c0, FP_RAST);
 	const int dc = (INT_TO_FIXED(c1 - c0, FP_RAST) / dx);
 
-	int x;
+	int y = INT_TO_FIXED(y0, FP_RAST);
+	const int dy = (INT_TO_FIXED(y1 - y0, FP_RAST) / dx);
 
+	int x;
 	for (x = xs0; x < xs1; x++) {
 		const int cc = FIXED_TO_INT(c, FP_RAST);
 		const int r = cc >> 3;
 		const int g = cc >> 2;
 		const int b = cc >> 3;
 
-		if (y >= clipValY) {
+		const int yy = FIXED_TO_INT(y, FP_RAST);
+		/* yy is not perspective correct so expect some weirdness between the triangle edges but with more smaller polygons it might be unoticable */
+		if (yy >= clipValY) {
 			*vram++ = (r << 11) | (g << 5) | b;
 		} else {
 			const uint16_t cSrc = *vram;
 			int rSrc = (cSrc >> 11) & 31;
 			int gSrc = (cSrc >> 6) & 63;
 			int bSrc = cSrc & 31;
-			const uint16_t cDst = (((r + rSrc) >> 3) << 11) | ((((g + gSrc) >> 3)>>2) << 5) | ((b + bSrc) >> 1);
+			const uint16_t cDst = (((r + rSrc) >> (1 + R_UNDER_SHIFT)) << 11) | ((((g + gSrc) >> (1 + G_UNDER_SHIFT))) << 5) | ((b + bSrc) >> (1 + B_UNDER_SHIFT));
 			*vram++ = cSrc | cDst;
 		}
 		c += dc;
+		y += dy;
 	}
 }
 

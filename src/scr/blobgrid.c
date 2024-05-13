@@ -21,7 +21,7 @@ typedef struct BlobGridParams
 
 #define FP_PT 16
 
-//#define STARS_NORMAL
+/* #define STARS_NORMAL */
 
 #define MAX_NUM_POINTS 256
 #define NUM_STARS MAX_NUM_POINTS
@@ -187,19 +187,14 @@ static void drawConnections3D(BlobGridParams *params)
 						const int xsj = screenPos[j].x;
 						const int ysj = screenPos[j].y;
 
-						//int steps = (((xsi - xsj)*(xsi - xsj) + (ysi - ysj)*(ysi - ysj)) / bp);
 						int length = isqrt((xsi - xsj)*(xsi - xsj) + (ysi - ysj)*(ysi - ysj));
 
 						int px = xsi << FP_PT;
 						int py = ysi << FP_PT;
-						//const int dx = ((xsj - xsi) << FP_PT) / steps;
-						//const int dy = ((ysj - ysi) << FP_PT) / steps;
 
 						int dx, dy, dl, ti;
 
-						//length >>= 1;
-
-						if (length<=1) continue;	// ==0 crashes, possibly overflow from sqrt giving a NaN?
+						if (length<=1) continue;	/* ==0 crashes, possibly overflow from sqrt giving a NaN? */
 						dl = (1 << FP_PT) / length;
 						dx = (xsj - xsi) * dl;
 						dy = (ysj - ysi) * dl;
@@ -207,9 +202,9 @@ static void drawConnections3D(BlobGridParams *params)
 						ti = 0;
 						for (k=0; k<length-1; ++k) {
 							int size = ((blobSizesNum-1) * 1 * ti) >> FP_PT;
-							//if (size > blobSizesNum-1) size = blobSizesNum-1 - size;
+							/* if (size > blobSizesNum-1) size = blobSizesNum-1 - size; */
 							if (size < 1) size = 1;
-							//if (size > blobSizesNum-1) size = blobSizesNum-1;
+							/* if (size > blobSizesNum-1) size = blobSizesNum-1; */
 							px += dx;
 							py += dy;
 							ti += dl;
@@ -325,12 +320,12 @@ static void drawEffect(BlobGridParams *params, int t)
 static void draw(void)
 {
 	int t = time_msec - startingTime;
-	//t >>= 6;
+	/* t >>= 6; */
 
 
 	memset(blobBuffer, 0, FB_WIDTH * FB_HEIGHT);
 
-	//drawEffect(&bgParams1, t);
+	/* drawEffect(&bgParams1, t); */
 	drawEffect(&bgParamsStars, t);
 
 	buffer8bppToVram(blobBuffer, blobsPal32);

@@ -190,7 +190,7 @@ static void updateDotsVolumeBufferQuaternionJulia(int t)
 				float xc = ((float)x - VERTICES_WIDTH/2) / (VERTICES_WIDTH/2);
 				float yc = ((float)y - VERTICES_HEIGHT/2) / (VERTICES_HEIGHT/2);
 				float zc = ((float)z - VERTICES_DEPTH/2) / (VERTICES_DEPTH/2);
-				float wc = 0;//zc;
+				float wc = 0; /*zc; */
 
 				int i;
 				for (i=0; i<16; ++i) {
@@ -388,8 +388,8 @@ static void draw(void)
 	
 	memset(polkaBuffer, 0, FB_WIDTH * FB_HEIGHT);
 
-	//updateDotsVolumeBufferPlasma(t);
-	//updateDotsVolumeBufferBlobs(t);
+	/* updateDotsVolumeBufferPlasma(t); */
+	/* updateDotsVolumeBufferBlobs(t); */
 
 	switch(tt) {
 		case 0:
@@ -405,8 +405,8 @@ static void draw(void)
 		break;
 	}
 
-	//updateDotsVolumeBufferFireball(t);
-	//updateDotsVolumeBufferRandomWalk(t);
+	/* updateDotsVolumeBufferFireball(t); */
+	/* updateDotsVolumeBufferRandomWalk(t); */
 
 	Opt3Drun(polkaBuffer, t);
 

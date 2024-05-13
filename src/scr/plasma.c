@@ -111,7 +111,6 @@ static void plasmaBufferToVram32()
 #define PSIN32(x) ((((x) & 3) * PSIN_SIZE) + ((x) & ~3))
 #define VAL32(x) (((x) << 24) | ((x) << 16) | ((x) << 8) | (x))
 
-//270, 250
 static void draw(void)
 {
 	int x, y;

@@ -151,11 +151,11 @@ static void drawEdgeGouraudClipY(int ys, int dx)
 		const int b = cc >> 3;
 
 		const unsigned short zz = (unsigned short)(FIXED_TO_INT(z, FP_RAST));
-		if (zz <= *zBuff) {
+		if (zz < *zBuff) {
 			const int yy = FIXED_TO_INT(y, FP_RAST);
 			/* yy is not perspective correct so expect some weirdness between the triangle edges but with more smaller polygons it might be unoticable */
 			if (yy >= clipValY) {
-				*vram++ = (r << 11) | (g << 5) | b;
+				*vram = (r << 11) | (g << 5) | b;
 			}
 			else {
 				const uint16_t cSrc = *vram;
@@ -163,11 +163,12 @@ static void drawEdgeGouraudClipY(int ys, int dx)
 				int gSrc = (cSrc >> 6) & 63;
 				int bSrc = cSrc & 31;
 				const uint16_t cDst = (((r + rSrc) >> (1 + R_UNDER_SHIFT)) << 11) | ((((g + gSrc) >> (1 + G_UNDER_SHIFT))) << 5) | ((b + bSrc) >> (1 + B_UNDER_SHIFT));
-				*vram++ = cSrc | cDst;
+				*vram = cSrc | cDst;
 			}
 			*zBuff = zz;
 		}
 		zBuff++;
+		vram++;
 		c += dc;
 		y += dy;
 		z += dz;

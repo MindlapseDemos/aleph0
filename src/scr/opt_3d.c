@@ -518,7 +518,8 @@ Mesh3D* genMesh(int type, int length)
 		case GEN_OBJ_SPHERICAL:
 		{
 			float kk = (float)length;
-			mesh = generateSpherical(24, 24, 1.5f, 2.0f, kk / 2.0f, kk / 2.0f, kk);
+			mesh = generateSpherical(16, 16, 1.5f, 2.0f, kk / 2.0f, kk / 2.0f, kk);
+			/* mesh = generateSpherical(24, 24, 1.5f, 2.0f, kk / 2.0f, kk / 2.0f, kk); */
 			/* mesh = generateSpherical(24, 24, 1.5f, 2.0f, kk / 4.0f, kk / 4.0f, kk); */
 
 			reversePolygonOrder(mesh);

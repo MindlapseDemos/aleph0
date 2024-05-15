@@ -68,8 +68,8 @@ unsigned char* waterTex = NULL;
 
 Vertex3D *rainDrops;
 
-Mesh3D* meshCube;
-Object3D objCube;
+Mesh3D* meshFlower;
+Object3D objFlower;
 
 
 static void swapWaterBuffers()
@@ -153,12 +153,9 @@ static void initRainDrops()
 
 static void initObjects()
 {
-	/* meshCube = genMesh(GEN_OBJ_CUBE, 128); */
-	meshCube = genMesh(GEN_OBJ_SPHERICAL, 80);
+	meshFlower = genMesh(GEN_OBJ_SPHERICAL, 80);
 
-	objCube.mesh = meshCube;
-	setObjectPos(0, -64, 512, &objCube);
-	setObjectRot(0, 0, 0, &objCube);
+	objFlower.mesh = meshFlower;
 
 	setClipValY(-WATER_FLOOR / 16);
 }
@@ -211,7 +208,7 @@ static void destroy(void)
 	free(waterBuffer1);
 	free(waterBuffer2);
 
-	freeMesh(meshCube);
+	freeMesh(meshFlower);
 	freeOptEngine();
 
 	freePals();
@@ -439,14 +436,15 @@ static void drawRain(int zRangeMin, int zRangeMax)
 	}
 }
 
-static void sceneRunCube(int t)
+static void sceneRunFlower(int t)
 {
 	clearZbuffer();
 
-	setObjectRot(t, 2*t, 3*t, &objCube);
+	setObjectPos(0, -64, 512, &objFlower);
+	setObjectRot(t, 2*t, 3*t, &objFlower);
 
-	transformObject3D(&objCube);
-	renderObject3D(&objCube);
+	transformObject3D(&objFlower);
+	renderObject3D(&objFlower);
 }
 
 static void draw(void)
@@ -462,7 +460,7 @@ static void draw(void)
 	testBlitCloudWater();
 
 	drawRain(frontRainZ, 16384);
-	sceneRunCube(t);
+	sceneRunFlower(t);
 	drawRain(0, frontRainZ);
 
 	swap_buffers(0);

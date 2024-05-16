@@ -1,6 +1,6 @@
 /*
 libimago - a multi-format image file input/output library.
-Copyright (C) 2010 John Tsiombikas <nuclear@member.fsf.org>
+Copyright (C) 2010-2021 John Tsiombikas <nuclear@member.fsf.org>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published
@@ -21,6 +21,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include "imago2.h"
 #include "ftmodule.h"
+#include "byteord.h"
+
+/* calculate int-aligned offset to colormap, right after the end of the pixel data */
+#define CMAPPTR(fb, fbsz)	\
+	(struct img_colormap*)((((uintptr_t)fb) + (fbsz) + sizeof(int) - 1) & ~(sizeof(int) - 1))
 
 static int pixel_size(enum img_fmt fmt);
 static size_t def_read(void *buf, size_t bytes, void *uptr);
@@ -86,22 +91,35 @@ int img_set_format(struct img_pixmap *img, enum img_fmt fmt)
 
 int img_copy(struct img_pixmap *dest, struct img_pixmap *src)
 {
-	return img_set_pixels(dest, src->width, src->height, src->fmt, src->pixels);
+	if(img_set_pixels(dest, src->width, src->height, src->fmt, src->pixels) == -1) {
+		return -1;
+	}
+
+	if(src->fmt == IMG_FMT_IDX8) {
+		*img_colormap(dest) = *img_colormap(src);
+	}
+	return 0;
 }
 
 int img_set_pixels(struct img_pixmap *img, int w, int h, enum img_fmt fmt, void *pix)
 {
 	void *newpix;
 	int pixsz = pixel_size(fmt);
+	int bsz = w * h * pixsz;
 
-	if(!(newpix = malloc(w * h * pixsz))) {
+	if(fmt == IMG_FMT_IDX8) {
+		/* add space for the colormap, and space to align it to sizeof(int) */
+		bsz += sizeof(struct img_colormap) + sizeof(int) - 1;
+	}
+
+	if(!(newpix = malloc(bsz))) {
 		return -1;
 	}
 
 	if(pix) {
 		memcpy(newpix, pix, w * h * pixsz);
 	} else {
-		memset(newpix, 0, w * h * pixsz);
+		memset(newpix, 0, bsz);
 	}
 
 	free(img->pixels);
@@ -141,6 +159,7 @@ int img_save_pixels(const char *fname, void *pix, int xsz, int ysz, enum img_fmt
 
 	img_init(&img);
 	img.fmt = fmt;
+	img.pixelsz = pixel_size(fmt);
 	img.width = xsz;
 	img.height = ysz;
 	img.pixels = pix;
@@ -164,6 +183,7 @@ int img_load(struct img_pixmap *img, const char *fname)
 	if(!(fp = fopen(fname, "rb"))) {
 		return -1;
 	}
+	img_set_name(img, fname);
 	res = img_read_file(img, fp);
 	fclose(fp);
 	return res;
@@ -205,7 +225,7 @@ int img_read(struct img_pixmap *img, struct img_io *io)
 {
 	struct ftype_module *mod;
 
-	if((mod = img_find_format_module(io))) {
+	if((mod = img_find_format_module(io, img->name))) {
 		return mod->read(img, io);
 	}
 	return -1;
@@ -285,6 +305,11 @@ int img_has_alpha(struct img_pixmap *img)
 		return 1;
 	}
 	return 0;
+}
+
+int img_is_greyscale(struct img_pixmap *img)
+{
+	return img->fmt == IMG_FMT_GREY8 || img->fmt == IMG_FMT_GREYF;
 }
 
 
@@ -390,6 +415,15 @@ void img_getpixel4f(struct img_pixmap *img, int x, int y, float *r, float *g, fl
 	}
 }
 
+struct img_colormap *img_colormap(struct img_pixmap *img)
+{
+	if(img->fmt != IMG_FMT_IDX8 || !img->pixels) {
+		return 0;
+	}
+
+	return CMAPPTR(img->pixels, img->width * img->height * img->pixelsz);
+}
+
 void img_io_set_user_data(struct img_io *io, void *uptr)
 {
 	io->uptr = uptr;
@@ -415,6 +449,7 @@ static int pixel_size(enum img_fmt fmt)
 {
 	switch(fmt) {
 	case IMG_FMT_GREY8:
+	case IMG_FMT_IDX8:
 		return 1;
 	case IMG_FMT_RGB24:
 		return 3;

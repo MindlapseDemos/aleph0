@@ -1,6 +1,6 @@
 /*
 libimago - a multi-format image file input/output library.
-Copyright (C) 2010 John Tsiombikas <nuclear@member.fsf.org>
+Copyright (C) 2010-2017 John Tsiombikas <nuclear@member.fsf.org>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published
@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 /* -- JPEG module -- */
+#ifndef NO_JPEG
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -68,7 +69,7 @@ static void term_destination(j_compress_ptr jc);
 
 int img_register_jpeg(void)
 {
-	static struct ftype_module mod = {".jpg", check, read, write};
+	static struct ftype_module mod = {".jpg:.jpeg", check, read, write};
 	return img_register_module(&mod);
 }
 
@@ -191,6 +192,7 @@ static int write(struct img_pixmap *img, struct img_io *io)
 	cinfo.in_color_space = JCS_RGB;
 
 	jpeg_set_defaults(&cinfo);
+	jpeg_set_quality(&cinfo, 95, 0);
 
 	jpeg_start_compress(&cinfo, 1);
 	while(nlines < img->height) {
@@ -292,3 +294,11 @@ static void term_destination(j_compress_ptr jc)
 	}
 	/* XXX flush? ... */
 }
+
+#else
+/* build without JPEG support */
+int img_register_jpeg(void)
+{
+	return -1;
+}
+#endif

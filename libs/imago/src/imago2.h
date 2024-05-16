@@ -1,6 +1,6 @@
 /*
 libimago - a multi-format image file input/output library.
-Copyright (C) 2010-2012 John Tsiombikas <nuclear@member.fsf.org>
+Copyright (C) 2010-2021 John Tsiombikas <nuclear@member.fsf.org>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published
@@ -32,13 +32,20 @@ enum img_fmt {
 	IMG_FMT_GREY8,
 	IMG_FMT_RGB24,
 	IMG_FMT_RGBA32,
-	IMG_FMT_BGRA32,
 	IMG_FMT_GREYF,
 	IMG_FMT_RGBF,
 	IMG_FMT_RGBAF,
+	IMG_FMT_BGRA32,
 	IMG_FMT_RGB565,
+	IMG_FMT_IDX8,
 
 	NUM_IMG_FMT
+};
+
+enum img_dither {
+	IMG_DITHER_NONE,
+	IMG_DITHER_ORDERED,
+	IMG_DITHER_FLOYD_STEINBERG
 };
 
 struct img_pixmap {
@@ -47,6 +54,13 @@ struct img_pixmap {
 	enum img_fmt fmt;
 	int pixelsz;
 	char *name;
+};
+
+struct img_colormap {
+	int ncolors;
+	struct {
+		unsigned char r, g, b;
+	} color[256];
 };
 
 struct img_io {
@@ -133,6 +147,19 @@ int img_write(struct img_pixmap *img, struct img_io *io);
 /* Converts an image to the specified pixel format */
 int img_convert(struct img_pixmap *img, enum img_fmt tofmt);
 
+/* Quantize an image to a have at most certain maximum number of colors,
+ * converting it to IMG_FMT_IDX8 in the process.
+ * The number of colors must be at most 256.
+ * The last argument defines the dithering algorithm to be used.
+ *
+ * C++: the dither argument is optional and defaults to IMG_DITHER_NONE
+ */
+int img_quantize(struct img_pixmap *img, int maxcol, IMG_OPTARG(enum img_dither dither, IMG_DITHER_NONE));
+
+/* Flip the image vertically or horizontally */
+void img_vflip(struct img_pixmap *img);
+void img_hflip(struct img_pixmap *img);
+
 /* Converts an image from an integer pixel format to the corresponding floating point one */
 int img_to_float(struct img_pixmap *img);
 /* Converts an image from a floating point pixel format to the corresponding integer one */
@@ -142,6 +169,8 @@ int img_to_integer(struct img_pixmap *img);
 int img_is_float(struct img_pixmap *img);
 /* Returns non-zero (true) if the supplied image has an alpha channel */
 int img_has_alpha(struct img_pixmap *img);
+/* Returns non-zero (true) if the supplied image is greyscale */
+int img_is_greyscale(struct img_pixmap *img);
 
 
 /* don't use these for anything performance-critical */
@@ -158,6 +187,9 @@ void img_getpixel1f(struct img_pixmap *img, int x, int y, float *pix);
 void img_getpixel4i(struct img_pixmap *img, int x, int y, int *r, int *g, int *b, int *a);
 void img_getpixel4f(struct img_pixmap *img, int x, int y, float *r, float *g, float *b, float *a);
 
+/* For IMG_FMT_IDX8 pixmaps, returns a pointer to the colormap, null otherwise */
+struct img_colormap *img_colormap(struct img_pixmap *img);
+
 
 /* OpenGL helper functions */
 
@@ -167,11 +199,14 @@ unsigned int img_fmt_glfmt(enum img_fmt fmt);
 unsigned int img_fmt_gltype(enum img_fmt fmt);
 /* Returns the equivalent OpenGL "internal format" as expected by the 3rd argument of glTexImage2D */
 unsigned int img_fmt_glintfmt(enum img_fmt fmt);
+/* same as above, but will return the sRGB variant type for 8bit per color channel images */
+unsigned int img_fmt_glintfmt_srgb(enum img_fmt fmt);
 
 /* Same as above, based on the pixel format of the supplied image */
 unsigned int img_glfmt(struct img_pixmap *img);
 unsigned int img_gltype(struct img_pixmap *img);
 unsigned int img_glintfmt(struct img_pixmap *img);
+unsigned int img_glintfmt_srgb(struct img_pixmap *img);
 
 /* Creates an OpenGL texture from the image, and returns the texture id, or 0 for failure */
 unsigned int img_gltexture(struct img_pixmap *img);

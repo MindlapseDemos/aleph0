@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 /* -- PNG module -- */
+#ifndef NO_PNG
 
 #include <stdlib.h>
 #include <string.h>
@@ -60,10 +61,14 @@ static int check_file(struct img_io *io)
 
 static int read_file(struct img_pixmap *img, struct img_io *io)
 {
+	unsigned int i, j, num_elem;
+	unsigned char **lineptr;
 	png_struct *png;
 	png_info *info;
 	int channel_bits, color_type, ilace_type, compression, filtering, fmt;
 	png_uint_32 xsz, ysz;
+	png_color *palette;
+	struct img_colormap *cmap;
 
 	if(!(png = png_create_read_struct(PNG_LIBPNG_VER_STRING, 0, 0, 0))) {
 		return -1;
@@ -95,19 +100,40 @@ static int read_file(struct img_pixmap *img, struct img_io *io)
 		return -1;
 	}
 
+	if(color_type == PNG_COLOR_TYPE_PALETTE) {
+		cmap = img_colormap(img);
+		png_get_PLTE(png, info, &palette, &cmap->ncolors);
+		memcpy(cmap->color, palette, cmap->ncolors * sizeof *cmap->color);
+	}
 
+	lineptr = (unsigned char**)png_get_rows(png, info);
 	if(channel_bits == 8) {
-		unsigned int i;
-		unsigned char **lineptr = (unsigned char**)png_get_rows(png, info);
 		unsigned char *dest = img->pixels;
 
 		for(i=0; i<ysz; i++) {
 			memcpy(dest, lineptr[i], xsz * img->pixelsz);
 			dest += xsz * img->pixelsz;
 		}
+
+	} else if(channel_bits < 8) {
+		unsigned char *src, *dest = img->pixels;
+		unsigned char data, bit;
+
+		for(i=0; i<ysz; i++) {
+			src = lineptr[i];
+			bit = 0;
+			for(j=0; j<xsz; j++) {
+				if(!bit) {
+					data = *src++;
+				}
+				*dest++ = data >> (8 - channel_bits);
+				data <<= channel_bits;
+				bit += channel_bits;
+				if(bit > 8 - channel_bits) bit = 0;
+			}
+		}
+
 	} else {
-		unsigned int i, j, num_elem;
-		unsigned char **lineptr = (unsigned char**)png_get_rows(png, info);
 		float *dest = img->pixels;
 
 		num_elem = img->pixelsz / sizeof(float);
@@ -124,7 +150,6 @@ static int read_file(struct img_pixmap *img, struct img_io *io)
 	return 0;
 }
 
-
 static int write_file(struct img_pixmap *img, struct img_io *io)
 {
 	png_struct *png;
@@ -134,6 +159,7 @@ static int write_file(struct img_pixmap *img, struct img_io *io)
 	unsigned char **rows;
 	unsigned char *pixptr;
 	int i, coltype;
+	struct img_colormap *cmap;
 
 	img_init(&tmpimg);
 
@@ -173,6 +199,11 @@ static int write_file(struct img_pixmap *img, struct img_io *io)
 	png_set_IHDR(png, info, img->width, img->height, 8, coltype, PNG_INTERLACE_NONE,
 			PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 	png_set_text(png, info, &txt, 1);
+
+	if(img->fmt == IMG_FMT_IDX8) {
+		cmap = img_colormap(img);
+		png_set_PLTE(png, info, (png_color*)cmap->color, cmap->ncolors);
+	}
 
 	if(!(rows = malloc(img->height * sizeof *rows))) {
 		png_destroy_write_struct(&png, &info);
@@ -222,8 +253,7 @@ static void flush_func(png_struct *png)
 
 static int png_type_to_fmt(int color_type, int channel_bits)
 {
-	/* only 8 and 16 bits per channel ar supported at the moment */
-	if(channel_bits != 8 && channel_bits != 16) {
+	if(channel_bits > 8 && channel_bits != 16) {
 		return -1;
 	}
 
@@ -236,6 +266,9 @@ static int png_type_to_fmt(int color_type, int channel_bits)
 
 	case PNG_COLOR_TYPE_GRAY:
 		return channel_bits == 16 ? IMG_FMT_GREYF : IMG_FMT_GREY8;
+
+	case PNG_COLOR_TYPE_PALETTE:
+		return channel_bits <= 8 ? IMG_FMT_IDX8 : -1;
 
 	default:
 		break;
@@ -255,8 +288,21 @@ static int fmt_to_png_type(enum img_fmt fmt)
 	case IMG_FMT_RGBA32:
 		return PNG_COLOR_TYPE_RGBA;
 
+	case IMG_FMT_IDX8:
+		return PNG_COLOR_TYPE_PALETTE;
+
 	default:
 		break;
 	}
 	return -1;
 }
+
+#else
+/* building with PNG support disabled */
+
+int img_register_png(void)
+{
+	return -1;
+}
+
+#endif

@@ -20,7 +20,7 @@ jpeglib = jpeglib/jcapimin.obj jpeglib/jcapistd.obj jpeglib/jccoefct.obj &
 	jpeglib/jquant1.obj jpeglib/jquant2.obj jpeglib/jutils.obj
 obj = src/conv.obj src/filejpeg.obj src/filepng.obj src/fileppm.obj src/filergbe.obj &
 	src/filetga.obj src/filelbm.obj src/ftmodule.obj src/imago2.obj src/imago_gl.obj &
-	src/modules.obj src/quant.obj &
+	src/modules.obj src/quant.obj src/byteord.obj &
 	$(libpng) $(zlib) $(jpeglib)
 
 alib = ../../imago.lib
@@ -46,7 +46,7 @@ jpeglib = jpeglib\jcapimin.obj jpeglib\jcapistd.obj jpeglib\jccoefct.obj &
 	jpeglib\jquant1.obj jpeglib\jquant2.obj jpeglib\jutils.obj
 obj = src\conv.obj src\filejpeg.obj src\filepng.obj src\fileppm.obj src\filergbe.obj &
 	src\filetga.obj src\filelbm.obj src\ftmodule.obj src\imago2.obj src\imago_gl.obj &
-	src\modules.obj src\quant.obj &
+	src\modules.obj src\quant.obj src\byteord.obj &
 	$(libpng) $(zlib) $(jpeglib)
 
 alib = ..\..\imago.lib

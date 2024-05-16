@@ -19,6 +19,12 @@
     <ClCompile Include="src\conv.c">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\quant.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\byteord.c">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="src\imago_gl.c">
       <Filter>src</Filter>
     </ClCompile>
@@ -256,6 +262,9 @@
     <ClCompile Include="src\fileppm.c">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\filelbm.c">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="src\filergbe.c">
       <Filter>src</Filter>
     </ClCompile>
@@ -268,6 +277,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\imago2.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\byteord.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="zlib\crc32.h">

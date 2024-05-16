@@ -73,9 +73,12 @@
     <ClCompile Include="libpng\pngwtran.c" />
     <ClCompile Include="libpng\pngwutil.c" />
     <ClCompile Include="src\conv.c" />
+    <ClCompile Include="src\quant.c" />
+    <ClCompile Include="src\byteord.c" />
     <ClCompile Include="src\filejpeg.c" />
     <ClCompile Include="src\filepng.c" />
     <ClCompile Include="src\fileppm.c" />
+    <ClCompile Include="src\filelbm.c" />
     <ClCompile Include="src\filergbe.c" />
     <ClCompile Include="src\filetga.c" />
     <ClCompile Include="src\ftmodule.c" />
@@ -112,6 +115,7 @@
     <ClInclude Include="libpng\pngconf.h" />
     <ClInclude Include="src\ftmodule.h" />
     <ClInclude Include="src\imago2.h" />
+    <ClInclude Include="src\byteord.h" />
     <ClInclude Include="zlib\crc32.h" />
     <ClInclude Include="zlib\deflate.h" />
     <ClInclude Include="zlib\inffast.h" />

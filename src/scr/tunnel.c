@@ -14,7 +14,6 @@
 
 #define VSCALE	1.5
 
-#define TEX_FNAME	"data/tunnel.png"
 #define TEX_USCALE	3
 #define TEX_VSCALE	1
 
@@ -27,6 +26,8 @@ static void stop(long trans_time);
 static void draw(void);
 
 static void draw_tunnel_range(unsigned short *pixels, int xoffs, int yoffs, int starty, int num_lines, long tm);
+static int gen_tables(void);
+static int gen_colormaps(struct img_pixmap *pixmap);
 static int count_bits(unsigned int x);
 static int count_zeros(unsigned int x);
 
@@ -39,13 +40,16 @@ static struct screen scr = {
 	draw
 };
 
+#define NUM_TUNPAL		16
+
 static int xsz, ysz, vxsz, vysz;
 static int pan_width, pan_height;
 static unsigned int *tunnel_map;
 static unsigned char *tunnel_fog;
 
 static int tex_xsz, tex_ysz;
-static unsigned int *tex_pixels;
+static unsigned char *tex_pixels;
+static uint16_t tunnel_cmap[NUM_TUNPAL][256];
 static int tex_xshift, tex_yshift;
 static unsigned int tex_xmask, tex_ymask;
 
@@ -58,13 +62,10 @@ struct screen *tunnel_screen(void)
 	return &scr;
 }
 
-
 static int init(void)
 {
 	int i, j, n;
-	unsigned int *tmap;
-	unsigned char *fog;
-	float aspect = (float)FB_WIDTH / (float)FB_HEIGHT;
+	struct img_pixmap pixmap;
 
 	xsz = FB_WIDTH;
 	ysz = FB_HEIGHT;
@@ -74,46 +75,27 @@ static int init(void)
 	pan_width = vxsz - xsz;
 	pan_height = vysz - ysz;
 
-	if(!(tunnel_map = malloc(vxsz * vysz * sizeof *tunnel_map))) {
-		fprintf(stderr, "failed to allocate tunnel map\n");
-		return -1;
-	}
-	if(!(tunnel_fog = malloc(vxsz * vysz))) {
-		fprintf(stderr, "failed to allocate tunnel fog map\n");
+	if(gen_tables() == -1) {
 		return -1;
 	}
 
-	tmap = tunnel_map;
-	fog = tunnel_fog;
-
-	for(i=0; i<vysz; i++) {
-		float y = 2.0 * (float)i / (float)vysz - 1.0;
-		for(j=0; j<vxsz; j++) {
-			float x = aspect * (2.0 * (float)j / (float)vxsz - 1.0);
-			float tu = atan2(y, x) / M_PI * 0.5 + 0.5;
-			float d = sqrt(x * x + y * y);
-			float tv = d == 0.0 ? 0.0 : 1.0 / d;
-
-			int tx = (int)(tu * 65535.0 * TEX_USCALE) & 0xffff;
-			int ty = (int)(tv * 65535.0 * TEX_VSCALE) & 0xffff;
-
-			int f = (int)(d * 192.0);
-
-			*tmap++ = (tx << 16) | ty;
-			*fog++ = f > 255 ? 255 : f;
-		}
+	img_init(&pixmap);
+	if(img_load(&pixmap, "data/tunnel.png") == -1) {
+		fprintf(stderr, "failed to load tunnel image\n");
+		return -1;
 	}
+	tex_pixels = pixmap.pixels;
+	tex_xsz = pixmap.width;
+	tex_ysz = pixmap.height;
 
-	if(!(tex_pixels = img_load_pixels(TEX_FNAME, &tex_xsz, &tex_ysz, IMG_FMT_RGBA32))) {
-		fprintf(stderr, "failed to load image " TEX_FNAME "\n");
+	if(pixmap.fmt != IMG_FMT_IDX8) {
+		fprintf(stderr, "tunnel texture is not palettized, make sure to do an 'svn update' in the data dir\n");
 		return -1;
 	}
 	if((count_bits(tex_xsz) | count_bits(tex_ysz)) != 1) {
 		fprintf(stderr, "non-pow2 image (%dx%d)\n", tex_xsz, tex_ysz);
 		return -1;
 	}
-
-	/*tex_pixels = gen_test_image(&tex_xsz, &tex_ysz);*/
 
 	n = count_zeros(tex_xsz);
 	for(i=0; i<n; i++) {
@@ -126,6 +108,10 @@ static int init(void)
 		tex_ymask |= 1 << i;
 	}
 	tex_yshift = n;
+
+	if(gen_colormaps(&pixmap) == -1) {
+		return -1;
+	}
 
 	return 0;
 }
@@ -194,10 +180,11 @@ static void draw(void)
 	swap_buffers(0);
 }
 
-static void tunnel_color(int *rp, int *gp, int *bp, long toffs, unsigned int tpacked, int fog)
+static uint16_t tunnel_color(long toffs, unsigned int tpacked, int fog)
 {
 	int r, g, b;
-	unsigned int col;
+	unsigned char texel;
+	uint16_t color;
 	unsigned int tx = (((tpacked >> 16) & 0xffff) << tex_xshift) >> 16;
 	unsigned int ty = ((tpacked & 0xffff) << tex_yshift) >> 16;
 	tx += toffs;
@@ -206,14 +193,8 @@ static void tunnel_color(int *rp, int *gp, int *bp, long toffs, unsigned int tpa
 	tx &= tex_xmask;
 	ty &= tex_ymask;
 
-	col = tex_pixels[(ty << tex_xshift) + tx];
-	r = col & 0xff;
-	g = (col >> 8) & 0xff;
-	b = (col >> 16) & 0xff;
-
-	*rp = (r * fog) >> 8;
-	*gp = (g * fog) >> 8;
-	*bp = (b * fog) >> 8;
+	texel = tex_pixels[(ty << tex_xshift) + tx];
+	return tunnel_cmap[fog >> 4][texel];	/* assumes NUM_TUNPAL == 16 */
 }
 
 static void draw_tunnel_range(unsigned short *pix, int xoffs, int yoffs, int starty, int num_lines, long tm)
@@ -230,15 +211,91 @@ static void draw_tunnel_range(unsigned short *pix, int xoffs, int yoffs, int sta
 			unsigned int col;
 			int r, g, b, idx = j << 1;
 
-			tunnel_color(&r, &g, &b, toffs, tmap[idx], fog[idx]);
-			col = PACK_RGB16(r, g, b);
-			tunnel_color(&r, &g, &b, toffs, tmap[idx + 1], fog[idx + 1]);
-			col |= PACK_RGB16(r, g, b) << 16;
+			col = tunnel_color(toffs, tmap[idx], fog[idx]);
+			col |= (unsigned int)tunnel_color(toffs, tmap[idx + 1], fog[idx + 1]) << 16;
 			*pixels++ = col;
 		}
 		tmap += vxsz;
 		fog += vxsz;
 	}
+}
+
+static int gen_tables(void)
+{
+	int i, j;
+	unsigned int *tmap;
+	unsigned char *fog;
+	float aspect = (float)FB_WIDTH / (float)FB_HEIGHT;
+
+	if(!(tunnel_map = malloc(vxsz * vysz * sizeof *tunnel_map))) {
+		fprintf(stderr, "failed to allocate tunnel map\n");
+		return -1;
+	}
+	if(!(tunnel_fog = malloc(vxsz * vysz))) {
+		fprintf(stderr, "failed to allocate tunnel fog map\n");
+		return -1;
+	}
+
+	tmap = tunnel_map;
+	fog = tunnel_fog;
+
+	for(i=0; i<vysz; i++) {
+		float y = 2.0 * (float)i / (float)vysz - 1.0;
+		for(j=0; j<vxsz; j++) {
+			float x = aspect * (2.0 * (float)j / (float)vxsz - 1.0);
+			float tu = atan2(y, x) / M_PI * 0.5 + 0.5;
+			float d = sqrt(x * x + y * y);
+			float tv = d == 0.0 ? 0.0 : 0.5 / d;
+
+			int tx = (int)(tu * 65535.0 * TEX_USCALE) & 0xffff;
+			int ty = (int)(tv * 65535.0 * TEX_VSCALE) & 0xffff;
+
+			/*int f = (int)(20.0 / d) - 35 + (rand() & 0xf);*/
+			int f = (int)(30.0 / d) - 35 + (rand() & 0xf);
+
+			*tmap++ = (tx << 16) | ty;
+			*fog++ = f > 255 ? 255 : (f < 0 ? 0 : f);
+		}
+	}
+
+	return 0;
+}
+
+/*
+#define R_END	255
+#define G_END	181
+#define B_END	80
+*/
+#define R_END	50
+#define G_END	0
+#define B_END	50
+
+static int gen_colormaps(struct img_pixmap *pixmap)
+{
+	int i, j, xsz, ysz;
+	int r, g, b;
+	struct img_colormap *imgpal;
+	uint16_t *cmap;
+	unsigned char *lastpix;
+	int32_t tfix;
+
+	/* populate the first colormap */
+	imgpal = img_colormap(pixmap);
+
+	for(i=0; i<NUM_TUNPAL; i++) {
+		tfix = (i << 16) / (NUM_TUNPAL - 1);
+		cmap = tunnel_cmap[i];
+		for(j=0; j<256; j++) {
+			r = imgpal->color[j].r;
+			g = imgpal->color[j].g;
+			b = imgpal->color[j].b;
+			r = r + ((R_END - r) * tfix >> 16);
+			g = g + ((G_END - g) * tfix >> 16);
+			b = b + ((B_END - b) * tfix >> 16);
+			*cmap++ = PACK_RGB16(r, g, b);
+		}
+	}
+	return 0;
 }
 
 static int count_bits(unsigned int x)

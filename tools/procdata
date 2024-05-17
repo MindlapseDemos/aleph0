@@ -44,4 +44,4 @@ if [ ! -f data/3dzoom/techroom.g3d -o data/src/3dzoom/techroom.obj -nt data/3dzo
 fi
 
 # convert random source assets
-convert data/src/tunnel.png -resize 256 data/tunnel.png
+#convert data/src/tunnel.png -resize 256 data/tunnel.png

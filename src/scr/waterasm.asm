@@ -1,7 +1,7 @@
 	section .text use32
 	bits 32
 
-WATER_WIDTH equ 256
+WATER_WIDTH equ 512
 WATER_HEIGHT equ 256
 
 	global updateWaterAsm5_

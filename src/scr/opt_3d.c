@@ -43,8 +43,6 @@ static unsigned char *volumeData;
 static Vertex3D* transformedObjectVertices;
 static int* currentIndexPtr;
 
-static unsigned short* zBuffer = 0;
-
 static int isOpt3Dinit = 0;
 
 
@@ -421,28 +419,36 @@ static Mesh3D* generateSpherical(int spx, int spy, float f1, float f2, float k1,
 	Vertex3D* vrtx = mesh->vertex;
 	int* index = mesh->index;
 
+	int vCount = 0;
+	int iCount = 0;
 	for (theta = 0.0f; theta < 360.0f; theta += (360.0f / (float)spx)) {
 		float ro0 = sin((theta * f1) / D2R * 4) * k1;
 		float cth = cos(theta / D2R);
 		float sth = sin(theta / D2R);
 		for (phi = 0.0; phi < 180.0; phi += (180.0 / spy)) {
-			ro = ro0 + sin((phi * f2) / D2R * 4) * k2 + kk;
-			vrtx->x = (int)(ro * sin(phi / D2R) * cth);
-			vrtx->y = (int)(ro * sin(phi / D2R) * sth);
-			vrtx->z = (int)(ro * cos(phi / D2R));
-			vrtx++;
+			if (vCount < numVertices) {
+				ro = ro0 + sin((phi * f2) / D2R * 4) * k2 + kk;
+				vrtx->x = (int)(ro * sin(phi / D2R) * cth);
+				vrtx->y = (int)(ro * sin(phi / D2R) * sth);
+				vrtx->z = (int)(ro * cos(phi / D2R));
+				vrtx++;
+				++vCount;
+			}
 		}
 	}
 
 	for (x = 0; x < spx; x++) {
 		for (y = 0; y < spy - 1; y++) {
-			*index++ = (y % spy) + (x % spx) * spy;
-			*index++ = (y % spy) + 1 + (x % spx) * spy;
-			*index++ = (y % spy) + ((x + 1) % spx) * spy;
+			if (iCount < numIndices) {
+				*index++ = (y % spy) + (x % spx) * spy;
+				*index++ = (y % spy) + 1 + (x % spx) * spy;
+				*index++ = (y % spy) + ((x + 1) % spx) * spy;
 
-			*index++ = (y % spy) + ((x + 1) % spx) * spy;
-			*index++ = ((y + 1) % spy) + (x % spx) * spy;
-			*index++ = ((y + 1) % spy) + ((x + 1) % spx) * spy;
+				*index++ = (y % spy) + ((x + 1) % spx) * spy;
+				*index++ = ((y + 1) % spy) + (x % spx) * spy;
+				*index++ = ((y + 1) % spy) + ((x + 1) % spx) * spy;
+				iCount += 6;
+			}
 		}
 	}
 
@@ -567,21 +573,13 @@ static void setVerticesMaterial(Object3D* obj)
 	}
 }
 
-unsigned short* getZbuffer()
-{
-	return zBuffer;
-}
-
-void clearZbuffer()
-{
-	memset(zBuffer, 255, FB_WIDTH * FB_HEIGHT * sizeof(unsigned short));
-}
-
 void transformObject3D(Object3D* obj)
 {
 	rotateVertices(obj->mesh->vertex, screenPointsObject.v, obj->mesh->verticesNum, obj->rot.x, obj->rot.y, obj->rot.z);
 	translateAndProjectVertices(screenPointsObject.v, screenPointsObject.v, obj->mesh->verticesNum, obj->pos.x, obj->pos.y, obj->pos.z);
 	setVerticesMaterial(obj);
+
+	screenPointsObject.num = obj->mesh->verticesNum;
 }
 
 void renderObject3D(Object3D* obj)
@@ -589,10 +587,14 @@ void renderObject3D(Object3D* obj)
 	renderPolygons(obj, screenPointsObject.v);
 }
 
+ScreenPoints* getObjectScreenPoints()
+{
+	return &screenPointsObject;
+}
+
 void initOptEngine(int maxPoints)
 {
 	screenPointsObject.v = (Vertex3D*)malloc(maxPoints * sizeof(Vertex3D));
-	zBuffer = (unsigned short*)malloc(FB_WIDTH * FB_HEIGHT * sizeof(unsigned short)); /* comes before initOptRasterizer */
 
 	initOptRasterizer();
 }
@@ -600,7 +602,6 @@ void initOptEngine(int maxPoints)
 void freeOptEngine()
 {
 	free(screenPointsObject.v);
-	free(zBuffer);
 
 	freeOptRasterizer();
 }

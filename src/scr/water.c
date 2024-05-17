@@ -30,7 +30,7 @@ static struct screen scr = {
 	draw
 };
 
-#define WATER_TEX_WIDTH 256
+#define WATER_TEX_WIDTH 512
 #define WATER_TEX_HEIGHT 256
 
 #define CLOUD_TEX_WIDTH 256
@@ -42,6 +42,8 @@ static struct screen scr = {
 #define WATER_FLOOR 2048
 #define WATER_SHADES 16
 #define PROJ_MUL 256
+#define CLIP_VAL_Y (-WATER_FLOOR / 16)
+#define CLIP_VAL_Y_DEEP (CLIP_VAL_Y + CLIP_VAL_Y / 8)
 
 #define NUM_RAINDROPS 128
 #define RAINDROPS_RANGE_X 1024
@@ -50,6 +52,7 @@ static struct screen scr = {
 #define RAINDROPS_HEIGHT_Y 384
 #define RAINDROPS_DIST 384
 #define RAIN_SPEED_Y 16
+
 
 static unsigned long startingTime;
 
@@ -157,7 +160,7 @@ static void initObjects()
 
 	objFlower.mesh = meshFlower;
 
-	setClipValY(-WATER_FLOOR / 16);
+	setClipValY(CLIP_VAL_Y);
 }
 
 static int init(void)
@@ -263,15 +266,21 @@ static void renderBlob(int xp, int yp, unsigned char *buffer)
 
 static void makeRipples(unsigned char *buff, int t)
 {
-	/*int i;
-	for (i = 0; i<3; ++i) {
-		const int xp = WATER_TEX_WIDTH / 2 + (int)(sin((t / 32 + 64*i)/24.0) * 96);
-		const int yp = WATER_TEX_HEIGHT / 2 + (int)(sin((t / 32 + 64*i)/16.0) * 64);
+	ScreenPoints* sp = getObjectScreenPoints();
+	Vertex3D* v = sp->v;
 
-		renderBlob(xp,yp,buff);
-	}*/
+	int i;
+	for (i = 0; i < sp->num; ++i) {
+		const int y = v->y;
+		if (y < CLIP_VAL_Y && y > CLIP_VAL_Y_DEEP) {
+			const int x = (-v->x / 2) & (WATER_TEX_WIDTH - 1);
+			const int z = (WATER_TEX_HEIGHT - v->z / 4) & (WATER_TEX_HEIGHT - 1);
+			renderBlob(x, z, buff);
+		}
+		++v;
+	}
 
-	renderBlob(24 + (rand() % 224), 24 + (rand() % 224), buff);
+	renderBlob(16 + (rand() % (WATER_TEX_WIDTH - 32)), 16 + (rand() % (WATER_TEX_HEIGHT - 32)), buff);
 }
 
 static void moveRain()
@@ -438,9 +447,13 @@ static void drawRain(int zRangeMin, int zRangeMax)
 
 static void sceneRunFlower(int t)
 {
+	int xp = (int)(sin((float)t / 512.0f) * 144);
+	int yp = (int)(sin((float)t / 384.0f) * 64 - 32);
+	int zp = (int)(sin((float)t / 1024.0f) * 160);
+
 	clearZbuffer();
 
-	setObjectPos(0, -64, 512, &objFlower);
+	setObjectPos(xp, yp, 512 + zp, &objFlower);
 	setObjectRot(t, 2*t, 3*t, &objFlower);
 
 	transformObject3D(&objFlower);
@@ -450,7 +463,7 @@ static void sceneRunFlower(int t)
 static void draw(void)
 {
 	const int t = time_msec - startingTime;
-	const int frontRainZ = 640;
+	const int frontRainZ = objFlower.pos.z;
 
 	runWaterEffect(t);
 

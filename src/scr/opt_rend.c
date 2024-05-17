@@ -18,7 +18,7 @@
 
 #define R_UNDER_SHIFT 2
 #define G_UNDER_SHIFT 3
-#define B_UNDER_SHIFT 1
+#define B_UNDER_SHIFT 0
 
 
 static BlobData blobData[BLOB_SIZES_NUM_MAX][BLOB_SIZEX_PAD];
@@ -48,8 +48,17 @@ static void drawEdgeGouraudClipY(int y, int dx);
 
 static uint16_t polyColor = 0xffff;
 
-static unsigned short* zBufferPtr;
+static unsigned short* zBuffer;
 
+unsigned short* getZbuffer()
+{
+	return zBuffer;
+}
+
+void clearZbuffer()
+{
+	memset(zBuffer, 255, FB_WIDTH * FB_HEIGHT * sizeof(unsigned short));
+}
 
 void initOptRasterizer()
 {
@@ -60,13 +69,14 @@ void initOptRasterizer()
 	/*drawEdge = drawEdgeGouraud;*/
 	drawEdge = drawEdgeGouraudClipY;
 
-	zBufferPtr = getZbuffer();
+	zBuffer = (unsigned short*)malloc(FB_WIDTH * FB_HEIGHT * sizeof(unsigned short));
 }
 
 void freeOptRasterizer()
 {
 	free(leftEdge);
 	free(rightEdge);
+	free(zBuffer);
 }
 
 void setClipValY(int y)
@@ -132,7 +142,7 @@ static void drawEdgeGouraudClipY(int ys, int dx)
 	const int z1 = r->z;
 
 	uint16_t* vram = fb_pixels + ys * FB_WIDTH + xs0;
-	unsigned short* zBuff = zBufferPtr + ys * FB_WIDTH + xs0;
+	unsigned short* zBuff = zBuffer + ys * FB_WIDTH + xs0;
 
 	int c = INT_TO_FIXED(c0, FP_RAST);
 	const int dc = (INT_TO_FIXED(c1 - c0, FP_RAST) / dx);
@@ -155,7 +165,7 @@ static void drawEdgeGouraudClipY(int ys, int dx)
 			const int yy = FIXED_TO_INT(y, FP_RAST);
 			/* yy is not perspective correct so expect some weirdness between the triangle edges but with more smaller polygons it might be unoticable */
 			if (yy >= clipValY) {
-				*vram = (r << 11) | (g << 5) | b;
+				*vram = ((r>>2) << 11) | ((g>>0) << 5) | (b>>1);
 			}
 			else {
 				const uint16_t cSrc = *vram;

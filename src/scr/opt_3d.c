@@ -272,7 +272,7 @@ static void initScreenPointsGrid(Vertex3D *src)
 	screenPointsGrid.v = src;
 }
 
-void Opt3Dinit()
+void OptGrid3Dinit()
 {
 	if (!isOpt3Dinit) {
 		int z;
@@ -289,7 +289,7 @@ void Opt3Dinit()
 	}
 }
 
-void Opt3Dfree()
+void OptGrid3Dfree()
 {
 	if (isOpt3Dinit) {
 		free(objectAxesVertices);
@@ -351,7 +351,7 @@ void drawBoxLines(unsigned char *buffer, int orderSign)
 	drawQuadLines(&v[4], &v[5], &v[1], &v[0], buffer, orderSign);
 }
 
-void Opt3Drun(unsigned char *buffer, int ticks)
+void OptGrid3Drun(unsigned char *buffer, int ticks)
 {
 	ticks >>= 1;
 
@@ -412,15 +412,15 @@ static void subVec(Vector3D* s1, Vector3D* s2, Vector3D* vDst)	/* dst = s1 - s2 
 
 static void crossProduct(Vector3D* v1, Vector3D* v2, Vector3D* vDst)
 {
-	vDst->x = v1->y * v2->z - v1->z * v2->y;
-	vDst->y = v1->z * v2->x - v1->x * v2->z;
-	vDst->z = v1->x * v2->y - v1->y * v2->x;
+	vDst->x = (v1->y * v2->z - v1->z * v2->y) >> FP_NORM;
+	vDst->y = (v1->z * v2->x - v1->x * v2->z) >> FP_NORM;
+	vDst->z = (v1->x * v2->y - v1->y * v2->x) >> FP_NORM;
 }
 
 
 static int dotProduct(Vector3D* v1, Vector3D* v2)
 {
-	return v1->x * v2->x + v1->y * v2->y + v1->z * v2->z;
+	return (v1->x * v2->x + v1->y * v2->y + v1->z * v2->z) >> (FP_NORM + 3);
 }
 
 
@@ -626,7 +626,7 @@ static Mesh3D* generateSpherical(int spx, int spy, float f1, float f2, float k1,
 
 Mesh3D* genMesh(int type, int length)
 {
-	int x, y, z, i;
+	int x, y, z;
 	const int halfLength = length / 2;
 
 	Mesh3D* mesh = 0;
@@ -685,10 +685,6 @@ Mesh3D* genMesh(int type, int length)
 			mesh = generateSpherical(pNum, pNum, 1.5f, 2.0f, kk / pDiv, kk / pDiv, kk);
 
 			reversePolygonOrder(mesh);
-
-			for (i = 0; i < mesh->indicesNum; ++i) {
-				mesh->element[i].c = 64 + (rand() % 127);
-			}
 		}
 		break;
 
@@ -747,7 +743,6 @@ static void calcVertexLights(Object3D* obj)
 
 	do {
 		int d = -dotProduct(vNormal, &light);
-		d >>= 11; /* hack for now */
 		CLAMP(d, 0, 255);
 		dst->c = d;
 

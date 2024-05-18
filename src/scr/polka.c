@@ -338,7 +338,7 @@ static void initRadialEffects()
 
 static int init(void)
 {
-	Opt3Dinit();
+	OptGrid3Dinit();
 	initBlobGfx();
 
 	polkaBuffer = (unsigned char*)malloc(FB_WIDTH * FB_HEIGHT);
@@ -358,7 +358,7 @@ static int init(void)
 
 static void destroy(void)
 {
-	Opt3Dfree();
+	OptGrid3Dfree();
 	freeBlobGfx();
 
 	free(polkaBuffer);
@@ -408,7 +408,7 @@ static void draw(void)
 	/* updateDotsVolumeBufferFireball(t); */
 	/* updateDotsVolumeBufferRandomWalk(t); */
 
-	Opt3Drun(polkaBuffer, t);
+	OptGrid3Drun(polkaBuffer, t);
 
 	buffer8bppToVram(polkaBuffer, polkaPal32);
 

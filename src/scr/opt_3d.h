@@ -76,9 +76,9 @@ typedef struct Object3D
 }Object3D;
 
 
-void Opt3Dinit(void);
-void Opt3Dfree(void);
-void Opt3Drun(unsigned char *buffer, int ticks);
+void OptGrid3Dinit(void);
+void OptGrid3Dfree(void);
+void OptGrid3Drun(unsigned char *buffer, int ticks);
 
 unsigned char *getDotsVolumeBuffer();
 void drawBoxLines();

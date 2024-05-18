@@ -452,14 +452,14 @@ static void drawRain(int zRangeMin, int zRangeMax)
 
 static void sceneRunFlower(int t)
 {
-	int xp = (int)(sin((float)t / 512.0f) * 144);
+	int xp = (int)(sin((float)t / 512.0f) * 128);
 	int yp = (int)(sin((float)t / 384.0f) * 64 - 32);
-	int zp = (int)(sin((float)t / 1024.0f) * 128);
+	int zp = (int)(sin((float)t / 1024.0f) * 160);
 
 	clearZbuffer();
 
 	setObjectPos(xp, yp, 512 + zp, &objFlower);
-	/* setObjectPos(0, 0, 320, &objFlower); */
+	/* setObjectPos(0, 0, 256, &objFlower); */
 	setObjectRot(t, 2 * t, 3 * t, &objFlower);
 
 	transformObject3D(&objFlower);

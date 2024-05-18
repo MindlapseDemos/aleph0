@@ -19,11 +19,17 @@
 #define FP_CORE 16
 #define FP_BASE 12
 #define FP_BASE_TO_CORE (FP_CORE - FP_BASE)
+#define FP_NORM 8
+
 #define PROJ_SHR 8
 #define PROJ_MUL (1 << PROJ_SHR)
 
 #define DOT_COLOR				0xFFFF
 #define D2R (180.0 / M_PI)
+
+
+static int rotMat[9];
+static int rotMatInv[9];
 
 
 static Vertex3D *objectGridVertices;
@@ -64,7 +70,7 @@ int isqrt(int x)
         }
     }
     return r;
-} 
+}
 
 
 unsigned char *getDotsVolumeBuffer()
@@ -96,6 +102,17 @@ static void createRotationMatrixValues(int rotX, int rotY, int rotZ, int *mat)
 	*rotVecs++ = (-sinyr) << FP_BASE_TO_CORE;
 	*rotVecs++ = (FIXED_MUL(sinxr, cosyr, FP_BASE)) << FP_BASE_TO_CORE;
 	*rotVecs = (FIXED_MUL(cosxr, cosyr, FP_BASE)) << FP_BASE_TO_CORE;
+}
+
+static void calcInvertedRotationMatrix(int* mat, int *invMat)
+{
+	int i, j;
+
+	for (j = 0; j < 3; ++j) {
+		for (i = 0; i < 3; ++i) {
+			*invMat++ = mat[3*i + j];
+		}
+	}
 }
 
 static void MulManyVec3Mat33(Vertex3D *dst, Vertex3D *src, int *m, int count)
@@ -136,8 +153,6 @@ static void translateAndProjectVertices(Vertex3D *src, Vertex3D *dst, int count,
 
 static void rotateVertices(Vertex3D *src, Vertex3D *dst, int count, int rx, int ry, int rz)
 {
-	static int rotMat[9];
-
 	createRotationMatrixValues(rx, ry, rz, rotMat);
 
 	MulManyVec3Mat33(dst, src, rotMat, count);
@@ -379,6 +394,159 @@ static void addIndexedTriangle(int p0, int p1, int p2)
 	*currentIndexPtr++ = p2;
 }
 
+
+static void addVec(Vector3D* s1, Vector3D* s2, Vector3D* vDst)
+{
+	vDst->x = s1->x + s2->x;
+	vDst->y = s1->y + s2->y;
+	vDst->z = s1->z + s2->z;
+}
+
+
+static void subVec(Vector3D* s1, Vector3D* s2, Vector3D* vDst)	/* dst = s1 - s2 */
+{
+	vDst->x = s1->x - s2->x;
+	vDst->y = s1->y - s2->y;
+	vDst->z = s1->z - s2->z;
+}
+
+static void crossProduct(Vector3D* v1, Vector3D* v2, Vector3D* vDst)
+{
+	vDst->x = v1->y * v2->z - v1->z * v2->y;
+	vDst->y = v1->z * v2->x - v1->x * v2->z;
+	vDst->z = v1->x * v2->y - v1->y * v2->x;
+}
+
+
+static int dotProduct(Vector3D* v1, Vector3D* v2)
+{
+	return v1->x * v2->x + v1->y * v2->y + v1->z * v2->z;
+}
+
+
+static void normalize(Vector3D* v, Vector3D* vDst)
+{
+	int d = isqrt(v->x * v->x + v->y * v->y + v->z * v->z);
+	if (d != 0) {
+		vDst->x = (v->x << FP_NORM) / d;
+		vDst->y = (v->y << FP_NORM) / d;
+		vDst->z = (v->z << FP_NORM) / d;
+	}
+	else {
+		vDst->x = 0;
+		vDst->y = 0;
+		vDst->z = 0;
+	}
+}
+
+static void negVec(Vector3D* v, Vector3D* vDst)
+{
+	vDst->x = -v->x;
+	vDst->y = -v->y;
+	vDst->z = -v->z;
+}
+
+static Vector3D vertexToVector3D(Vertex3D* vrtx)
+{
+	Vector3D v;
+
+	v.x = vrtx->x;
+	v.y = vrtx->y;
+	v.z = vrtx->z;
+
+	return v;
+}
+
+static void calcPolyNormals(Mesh3D* mesh, int neg)
+{
+	int count = mesh->indicesNum / 3;
+	int* index = mesh->index;
+	Vertex3D* vertex = mesh->vertex;
+	Vector3D* pNormal = mesh->pNormal;
+	Vector3D a0, a1;
+	Vector3D norm;
+	do {
+		const int i0 = *index++;
+		const int i1 = *index++;
+		const int i2 = *index++;
+
+		Vector3D v0 = vertexToVector3D(&vertex[i0]);
+		Vector3D v1 = vertexToVector3D(&vertex[i1]);
+		Vector3D v2 = vertexToVector3D(&vertex[i2]);
+
+		subVec(&v1, &v0, &a0);
+		subVec(&v2, &v1, &a1);
+
+		crossProduct(&a0, &a1, &norm);
+		normalize(&norm, &norm);
+		if (neg == 1) {
+			negVec(&norm, &norm);
+		}
+
+		*pNormal++ = norm;
+	} while (--count > 0);
+}
+
+static void calcVertexNormals(Mesh3D* mesh)
+{
+	int i;
+	const int vNum = mesh->verticesNum;
+	const int pNum = mesh->indicesNum / 3;
+
+	Vector3D* vNormal = mesh->vNormal;
+	Vector3D* pNormal = mesh->pNormal;
+	int* index = mesh->index;
+
+	unsigned char* addTimes = (unsigned char*)malloc(vNum);
+
+	memset(addTimes, 0, vNum);
+	memset(vNormal, 0, vNum * sizeof(Vector3D));
+
+	for (i = 0; i < pNum; i++) {
+		const int i0 = *index++;
+		const int i1 = *index++;
+		const int i2 = *index++;
+
+		Vector3D* v0 = &vNormal[i0];
+		Vector3D* v1 = &vNormal[i1];
+		Vector3D* v2 = &vNormal[i2];
+
+		addVec(v0, pNormal, v0);
+		addVec(v1, pNormal, v1);
+		addVec(v2, pNormal, v2);
+
+		addTimes[i0]++;
+		addTimes[i1]++;
+		addTimes[i2]++;
+
+		++pNormal;
+	}
+
+	for (i = 0; i < vNum; i++) {
+		const int t = addTimes[i];
+		if (t > 0) {
+			vNormal->x /= t;
+			vNormal->y /= t;
+			vNormal->z /= t;
+		}
+		normalize(vNormal, vNormal);
+	}
+
+	free(addTimes);
+}
+
+static void reversePolygonOrder(Mesh3D* mesh)
+{
+	int i, temp;
+	for (i = 0; i < mesh->indicesNum; i += 3)
+	{
+		temp = mesh->index[i + 2];
+		mesh->index[i + 2] = mesh->index[i];
+		mesh->index[i] = temp;
+	}
+}
+
+
 static Mesh3D* newMesh(int vNum, int iNum)
 {
 	Mesh3D* mesh = (Mesh3D*)malloc(sizeof(Mesh3D));
@@ -388,6 +556,9 @@ static Mesh3D* newMesh(int vNum, int iNum)
 	mesh->vertex = (Vertex3D*)malloc(vNum * sizeof(Vertex3D));
 	mesh->index = (int*)malloc(iNum * sizeof(int));
 	mesh->element = (Element*)malloc(iNum * sizeof(Element));
+
+	mesh->pNormal = (Vector3D*)malloc((iNum / 3) * sizeof(Vector3D));
+	mesh->vNormal = (Vector3D*)malloc(vNum * sizeof(Vector3D));
 
 	return mesh;
 }
@@ -447,21 +618,10 @@ static Mesh3D* generateSpherical(int spx, int spy, float f1, float f2, float k1,
 		}
 	}
 
-	/* CalcNorms(obj, 0);
-	   CalcPtNorms(obj); */
+	calcPolyNormals(mesh, 0);
+	calcVertexNormals(mesh);
 
 	return mesh;
-}
-
-static void reversePolygonOrder(Mesh3D *mesh)
-{
-	int i, temp;
-	for (i = 0; i < mesh->indicesNum; i+=3)
-	{
-		temp = mesh->index[i + 2];
-		mesh->index[i + 2] = mesh->index[i];
-		mesh->index[i] = temp;
-	}
 }
 
 Mesh3D* genMesh(int type, int length)
@@ -519,12 +679,10 @@ Mesh3D* genMesh(int type, int length)
 		case GEN_OBJ_SPHERICAL:
 		{
 			float kk = (float)length;
-			mesh = generateSpherical(16, 16, 1.5f, 2.0f, kk / 2.0f, kk / 2.0f, kk);
-			/* mesh = generateSpherical(64, 64, 1.5f, 2.0f, kk / 4.0f, kk / 4.0f, kk); */
+			int pNum = 24;
+			float pDiv = 2.0f;
 
-			/* mesh = generateSpherical(16, 16, 1.5f, 2.0f, kk / 2.0f, kk / 2.0f, kk); */
-			/* mesh = generateSpherical(24, 24, 1.5f, 2.0f, kk / 2.0f, kk / 2.0f, kk); */
-			/* mesh = generateSpherical(24, 24, 1.5f, 2.0f, kk / 4.0f, kk / 4.0f, kk); */
+			mesh = generateSpherical(pNum, pNum, 1.5f, 2.0f, kk / pDiv, kk / pDiv, kk);
 
 			reversePolygonOrder(mesh);
 
@@ -557,25 +715,54 @@ void setObjectRot(int x, int y, int z, Object3D* obj)
 
 static void setVerticesMaterial(Object3D* obj)
 {
-	const int count = obj->mesh->verticesNum;
+	int count = obj->mesh->verticesNum;
 	Element* src = obj->mesh->element;
 	Vertex3D* dst = screenPointsObject.v;
 
-	int i;
-	for (i = 0; i < count; i++) {
+	do {
 		dst->c = src->c;
 		dst->u = src->u;
 		dst->v = src->v;
 		++src;
 		++dst;
-	}
+	} while (--count > 0);
+}
+
+static void calcVertexLights(Object3D* obj)
+{
+	int count = obj->mesh->verticesNum;
+
+	Vector3D* vNormal = obj->mesh->vNormal;
+
+	Vertex3D* dst = screenPointsObject.v;
+
+	Vector3D light;
+	Vertex3D vLight;	/* it happens that MulManyVec3Mat33 thing works with Vertex3D which is way more than Vector3D. I will refactor */
+
+	calcInvertedRotationMatrix(rotMat, rotMatInv);
+
+	vLight.x = 0; vLight.y = 0; vLight.z = 1 << FP_NORM;
+	MulManyVec3Mat33(&vLight, &vLight, rotMatInv, 1);
+	light = vertexToVector3D(&vLight);
+
+	do {
+		int d = -dotProduct(vNormal, &light);
+		d >>= 11; /* hack for now */
+		CLAMP(d, 0, 255);
+		dst->c = d;
+
+		++dst;
+		++vNormal;
+	} while (--count > 0);
 }
 
 void transformObject3D(Object3D* obj)
 {
 	rotateVertices(obj->mesh->vertex, screenPointsObject.v, obj->mesh->verticesNum, obj->rot.x, obj->rot.y, obj->rot.z);
 	translateAndProjectVertices(screenPointsObject.v, screenPointsObject.v, obj->mesh->verticesNum, obj->pos.x, obj->pos.y, obj->pos.z);
-	setVerticesMaterial(obj);
+
+	/* setVerticesMaterial(obj); */
+	calcVertexLights(obj);
 
 	screenPointsObject.num = obj->mesh->verticesNum;
 }

@@ -16,6 +16,9 @@
 
 #define FP_RAST 16
 
+#define R_OVER_SHIFT 2
+#define G_OVER_SHIFT 0
+#define B_OVER_SHIFT 1
 #define R_UNDER_SHIFT 2
 #define G_UNDER_SHIFT 3
 #define B_UNDER_SHIFT 0
@@ -200,9 +203,7 @@ static void drawEdgeGouraudClipY(int ys, int dx)
 	int x;
 	for (x = xs0; x < xs1; x++) {
 		const int cc = FIXED_TO_INT(c, FP_RAST);
-		const int r = cc >> 3;
-		const int g = cc >> 2;
-		const int b = cc >> 3;
+		const int b = cc >> (3 + B_OVER_SHIFT);
 
 	#ifdef ZBUFFER_ON
 		const unsigned short zz = (unsigned short)(FIXED_TO_INT(z, FP_RAST));
@@ -211,16 +212,13 @@ static void drawEdgeGouraudClipY(int ys, int dx)
 			const int yy = FIXED_TO_INT(y, FP_RAST);
 			/* yy is not perspective correct so expect some weirdness between the triangle edges but with more smaller polygons it might be unoticable */
 			if (yy >= clipValY) {
-				*vram = ((r>>2) << 11) | ((g>>0) << 5) | (b>>1);
-			}
-			else {
-				const uint16_t cSrc = *vram;
-				int rSrc = (cSrc >> 11) & 31;
-				int gSrc = (cSrc >> 6) & 63;
-				int bSrc = cSrc & 31;
-				const uint16_t cDst = (((r + rSrc) >> (1 + R_UNDER_SHIFT)) << 11) | ((((g + gSrc) >> (1 + G_UNDER_SHIFT))) << 5) | ((b + bSrc) >> (1 + B_UNDER_SHIFT));
-				*vram = cSrc | cDst;	/* haha wannabe lazy blend */
-			}
+				const int r = cc >> (3 + R_OVER_SHIFT);
+				const int g = cc >> (2 + G_OVER_SHIFT);
+				*vram = (r << 11) | (g << 5) | b;
+			}/* else {
+				// Comment this out for now, trying to figure simpler that looks nice
+				*vram |= (7 + (b>>2));
+			}*/
 	#ifdef ZBUFFER_ON
 			*zBuff = zz;
 		}

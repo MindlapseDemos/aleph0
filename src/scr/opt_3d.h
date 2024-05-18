@@ -58,12 +58,15 @@ typedef struct ScreenPoints
 
 typedef struct Mesh3D
 {
-	Vertex3D* vertex;
 	int verticesNum;
+	int indicesNum;
+
+	Vertex3D* vertex;
+	Vector3D* vNormal;
+	Vector3D* pNormal;
 
 	int* index;
 	Element* element;
-	int indicesNum;
 }Mesh3D;
 
 typedef struct Object3D

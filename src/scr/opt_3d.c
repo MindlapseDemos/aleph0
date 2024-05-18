@@ -143,22 +143,17 @@ static void rotateVertices(Vertex3D *src, Vertex3D *dst, int count, int rx, int 
 	MulManyVec3Mat33(dst, src, rotMat, count);
 }
 
-static void renderVertices(unsigned char *buffer)
+static void renderVertices(ScreenPoints *pt)
 {
-	Vertex3D *src = screenPointsGrid.v;
-	const int count = screenPointsGrid.num;
+	Vertex3D *src = pt->v;
+	const int count = pt->num;
 
 	int i;
 	for (i = 0; i < count; i++) {
-		const int x = src->x;
-		const int y = src->y;
-		const int z = src->z;
-
-		if (z > 0 && x >= 0 && x < FB_WIDTH && y >= 0 && y < FB_HEIGHT) {
-			int c = (OBJECT_POS_Z + 256 - z) >> 4;
-			if (c < 0) c = 0;
-			if (c > 31) c = 31;
-			*(buffer + y * FB_WIDTH + x) = c;
+		const int x = src->xs;
+		const int y = src->ys;
+		if (x >= 0 && x < FB_WIDTH && y >= 0 && y < FB_HEIGHT) {
+			*(fb_pixels + y * FB_WIDTH + x) = 0xffff;
 		}
 		++src;
 	}
@@ -525,6 +520,9 @@ Mesh3D* genMesh(int type, int length)
 		{
 			float kk = (float)length;
 			mesh = generateSpherical(16, 16, 1.5f, 2.0f, kk / 2.0f, kk / 2.0f, kk);
+			/* mesh = generateSpherical(64, 64, 1.5f, 2.0f, kk / 4.0f, kk / 4.0f, kk); */
+
+			/* mesh = generateSpherical(16, 16, 1.5f, 2.0f, kk / 2.0f, kk / 2.0f, kk); */
 			/* mesh = generateSpherical(24, 24, 1.5f, 2.0f, kk / 2.0f, kk / 2.0f, kk); */
 			/* mesh = generateSpherical(24, 24, 1.5f, 2.0f, kk / 4.0f, kk / 4.0f, kk); */
 
@@ -585,6 +583,7 @@ void transformObject3D(Object3D* obj)
 void renderObject3D(Object3D* obj)
 {
 	renderPolygons(obj, screenPointsObject.v);
+	/* renderVertices(&screenPointsObject); */
 }
 
 ScreenPoints* getObjectScreenPoints()

@@ -20,6 +20,7 @@ static void start(long trans_time);
 static void draw(void);
 
 #define FP_SCALE 16
+#define MAX_OBJ_VERTS 4096
 
 static struct screen scr = {
 	"water",
@@ -56,20 +57,20 @@ static struct screen scr = {
 
 static unsigned long startingTime;
 
-static unsigned short *waterPal[WATER_SHADES];
+static unsigned short* waterPal[WATER_SHADES];
 
-static unsigned char *waterBuffer1;
-static unsigned char *waterBuffer2;
+static unsigned char* waterBuffer1;
+static unsigned char* waterBuffer2;
 
-unsigned char *wb1, *wb2;
+unsigned char* wb1, * wb2;
 
-unsigned char *cloudTex;
-unsigned short *cloudPal[CLOUD_SHADES];
+unsigned char* cloudTex;
+unsigned short* cloudPal[CLOUD_SHADES];
 
 unsigned char* skyTex;
 unsigned char* waterTex = NULL;
 
-Vertex3D *rainDrops;
+Vertex3D* rainDrops;
 
 Mesh3D* meshFlower;
 Object3D objFlower;
@@ -77,14 +78,14 @@ Object3D objFlower;
 
 static void swapWaterBuffers()
 {
-	unsigned char *temp = wb2;
+	unsigned char* temp = wb2;
 	wb2 = wb1;
 	wb1 = temp;
 
 	waterTex = wb1;
 }
 
-struct screen *water_screen(void)
+struct screen* water_screen(void)
 {
 	return &scr;
 }
@@ -115,12 +116,12 @@ static void initCloudTex()
 
 			sumF += 0.25f;
 			CLAMP01(sumF)
-			cloudTex[i++] = (unsigned char)(sumF * 127);
+				cloudTex[i++] = (unsigned char)(sumF * 127);
 		}
 	}
 
 	for (i = 0; i < CLOUD_SHADES; ++i) {
-		unsigned short *pal;
+		unsigned short* pal;
 		cloudPal[i] = (unsigned short*)malloc(256 * sizeof(unsigned short));
 		pal = cloudPal[i];
 		for (n = 0; n < 255; ++n) {
@@ -179,16 +180,18 @@ static int init(void)
 	for (i = 0; i < WATER_SHADES; ++i) {
 		float s = 1.0f - (float)(WATER_SHADES - i - 1) / (WATER_SHADES * 1.125);
 		CLAMP01(s)
-		waterPal[i] = (unsigned short*)malloc(sizeof(unsigned short) * 256);
-		setPalGradient(0, 127, 0, 0, 7*s, 31 * s, 63 * s, 31 * s, waterPal[i]);
+			waterPal[i] = (unsigned short*)malloc(sizeof(unsigned short) * 256);
+		setPalGradient(0, 127, 0, 0, 7 * s, 31 * s, 63 * s, 31 * s, waterPal[i]);
 		setPalGradient(128, 255, 0, 0, 0, 0, 0, 0, waterPal[i]);
 	}
 
 	initCloudTex();
 	initRainDrops();
 
-	initOptEngine(4096);
+	initOptEngine(MAX_OBJ_VERTS);
 	initObjects();
+
+	setRenderingMode(OPT_RAST_GOURAUD_CLIP_Y);
 
 	return 0;
 }
@@ -223,21 +226,21 @@ static void start(long trans_time)
 }
 
 #ifdef __WATCOMC__
-void updateWaterAsm5(void *buffer1, void *buffer2, void *vramStart);
+void updateWaterAsm5(void* buffer1, void* buffer2, void* vramStart);
 #else
-static void updateWater32(unsigned char *buffer1, unsigned char *buffer2)
+static void updateWater32(unsigned char* buffer1, unsigned char* buffer2)
 {
 	int count = (WATER_TEX_WIDTH / 4) * (WATER_TEX_HEIGHT - 2) - 2;
 
-	unsigned int *src1 = (unsigned int*)buffer1;
-	unsigned int *src2 = (unsigned int*)buffer2;
-	unsigned int *vram = (unsigned int*)((unsigned char*)wb1 + WATER_TEX_WIDTH + 4);
+	unsigned int* src1 = (unsigned int*)buffer1;
+	unsigned int* src2 = (unsigned int*)buffer2;
+	unsigned int* vram = (unsigned int*)((unsigned char*)wb1 + WATER_TEX_WIDTH + 4);
 
 	do {
-		const unsigned int c0 = *(unsigned int*)((unsigned char*)src1-1);
-		const unsigned int c1 = *(unsigned int*)((unsigned char*)src1+1);
-		const unsigned int c2 = *(src1-(WATER_TEX_WIDTH / 4));
-		const unsigned int c3 = *(src1+(WATER_TEX_WIDTH / 4));
+		const unsigned int c0 = *(unsigned int*)((unsigned char*)src1 - 1);
+		const unsigned int c1 = *(unsigned int*)((unsigned char*)src1 + 1);
+		const unsigned int c2 = *(src1 - (WATER_TEX_WIDTH / 4));
+		const unsigned int c3 = *(src1 + (WATER_TEX_WIDTH / 4));
 
 		/* Subtract and then absolute value of 4 bytes packed in 8bits(From Hacker's Delight) */
 		const unsigned int c = (((c0 + c1 + c2 + c3) >> 1) & 0x7f7f7f7f) - *src2;
@@ -251,20 +254,20 @@ static void updateWater32(unsigned char *buffer1, unsigned char *buffer2)
 }
 #endif
 
-static void renderBlob(int xp, int yp, unsigned char *buffer)
+static void renderBlob(int xp, int yp, unsigned char* buffer)
 {
-	int i,j;
-	unsigned char *dst = buffer + yp * WATER_TEX_WIDTH + xp;
+	int i, j;
+	unsigned char* dst = buffer + yp * WATER_TEX_WIDTH + xp;
 
-	for (j=0; j<3; ++j) {
-		for (i=0; i<3; ++i) {
+	for (j = -1; j <= 1; ++j) {
+		for (i = -1; i <= 1; ++i) {
 			*(dst + i) = 0x3f;
 		}
 		dst += WATER_TEX_WIDTH;
 	}
 }
 
-static void makeRipples(unsigned char *buff, int t)
+static void makeRipples(unsigned char* buff, int t)
 {
 	ScreenPoints* sp = getObjectScreenPoints();
 	Vertex3D* v = sp->v;
@@ -292,7 +295,7 @@ static void moveRain()
 		int x = rainDrops[i].x;
 
 		y -= RAIN_SPEED_Y;
-		if (y < -WATER_FLOOR/8) {
+		if (y < -WATER_FLOOR / 8) {
 			y = (rand() % RAINDROPS_RANGE_Y) + RAINDROPS_HEIGHT_Y;
 		}
 		rainDrops[i].y = y;
@@ -318,11 +321,11 @@ static void runWaterEffect(int t)
 
 		makeRipples(buff1, t);
 
-		#ifdef __WATCOMC__
-				updateWaterAsm5(buff1, buff2, vramOffset);
-		#else
-				updateWater32(buff1, buff2);
-		#endif
+#ifdef __WATCOMC__
+		updateWaterAsm5(buff1, buff2, vramOffset);
+#else
+		updateWater32(buff1, buff2);
+#endif
 
 		swapWaterBuffers();
 
@@ -330,24 +333,26 @@ static void runWaterEffect(int t)
 	}
 }
 
-static void renderBitmapLineX(int u, int du, int texWidth, int length, unsigned char* src, unsigned short *pal, unsigned short* dst)
+static void renderBitmapLineSky(int u, int du, unsigned char* src, unsigned short* pal, unsigned short* dst)
 {
+	int length = FB_WIDTH;
 	while (length-- > 0) {
-		int tu = (u >> FP_SCALE) & (texWidth - 1);
+		int tu = (u >> FP_SCALE) & (CLOUD_TEX_WIDTH - 1);
 		*dst++ = pal[src[tu]];
 		u += du;
 	};
 }
 
-static void renderBitmapLineX2(int u, int du, int texWidth1, int texWidth2, int length, unsigned char* src1, unsigned char* src2, unsigned short* pal, unsigned short* dst)
+static void renderBitmapLineWater(int u, int du, unsigned char* src1, unsigned char* src2, unsigned short* pal, unsigned short* dst)
 {
+	int length = FB_WIDTH;
 	while (length-- > 0) {
 		int tu = u >> FP_SCALE;
-		int tu1 = tu & (texWidth1 - 1);
+		int tu1 = tu & (WATER_TEX_WIDTH - 1);
 		int wat0 = src1[tu1];
-		int wat1 = src1[(tu1 + 2) & (texWidth1 - 1)];
+		int wat1 = src1[(tu1 + 2) & (WATER_TEX_WIDTH - 1)];
 		int dx = (wat1 - wat0) << 1;
-		int tu2 = (tu + dx) & (texWidth2 - 1);
+		int tu2 = (tu + dx) & (CLOUD_TEX_WIDTH - 1);
 		*dst++ = pal[src1[tu1] + (src2[tu2] >> 2)];
 		u += du;
 	};
@@ -361,9 +366,9 @@ static void blendClouds(int t)
 	for (y = 0; y < CLOUD_TEX_HEIGHT; ++y) {
 		int v1 = (y + t) & (CLOUD_TEX_HEIGHT - 1);
 		int v2 = (y + t * 2) & (CLOUD_TEX_HEIGHT - 1);
-		unsigned int *src1 = (unsigned int*)&cloudTex[v1 * CLOUD_TEX_WIDTH];
-		unsigned int *src2 = (unsigned int*)&cloudTex[v2 * CLOUD_TEX_WIDTH];
-		for (x = 0; x < CLOUD_TEX_WIDTH/4; ++x) {
+		unsigned int* src1 = (unsigned int*)&cloudTex[v1 * CLOUD_TEX_WIDTH];
+		unsigned int* src2 = (unsigned int*)&cloudTex[v2 * CLOUD_TEX_WIDTH];
+		for (x = 0; x < CLOUD_TEX_WIDTH / 4; ++x) {
 			*dst++ = *src1++ + *src2++;
 		}
 	}
@@ -373,8 +378,8 @@ static void testBlitCloudTex()
 {
 	unsigned short* dst = (unsigned short*)fb_pixels;
 	int y;
-	for (y = 0; y < FB_HEIGHT/2; ++y) {
-		unsigned char *src;
+	for (y = 0; y < FB_HEIGHT / 2; ++y) {
+		unsigned char* src;
 		int z, u, v, du;
 		int palNum = (CLOUD_SHADES * y) / (FB_HEIGHT / 2);
 
@@ -388,8 +393,8 @@ static void testBlitCloudTex()
 		v = (z >> 8) & (CLOUD_TEX_HEIGHT - 1);
 		src = &skyTex[v * CLOUD_TEX_WIDTH];
 
-		CLAMP(palNum, 0, CLOUD_SHADES-1)
-		renderBitmapLineX(u, du, CLOUD_TEX_WIDTH, FB_WIDTH, src, cloudPal[palNum], dst);
+		CLAMP(palNum, 0, CLOUD_SHADES - 1)
+			renderBitmapLineSky(u, du, src, cloudPal[palNum], dst);
 
 		dst += FB_WIDTH;
 	}
@@ -421,7 +426,7 @@ static void testBlitCloudWater()
 		src = &waterTex[v1 * WATER_TEX_WIDTH];
 
 		CLAMP(palNum, 0, WATER_SHADES - 1)
-		renderBitmapLineX2(u, du, WATER_TEX_WIDTH, CLOUD_TEX_WIDTH, FB_WIDTH, src, &skyTex[v2 * CLOUD_TEX_WIDTH], waterPal[palNum], dst);
+			renderBitmapLineWater(u, du, src, &skyTex[v2 * CLOUD_TEX_WIDTH], waterPal[palNum], dst);
 	}
 }
 
@@ -438,7 +443,7 @@ static void drawRain(int zRangeMin, int zRangeMax)
 			v1.xs = (x * PROJ_MUL) / z + FB_WIDTH / 2;
 			v1.ys = FB_HEIGHT / 2 - (y * PROJ_MUL) / z;
 			v2.xs = v1.xs + 1;
-			v2.ys = FB_HEIGHT / 2 - ((y + 2*RAIN_SPEED_Y) * PROJ_MUL) / z;
+			v2.ys = FB_HEIGHT / 2 - ((y + 2 * RAIN_SPEED_Y) * PROJ_MUL) / z;
 
 			drawAntialiasedLine16bpp(&v1, &v2, 4 + ((z - RAINDROPS_DIST) >> 9), fb_pixels);
 		}
@@ -449,12 +454,13 @@ static void sceneRunFlower(int t)
 {
 	int xp = (int)(sin((float)t / 512.0f) * 144);
 	int yp = (int)(sin((float)t / 384.0f) * 64 - 32);
-	int zp = (int)(sin((float)t / 1024.0f) * 160);
+	int zp = (int)(sin((float)t / 1024.0f) * 128);
 
 	clearZbuffer();
 
 	setObjectPos(xp, yp, 512 + zp, &objFlower);
-	setObjectRot(t, 2*t, 3*t, &objFlower);
+	/* setObjectPos(0, 0, 320, &objFlower); */
+	setObjectRot(t, 2 * t, 3 * t, &objFlower);
 
 	transformObject3D(&objFlower);
 	renderObject3D(&objFlower);
@@ -465,11 +471,12 @@ static void draw(void)
 	const int t = time_msec - startingTime;
 	const int frontRainZ = objFlower.pos.z;
 
+	/* memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2); */
+
 	runWaterEffect(t);
 
 	blendClouds(t >> 5);
 	testBlitCloudTex();
-
 	testBlitCloudWater();
 
 	drawRain(frontRainZ, 16384);

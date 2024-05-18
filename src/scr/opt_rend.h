@@ -6,6 +6,12 @@
 #define CLAMP(v,a,b) if (v < a) v = a; if (v > b) v = b;
 #define CLAMP01(v) if (v < 0.0f) v = 0.0f; if (v > 1.0f) v = 1.0f;
 
+enum {
+	OPT_RAST_FLAT, 
+	OPT_RAST_GOURAUD, 
+	OPT_RAST_GOURAUD_CLIP_Y,
+	OPT_RAST_TEXTURED_CLIP_Y
+};
 
 typedef struct BlobData
 {
@@ -33,6 +39,7 @@ void renderPolygons(Object3D* obj, Vertex3D* screenVertices);
 void clearZbuffer();
 unsigned short* getZbuffer();
 
+void setRenderingMode(int mode);
 void setClipValY(int y);
 
 #endif

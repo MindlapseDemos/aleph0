@@ -37,7 +37,6 @@ void setPalGradient(int c0, int c1, int r0, int g0, int b0, int r1, int g1, int 
 void renderPolygons(Object3D* obj, Vertex3D* screenVertices);
 
 void clearZbuffer();
-unsigned short* getZbuffer();
 
 void setRenderingMode(int mode);
 void setClipValY(int y);

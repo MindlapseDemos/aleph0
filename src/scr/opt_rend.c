@@ -62,11 +62,6 @@ static uint16_t polyColor = 0xffff;
 
 static unsigned short* zBuffer;
 
-unsigned short* getZbuffer()
-{
-	return zBuffer;
-}
-
 void clearZbuffer()
 {
 	#ifdef ZBUFFER_ON
@@ -180,14 +175,14 @@ static void drawEdgeGouraudClipY(int ys, int dx)
 	const int c1 = r->c;
 	const int y0 = l->y;
 	const int y1 = r->y;
-	const int z0 = l->z;
-	const int z1 = r->z;
 
-	uint16_t* vram = fb_pixels + ys * FB_WIDTH + xs0;
-
+	const int offset = ys * FB_WIDTH + xs0;
 	#ifdef ZBUFFER_ON
-		unsigned short* zBuff = zBuffer + ys * FB_WIDTH + xs0;
+		const int z0 = l->z;
+		const int z1 = r->z;
+		unsigned short* zBuff = zBuffer + offset;
 	#endif
+	uint16_t* vram = fb_pixels + offset;
 
 	int c = INT_TO_FIXED(c0, FP_RAST);
 	const int dc = (INT_TO_FIXED(c1 - c0, FP_RAST) / dx);
@@ -202,13 +197,13 @@ static void drawEdgeGouraudClipY(int ys, int dx)
 
 	int x;
 	for (x = xs0; x < xs1; x++) {
-		const int cc = FIXED_TO_INT(c, FP_RAST);
-		const int b = cc >> (3 + B_OVER_SHIFT);
-
 	#ifdef ZBUFFER_ON
 		const unsigned short zz = (unsigned short)(FIXED_TO_INT(z, FP_RAST));
 		if (zz < *zBuff) {
 	#endif
+			const int cc = FIXED_TO_INT(c, FP_RAST);
+			const int b = cc >> (3 + B_OVER_SHIFT);
+
 			const int yy = FIXED_TO_INT(y, FP_RAST);
 			/* yy is not perspective correct so expect some weirdness between the triangle edges but with more smaller polygons it might be unoticable */
 			if (yy >= clipValY) {
@@ -222,8 +217,8 @@ static void drawEdgeGouraudClipY(int ys, int dx)
 	#ifdef ZBUFFER_ON
 			*zBuff = zz;
 		}
-		zBuff++;
 		z += dz;
+		zBuff++;
 	#endif
 		vram++;
 		c += dc;

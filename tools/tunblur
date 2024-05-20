@@ -1,0 +1,25 @@
+#!/bin/sh
+
+infile=$1
+outfile=$2
+blur1=5
+blur2=15
+blur3=30
+
+if [ -z "$infile" ]; then
+	echo 'specify input texture' >&2
+	exit 1
+fi
+if [ -z "$outfile" ]; then
+	echo 'specify destination' >&2
+	exit 1
+fi
+
+convert $infile -virtual-pixel Tile -motion-blur 0x$blur1+270 /tmp/tunblur1.png
+convert $infile -virtual-pixel Tile -motion-blur 0x$blur2+270 /tmp/tunblur2.png
+convert $infile -virtual-pixel Tile -motion-blur 0x$blur3+270 /tmp/tunblur3.png
+
+convert $infile /tmp/tunblur1.png /tmp/tunblur2.png /tmp/tunblur3.png -append \
+	-colors 256 -dither FloydSteinberg png8:$outfile
+
+rm -f /tmp/tunblur1.png /tmp/tunblur2.png /tmp/tunblur3.png

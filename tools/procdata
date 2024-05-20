@@ -43,5 +43,12 @@ if [ ! -f data/3dzoom/techroom.g3d -o data/src/3dzoom/techroom.obj -nt data/3dzo
 	fi
 fi
 
-# convert random source assets
-#convert data/src/tunnel.png -resize 256 data/tunnel.png
+# create pre-blurred 256c tunnel texture
+for i in 1 2 3; do
+	infile=data/src/tunnel$i.png
+	outfile=data/tunnel$i.png
+	if [ ! -f $outfile -o $infile -nt $outfile -o tools/tunblur -nt $outfile ]; then
+		echo "pre-blur tunnel texture: $infile -> $outfile"
+		tools/tunblur $infile $outfile
+	fi
+done

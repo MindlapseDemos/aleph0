@@ -7,6 +7,7 @@
 #include "demo.h"
 #include "screen.h"
 #include "gfxutil.h"
+#include "util.h"
 
 #ifndef M_PI
 #define M_PI	3.1415926535
@@ -16,6 +17,7 @@
 
 #define TEX_USCALE	3
 #define TEX_VSCALE	1
+#undef ROTATE
 
 /* TODO: with the new texture, try purple fog, dstar used rgb 20,0,29 */
 
@@ -24,8 +26,9 @@ static void destroy(void);
 static void start(long trans_time);
 static void stop(long trans_time);
 static void draw(void);
+static void keypress(int key);
 
-static void draw_tunnel_range(unsigned short *pixels, int xoffs, int yoffs, int starty, int num_lines, long tm);
+static void draw_tunnel_range(unsigned short *pixels, int xoffs, int yoffs, int starty, int num_lines);
 static int gen_tables(void);
 static int gen_colormaps(struct img_pixmap *pixmap);
 static int count_bits(unsigned int x);
@@ -37,7 +40,8 @@ static struct screen scr = {
 	destroy,
 	start,
 	stop,
-	draw
+	draw,
+	keypress
 };
 
 #define NUM_TUNPAL		16
@@ -48,13 +52,19 @@ static unsigned int *tunnel_map;
 static unsigned char *tunnel_fog;
 
 static int tex_xsz, tex_ysz;
-static unsigned char *tex_pixels;
+static unsigned char *tex_pixels, *tex_pixels_curblur;
 static uint16_t tunnel_cmap[NUM_TUNPAL][256];
 static int tex_xshift, tex_yshift;
 static unsigned int tex_xmask, tex_ymask;
 
 static long trans_start, trans_dur;
 static int trans_dir;
+
+static int blurlevel, nextblur;
+static float tunpos, tunspeed, nextspeed;
+static long accel_start;
+
+static const float speedtab[] = {100.0f, 300.0f, 500.0f, 800.0f};
 
 
 struct screen *tunnel_screen(void)
@@ -80,11 +90,11 @@ static int init(void)
 	}
 
 	img_init(&pixmap);
-	if(img_load(&pixmap, "data/tunnel.png") == -1) {
+	if(img_load(&pixmap, "data/tunnel2.png") == -1) {
 		fprintf(stderr, "failed to load tunnel image\n");
 		return -1;
 	}
-	tex_pixels = pixmap.pixels;
+	tex_pixels = tex_pixels_curblur = pixmap.pixels;
 	tex_xsz = pixmap.width;
 	tex_ysz = pixmap.height;
 
@@ -103,11 +113,16 @@ static int init(void)
 	}
 	tex_xshift = n;
 
+	/*
 	n = count_zeros(tex_ysz);
 	for(i=0; i<n; i++) {
 		tex_ymask |= 1 << i;
 	}
 	tex_yshift = n;
+	*/
+
+	tex_ymask = tex_xmask;
+	tex_yshift = tex_xshift;
 
 	if(gen_colormaps(&pixmap) == -1) {
 		return -1;
@@ -130,6 +145,10 @@ static void start(long trans_time)
 		trans_dur = trans_time;
 		trans_dir = 1;
 	}
+
+	tunpos = 0;
+	blurlevel = nextblur = 0;
+	tunspeed = nextspeed = speedtab[0];
 }
 
 static void stop(long trans_time)
@@ -142,13 +161,18 @@ static void stop(long trans_time)
 }
 
 #define NUM_WORK_ITEMS	8
+#define ACCEL_DUR	1000
+static int draw_lines, num_lines;
+static int xoffs, yoffs;
+static long toffs;
 
-static void draw(void)
+static void update(float tsec, float dt)
 {
-	int i, num_lines = ysz / NUM_WORK_ITEMS;
-	int draw_lines = num_lines;
-	float t;
-	int xoffs, yoffs;
+	int i;
+	float t, curspeed;
+
+	num_lines = ysz / NUM_WORK_ITEMS;
+	draw_lines = num_lines;
 
 	if(trans_dir) {
 		long interval = time_msec - trans_start;
@@ -163,15 +187,50 @@ static void draw(void)
 		}
 	}
 
-	t = time_msec / 10000.0;
-	xoffs = (int)(cos(t * 3.0) * pan_width / 2) + pan_width / 2;
-	yoffs = (int)(sin(t * 4.0) * pan_height / 2) + pan_height / 2;
+	xoffs = (int)(cos(tsec * 0.3) * pan_width / 2) + pan_width / 2;
+	yoffs = (int)(sin(tsec * 0.4) * pan_height / 2) + pan_height / 2;
+
+	if(tunspeed != nextspeed) {
+		if(time_msec < accel_start + ACCEL_DUR) {
+			t = (float)(time_msec - accel_start) / (float)ACCEL_DUR;
+			curspeed = tunspeed + (nextspeed - tunspeed) * t;
+			if(blurlevel != nextblur && t > 0.5f) {
+				blurlevel = nextblur;
+				tex_pixels_curblur = tex_pixels + tex_xsz * tex_xsz * blurlevel;
+			}
+			/*printf("speed: %f\n", curspeed);*/
+		} else {
+			tunspeed = nextspeed;
+			/*printf("speed: %f\n", nextspeed);*/
+			goto samespeed;
+		}
+	} else {
+samespeed:
+		curspeed = tunspeed;
+	}
+
+	tunpos += curspeed * dt;
+	toffs = cround64(tunpos);
+}
+
+static void draw(void)
+{
+	static float prev_upd;
+	float tsec, dt;
+	int i, num_lines = ysz / NUM_WORK_ITEMS;
+	int draw_lines = num_lines;
+
+	tsec = time_msec / 1000.0f;
+	dt = tsec - prev_upd;
+	prev_upd = tsec;
+
+	update(tsec, dt);
 
 	for(i=0; i<NUM_WORK_ITEMS; i++) {
 		int starty = i * num_lines;
 		int resty = starty + draw_lines;
 		int rest_lines = num_lines - draw_lines;
-		draw_tunnel_range(fb_pixels, xoffs, yoffs, starty, draw_lines, time_msec);
+		draw_tunnel_range(fb_pixels, xoffs, yoffs, starty, draw_lines);
 		if(rest_lines) {
 			memset(fb_pixels + resty * FB_WIDTH, 0, rest_lines * FB_WIDTH * 2);
 		}
@@ -180,30 +239,45 @@ static void draw(void)
 	swap_buffers(0);
 }
 
-static uint16_t tunnel_color(long toffs, unsigned int tpacked, int fog)
+static void keypress(int key)
+{
+	switch(key) {
+	case ' ':
+		nextblur = (blurlevel + 1) & 3;
+		nextspeed = speedtab[nextblur];
+		accel_start = time_msec;
+		break;
+
+	default:
+		break;
+	}
+}
+
+static uint16_t tunnel_color(long toffs, long roffs, unsigned int tpacked, int fog)
 {
 	int r, g, b;
 	unsigned char texel;
 	uint16_t color;
 	unsigned int tx = (((tpacked >> 16) & 0xffff) << tex_xshift) >> 16;
 	unsigned int ty = ((tpacked & 0xffff) << tex_yshift) >> 16;
-	tx += toffs;
-	ty += toffs << 1;
+#ifdef ROTATE
+	tx += roffs;
+#endif
+	ty += toffs;
 
 	tx &= tex_xmask;
 	ty &= tex_ymask;
 
-	texel = tex_pixels[(ty << tex_xshift) + tx];
+	texel = tex_pixels_curblur[(ty << tex_xshift) + tx];
 	return tunnel_cmap[fog >> 4][texel];	/* assumes NUM_TUNPAL == 16 */
 }
 
-static void draw_tunnel_range(unsigned short *pix, int xoffs, int yoffs, int starty, int num_lines, long tm)
+static void draw_tunnel_range(unsigned short *pix, int xoffs, int yoffs, int starty, int num_lines)
 {
 	int i, j;
 	unsigned int *tmap = tunnel_map + (starty + yoffs) * vxsz + xoffs;
 	unsigned char *fog = tunnel_fog + (starty + yoffs) * vxsz + xoffs;
 
-	long toffs = tm / 8;
 	unsigned int *pixels = (unsigned int*)pix + starty * (FB_WIDTH >> 1);
 
 	for(i=0; i<num_lines; i++) {
@@ -211,8 +285,8 @@ static void draw_tunnel_range(unsigned short *pix, int xoffs, int yoffs, int sta
 			unsigned int col;
 			int r, g, b, idx = j << 1;
 
-			col = tunnel_color(toffs, tmap[idx], fog[idx]);
-			col |= (unsigned int)tunnel_color(toffs, tmap[idx + 1], fog[idx + 1]) << 16;
+			col = tunnel_color(toffs, 0, tmap[idx], fog[idx]);
+			col |= (unsigned int)tunnel_color(toffs, 0, tmap[idx + 1], fog[idx + 1]) << 16;
 			*pixels++ = col;
 		}
 		tmap += vxsz;

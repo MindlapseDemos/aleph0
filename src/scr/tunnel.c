@@ -217,8 +217,7 @@ static void draw(void)
 {
 	static float prev_upd;
 	float tsec, dt;
-	int i, num_lines = ysz / NUM_WORK_ITEMS;
-	int draw_lines = num_lines;
+	int i;
 
 	tsec = time_msec / 1000.0f;
 	dt = tsec - prev_upd;

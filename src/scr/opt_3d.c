@@ -803,14 +803,32 @@ static void rotateVertexNormals(Object3D* obj)
 
 void transformObject3D(Object3D* obj)
 {
+	const int renderingMode = getRenderingMode();
+
 	rotateVertices(obj->mesh->vertex, screenPointsObject.v, obj->mesh->verticesNum, obj->rot.x, obj->rot.y, obj->rot.z);
 	translateAndProjectVertices(screenPointsObject.v, screenPointsObject.v, obj->mesh->verticesNum, obj->pos.x, obj->pos.y, obj->pos.z);
 
-	/* setVerticesMaterial(obj); */
-	/* calcVertexLights(obj); */
+	switch(renderingMode) {
+		case OPT_RAST_FLAT:
+			setVerticesMaterial(obj);
+		break;
 
-	rotateVertexNormals(obj);
-	calculateVertexEnvmapTC(obj);
+		case OPT_RAST_GOURAUD:
+		case OPT_RAST_GOURAUD_CLIP_Y:
+			calcVertexLights(obj);
+		break;
+
+		case OPT_RAST_TEXTURED_CLIP_Y:
+			rotateVertexNormals(obj);
+			calculateVertexEnvmapTC(obj);
+		break;
+
+		case OPT_RAST_TEXTURED_GOURAUD_CLIP_Y:
+			calcVertexLights(obj);
+			rotateVertexNormals(obj);
+			calculateVertexEnvmapTC(obj);
+		break;
+	}
 
 	screenPointsObject.num = obj->mesh->verticesNum;
 }

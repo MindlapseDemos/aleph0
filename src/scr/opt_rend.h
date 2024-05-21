@@ -10,7 +10,8 @@ enum {
 	OPT_RAST_FLAT, 
 	OPT_RAST_GOURAUD, 
 	OPT_RAST_GOURAUD_CLIP_Y,
-	OPT_RAST_TEXTURED_CLIP_Y
+	OPT_RAST_TEXTURED_CLIP_Y,
+	OPT_RAST_TEXTURED_GOURAUD_CLIP_Y
 };
 
 typedef struct BlobData
@@ -41,6 +42,7 @@ void renderPolygons(Object3D* obj, Vertex3D* screenVertices);
 void clearZbuffer();
 
 void setRenderingMode(int mode);
+int getRenderingMode();
 void setClipValY(int y);
 
 #endif

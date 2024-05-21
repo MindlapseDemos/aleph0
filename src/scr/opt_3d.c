@@ -133,6 +133,25 @@ static void MulManyVec3Mat33(Vertex3D *dst, Vertex3D *src, int *m, int count)
 	}
 }
 
+/* MulManyVec3Mat33 above should take a simpler Vector3D and not the full Vertex3D (bad design decision) but I need to refactor some structs around, so I'll duplicate for now and refactor later */
+static void MulManyVec3Mat33_VecEdition(Vector3D* dst, Vector3D* src, int* m, int count)
+{
+	int i;
+	for (i = 0; i < count; ++i)
+	{
+		const int x = src->x;
+		const int y = src->y;
+		const int z = src->z;
+
+		dst->x = AFTER_MUL_ADDS(x * m[0] + y * m[3] + z * m[6], (FP_CORE + 3));	/* many hacks here like + 3, need fix */
+		dst->y = AFTER_MUL_ADDS(x * m[1] + y * m[4] + z * m[7], (FP_CORE + 3));
+		dst->z = AFTER_MUL_ADDS(x * m[2] + y * m[5] + z * m[8], (FP_CORE + 3));
+
+		++src;
+		++dst;
+	}
+}
+
 static void translateAndProjectVertices(Vertex3D *src, Vertex3D *dst, int count, int posX, int posY, int posZ)
 {
 	int i;
@@ -751,13 +770,47 @@ static void calcVertexLights(Object3D* obj)
 	} while (--count > 0);
 }
 
+static void calculateVertexEnvmapTC(Object3D* obj)
+{
+	int count = obj->mesh->verticesNum;
+
+	/* Texture* tex = &mesh->tex[0]; */
+	const int texWidth = 256;	/* hack values for now */
+	const int texHeight = 256; /* I don't have tex info yet */
+
+	const int texWidthHalf = texWidth >> 1;
+	const int texHeightHalf = texHeight >> 1;
+	const int wShiftHalf = FP_NORM - 8 + 1;	/* 8bits for 256 */
+	const int hShiftHalf = FP_NORM - 8 + 1; /* hack values for now */
+
+	Vector3D* vNormal = screenPointsObject.vNormals;
+	Vertex3D* dst = screenPointsObject.v;
+	do {
+		if (vNormal->z != 0) {
+			dst->u = ((vNormal->x >> wShiftHalf) + texWidthHalf) & (texWidth - 1);
+			dst->v = ((vNormal->y >> hShiftHalf) + texHeightHalf) & (texHeight - 1);
+		}
+
+		++dst;
+		++vNormal;
+	} while (--count > 0);
+}
+
+static void rotateVertexNormals(Object3D* obj)
+{
+	MulManyVec3Mat33_VecEdition(screenPointsObject.vNormals, obj->mesh->vNormal, rotMat, obj->mesh->verticesNum);
+}
+
 void transformObject3D(Object3D* obj)
 {
 	rotateVertices(obj->mesh->vertex, screenPointsObject.v, obj->mesh->verticesNum, obj->rot.x, obj->rot.y, obj->rot.z);
 	translateAndProjectVertices(screenPointsObject.v, screenPointsObject.v, obj->mesh->verticesNum, obj->pos.x, obj->pos.y, obj->pos.z);
 
 	/* setVerticesMaterial(obj); */
-	calcVertexLights(obj);
+	/* calcVertexLights(obj); */
+
+	rotateVertexNormals(obj);
+	calculateVertexEnvmapTC(obj);
 
 	screenPointsObject.num = obj->mesh->verticesNum;
 }
@@ -776,6 +829,7 @@ ScreenPoints* getObjectScreenPoints()
 void initOptEngine(int maxPoints)
 {
 	screenPointsObject.v = (Vertex3D*)malloc(maxPoints * sizeof(Vertex3D));
+	screenPointsObject.vNormals = (Vector3D*)malloc(maxPoints * sizeof(Vector3D));
 
 	initOptRasterizer();
 }
@@ -783,6 +837,7 @@ void initOptEngine(int maxPoints)
 void freeOptEngine()
 {
 	free(screenPointsObject.v);
+	free(screenPointsObject.vNormals);
 
 	freeOptRasterizer();
 }

@@ -34,6 +34,8 @@ void drawAntialiasedLine8bpp(Vertex3D *v1, Vertex3D *v2, int shadeShift, unsigne
 void drawAntialiasedLine16bpp(Vertex3D* v1, Vertex3D* v2, int shadeShift, unsigned short* vram);
 
 void setPalGradient(int c0, int c1, int r0, int g0, int b0, int r1, int g1, int b1, unsigned short* pal);
+void setMainTexture(int width, int height, unsigned char* texData);
+
 void renderPolygons(Object3D* obj, Vertex3D* screenVertices);
 
 void clearZbuffer();

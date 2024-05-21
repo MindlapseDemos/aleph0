@@ -53,6 +53,7 @@ typedef struct Element
 typedef struct ScreenPoints
 {
 	Vertex3D *v;
+	Vector3D* vNormals;
 	int num;
 }ScreenPoints;
 

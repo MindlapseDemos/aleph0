@@ -140,6 +140,8 @@ static void initCloudTex()
 			*pal++ = PACK_RGB16(r, g, b);
 		}
 	}
+
+	setMainTexture(CLOUD_TEX_WIDTH, CLOUD_TEX_HEIGHT, cloudTex);
 }
 
 static void initRainDrops()
@@ -191,7 +193,7 @@ static int init(void)
 	initOptEngine(MAX_OBJ_VERTS);
 	initObjects();
 
-	setRenderingMode(OPT_RAST_GOURAUD_CLIP_Y);
+	setRenderingMode(OPT_RAST_TEXTURED_CLIP_Y);
 
 	return 0;
 }
@@ -458,8 +460,8 @@ static void sceneRunFlower(int t)
 
 	clearZbuffer();
 
-	setObjectPos(xp, yp, 512 + zp, &objFlower);
-	/* setObjectPos(0, 0, 256, &objFlower); */
+	/* setObjectPos(xp, yp, 512 + zp, &objFlower); */
+	setObjectPos(0, -32, 384, &objFlower);
 	setObjectRot(t, 2 * t, 3 * t, &objFlower);
 
 	transformObject3D(&objFlower);

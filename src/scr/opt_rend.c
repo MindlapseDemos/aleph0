@@ -60,13 +60,25 @@ static void prepareEdgeListTexturedClipY(Vertex3D* v0, Vertex3D* v1);
 
 static uint16_t polyColor = 0xffff;
 
+static int texWidth = 256;
+static int texHeight = 256;
+static unsigned char* texBmp;
+
 static unsigned short* zBuffer;
+
 
 void clearZbuffer()
 {
 	#ifdef ZBUFFER_ON
 		memset(zBuffer, 255, FB_WIDTH * FB_HEIGHT * sizeof(unsigned short));
 	#endif
+}
+
+void setMainTexture(int width, int height, unsigned char *texData)
+{
+	texWidth = width;
+	texHeight = height;
+	texBmp = texData;
 }
 
 void setRenderingMode(int mode)
@@ -258,15 +270,15 @@ static void drawEdgeTexturedClipY(int ys, int dx)
 
 	int x;
 	for (x = xs0; x < xs1; x++) {
-		const int uu = FIXED_TO_INT(u, FP_RAST);
-		const int vv = FIXED_TO_INT(v, FP_RAST);
-		const int cc = 1233456; /* TODO: mainTexture[(vv & (texHeight - 1)) * texWidth + (uu & (texWidth - 1))]; */
-		const int r = cc >> 3;
-		const int g = cc >> 2;
-		const int b = cc >> 3;
-
 		const unsigned short zz = (unsigned short)(FIXED_TO_INT(z, FP_RAST));
 		if (zz < *zBuff) {
+			const int uu = FIXED_TO_INT(u, FP_RAST);
+			const int vv = FIXED_TO_INT(v, FP_RAST);
+			const int cc = texBmp[(vv & (texHeight - 1)) * texWidth + (uu & (texWidth - 1))];
+			const int r = cc >> 0;
+			const int g = cc >> 2;
+			const int b = cc >> 2;
+
 			const int yy = FIXED_TO_INT(y, FP_RAST);
 			/* yy is not perspective correct so expect some weirdness between the triangle edges but with more smaller polygons it might be unoticable */
 			if (yy >= clipValY) {

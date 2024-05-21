@@ -43,6 +43,23 @@ if [ ! -f data/3dzoom/techroom.g3d -o data/src/3dzoom/techroom.obj -nt data/3dzo
 	fi
 fi
 
+# generate curved tunnel multi-lut!
+#if [ ! -f tools/tungen ]; then
+#	if ! cc -o tools/tungen -O3 -fopenmp tools/tungen.c -lm -lgomp -lpthread; then
+#		echo "failed to build tunnel LUT generator" >&2
+#		exit 1
+#	fi
+#fi
+#tunlut=data/tunnel.lut
+#if [ ! -f $tunlut -o $0 -nt $tunlut ]; then
+#	curve_frames=32
+#	curve_dist=533
+#	#size=`awk '/define VSCALE/ { print $3 * 320 "x" $3 * 240 }' src/scr/tunnel.c`
+#	size=320x240
+#	echo "generating tunnel LUT: $size, $curve_frames frames ..."
+#	tools/tungen -s $size -y -c $curve_dist -n $curve_frames >$tunlut
+#fi
+
 # create pre-blurred 256c tunnel texture
 for i in 1 2 3; do
 	infile=data/src/tunnel$i.png

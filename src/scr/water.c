@@ -452,6 +452,8 @@ static void drawRain(int zRangeMin, int zRangeMax)
 	}
 }
 
+#define PAUSE_FOR_PERFORMANCE_TEST
+
 static void sceneRunFlower(int t)
 {
 	int xp = (int)(sin((float)t / 512.0f) * 128);
@@ -459,9 +461,14 @@ static void sceneRunFlower(int t)
 	int zp = (int)(sin((float)t / 1024.0f) * 160);
 
 	clearZbuffer();
-
+	/* 19-21 */
+#ifdef PAUSE_FOR_PERFORMANCE_TEST
+	t = 1536;
+	setObjectPos(0, 16, 384, &objFlower);
+#else
 	setObjectPos(xp, yp, 512 + zp, &objFlower);
-	//setObjectPos(0, -32, 384, &objFlower);
+#endif
+
 	setObjectRot(t, 2 * t, 3 * t, &objFlower);
 
 	transformObject3D(&objFlower);
@@ -473,8 +480,10 @@ static void draw(void)
 	const int t = time_msec - startingTime;
 	const int frontRainZ = objFlower.pos.z;
 
-	/* memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2); */
-
+#ifdef PAUSE_FOR_PERFORMANCE_TEST
+	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
+	sceneRunFlower(t);
+#else
 	runWaterEffect(t);
 
 	blendClouds(t >> 5);
@@ -484,6 +493,7 @@ static void draw(void)
 	drawRain(frontRainZ, 16384);
 	sceneRunFlower(t);
 	drawRain(0, frontRainZ);
+#endif
 
 	swap_buffers(0);
 }

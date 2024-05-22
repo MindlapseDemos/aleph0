@@ -813,14 +813,8 @@ void transformObject3D(Object3D* obj)
 			setVerticesMaterial(obj);
 		break;
 
-		case OPT_RAST_GOURAUD:
 		case OPT_RAST_GOURAUD_CLIP_Y:
 			calcVertexLights(obj);
-		break;
-
-		case OPT_RAST_TEXTURED_CLIP_Y:
-			rotateVertexNormals(obj);
-			calculateVertexEnvmapTC(obj);
 		break;
 
 		case OPT_RAST_TEXTURED_GOURAUD_CLIP_Y:

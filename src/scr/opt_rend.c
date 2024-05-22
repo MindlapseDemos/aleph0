@@ -38,24 +38,30 @@ typedef struct Edge
 	int c, u, v;
 }Edge;
 
+typedef struct Gradients
+{
+	int dx, dy, dz;
+	int dc, du, dv;
+}Gradients;
+
+
 static Edge* leftEdge = 0;
 static Edge* rightEdge = 0;
 
 static int edgeYmin = 0;
 static int edgeYmax = 0;
 
+static Gradients grads;
+
+
 static void(*drawEdge)(int, int);
 static void drawEdgeFlat(int y, int dx);
-static void drawEdgeGouraud(int y, int dx);
 static void drawEdgeGouraudClipY(int y, int dx);
-static void drawEdgeTexturedClipY(int y, int dx);
 static void drawEdgeTexturedGouraudClipY(int y, int dx);
 
 static void (*prepareEdgeList)(Vertex3D*, Vertex3D*);
 static void prepareEdgeListFlat(Vertex3D* v0, Vertex3D* v1);
-static void prepareEdgeListGouraud(Vertex3D* v0, Vertex3D* v1);
 static void prepareEdgeListGouraudClipY(Vertex3D* v0, Vertex3D* v1);
-static void prepareEdgeListTexturedClipY(Vertex3D* v0, Vertex3D* v1);
 static void prepareEdgeListTexturedGouraudClipY(Vertex3D* v0, Vertex3D* v1);
 
 static int renderingMode;
@@ -89,19 +95,9 @@ void setRenderingMode(int mode)
 			drawEdge = drawEdgeFlat;
 		break;
 
-		case OPT_RAST_GOURAUD:
-			prepareEdgeList = prepareEdgeListGouraud;
-			drawEdge = drawEdgeGouraud;
-		break;
-
 		case OPT_RAST_GOURAUD_CLIP_Y:
 			prepareEdgeList = prepareEdgeListGouraudClipY;
 			drawEdge = drawEdgeGouraudClipY;
-		break;
-
-		case OPT_RAST_TEXTURED_CLIP_Y:
-			prepareEdgeList = prepareEdgeListTexturedClipY;
-			drawEdge = drawEdgeTexturedClipY;
 		break;
 
 		case OPT_RAST_TEXTURED_GOURAUD_CLIP_Y:
@@ -156,33 +152,6 @@ static void drawEdgeFlat(int ys, int dx)
 	}
 }
 
-static void drawEdgeGouraud(int ys, int dx)
-{
-	const Edge* l = &leftEdge[ys];
-	const Edge* r = &rightEdge[ys];
-
-	const int xs0 = l->xs;
-	const int xs1 = r->xs;
-	const int c0 = l->c;
-	const int c1 = r->c;
-
-	uint16_t* vram = fb_pixels + ys * FB_WIDTH + xs0;
-
-	int c = INT_TO_FIXED(c0, FP_RAST);
-	const int dc = (INT_TO_FIXED(c1 - c0, FP_RAST) / dx);
-
-	int xs;
-	for (xs = xs0; xs < xs1; xs++) {
-		const int cc = FIXED_TO_INT(c, FP_RAST);
-		const int r = cc >> 3;
-		const int g = cc >> (2 + 1);
-		const int b = cc >> (3 + 2);
-
-		*vram++ = (r << 11) | (g << 5) | b;
-		c += dc;
-	}
-}
-
 static void drawEdgeGouraudClipY(int ys, int dx)
 {
 	const Edge* l = &leftEdge[ys];
@@ -201,14 +170,13 @@ static void drawEdgeGouraudClipY(int ys, int dx)
 	unsigned short* zBuff = zBuffer + offset;
 	uint16_t* vram = fb_pixels + offset;
 
+	const int dc = grads.dc;
+	const int dy = grads.dy;
+	const int dz = grads.dz;
+
 	int c = INT_TO_FIXED(c0, FP_RAST);
-	const int dc = (INT_TO_FIXED(c1 - c0, FP_RAST) / dx);
-
 	int y = INT_TO_FIXED(y0, FP_RAST);
-	const int dy = (INT_TO_FIXED(y1 - y0, FP_RAST) / dx);
-
 	int z = INT_TO_FIXED(z0, FP_RAST);
-	const int dz = (INT_TO_FIXED(z1 - z0, FP_RAST) / dx);
 
 	int x;
 	for (x = xs0; x < xs1; x++) {
@@ -235,64 +203,6 @@ static void drawEdgeGouraudClipY(int ys, int dx)
 	}
 }
 
-static void drawEdgeTexturedClipY(int ys, int dx)
-{
-	const Edge* l = &leftEdge[ys];
-	const Edge* r = &rightEdge[ys];
-
-	const int xs0 = l->xs;
-	const int xs1 = r->xs;
-	const int u0 = l->u;
-	const int u1 = r->u;
-	const int v0 = l->v;
-	const int v1 = r->v;
-	const int y0 = l->y;
-	const int y1 = r->y;
-	const int z0 = l->z;
-	const int z1 = r->z;
-
-	uint16_t* vram = fb_pixels + ys * FB_WIDTH + xs0;
-	unsigned short* zBuff = zBuffer + ys * FB_WIDTH + xs0;
-
-	int u = INT_TO_FIXED(u0, FP_RAST);
-	const int du = (INT_TO_FIXED(u1 - u0, FP_RAST) / dx);
-	int v = INT_TO_FIXED(v0, FP_RAST);
-	const int dv = (INT_TO_FIXED(v1 - v0, FP_RAST) / dx);
-
-	int y = INT_TO_FIXED(y0, FP_RAST);
-	const int dy = (INT_TO_FIXED(y1 - y0, FP_RAST) / dx);
-
-	int z = INT_TO_FIXED(z0, FP_RAST);
-	const int dz = (INT_TO_FIXED(z1 - z0, FP_RAST) / dx);
-
-	int x;
-	for (x = xs0; x < xs1; x++) {
-		const unsigned short zz = (unsigned short)(FIXED_TO_INT(z, FP_RAST));
-		if (zz < *zBuff) {
-			const int uu = FIXED_TO_INT(u, FP_RAST);
-			const int vv = FIXED_TO_INT(v, FP_RAST);
-			const int cc = texBmp[(vv & (texHeight - 1)) * texWidth + (uu & (texWidth - 1))];
-			int r = cc >> 0;
-			int g = cc >> 2;
-			int b = cc >> 2;
-
-			const int yy = FIXED_TO_INT(y, FP_RAST);
-			if (yy >= clipValY) {
-				*vram = ((r >> 2) << 11) | ((g >> 0) << 5) | (b >> 1);
-			} else {
-				*vram += (1 + (b >> 3));
-			}
-			*zBuff = zz;
-		}
-		zBuff++;
-		vram++;
-		u += du;
-		v += dv;
-		y += dy;
-		z += dz;
-	}
-}
-
 static void drawEdgeTexturedGouraudClipY(int ys, int dx)
 {
 	const Edge* l = &leftEdge[ys];
@@ -314,19 +224,17 @@ static void drawEdgeTexturedGouraudClipY(int ys, int dx)
 	uint16_t* vram = fb_pixels + ys * FB_WIDTH + xs0;
 	unsigned short* zBuff = zBuffer + ys * FB_WIDTH + xs0;
 
+	const int dc = grads.dc;
+	const int du = grads.du;
+	const int dv = grads.dv;
+	const int dy = grads.dy;
+	const int dz = grads.dz;
+
 	int c = INT_TO_FIXED(c0, FP_RAST);
-	const int dc = (INT_TO_FIXED(c1 - c0, FP_RAST) / dx);
-
 	int u = INT_TO_FIXED(u0, FP_RAST);
-	const int du = (INT_TO_FIXED(u1 - u0, FP_RAST) / dx);
 	int v = INT_TO_FIXED(v0, FP_RAST);
-	const int dv = (INT_TO_FIXED(v1 - v0, FP_RAST) / dx);
-
 	int y = INT_TO_FIXED(y0, FP_RAST);
-	const int dy = (INT_TO_FIXED(y1 - y0, FP_RAST) / dx);
-
 	int z = INT_TO_FIXED(z0, FP_RAST);
-	const int dz = (INT_TO_FIXED(z1 - z0, FP_RAST) / dx);
 
 	int x;
 	for (x = xs0; x < xs1; x++) {
@@ -398,52 +306,6 @@ static void prepareEdgeListFlat(Vertex3D* v0, Vertex3D* v1)
 	}
 }
 
-static void prepareEdgeListGouraud(Vertex3D* v0, Vertex3D* v1)
-{
-	const int yp0 = v0->ys;
-	int yp1 = v1->ys;
-
-	Edge* edgeListToWrite;
-
-	if (yp0 == yp1) return;
-
-	if (yp0 < yp1) {
-		edgeListToWrite = leftEdge;
-	}
-	else {
-		edgeListToWrite = rightEdge;
-		{
-			Vertex3D* vTemp = v0;
-			v0 = v1;
-			v1 = vTemp;
-		}
-	}
-
-	{
-		const int xs0 = v0->xs; const int ys0 = v0->ys;
-		const int xs1 = v1->xs; const int ys1 = v1->ys;
-		const int c0 = v0->c; const int c1 = v1->c;
-
-		const int dys = ys1 - ys0;
-
-		const int dxs = INT_TO_FIXED(xs1 - xs0, FP_RAST) / dys;
-		const int dc = INT_TO_FIXED(c1 - c0, FP_RAST) / dys;
-
-		int xp = INT_TO_FIXED(xs0, FP_RAST);
-		int c = INT_TO_FIXED(c0, FP_RAST);
-		int yp = ys0;
-
-		do {
-			if (yp >= 0 && yp < FB_HEIGHT) {
-				edgeListToWrite[yp].xs = FIXED_TO_INT(xp, FP_RAST);
-				edgeListToWrite[yp].c = FIXED_TO_INT(c, FP_RAST);
-			}
-			xp += dxs;
-			c += dc;
-		} while (yp++ < ys1);
-	}
-}
-
 static void prepareEdgeListGouraudClipY(Vertex3D* v0, Vertex3D* v1)
 {
 	const int yp0 = v0->ys;
@@ -468,116 +330,55 @@ static void prepareEdgeListGouraudClipY(Vertex3D* v0, Vertex3D* v1)
 	{
 		const int xs0 = v0->xs; const int ys0 = v0->ys;
 		const int xs1 = v1->xs; const int ys1 = v1->ys;
-		const int c0 = v0->c; const int c1 = v1->c;
-
 		const int dys = ys1 - ys0;
 
 		const int dxs = INT_TO_FIXED(xs1 - xs0, FP_RAST) / dys;
-		const int dc = INT_TO_FIXED(c1 - c0, FP_RAST) / dys;
-
 		int xp = INT_TO_FIXED(xs0, FP_RAST);
-		int c = INT_TO_FIXED(c0, FP_RAST);
 		int yp = ys0;
 
-		/* Extra interpolant to have 3D y interpolated only used for water floor object collision test */
-		/* If I reuse those functions for other 3D I don't need to interpolate everything, will see how I'll refactor if things get slow (or even code duplicate) */
-		const int y0 = v0->y; const int y1 = v1->y;
-		const int dy = INT_TO_FIXED(y1 - y0, FP_RAST) / dys;
-		int y = INT_TO_FIXED(y0, FP_RAST);
+		if (edgeListToWrite == rightEdge) {
+			do {
+				if (yp >= 0 && yp < FB_HEIGHT) {
+					edgeListToWrite[yp].xs = FIXED_TO_INT(xp, FP_RAST);
+				}
+				xp += dxs;
+			} while (yp++ < ys1);
+		} else {
+			const int c0 = v0->c; const int c1 = v1->c;
 
-		/* for z-buffer */
-		const int z0 = v0->z; const int z1 = v1->z;
-		const int dz = INT_TO_FIXED(z1 - z0, FP_RAST) / dys;
-		int z = INT_TO_FIXED(z0, FP_RAST);
+			const int dc = INT_TO_FIXED(c1 - c0, FP_RAST) / dys;
 
-		do {
-			if (yp >= 0 && yp < FB_HEIGHT) {
-				edgeListToWrite[yp].xs = FIXED_TO_INT(xp, FP_RAST);
-				edgeListToWrite[yp].c = FIXED_TO_INT(c, FP_RAST);
+			int c = INT_TO_FIXED(c0, FP_RAST);
+
+			/* Extra interpolant to have 3D y interpolated only used for water floor object collision test */
+			/* If I reuse those functions for other 3D I don't need to interpolate everything, will see how I'll refactor if things get slow (or even code duplicate) */
+			const int y0 = v0->y; const int y1 = v1->y;
+			const int dy = INT_TO_FIXED(y1 - y0, FP_RAST) / dys;
+			int y = INT_TO_FIXED(y0, FP_RAST);
+
+			/* for z-buffer */
+			const int z0 = v0->z; const int z1 = v1->z;
+			const int dz = INT_TO_FIXED(z1 - z0, FP_RAST) / dys;
+			int z = INT_TO_FIXED(z0, FP_RAST);
+
+			do {
+				if (yp >= 0 && yp < FB_HEIGHT) {
+					edgeListToWrite[yp].xs = FIXED_TO_INT(xp, FP_RAST);
+					edgeListToWrite[yp].c = FIXED_TO_INT(c, FP_RAST);
+
+					/* likewise */
+					edgeListToWrite[yp].y = FIXED_TO_INT(y, FP_RAST);
+					edgeListToWrite[yp].z = FIXED_TO_INT(z, FP_RAST);
+				}
+				xp += dxs;
+				c += dc;
 
 				/* likewise */
-				edgeListToWrite[yp].y = FIXED_TO_INT(y, FP_RAST);
-				edgeListToWrite[yp].z = FIXED_TO_INT(z, FP_RAST);
-			}
-			xp += dxs;
-			c += dc;
+				y += dy;
+				z += dz;
 
-			/* likewise */
-			y += dy;
-			z += dz;
-
-		} while (yp++ < ys1);
-	}
-}
-
-static void prepareEdgeListTexturedClipY(Vertex3D* v0, Vertex3D* v1)
-{
-	const int yp0 = v0->ys;
-	int yp1 = v1->ys;
-
-	Edge* edgeListToWrite;
-
-	if (yp0 == yp1) return;
-
-	if (yp0 < yp1) {
-		edgeListToWrite = leftEdge;
-	}
-	else {
-		edgeListToWrite = rightEdge;
-		{
-			Vertex3D* vTemp = v0;
-			v0 = v1;
-			v1 = vTemp;
+			} while (yp++ < ys1);
 		}
-	}
-
-	{
-		const int xs0 = v0->xs; const int ys0 = v0->ys;
-		const int xs1 = v1->xs; const int ys1 = v1->ys;
-		const int tc_u0 = v0->u; const int tc_u1 = v1->u;
-		const int tc_v0 = v0->v; const int tc_v1 = v1->v;
-
-		const int dys = ys1 - ys0;
-
-		const int dxs = INT_TO_FIXED(xs1 - xs0, FP_RAST) / dys;
-		const int du = INT_TO_FIXED(tc_u1 - tc_u0, FP_RAST) / dys;
-		const int dv = INT_TO_FIXED(tc_v1 - tc_v0, FP_RAST) / dys;
-
-		int xp = INT_TO_FIXED(xs0, FP_RAST);
-		int u = INT_TO_FIXED(tc_u0, FP_RAST);
-		int v = INT_TO_FIXED(tc_v0, FP_RAST);
-		int yp = ys0;
-
-		/* Extra interpolant to have 3D y interpolated only used for water floor object collision test */
-		/* If I reuse those functions for other 3D I don't need to interpolate everything, will see how I'll refactor if things get slow (or even code duplicate) */
-		const int y0 = v0->y; const int y1 = v1->y;
-		const int dy = INT_TO_FIXED(y1 - y0, FP_RAST) / dys;
-		int y = INT_TO_FIXED(y0, FP_RAST);
-
-		/* for z-buffer */
-		const int z0 = v0->z; const int z1 = v1->z;
-		const int dz = INT_TO_FIXED(z1 - z0, FP_RAST) / dys;
-		int z = INT_TO_FIXED(z0, FP_RAST);
-
-		do {
-			if (yp >= 0 && yp < FB_HEIGHT) {
-				edgeListToWrite[yp].xs = FIXED_TO_INT(xp, FP_RAST);
-				edgeListToWrite[yp].u = FIXED_TO_INT(u, FP_RAST);
-				edgeListToWrite[yp].v = FIXED_TO_INT(v, FP_RAST);
-
-				/* likewise */
-				edgeListToWrite[yp].y = FIXED_TO_INT(y, FP_RAST);
-				edgeListToWrite[yp].z = FIXED_TO_INT(z, FP_RAST);
-			}
-			xp += dxs;
-			u += du;
-			v += dv;
-
-			/* likewise */
-			y += dy;
-			z += dz;
-
-		} while (yp++ < ys1);
 	}
 }
 
@@ -605,55 +406,66 @@ static void prepareEdgeListTexturedGouraudClipY(Vertex3D* v0, Vertex3D* v1)
 	{
 		const int xs0 = v0->xs; const int ys0 = v0->ys;
 		const int xs1 = v1->xs; const int ys1 = v1->ys;
-		const int c0 = v0->c; const int c1 = v1->c;
-		const int tc_u0 = v0->u; const int tc_u1 = v1->u;
-		const int tc_v0 = v0->v; const int tc_v1 = v1->v;
-
 		const int dys = ys1 - ys0;
 
 		const int dxs = INT_TO_FIXED(xs1 - xs0, FP_RAST) / dys;
-		const int dc = INT_TO_FIXED(c1 - c0, FP_RAST) / dys;
-		const int du = INT_TO_FIXED(tc_u1 - tc_u0, FP_RAST) / dys;
-		const int dv = INT_TO_FIXED(tc_v1 - tc_v0, FP_RAST) / dys;
-
 		int xp = INT_TO_FIXED(xs0, FP_RAST);
-		int c = INT_TO_FIXED(c0, FP_RAST);
-		int u = INT_TO_FIXED(tc_u0, FP_RAST);
-		int v = INT_TO_FIXED(tc_v0, FP_RAST);
 		int yp = ys0;
 
-		/* Extra interpolant to have 3D y interpolated only used for water floor object collision test */
-		/* If I reuse those functions for other 3D I don't need to interpolate everything, will see how I'll refactor if things get slow (or even code duplicate) */
-		const int y0 = v0->y; const int y1 = v1->y;
-		const int dy = INT_TO_FIXED(y1 - y0, FP_RAST) / dys;
-		int y = INT_TO_FIXED(y0, FP_RAST);
+		if (edgeListToWrite == rightEdge) {
+			do {
+				if (yp >= 0 && yp < FB_HEIGHT) {
+					edgeListToWrite[yp].xs = FIXED_TO_INT(xp, FP_RAST);
+				}
+				xp += dxs;
+			} while (yp++ < ys1);
+		}
+		else {
+			const int c0 = v0->c; const int c1 = v1->c;
+			const int tc_u0 = v0->u; const int tc_u1 = v1->u;
+			const int tc_v0 = v0->v; const int tc_v1 = v1->v;
 
-		/* for z-buffer */
-		const int z0 = v0->z; const int z1 = v1->z;
-		const int dz = INT_TO_FIXED(z1 - z0, FP_RAST) / dys;
-		int z = INT_TO_FIXED(z0, FP_RAST);
+			const int dc = INT_TO_FIXED(c1 - c0, FP_RAST) / dys;
+			const int du = INT_TO_FIXED(tc_u1 - tc_u0, FP_RAST) / dys;
+			const int dv = INT_TO_FIXED(tc_v1 - tc_v0, FP_RAST) / dys;
 
-		do {
-			if (yp >= 0 && yp < FB_HEIGHT) {
-				edgeListToWrite[yp].xs = FIXED_TO_INT(xp, FP_RAST);
-				edgeListToWrite[yp].c = FIXED_TO_INT(c, FP_RAST);
-				edgeListToWrite[yp].u = FIXED_TO_INT(u, FP_RAST);
-				edgeListToWrite[yp].v = FIXED_TO_INT(v, FP_RAST);
+			int c = INT_TO_FIXED(c0, FP_RAST);
+			int u = INT_TO_FIXED(tc_u0, FP_RAST);
+			int v = INT_TO_FIXED(tc_v0, FP_RAST);
+
+			/* Extra interpolant to have 3D y interpolated only used for water floor object collision test */
+			/* If I reuse those functions for other 3D I don't need to interpolate everything, will see how I'll refactor if things get slow (or even code duplicate) */
+			const int y0 = v0->y; const int y1 = v1->y;
+			const int dy = INT_TO_FIXED(y1 - y0, FP_RAST) / dys;
+			int y = INT_TO_FIXED(y0, FP_RAST);
+
+			/* for z-buffer */
+			const int z0 = v0->z; const int z1 = v1->z;
+			const int dz = INT_TO_FIXED(z1 - z0, FP_RAST) / dys;
+			int z = INT_TO_FIXED(z0, FP_RAST);
+
+			do {
+				if (yp >= 0 && yp < FB_HEIGHT) {
+					edgeListToWrite[yp].xs = FIXED_TO_INT(xp, FP_RAST);
+					edgeListToWrite[yp].c = FIXED_TO_INT(c, FP_RAST);
+					edgeListToWrite[yp].u = FIXED_TO_INT(u, FP_RAST);
+					edgeListToWrite[yp].v = FIXED_TO_INT(v, FP_RAST);
+
+					/* likewise */
+					edgeListToWrite[yp].y = FIXED_TO_INT(y, FP_RAST);
+					edgeListToWrite[yp].z = FIXED_TO_INT(z, FP_RAST);
+				}
+				xp += dxs;
+				c += dc;
+				u += du;
+				v += dv;
 
 				/* likewise */
-				edgeListToWrite[yp].y = FIXED_TO_INT(y, FP_RAST);
-				edgeListToWrite[yp].z = FIXED_TO_INT(z, FP_RAST);
-			}
-			xp += dxs;
-			c += dc;
-			u += du;
-			v += dv;
+				y += dy;
+				z += dz;
 
-			/* likewise */
-			y += dy;
-			z += dz;
-
-		} while (yp++ < ys1);
+			} while (yp++ < ys1);
+		}
 	}
 }
 
@@ -687,6 +499,33 @@ static void drawEdges()
 		if (l->xs < r->xs) {
 			drawEdge(ys, dsx);
 		}
+	}
+}
+
+static void calculateTriangleGradients(Vertex3D *v0, Vertex3D *v1, Vertex3D *v2)
+{
+	const int xs0 = v0->xs; const int xs1 = v1->xs; const int xs2 = v2->xs;
+	const int ys0 = v0->ys; const int ys1 = v1->ys; const int ys2 = v2->ys;
+
+	const int dys0 = ys0 - ys2; const int dys1 = ys1 - ys2;
+	const int dd = (xs1 - xs2) * dys0 - (xs0 - xs2) * dys1;
+
+	if (dd == 0) return;
+
+	if (renderingMode >= OPT_RAST_GOURAUD_CLIP_Y) {
+		const int c0 = v0->c; const int c1 = v1->c; const int c2 = v2->c;
+		const int y0 = v0->y; const int y1 = v1->y; const int y2 = v2->y;
+		const int z0 = v0->z; const int z1 = v1->z; const int z2 = v2->z;
+		grads.dc = (((c1 - c2) * dys0 - (c0 - c2) * dys1) << FP_RAST) / dd;
+		grads.dy = (((y1 - y2) * dys0 - (y0 - y2) * dys1) << FP_RAST) / dd;
+		grads.dz = (((z1 - z2) * dys0 - (z0 - z2) * dys1) << FP_RAST) / dd;
+	}
+
+	if (renderingMode >= OPT_RAST_TEXTURED_GOURAUD_CLIP_Y) {
+		const int tu0 = v0->u; const int tu1 = v1->u; const int tu2 = v2->u;
+		const int tv0 = v0->v; const int tv1 = v1->v; const int tv2 = v2->v;
+		grads.du = (((tu1 - tu2) * dys0 - (tu0 - tu2) * dys1) << FP_RAST) / dd;
+		grads.dv = (((tv1 - tv2) * dys0 - (tv0 - tv2) * dys1) << FP_RAST) / dd;
 	}
 }
 
@@ -730,6 +569,7 @@ void renderPolygons(Object3D* obj, Vertex3D* screenVertices)
 
 		n = (v0->xs - v1->xs) * (v2->ys - v1->ys) - (v2->xs - v1->xs) * (v0->ys - v1->ys);
 		if (n >= 0) {
+			calculateTriangleGradients(v0, v1, v2);
 			drawTriangle(v0, v1, v2);
 		}
 	}

@@ -762,7 +762,7 @@ static void calcVertexLights(Object3D* obj)
 
 	do {
 		int d = -dotProduct(vNormal, &light);
-		CLAMP(d, 0, 255);
+		CLAMP(d, 1, 254);	/* 1 to 254 hacky solution to avoid the unstable gradient step go slightly out of bounds for now */
 		dst->c = d;
 
 		++dst;

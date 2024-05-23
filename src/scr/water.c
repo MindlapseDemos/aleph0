@@ -452,7 +452,7 @@ static void drawRain(int zRangeMin, int zRangeMax)
 	}
 }
 
-#define PAUSE_FOR_PERFORMANCE_TEST
+/* #define PAUSE_FOR_PERFORMANCE_TEST */
 
 static void sceneRunFlower(int t)
 {

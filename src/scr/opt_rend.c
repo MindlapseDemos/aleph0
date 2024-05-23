@@ -484,10 +484,10 @@ static void drawEdges()
 		int dsx = xs1 - xs0;
 		if (xs0 < 0) {
 			if (xs0 != xs1) {
-				l->u += (((r->u - l->u) * -xs0) / dsx);
-				l->v += (((r->v - l->v) * -xs0) / dsx);
-				l->c += (((r->c - l->c) * -xs0) / dsx);
-				l->y += (((r->y - l->y) * -xs0) / dsx);
+				l->u += ((-xs0 * grads.du) >> FP_RAST);
+				l->v += ((-xs0 * grads.dv) >> FP_RAST);
+				l->c += ((-xs0 * grads.dc) >> FP_RAST);
+				l->y += ((-xs0 * grads.dy) >> FP_RAST);
 			}
 			l->xs = 0;
 			dsx = xs1;

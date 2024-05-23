@@ -4,8 +4,8 @@
 #include <math.h>
 #include <errno.h>
 #include "imago2.h"
-#include "3dgfx.h"
 #include "smoketxt.h"
+#include "3dgfx.h"
 #include "util.h"
 #include "noise.h"
 
@@ -24,52 +24,10 @@
 #define DFL_FORCE		0.07
 #define DFL_FREQ		0.085
 
-struct vec2 {
-	float x, y;
-};
-
-struct vec3 {
-	float x, y, z;
-};
-
-struct particle {
-	float x, y, z;
-	float vx, vy, vz;	/* velocity */
-	int r, g, b;
-	float life;
-};
-
-struct emitter {
-	struct particle *plist;
-	int pcount;
-
-	struct vec3 wind;
-	float drag;
-	float max_life;
-
-	struct g3d_vertex *varr;
-};
-
-struct vfield {
-	struct vec2 pos, size;
-
-	int width, height;
-	int xshift;
-	struct vec2 *v;
-};
-
-
-struct smktxt {
-	struct emitter em;
-	struct vfield vfield;
-
-	unsigned char *img_pixels;
-	int img_xsz, img_ysz;
-};
 
 static int init_emitter(struct emitter *em, int num, unsigned char *map, int xsz, int ysz);
 static int load_vfield(struct vfield *vf, const char *fname);
-static void vfield_eval(struct vfield *vf, float x, float y, struct vec2 *dir);
+static void vfield_eval(struct vfield *vf, float x, float y, cgm_vec2 *dir);
 
 struct smktxt *create_smktxt(const char *imgname, const char *vfieldname)
 {
@@ -114,7 +72,7 @@ int gen_smktxt_vfield(struct smktxt *stx, int xres, int yres, float xfreq, float
 {
 	int i, j;
 	unsigned int tmp;
-	struct vec2 *vptr;
+	cgm_vec2 *vptr;
 	struct vfield *vf = &stx->vfield;
 
 	if(!(vf->v = malloc(xres * yres * sizeof *vf->v))) {
@@ -196,10 +154,11 @@ void set_smktxt_drag(struct smktxt *stx, float drag)
 	stx->em.drag = drag;
 }
 
-void update_smktxt(struct smktxt *stx, float dt)
+#define DT	(1.0f / 30.0f)
+void update_smktxt(struct smktxt *stx)
 {
 	int i;
-	struct vec2 accel;
+	cgm_vec2 accel;
 	struct particle *p;
 	struct g3d_vertex *v;
 
@@ -215,13 +174,13 @@ void update_smktxt(struct smktxt *stx, float dt)
 
 	for(i=0; i<stx->em.pcount; i++) {
 		vfield_eval(&stx->vfield, p->x, p->y, &accel);
-		p->x += p->vx * stx->em.drag * dt;
-		p->y += p->vy * stx->em.drag * dt;
-		p->z += p->vz * stx->em.drag * dt;
-		p->vx += (stx->em.wind.x + accel.x * DFL_FORCE) * dt;
-		p->vy += (stx->em.wind.y + accel.y * DFL_FORCE) * dt;
-		p->vz += (stx->em.wind.z + p->z * DFL_ZBIAS) * dt;
-		p->life -= dt;
+		p->x += p->vx * stx->em.drag * DT;
+		p->y += p->vy * stx->em.drag * DT;
+		p->z += p->vz * stx->em.drag * DT;
+		p->vx += (stx->em.wind.x + accel.x * DFL_FORCE) * DT;
+		p->vy += (stx->em.wind.y + accel.y * DFL_FORCE) * DT;
+		p->vz += (stx->em.wind.z + p->z * DFL_ZBIAS) * DT;
+		p->life -= DT;
 		if(p->life < 0.0f) p->life = 0.0f;
 
 		v->x = p->x;
@@ -323,12 +282,12 @@ static int load_vfield(struct vfield *vf, const char *fname)
 	return 0;
 }
 
-static void vfield_eval(struct vfield *vf, float x, float y, struct vec2 *dir)
+static void vfield_eval(struct vfield *vf, float x, float y, cgm_vec2 *dir)
 {
 	int px, py;
 	float tx, ty;
-	struct vec2 *p1, *p2;
-	struct vec2 left, right;
+	cgm_vec2 *p1, *p2;
+	cgm_vec2 left, right;
 
 	x = ((x - vf->pos.x) / vf->size.x + 0.5f) * vf->width;
 	y = ((y - vf->pos.y) / vf->size.y + 0.5f) * vf->height;

@@ -8,10 +8,14 @@
 #include "screen.h"
 #include "gfxutil.h"
 #include "util.h"
+#include "smoketxt.h"
 
 #ifndef M_PI
 #define M_PI	3.1415926535
 #endif
+
+#define UPD_RATE	33
+#define UPD_DT		(1.0 / 30.0)
 
 #define VSCALE	1.5
 
@@ -19,12 +23,11 @@
 #define TEX_VSCALE	1
 #undef ROTATE
 
-/* TODO: with the new texture, try purple fog, dstar used rgb 20,0,29 */
-
 static int init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void stop(long trans_time);
+static void update(float tsec);
 static void draw(void);
 static void keypress(int key);
 
@@ -48,6 +51,7 @@ static struct screen scr = {
 
 static int xsz, ysz, vxsz, vysz;
 static int pan_width, pan_height;
+static unsigned long start_time;
 static unsigned int *tunnel_map;
 static unsigned char *tunnel_fog;
 
@@ -64,7 +68,12 @@ static int blurlevel, nextblur;
 static float tunpos, tunspeed, nextspeed;
 static long accel_start;
 
-static const float speedtab[] = {100.0f, 300.0f, 500.0f, 800.0f};
+static const float speedtab[] = {100.0f * UPD_DT, 300.0f * UPD_DT, 500.0f * UPD_DT, 800.0f * UPD_DT};
+
+/* smoketext stuff */
+static struct smktxt *stx;
+static unsigned char *smokebuf, *cur_smokebuf, *prev_smokebuf;
+#define SMOKEBUF_SIZE	(320 * 240)
 
 
 struct screen *tunnel_screen(void)
@@ -99,7 +108,7 @@ static int init(void)
 	tex_ysz = pixmap.height;
 
 	if(pixmap.fmt != IMG_FMT_IDX8) {
-		fprintf(stderr, "tunnel texture is not palettized, make sure to do an 'svn update' in the data dir\n");
+		fprintf(stderr, "tunnel texture is not palettized\n");
 		return -1;
 	}
 	if((count_bits(tex_xsz) | count_bits(tex_ysz)) != 1) {
@@ -128,6 +137,16 @@ static int init(void)
 		return -1;
 	}
 
+	if(!(stx = create_smktxt("data/ml_dsr.png", "data/vfield1"))) {
+		return -1;
+	}
+	if(!(smokebuf = malloc(SMOKEBUF_SIZE * 2))) {
+		perror("failed to allocate smoke ping-pong buffers");
+		return -1;
+	}
+	cur_smokebuf = smokebuf;
+	prev_smokebuf = smokebuf + SMOKEBUF_SIZE;
+
 	return 0;
 }
 
@@ -136,6 +155,7 @@ static void destroy(void)
 	free(tunnel_map);
 	free(tunnel_fog);
 	img_free_pixels(tex_pixels);
+	free(smokebuf);
 }
 
 static void start(long trans_time)
@@ -149,6 +169,11 @@ static void start(long trans_time)
 	tunpos = 0;
 	blurlevel = nextblur = 0;
 	tunspeed = nextspeed = speedtab[0];
+
+	memset(smokebuf, 0, SMOKEBUF_SIZE * 2);
+	start_time = time_msec;
+
+	update(0);
 }
 
 static void stop(long trans_time)
@@ -166,7 +191,7 @@ static int draw_lines, num_lines;
 static int xoffs, yoffs;
 static long toffs;
 
-static void update(float tsec, float dt)
+static void update(float tsec)
 {
 	int i;
 	float t, curspeed;
@@ -209,21 +234,26 @@ samespeed:
 		curspeed = tunspeed;
 	}
 
-	tunpos += curspeed * dt;
+	tunpos += curspeed;
 	toffs = cround64(tunpos);
+
+	update_smktxt(stx);
 }
 
 static void draw(void)
 {
-	static float prev_upd;
-	float tsec, dt;
-	int i;
+	static unsigned long prev_upd;
+	unsigned long tm, upd_interv;
+	int i, x, y;
+	struct g3d_vertex *vptr;
 
-	tsec = time_msec / 1000.0f;
-	dt = tsec - prev_upd;
-	prev_upd = tsec;
+	tm = time_msec - start_time;
 
-	update(tsec, dt);
+	upd_interv = tm - prev_upd;
+	if(upd_interv >= UPD_RATE) {
+		prev_upd = tm;
+		update((float)tm / 1000.0f);
+	}
 
 	for(i=0; i<NUM_WORK_ITEMS; i++) {
 		int starty = i * num_lines;
@@ -235,6 +265,20 @@ static void draw(void)
 		}
 	}
 
+	vptr = stx->em.varr;
+	for(i=0; i<stx->em.pcount; i++) {
+		x = vptr->x * 128 + 160;
+		y = 128 - vptr->y * 120;
+
+		if(x < 0 || x >= 320 || y < 0 || y >= 240) {
+			vptr++;
+			continue;
+		}
+
+		fb_pixels[y * 320 + x] = PACK_RGB16(0, 255, 0);
+		vptr++;
+	}
+
 	swap_buffers(0);
 }
 
@@ -244,7 +288,7 @@ static void keypress(int key)
 	case ' ':
 		nextblur = (blurlevel + 1) & 3;
 		nextspeed = speedtab[nextblur];
-		accel_start = time_msec;
+		accel_start = time_msec - start_time;
 		break;
 
 	default:

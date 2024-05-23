@@ -77,9 +77,9 @@ static int init(void)
 			vptr->z = z;
 			vptr++;
 
-			if(i == 0 || j == 0 || i >= 240 - TILESZ || j >= 320 - TILESZ) {
+			/*if(i == 0 || j == 0 || i >= 240 - TILESZ || j >= 320 - TILESZ) {
 				continue;
-			}
+			}*/
 
 			if(((j & (TILESZ-1)) | (i & (TILESZ-1))) == 0) {
 				tptr->x = j;
@@ -169,6 +169,7 @@ static void draw(void)
 
 	if(opt.dbgmode) {
 		/* clear the spot where we'll be drawing the fps counter */
+		/*
 		fbptr = fb_pixels + (240 - 16) * 320;
 		for(i=0; i<4; i++) {
 			memset16(fbptr, 0, 24);
@@ -177,6 +178,7 @@ static void draw(void)
 			memset16(fbptr + 960, 0, 24);
 			fbptr += 1280;
 		}
+		*/
 	}
 
 	swap_buffers(0);

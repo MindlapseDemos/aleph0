@@ -131,7 +131,7 @@ static void update(void)
 	prev_my = mouse_y;
 	prev_bmask = mouse_bmask;
 
-	update_smktxt(stx, dt);
+	//update_smktxt(stx, dt);
 }
 
 static void draw(void)

@@ -39,8 +39,10 @@ int clip_line(int *x0, int *y0, int *x1, int *y1, int xmin, int ymin, int xmax, 
 void draw_line(int x0, int y0, int x1, int y1, unsigned short color);
 
 /* scale in 24.8 fixed point */
-void blur_horiz(uint16_t *dest, uint16_t *src, int xsz, int ysz, int radius, int scale);
-void blur_vert(uint16_t *dest, uint16_t *src, int xsz, int ysz, int radius, int scale);
+void blur_horiz(uint16_t *dest, uint16_t *src, int xsz, int ysz, int rad, int scale);
+void blur_vert(uint16_t *dest, uint16_t *src, int xsz, int ysz, int rad, int scale);
+void blur_full_horiz8(uint8_t *dest, uint8_t *src, unsigned int rad, int scale);
+void blur_full_vert8(uint8_t *dest, uint8_t *src, unsigned int rad, int scale);
 
 void convimg_rgb24_rgb16(uint16_t *dest, unsigned char *src, int xsz, int ysz);
 
@@ -49,6 +51,9 @@ void blit(uint16_t *dest, int destwidth, uint16_t *src, int xsz, int ysz, int pi
 void blit_key(uint16_t *dest, int destwidth, uint16_t *src, int xsz, int ysz, int pitch_pix, uint16_t key);
 
 void overlay_add_full(uint16_t *dest, uint16_t *src);
+
+/* the palette is 256 * 4 ints to avoid unpacking and conversions */
+void overlay_full_add_pal(uint16_t *dest, uint8_t *src, unsigned int *pal);
 
 extern void (*overlay_alpha)(struct image *dest, int x, int y, const struct image *src,
 		int width, int height);

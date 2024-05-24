@@ -23,6 +23,9 @@
 #define TEX_VSCALE	1
 #undef ROTATE
 
+#define BLUR_RAD	5
+
+
 static int init(void);
 static void destroy(void);
 static void start(long trans_time);
@@ -74,6 +77,7 @@ static const float speedtab[] = {100.0f * UPD_DT, 300.0f * UPD_DT, 500.0f * UPD_
 static struct smktxt *stx;
 static unsigned char *smokebuf, *cur_smokebuf, *prev_smokebuf;
 #define SMOKEBUF_SIZE	(320 * 240)
+static unsigned int smoke_cmap[256 * 4];
 
 
 struct screen *tunnel_screen(void)
@@ -85,6 +89,7 @@ static int init(void)
 {
 	int i, j, n;
 	struct img_pixmap pixmap;
+	unsigned char *pal;
 
 	xsz = FB_WIDTH;
 	ysz = FB_HEIGHT;
@@ -147,6 +152,17 @@ static int init(void)
 	cur_smokebuf = smokebuf;
 	prev_smokebuf = smokebuf + SMOKEBUF_SIZE;
 
+	if(!(pal = img_load_pixels("data/smokepal.ppm", &n, &n, IMG_FMT_RGB24))) {
+		fprintf(stderr, "failed to load smoke colormap: smokepal.png\n");
+		return -1;
+	}
+	for(i=0; i<256; i++) {
+		smoke_cmap[i * 4] = pal[i * 3];
+		smoke_cmap[i * 4 + 1] = pal[i * 3 + 1];
+		smoke_cmap[i * 4 + 2] = pal[i * 3 + 2];
+	}
+	img_free_pixels(pal);
+
 	return 0;
 }
 
@@ -163,7 +179,7 @@ static void start(long trans_time)
 	if(trans_time) {
 		trans_start = time_msec;
 		trans_dur = trans_time;
-		trans_dir = 1;
+		//trans_dir = 1;
 	}
 
 	tunpos = 0;
@@ -246,6 +262,7 @@ static void draw(void)
 	unsigned long tm, upd_interv;
 	int i, x, y;
 	struct g3d_vertex *vptr;
+	void *tmpptr;
 
 	tm = time_msec - start_time;
 
@@ -265,19 +282,32 @@ static void draw(void)
 		}
 	}
 
+	/* blur the previous smoke buffer */
+	blur_full_horiz8(prev_smokebuf, cur_smokebuf, BLUR_RAD, 240);
+	/*blur_full_vert8(cur_smokebuf, prev_smokebuf, BLUR_RAD, 240);*/
+
+	/* swap the smoke buffer pointers */
+	tmpptr = cur_smokebuf;
+	cur_smokebuf = prev_smokebuf;
+	prev_smokebuf = tmpptr;
+
 	vptr = stx->em.varr;
 	for(i=0; i<stx->em.pcount; i++) {
-		x = vptr->x * 128 + 160;
-		y = 128 - vptr->y * 120;
+		x = vptr->x * 220 + 160;
+		y = 120 - vptr->y * 220;
 
 		if(x < 0 || x >= 320 || y < 0 || y >= 240) {
 			vptr++;
 			continue;
 		}
 
-		fb_pixels[y * 320 + x] = PACK_RGB16(0, 255, 0);
+		cur_smokebuf[y * 320 + x] = 192;
 		vptr++;
 	}
+
+	/* overlay the current smoke buffer over the image */
+	overlay_full_add_pal(fb_pixels, cur_smokebuf, smoke_cmap);
+
 
 	swap_buffers(0);
 }

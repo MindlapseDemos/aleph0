@@ -244,6 +244,120 @@ void blur_vert(uint16_t *dest, uint16_t *src, int xsz, int ysz, int rad, int sca
 	BLUR(ysz, xsz, pixel_step, scanline_step);
 }
 
+
+#define BF8_CLAMP(dest, val) dest = val
+/*
+#define BF8_CLAMP(dest, val) \
+	do { \
+		int res = val; \
+		if(res < 0) res = 0; \
+		if(res > 255) res = 255; \
+		dest = res; \
+	} while(0)
+*/
+
+
+void blur_full_horiz8(uint8_t *dest, uint8_t *src, unsigned int rad, int scale)
+{
+	int i, j, midcount;
+	unsigned char *sptr, *dptr;
+	int sum, first, last, count;
+
+	midcount = 320 - rad * 2;
+	sptr = src;
+	dptr = dest;
+	count = (rad * 2 + 1) << 8;
+
+	for(i=0; i<240; i++) {
+		first = sptr[0];
+		last = sptr[319];
+
+		/* start with the sum corresponding to the pixel just outside */
+		/* add up all outside boundary pixels */
+		sum = first * (rad + 1);
+		/* add the right part of the kernel which are all inside */
+		for(j=0; j<rad; j++) {
+			sum += sptr[j];
+		}
+
+		/* first stage: add sptr[rad], subtract one of the outside pixels */
+		for(j=0; j<=rad; j++) {
+			sum = sum + sptr[rad] - first;
+			sptr++;
+			BF8_CLAMP(dptr[j], scale * sum / count);
+		}
+		dptr += rad + 1;
+
+		/* iterate for the rest of the scanline until the end boundary condition */
+		for(j=0; j<midcount-1; j++) {
+			sum = sum + sptr[rad] - sptr[-rad-1];
+			sptr++;
+			BF8_CLAMP(dptr[j], scale * sum / count);
+		}
+		dptr += midcount - 1;
+
+		/* last stage: add last, subtract left */
+		for(j=0; j<rad; j++) {
+			sum = sum + last - sptr[-rad-1];
+			sptr++;
+			BF8_CLAMP(dptr[j], scale * sum / count);
+		}
+		dptr += rad;
+	}
+}
+
+void blur_full_vert8(uint8_t *dest, uint8_t *src, unsigned int rad, int scale)
+{
+	int i, j, midcount;
+	unsigned char *sptr, *dptr;
+	int sum, first, last, count;
+	int outoffs = -(rad + 1) * 320;
+	int inoffs = rad * 320;
+
+	midcount = 240 - rad * 2;
+	count = (rad * 2 + 1) << 8;
+
+	for(i=0; i<320; i++) {
+		sptr = src + i;
+		dptr = dest + i;
+
+		first = sptr[0];
+		last = sptr[320 * 239];
+
+		/* start with the sum corresponding to the pixel just outside */
+		/* add up all outside boundary pixels */
+		sum = first * (rad + 1);
+		/* add the right part of the kernel which are all inside */
+		for(j=0; j<rad; j++) {
+			sum += sptr[inoffs];
+		}
+
+		/* first stage: add sptr[rad], subtract one of the outside pixels */
+		for(j=0; j<=rad; j++) {
+			sum = sum + sptr[inoffs] - first;
+			sptr += 320;
+			BF8_CLAMP(*dptr, scale * sum / count);
+			dptr += 320;
+		}
+
+		/* iterate for the rest of the column until the end boundary condition */
+		for(j=0; j<midcount-1; j++) {
+			sum = sum + sptr[inoffs] - sptr[outoffs];
+			sptr += 320;
+			BF8_CLAMP(*dptr, scale * sum / count);
+			dptr += 320;
+		}
+
+		/* last stage: add last, subtract left */
+		for(j=0; j<rad; j++) {
+			sum = sum + last - sptr[outoffs];
+			sptr += 320;
+			BF8_CLAMP(*dptr, scale * sum / count);
+			dptr += 320;
+		}
+	}
+}
+
 void convimg_rgb24_rgb16(uint16_t *dest, unsigned char *src, int xsz, int ysz)
 {
 	int i;
@@ -300,6 +414,29 @@ void overlay_add_full(uint16_t *dest, uint16_t *src)
 	/* TODO */
 }
 
+void overlay_full_add_pal(uint16_t *dest, uint8_t *src, unsigned int *pal)
+{
+	int i, j;
+	unsigned int r, g, b;
+	unsigned int *col;
+	uint16_t pixel;
+
+	for(i=0; i<240; i++) {
+		for(j=0; j<320; j++) {
+			pixel = dest[j];
+			col = pal + ((unsigned int)src[j] << 2);
+			r = UNPACK_R16(pixel) + col[0];
+			g = UNPACK_G16(pixel) + col[1];
+			b = UNPACK_B16(pixel) + col[2];
+			if(r > 255) r = 255;
+			if(g > 255) g = 255;
+			if(b > 255) b = 255;
+			dest[j] = PACK_RGB16(r, g, b);
+		}
+		dest += 320;
+		src += 320;
+	}
+}
 
 static void overlay_alpha_c(struct image *dest, int x, int y, const struct image *src,
 		int width, int height)

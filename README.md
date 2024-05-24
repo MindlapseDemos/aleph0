@@ -265,3 +265,20 @@ Since the DOS rsync utility is unfortunately read-only, the `push.bat` relies on
 ssh2dos instead, which does require a password. The sshd on the server might
 need to be configured to allow older encryption algorithms, depending on your
 current setup.
+
+Calling conventions cheatsheet
+------------------------------
+### DJGPP
+
+ - All symbols are *prefixed* with an underscore.
+ - Preserve registers: ebx, esi, edi, ebp.
+ - Arguments on the stack, on entry: 0:retaddr, 4:first argument (typically at 8
+   after saving ebp).
+ - Return in eax, edx:eax, or st0.
+
+### Watcom
+
+ - Functions have an underscore *suffix*.
+ - Preserve all registers except eax, and any argument registers.
+ - Arguments on regs: eax, edx, ebx, ecx.
+ - Return in eax

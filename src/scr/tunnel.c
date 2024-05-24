@@ -179,7 +179,7 @@ static void start(long trans_time)
 	if(trans_time) {
 		trans_start = time_msec;
 		trans_dur = trans_time;
-		//trans_dir = 1;
+		/*trans_dir = 1;*/
 	}
 
 	tunpos = 0;

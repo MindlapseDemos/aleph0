@@ -143,9 +143,9 @@ static void MulManyVec3Mat33_VecEdition(Vector3D* dst, Vector3D* src, int* m, in
 		const int y = src->y;
 		const int z = src->z;
 
-		dst->x = AFTER_MUL_ADDS(x * m[0] + y * m[3] + z * m[6], (FP_CORE + 3));	/* many hacks here like + 3, need fix */
-		dst->y = AFTER_MUL_ADDS(x * m[1] + y * m[4] + z * m[7], (FP_CORE + 3));
-		dst->z = AFTER_MUL_ADDS(x * m[2] + y * m[5] + z * m[8], (FP_CORE + 3));
+		dst->x = AFTER_MUL_ADDS(x * m[0] + y * m[3] + z * m[6], FP_CORE);
+		dst->y = AFTER_MUL_ADDS(x * m[1] + y * m[4] + z * m[7], FP_CORE);
+		dst->z = AFTER_MUL_ADDS(x * m[2] + y * m[5] + z * m[8], FP_CORE);
 
 		++src;
 		++dst;
@@ -431,21 +431,21 @@ static void subVec(Vector3D* s1, Vector3D* s2, Vector3D* vDst)	/* dst = s1 - s2 
 
 static void crossProduct(Vector3D* v1, Vector3D* v2, Vector3D* vDst)
 {
-	vDst->x = (v1->y * v2->z - v1->z * v2->y) >> FP_NORM;
-	vDst->y = (v1->z * v2->x - v1->x * v2->z) >> FP_NORM;
-	vDst->z = (v1->x * v2->y - v1->y * v2->x) >> FP_NORM;
+	vDst->x = ((v1->y * v2->z) >> FP_NORM) - ((v1->z * v2->y) >> FP_NORM);
+	vDst->y = ((v1->z * v2->x) >> FP_NORM) - ((v1->x * v2->z) >> FP_NORM);
+	vDst->z = ((v1->x * v2->y) >> FP_NORM) - ((v1->y * v2->x) >> FP_NORM);
 }
 
 
 static int dotProduct(Vector3D* v1, Vector3D* v2)
 {
-	return (v1->x * v2->x + v1->y * v2->y + v1->z * v2->z) >> (FP_NORM + 3);
+	return ((v1->x * v2->x) >> FP_NORM) + ((v1->y * v2->y) >> FP_NORM) + ((v1->z * v2->z) >> FP_NORM);
 }
 
 
 static void normalize(Vector3D* v, Vector3D* vDst)
 {
-	int d = isqrt(v->x * v->x + v->y * v->y + v->z * v->z);
+	int d = isqrt(v->x * v->x + v->y * v->y + v->z * v->z) << 3;	/* move the hack here till I find later */
 	if (d != 0) {
 		vDst->x = (v->x << FP_NORM) / d;
 		vDst->y = (v->y << FP_NORM) / d;
@@ -754,6 +754,9 @@ static void calcVertexLights(Object3D* obj)
 	Vector3D light;
 	Vertex3D vLight;	/* it happens that MulManyVec3Mat33 thing works with Vertex3D which is way more than Vector3D. I will refactor */
 
+	/* static int min = (1 << 30) - 1;
+	static int max = -(1 << 30); */
+
 	calcInvertedRotationMatrix(rotMat, rotMatInv);
 
 	vLight.x = 0; vLight.y = 0; vLight.z = 1 << FP_NORM;
@@ -765,9 +768,14 @@ static void calcVertexLights(Object3D* obj)
 		CLAMP(d, 1, 254);	/* 1 to 254 hacky solution to avoid the unstable gradient step go slightly out of bounds for now */
 		dst->c = d;
 
+		/* if (vNormal->x < min) min = vNormal->x; if (vNormal->x > max) max = vNormal->x;
+		if (vNormal->y < min) min = vNormal->y; if (vNormal->y > max) max = vNormal->y;
+		if (vNormal->z < min) min = vNormal->z; if (vNormal->z > max) max = vNormal->z; */
+
 		++dst;
 		++vNormal;
 	} while (--count > 0);
+	/* printf("%d %d\n", min, max); */
 }
 
 static void calculateVertexEnvmapTC(Object3D* obj)
@@ -785,15 +793,22 @@ static void calculateVertexEnvmapTC(Object3D* obj)
 
 	Vector3D* vNormal = screenPointsObject.vNormals;
 	Vertex3D* dst = screenPointsObject.v;
+	/* static int min = (1 << 30) - 1;
+	static int max = -(1 << 30); */
 	do {
 		if (vNormal->z != 0) {
 			dst->u = ((vNormal->x >> wShiftHalf) + texWidthHalf) & (texWidth - 1);
 			dst->v = ((vNormal->y >> hShiftHalf) + texHeightHalf) & (texHeight - 1);
+
+			/* if (vNormal->x < min) min = vNormal->x; if (vNormal->x > max) max = vNormal->x;
+			if (vNormal->y < min) min = vNormal->y; if (vNormal->y > max) max = vNormal->y;
+			if (vNormal->z < min) min = vNormal->z; if (vNormal->z > max) max = vNormal->z; */
 		}
 
 		++dst;
 		++vNormal;
 	} while (--count > 0);
+	/* printf("%d %d\n", min, max); */
 }
 
 static void rotateVertexNormals(Object3D* obj)

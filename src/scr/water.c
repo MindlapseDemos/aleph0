@@ -20,7 +20,7 @@ static void start(long trans_time);
 static void draw(void);
 
 #define FP_SCALE 16
-#define MAX_OBJ_VERTS 4096
+#define MAX_OBJ_VERTS 65536
 
 static struct screen scr = {
 	"water",

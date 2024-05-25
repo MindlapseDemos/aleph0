@@ -456,17 +456,16 @@ static void drawRain(int zRangeMin, int zRangeMax)
 
 static void sceneRunFlower(int t)
 {
-	int xp = (int)(sin((float)t / 512.0f) * 128);
-	int yp = (int)(sin((float)t / 384.0f) * 64 - 32);
-	int zp = (int)(sin((float)t / 1024.0f) * 160);
+	int xp = (int)(sin((float)t / 384.0f) * 128);
+	int yp = (int)((sin((float)t / 768.0f) * 64 - 32) * 2.5f);
+	int zp = (int)(sin((float)t / 512.0f) * 128) - 32;
 
 	clearZbuffer();
-	/* 19-21 */
 #ifdef PAUSE_FOR_PERFORMANCE_TEST
 	t = 1536;
 	setObjectPos(0, 16, 384, &objFlower);
 #else
-	setObjectPos(xp, yp, 512 + zp, &objFlower);
+	setObjectPos(xp, yp, 640 + zp, &objFlower);
 #endif
 
 	setObjectRot(t, 2 * t, 3 * t, &objFlower);

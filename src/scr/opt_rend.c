@@ -7,7 +7,7 @@
 #include "demo.h"
 #include "screen.h"
 
-#define USE_HALFRES_INTERPOLATION_RASTERIZER
+/* #define USE_HALFRES_INTERPOLATION_RASTERIZER */
 
 #define BLOB_SIZES_NUM_MAX 16
 #define BLOB_SIZEX_PAD 4
@@ -344,7 +344,7 @@ static void drawEdgeTexturedGouraudClipY(int ys, int dx)
 						const int g = (ct * cc) >> (8 + 1);
 						pix = (r << 11) | (g << 5) | b;
 					} else {
-						pix = (1 + ((ct & 31) >> 3));
+						pix = (*vram32 >> 16) + (1 + ((ct & 31) >> 3));
 					}
 					*vram32 = (pix << 16) | pix;
 					*zBuff = zz;

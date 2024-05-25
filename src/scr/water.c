@@ -13,6 +13,7 @@
 #include "opt_3d.h"
 #include "opt_rend.h"
 
+/* #define PAUSE_FOR_PERFORMANCE_TEST */
 
 static int init(void);
 static void destroy(void);
@@ -20,7 +21,7 @@ static void start(long trans_time);
 static void draw(void);
 
 #define FP_SCALE 16
-#define MAX_OBJ_VERTS 65536
+#define MAX_OBJ_VERTS 4096
 
 static struct screen scr = {
 	"water",
@@ -452,7 +453,6 @@ static void drawRain(int zRangeMin, int zRangeMax)
 	}
 }
 
-/* #define PAUSE_FOR_PERFORMANCE_TEST */
 
 static void sceneRunFlower(int t)
 {

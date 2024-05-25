@@ -765,7 +765,7 @@ static void calcVertexLights(Object3D* obj)
 
 	do {
 		int d = -dotProduct(vNormal, &light);
-		CLAMP(d, 1, 254);	/* 1 to 254 hacky solution to avoid the unstable gradient step go slightly out of bounds for now */
+		CLAMP(d, 16, 240);	/* 1 to 254 hacky solution to avoid the unstable gradient step go slightly out of bounds for now */
 		dst->c = d;
 
 		/* if (vNormal->x < min) min = vNormal->x; if (vNormal->x > max) max = vNormal->x;

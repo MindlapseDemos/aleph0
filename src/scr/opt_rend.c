@@ -7,6 +7,8 @@
 #include "demo.h"
 #include "screen.h"
 
+#define USE_HALFRES_INTERPOLATION_RASTERIZER
+
 #define BLOB_SIZES_NUM_MAX 16
 #define BLOB_SIZEX_PAD 4
 #define MAX_BLOB_COLOR 15
@@ -203,6 +205,7 @@ static void drawEdgeGouraudClipY(int ys, int dx)
 	}
 }
 
+#ifndef USE_HALFRES_INTERPOLATION_RASTERIZER
 static void drawEdgeTexturedGouraudClipY(int ys, int dx)
 {
 	const Edge* l = &leftEdge[ys];
@@ -265,6 +268,117 @@ static void drawEdgeTexturedGouraudClipY(int ys, int dx)
 		z += dz;
 	}
 }
+#else
+static void drawEdgeTexturedGouraudClipY(int ys, int dx)
+{
+	const Edge* l = &leftEdge[ys];
+	const Edge* r = &rightEdge[ys];
+
+	const int c0 = l->c;
+	const int c1 = r->c;
+	const int u0 = l->u;
+	const int u1 = r->u;
+	const int v0 = l->v;
+	const int v1 = r->v;
+	const int y0 = l->y;
+	const int y1 = r->y;
+	const int z0 = l->z;
+	const int z1 = r->z;
+
+	const int offset = ys * FB_WIDTH + l->xs;
+	uint16_t* vram = fb_pixels + offset;
+	unsigned short* zBuff = zBuffer + offset;
+	int xLength = r->xs - l->xs + 1;
+
+	const int dc = grads.dc;
+	const int du = grads.du;
+	const int dv = grads.dv;
+	const int dy = grads.dy;
+	const int dz = grads.dz;
+
+	int c = INT_TO_FIXED(c0, FP_RAST);
+	int u = INT_TO_FIXED(u0, FP_RAST);
+	int v = INT_TO_FIXED(v0, FP_RAST);
+	int y = INT_TO_FIXED(y0, FP_RAST);
+	int z = INT_TO_FIXED(z0, FP_RAST);
+
+	uint32_t* vram32;
+
+	if (l->xs & 1) {
+		const unsigned short zz = (unsigned short)(FIXED_TO_INT(z, FP_RAST));
+		if (zz < *zBuff) {
+			const int cc = FIXED_TO_INT(c, FP_RAST); const int uu = FIXED_TO_INT(u, FP_RAST); const int vv = FIXED_TO_INT(v, FP_RAST);
+			const int ct = texBmp[(vv & (texHeight - 1)) * texWidth + (uu & (texWidth - 1))];
+			int b = (ct * cc) >> (8 + 3);
+
+			const int yy = FIXED_TO_INT(y, FP_RAST);
+			if (yy >= clipValY) {
+				const int r = 7 + ((ct * cc) >> (8 + 2));
+				const int g = (ct * cc) >> (8 + 1);
+				*vram = (r << 11) | (g << 5) | b;
+			} else {
+				*vram += (1 + ((ct & 31) >> 3));
+			}
+			*zBuff = zz;
+		}
+		zBuff++;
+		vram++;
+		c += dc; u += du; v += dv; y += dy; z += dz;
+		--xLength;
+	}
+
+	{
+		vram32 = (uint32_t*)vram;
+		{
+			while (xLength > 1) {
+				const unsigned short zz = (unsigned short)(FIXED_TO_INT(z, FP_RAST));
+				int pix;
+				if (zz < *(zBuff+1)) {
+					const int cc = FIXED_TO_INT(c, FP_RAST); const int uu = FIXED_TO_INT(u, FP_RAST); const int vv = FIXED_TO_INT(v, FP_RAST);
+					const int ct = texBmp[(vv & (texHeight - 1)) * texWidth + (uu & (texWidth - 1))];
+					int b = (ct * cc) >> (8 + 3);
+
+					const int yy = FIXED_TO_INT(y, FP_RAST);
+					if (yy >= clipValY) {
+						const int r = 7 + ((ct * cc) >> (8 + 2));
+						const int g = (ct * cc) >> (8 + 1);
+						pix = (r << 11) | (g << 5) | b;
+					} else {
+						pix = (1 + ((ct & 31) >> 3));
+					}
+					*vram32 = (pix << 16) | pix;
+					*zBuff = zz;
+					*(zBuff + 1) = zz;
+				}
+				zBuff+=2;
+				vram32++;
+				c += 2 * dc; u += 2 * du; v += 2 * dv; y += 2 * dy; z += 2 * dz;
+				xLength -= 2;
+			}
+		}
+	}
+
+	vram = (uint16_t*)vram32;
+	if (xLength == 1) {
+		const unsigned short zz = (unsigned short)(FIXED_TO_INT(z, FP_RAST));
+		if (zz < *zBuff) {
+			const int cc = FIXED_TO_INT(c, FP_RAST); const int uu = FIXED_TO_INT(u, FP_RAST); const int vv = FIXED_TO_INT(v, FP_RAST);
+			const int ct = texBmp[(vv & (texHeight - 1)) * texWidth + (uu & (texWidth - 1))];
+			int b = (ct * cc) >> (8 + 3);
+
+			const int yy = FIXED_TO_INT(y, FP_RAST);
+			if (yy >= clipValY) {
+				const int r = 7 + ((ct * cc) >> (8 + 2));
+				const int g = (ct * cc) >> (8 + 1);
+				*vram = (r << 11) | (g << 5) | b;
+			} else {
+				*vram += (1 + ((ct & 31) >> 3));
+			}
+			*zBuff = zz;
+		}
+	}
+}
+#endif
 
 static void prepareEdgeListFlat(Vertex3D* v0, Vertex3D* v1)
 {

@@ -701,6 +701,17 @@ void buffer8bppToVram(unsigned char *buffer, unsigned int *colMap16to32)
 	}
 }
 
+void buffer8bppToVramLazyOR(unsigned char* buffer, unsigned int* colMap16to32)
+{
+	int i;
+	unsigned short* src = (unsigned short*)buffer;
+	unsigned int* dst = (unsigned int*)fb_pixels;
+
+	for (i = 0; i < FB_WIDTH * FB_HEIGHT / 2; ++i) {
+		*dst++ |= colMap16to32[*src++];
+	}
+}
+
 unsigned int *createColMap16to32(unsigned short *srcPal)
 {
 	unsigned int *dstPal = (unsigned int*)malloc(sizeof(unsigned int) * 256 * 256);

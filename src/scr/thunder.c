@@ -146,8 +146,8 @@ static void draw(void)
 	blitEffect();
 
 	
-
-	swap_buffers(0);
+	/* comment out to merge with blobgrid */
+	/* swap_buffers(0); */
 }
 
 void clearBlurBuffer() {

@@ -47,6 +47,8 @@ static unsigned short *blobsPal;
 static unsigned int *blobsPal32;
 static unsigned char *blobBuffer;
 
+struct screen* thunderScreen = NULL;
+
 
 static int init(void);
 static void destroy(void);
@@ -322,13 +324,18 @@ static void draw(void)
 	int t = time_msec - startingTime;
 	/* t >>= 6; */
 
+	if (!thunderScreen) {
+		thunderScreen = scr_lookup("thunder");
+	}
+
+	thunderScreen->draw();
 
 	memset(blobBuffer, 0, FB_WIDTH * FB_HEIGHT);
 
 	/* drawEffect(&bgParams1, t); */
 	drawEffect(&bgParamsStars, t);
 
-	buffer8bppToVram(blobBuffer, blobsPal32);
+	buffer8bppToVramLazyOR(blobBuffer, blobsPal32);
 
 	swap_buffers(0);
 }

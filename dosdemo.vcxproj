@@ -116,7 +116,6 @@
     <ClCompile Include="src\scr\polka.c" />
     <ClCompile Include="src\scr\opt_3d.c" />
     <ClCompile Include="src\scr\opt_rend.c" />
-    <ClCompile Include="src\scr\greets.c" />
     <ClCompile Include="src\scr\grise.c" />
     <ClCompile Include="src\scr\hairball.c" />
     <ClCompile Include="src\scr\infcubes.c" />

@@ -123,9 +123,6 @@
     <ClCompile Include="src\scr\fract.c">
       <Filter>src\screens</Filter>
     </ClCompile>
-    <ClCompile Include="src\scr\greets.c">
-      <Filter>src\screens</Filter>
-    </ClCompile>
     <ClCompile Include="src\scr\grise.c">
       <Filter>src\screens</Filter>
     </ClCompile>

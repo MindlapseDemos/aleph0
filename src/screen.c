@@ -21,7 +21,6 @@ struct screen *plasma_screen(void);
 struct screen *bump_screen(void);
 struct screen *thunder_screen(void);
 struct screen *metaballs_screen(void);
-struct screen *greets_screen(void);
 struct screen *infcubes_screen(void);
 struct screen *hairball_screen(void);
 struct screen *cybersun_screen(void);
@@ -61,7 +60,6 @@ void populate_screens(void)
 	scr[idx++] = bump_screen();
 	scr[idx++] = thunder_screen();
 	scr[idx++] = metaballs_screen();
-	scr[idx++] = greets_screen();
 	scr[idx++] = infcubes_screen();
 	scr[idx++] = hairball_screen();
 	scr[idx++] = cybersun_screen();

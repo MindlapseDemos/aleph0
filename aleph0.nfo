@@ -1,0 +1,33 @@
+            Aleph Null
+      by Mindlapse & Desire
+------------------------------------
+A Pentium DOS demo for Assembly 2024
+
+    Code: Nuclear, Optimus, Samurai
+Graphics: dstar, ...
+   Music: ...
+
+Requires a fast Pentium (preferably MMX), 64mb RAM, SVGA (preferably VBE2), and
+any sound card supported by midas (soundblaster/gus/wss/pro audio spectrum).
+
+If the demo just exits, look for errors in demo.log.
+If the demo fails to find a suitable video mode, try running univbe first.
+If your sound card is not auto-detected correctly, run with "-setup" to
+  configure manually.
+
+This demo is free software released under the GNU GPLv3. Source code included in
+alephsrc.zip, and on github at: https://github.com/MindlapseDemos/aleph0
+
+Included executables:
+  - DOS: aleph0.exe
+  - GNU/Linux x86: aleph0
+  - GNU/Linux ARM: alephpi
+  - Windows x86: alephwin.exe
+  - FreeBSD x86: alephbsd
+  - SGI IRIX mips3: alephsgi
+
+The non-DOS builds of this demo use OpenGL to display the framebuffer, and the
+mikmod library for music playback.
+
+Greets to:
+  ... mass greetings ...

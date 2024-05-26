@@ -8,26 +8,27 @@
 #include "3dgfx.h"
 #include "util.h"
 #include "noise.h"
+#include "cgmath/cgmath.h"
 
 /* if defined, use bilinear interpolation for dispersion field vectors */
-#define BILERP_FIELD
+#undef BILERP_FIELD
 /* if defined randomize field vectors by RAND_FIELD_MAX */
 #define RANDOMIZE_FIELD
 
-#define RAND_FIELD_MAX	0.7
+#define RAND_FIELD_MAX	((int32_t)(0.7 * 65536.0))
 
 #define DFL_PCOUNT		4000
-#define DFL_MAX_LIFE	7.0f
+#define DFL_MAX_LIFE	(7 << 16)
 #define DFL_PALPHA		1.0f
 #define DFL_ZBIAS		0.25
-#define DFL_DRAG		0.95
-#define DFL_FORCE		0.07
+#define DFL_DRAG		((int32_t)(0.95 * 65536.0))
+#define DFL_FORCE		((int32_t)(0.07 * 65536.0))
 #define DFL_FREQ		0.085
 
 
 static int init_emitter(struct emitter *em, int num, unsigned char *map, int xsz, int ysz);
 static int load_vfield(struct vfield *vf, const char *fname);
-static void vfield_eval(struct vfield *vf, float x, float y, cgm_vec2 *dir);
+static void vfield_eval(struct vfield *vf, int32_t x, int32_t y, struct ivec2 *dir);
 
 struct smktxt *create_smktxt(const char *imgname, const char *vfieldname)
 {
@@ -45,7 +46,6 @@ struct smktxt *create_smktxt(const char *imgname, const char *vfieldname)
 	}
 
 	stx->em.pcount = DFL_PCOUNT;
-	stx->em.wind.z = 0.01;
 	stx->em.drag = DFL_DRAG;
 	stx->em.max_life = DFL_MAX_LIFE;
 
@@ -70,9 +70,10 @@ void destroy_smktxt(struct smktxt *stx)
 
 int gen_smktxt_vfield(struct smktxt *stx, int xres, int yres, float xfreq, float yfreq)
 {
+#if 0
 	int i, j;
 	unsigned int tmp;
-	cgm_vec2 *vptr;
+	struct ivec2 *vptr;
 	struct vfield *vf = &stx->vfield;
 
 	if(!(vf->v = malloc(xres * yres * sizeof *vf->v))) {
@@ -82,8 +83,8 @@ int gen_smktxt_vfield(struct smktxt *stx, int xres, int yres, float xfreq, float
 
 	vf->width = xres;
 	vf->height = yres;
-	vf->pos.x = vf->pos.y = 0.0f;
-	vf->size.x = vf->size.y = 1.0f;
+	vf->pos.x = vf->pos.y = 0;
+	vf->size.x = vf->size.y = 65536;
 
 	/* assume xres is pow2 otherwise fuck you */
 	tmp = xres - 1;
@@ -107,11 +108,14 @@ int gen_smktxt_vfield(struct smktxt *stx, int xres, int yres, float xfreq, float
 			++vptr;
 		}
 	}
+
+#endif
 	return 0;
 }
 
 int dump_smktxt_vfield(struct smktxt *stx, const char *fname)
 {
+#if 0
 	FILE *fp;
 	int xsz, ysz;
 
@@ -127,17 +131,17 @@ int dump_smktxt_vfield(struct smktxt *stx, const char *fname)
 	fwrite(&ysz, sizeof ysz, 1, fp);
 	fwrite(stx->vfield.v, sizeof *stx->vfield.v, xsz * ysz, fp);
 	fclose(fp);
+#endif
 	return 0;
 }
 
-void set_smktxt_wind(struct smktxt *stx, float x, float y, float z)
+void set_smktxt_wind(struct smktxt *stx, int32_t x, int32_t y)
 {
 	stx->em.wind.x = x;
 	stx->em.wind.y = y;
-	stx->em.wind.z = z;
 }
 
-void set_smktxt_plife(struct smktxt *stx, float life)
+void set_smktxt_plife(struct smktxt *stx, int32_t life)
 {
 	stx->em.max_life = life;
 }
@@ -149,18 +153,18 @@ void set_smktxt_pcount(struct smktxt *stx, int count)
 	stx->em.pcount = count;
 }
 
-void set_smktxt_drag(struct smktxt *stx, float drag)
+void set_smktxt_drag(struct smktxt *stx, int32_t drag)
 {
 	stx->em.drag = drag;
 }
 
-#define DT	(1.0f / 30.0f)
+#define DT	(65536 / 30)
 void update_smktxt(struct smktxt *stx)
 {
 	int i;
-	cgm_vec2 accel;
+	struct ivec2 accel;
 	struct particle *p;
-	struct g3d_vertex *v;
+	struct ivec2 *v;
 
 	if(!stx->em.plist) {
 		if(init_emitter(&stx->em, stx->em.pcount, stx->img_pixels, stx->img_xsz, stx->img_ysz) == -1) {
@@ -174,32 +178,19 @@ void update_smktxt(struct smktxt *stx)
 
 	for(i=0; i<stx->em.pcount; i++) {
 		vfield_eval(&stx->vfield, p->x, p->y, &accel);
-		p->x += p->vx * stx->em.drag * DT;
-		p->y += p->vy * stx->em.drag * DT;
-		p->z += p->vz * stx->em.drag * DT;
-		p->vx += (stx->em.wind.x + accel.x * DFL_FORCE) * DT;
-		p->vy += (stx->em.wind.y + accel.y * DFL_FORCE) * DT;
-		p->vz += (stx->em.wind.z + p->z * DFL_ZBIAS) * DT;
+		p->x += ((p->vx >> 4) * (stx->em.drag >> 4)) >> 12;
+		p->y += ((p->vy >> 4) * (stx->em.drag >> 4)) >> 12;
+		p->vx += ((accel.x >> 4) * (DFL_FORCE >> 4)) >> 12;
+		p->vy += ((accel.y >> 4) * (DFL_FORCE >> 4)) >> 12;
 		p->life -= DT;
-		if(p->life < 0.0f) p->life = 0.0f;
+		if(p->life < 0) p->life = 0;
 
 		v->x = p->x;
 		v->y = p->y;
-		v->z = p->z;
-		v->w = 1.0f;
-		v->a = cround64(p->life * 255.0f / stx->em.max_life);
-		v->r = 0;
-		v->g = (v->a & 0xe0) >> 3;
-		v->b = (v->a & 0x1f) << 3;
 		++v;
 
 		++p;
 	}
-}
-
-void draw_smktxt(struct smktxt *stx)
-{
-	g3d_draw(G3D_POINTS, stx->em.varr, stx->em.pcount);
 }
 
 
@@ -229,11 +220,10 @@ static int init_emitter(struct emitter *em, int num, unsigned char *map, int xsz
 			y = rand() % ysz;
 		} while(map[y * xsz + x] < 128);
 
-		p->x = (float)x / (float)xsz - 0.5;
-		p->y = -(float)y / (float)xsz + 0.5 / aspect;
-		p->z = ((float)i / (float)num * 2.0 - 1.0) * 0.005;
+		p->x = (int32_t)(((float)x / (float)xsz - 0.5) * 65536.0);
+		p->y = (int32_t)((-(float)y / (float)xsz + 0.5 / aspect) * 65536.0);
 		p->r = p->g = p->b = 255;
-		p->vx = p->vy = p->vz = 0.0f;
+		p->vx = p->vy = 0.0f;
 		p->life = em->max_life;
 		++p;
 	}
@@ -243,7 +233,9 @@ static int init_emitter(struct emitter *em, int num, unsigned char *map, int xsz
 static int load_vfield(struct vfield *vf, const char *fname)
 {
 	FILE *fp;
-	int tmp;
+	int i, j, tmp;
+	cgm_vec2 *vflt, *vsrc;
+	struct ivec2 *vdst;
 
 	if(!(fp = fopen(fname, "rb"))) {
 		fprintf(stderr, "failed to open vector field: %s\n", fname);
@@ -264,12 +256,12 @@ static int load_vfield(struct vfield *vf, const char *fname)
 		tmp >>= 1;
 	}
 
-	if(!(vf->v = malloc(vf->width * vf->height * sizeof *vf->v))) {
-		fprintf(stderr, "failed to allocate %dx%d vector field\n", vf->width, vf->height);
+	if(!(vflt = malloc(vf->width * vf->height * sizeof *vflt))) {
+		fprintf(stderr, "failed to allocate temp %dx%d vector field\n", vf->width, vf->height);
 		fclose(fp);
 		return -1;
 	}
-	if(fread(vf->v, sizeof *vf->v, vf->width * vf->height, fp) < vf->width * vf->height) {
+	if(fread(vflt, sizeof *vflt, vf->width * vf->height, fp) < vf->width * vf->height) {
 		fprintf(stderr, "load_vfield: unexpected end of file while reading %dx%d vector field\n",
 				vf->width, vf->height);
 		fclose(fp);
@@ -277,35 +269,55 @@ static int load_vfield(struct vfield *vf, const char *fname)
 	}
 	fclose(fp);
 
+	if(!(vf->v = malloc(vf->width * vf->height * sizeof *vf->v))) {
+		fprintf(stderr, "failed to allocate %dx%d vector field\n", vf->width, vf->height);
+		return -1;
+	}
+
+	vsrc = vflt;
+	vdst = vf->v;
+	for(i=0; i<vf->height; i++) {
+		for(j=0; j<vf->width; j++) {
+			vdst->x = (int32_t)(vsrc->x * 65536.0f);
+			vdst->y = (int32_t)(vsrc->y * 65536.0f);
+			vsrc++;
+			vdst++;
+		}
+	}
+	free(vflt);
+
 	vf->pos.x = vf->pos.y = 0;
-	vf->size.x = vf->size.y = 1;
+	vf->size.x = vf->size.y = 65536;
 	return 0;
 }
 
-static void vfield_eval(struct vfield *vf, float x, float y, cgm_vec2 *dir)
+static void vfield_eval(struct vfield *vf, int32_t x, int32_t y, struct ivec2 *dir)
 {
-	int px, py;
-	float tx, ty;
-	cgm_vec2 *p1, *p2;
-	cgm_vec2 left, right;
+	int32_t px, py;
+	int32_t tx, ty;
+	struct ivec2 *p1, *p2;
+	struct ivec2 left, right;
 
-	x = ((x - vf->pos.x) / vf->size.x + 0.5f) * vf->width;
-	y = ((y - vf->pos.y) / vf->size.y + 0.5f) * vf->height;
-	x = floor(x);
-	y = floor(y);
+	/* after this, x/y is left in 24.8 */
+	x = ((x - vf->pos.x) / (vf->size.x >> 8) + 128) * vf->width;
+	y = ((y - vf->pos.y) / (vf->size.y >> 8) + 128) * vf->height;
+	/* floor */
+	x &= 0xffffff00;
+	y &= 0xffffff00;
 
 	if(x < 0) x = 0;
 	if(y < 0) y = 0;
-	if(x > vf->width - 2) x = vf->width - 2;
-	if(y > vf->height - 2) y = vf->height - 2;
+	if(x > (vf->width - 2) << 8) x = (vf->width - 2) << 8;
+	if(y > (vf->height - 2) << 8) y = (vf->height - 2) << 8;
 
-	px = (int)x;
-	py = (int)y;
+	px = x >> 8;
+	py = y >> 8;
 
 	p1 = vf->v + (py << vf->xshift) + px;
-#ifdef BILERP_FIELD
+#if 0
 	p2 = p1 + vf->width;
 
+	/* XXX wtf? x = floor(x) then fmod(x, 1.0f) makes no sense */
 	tx = fmod(x, 1.0f);
 	ty = fmod(y, 1.0f);
 
@@ -324,7 +336,7 @@ static void vfield_eval(struct vfield *vf, float x, float y, cgm_vec2 *dir)
 #endif
 
 #ifdef RANDOMIZE_FIELD
-	dir->x += ((float)rand() / (float)RAND_MAX - 0.5) * RAND_FIELD_MAX;
-	dir->y += ((float)rand() / (float)RAND_MAX - 0.5) * RAND_FIELD_MAX;
+	dir->x += rand() % RAND_FIELD_MAX - 32768;
+	dir->y += rand() % RAND_FIELD_MAX - 32768;
 #endif
 }

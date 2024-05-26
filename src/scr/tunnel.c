@@ -261,7 +261,7 @@ static void draw(void)
 	static unsigned long prev_upd;
 	unsigned long tm, upd_interv;
 	int i, x, y;
-	struct g3d_vertex *vptr;
+	struct ivec2 *vptr;
 	void *tmpptr;
 
 	tm = time_msec - start_time;
@@ -293,8 +293,8 @@ static void draw(void)
 
 	vptr = stx->em.varr;
 	for(i=0; i<stx->em.pcount; i++) {
-		x = vptr->x * 220 + 160;
-		y = 120 - vptr->y * 220;
+		x = ((vptr->x * 220) >> 16) + 160;
+		y = 120 - ((vptr->y * 220) >> 16);
 
 		if(x < 0 || x >= 320 || y < 0 || y >= 240) {
 			vptr++;
@@ -302,6 +302,7 @@ static void draw(void)
 		}
 
 		cur_smokebuf[y * 320 + x] = 192;
+		/*fb_pixels[y * 320 + x] = PACK_RGB16(200, 180, 64);*/
 		vptr++;
 	}
 

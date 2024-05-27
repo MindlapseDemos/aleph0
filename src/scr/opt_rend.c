@@ -700,6 +700,17 @@ void buffer8bppToVram(unsigned char *buffer, unsigned int *colMap16to32)
 		*dst++ = colMap16to32[*src++];
 	}
 }
+/* will need this alternative for faster OR with thunder screen anyway */
+void buffer8bppORwithVram(unsigned char* buffer, unsigned int* colMap16to32)
+{
+	int i;
+	unsigned short* src = (unsigned short*)buffer;
+	unsigned int* dst = (unsigned int*)fb_pixels;
+
+	for (i = 0; i < FB_WIDTH * FB_HEIGHT / 2; ++i) {
+		*dst++ |= colMap16to32[*src++];
+	}
+}
 
 unsigned int *createColMap16to32(unsigned short *srcPal)
 {

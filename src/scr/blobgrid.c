@@ -46,6 +46,8 @@ static unsigned int *blobsPal32;
 static unsigned char *blobBuffer;
 
 struct screen* thunderScreen = NULL;
+static unsigned short* thunderPal;
+static unsigned int* thunderPal32;
 
 
 static int init(void);
@@ -87,11 +89,16 @@ static int init(void)
 
 	blobBuffer = (unsigned char*)malloc(FB_WIDTH * FB_HEIGHT);
 	blobsPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
+	thunderPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
 
 	setPalGradient(0,127, 0,0,0, 31,63,63, blobsPal);
 	setPalGradient(128,255, 31,63,31, 23,15,7, blobsPal);
 
+	setPalGradient(0, 127, 0, 0, 0, 11, 7, 7, thunderPal);
+	setPalGradient(127, 255, 11, 7, 7, 3, 7, 31, thunderPal);
+
 	blobsPal32 = createColMap16to32(blobsPal);
+	thunderPal32 = createColMap16to32(thunderPal);
 
 	initBlobGfx();
 
@@ -103,7 +110,9 @@ static int init(void)
 static void destroy(void)
 {
 	free(blobsPal);
+	free(thunderPal);
 	free(blobsPal32);
+	free(thunderPal32);
 	free(origPos);
 	free(screenPos);
 }
@@ -286,20 +295,13 @@ static void drawEffect(BlobGridParams *params, int t)
 
 static void mergeThunderScreen()
 {
-	int i;
-	unsigned char* src = getThunderBlurBuffer();
-	uint16_t* dst = fb_pixels;
-
 	if (!thunderScreen) {
 		thunderScreen = scr_lookup("thunder");
 	}
 
 	thunderScreen->draw();
 
-	for (i = 0; i < FB_WIDTH * FB_HEIGHT; ++i) {
-		unsigned char c = *src++ >> 3;
-		*dst++ |= ((c >> (1 + 2)) << 11) | ((c >> 2) << 5) | (c >> 1);
-	}
+	buffer8bppORwithVram(getThunderBlurBuffer(), thunderPal32);
 }
 
 static void draw(void)

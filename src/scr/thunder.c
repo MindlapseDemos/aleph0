@@ -16,6 +16,8 @@
 #define BLUR_BUFFER_SIZE (BLUR_BUFFER_WIDTH * BLUR_BUFFER_HEIGHT)
 static unsigned char *blurBuffer, *blurBuffer2;
 
+static unsigned char* finalBuffer8;
+
 #define BLUR_DARKEN 4
 
 #define THUNDER_RECT_SIZE 2
@@ -49,22 +51,25 @@ typedef struct {
 	float x,y,z;
 } MyVertex ;
 
-MyVertex vertexBuffer[VERTEX_COUNT];
-MyVertex vertexBufferAnimated[VERTEX_COUNT];
-MyVertex vertexBufferProjected[VERTEX_COUNT];
+static MyVertex vertexBuffer[VERTEX_COUNT];
+static MyVertex vertexBufferAnimated[VERTEX_COUNT];
+static MyVertex vertexBufferProjected[VERTEX_COUNT];
 
-void clearBlurBuffer();
-void applyBlur();
-void blitEffect();
-void thunder(int x0, int y0, int x1, int y1, unsigned char c0, unsigned char c1, int seed, int randomness, int depth);
+static void clearBlurBuffer();
+static void applyBlur();
+static void blitEffect();
+static void blitEffectBackTo8bitBuffer();
+static void thunder(int x0, int y0, int x1, int y1, unsigned char c0, unsigned char c1, int seed, int randomness, int depth);
 
-void initMesh();
-void projectMesh();
-void animateMesh();
-void renderMeshToPointSprites(int seed);
-void renderPointSprites();
-unsigned char fog(float z);
-void sortPointSprites();
+static void initMesh();
+static void projectMesh();
+static void animateMesh();
+static void renderMeshToPointSprites(int seed);
+static void renderPointSprites();
+static unsigned char fog(float z);
+static void sortPointSprites();
+
+unsigned char* getThunderBlurBuffer();
 
 static int init(void);
 static void destroy(void);
@@ -94,6 +99,8 @@ static int init(void)
 	blurBuffer = malloc(BLUR_BUFFER_SIZE);
 	blurBuffer2 = malloc(BLUR_BUFFER_SIZE);
 
+	finalBuffer8 = malloc(FB_WIDTH * FB_HEIGHT);
+
 	clearBlurBuffer();
 
 	/* For now, map to blue */
@@ -113,6 +120,9 @@ static void destroy(void)
 	
 	free(blurBuffer2);
 	blurBuffer2 = 0;
+
+	free(finalBuffer8);
+	finalBuffer8 = 0;
 }
 
 static void start(long trans_time)
@@ -143,21 +153,23 @@ static void draw(void)
 	
 	
 	applyBlur();
-	blitEffect();
+	
+	blitEffectBackTo8bitBuffer();
 
 	
 	/* comment out to merge with blobgrid */
-	/* swap_buffers(0); */
+	/* blitEffect();
+	   swap_buffers(0); */
 }
 
-void clearBlurBuffer() {
+static void clearBlurBuffer() {
 	/* Clear the whole buffer (including its padding ) */
 	memset(blurBuffer, 0, BLUR_BUFFER_SIZE);
 	memset(blurBuffer2, 0, BLUR_BUFFER_SIZE);
 }
 
 
-void applyBlur() {
+static void applyBlur() {
 	int i, j;
 	unsigned char *tmp;
 	unsigned char *src = blurBuffer + BLUR_BUFFER_WIDTH + 1;
@@ -184,7 +196,7 @@ void applyBlur() {
 	blurBuffer2 = tmp;
 }
 
-void blitEffect() {
+static void blitEffect() {
 	unsigned int *dst1 = (unsigned int*) fb_pixels;
 	unsigned int *dst2 = dst1 + 160; /* We're writing two pixels at once */
 	unsigned char *src1 = blurBuffer + BLUR_BUFFER_WIDTH + 1;
@@ -216,10 +228,43 @@ void blitEffect() {
 		dst1 += 160;
 		dst2 += 160;
 	}
-
 }
 
-void thunder(int x0, int y0, int x1, int y1, unsigned char c0, unsigned char c1, int seed, int randomness, int depth) {
+static void blitEffectBackTo8bitBuffer() {
+	unsigned short* dst1 = (unsigned short*)finalBuffer8;
+	unsigned short* dst2 = dst1 + 160; /* We're writing two pixels at once */
+	unsigned char* src1 = blurBuffer + BLUR_BUFFER_WIDTH + 1;
+	unsigned char* src2 = src1 + BLUR_BUFFER_WIDTH;
+	unsigned char tl, tr, bl, br;
+	int i, j;
+
+	for (j = 0; j < 120; j++) {
+		for (i = 0; i < 160; i++) {
+			tl = *src1;
+			tr = (*src1 + *(src1 + 1)) >> 1;
+			bl = (*src1 + *src2) >> 1;
+			br = (tr + ((*src2 + *(src2 + 1)) >> 1)) >> 1;
+
+			/* Pack 2 pixels in each 16 bit word */
+			*dst1 = (tr << 8) | tl;
+			*dst2 = (br << 8) | bl;
+
+			dst1++;
+			src1++;
+			dst2++;
+			src2++;
+		}
+		/* Again, skip padding */
+		src1 += 2;
+		src2 += 2;
+
+		/* For now, skip a scanline */
+		dst1 += 160;
+		dst2 += 160;
+	}
+}
+
+static void thunder(int x0, int y0, int x1, int y1, unsigned char c0, unsigned char c1, int seed, int randomness, int depth) {
 	int mx, my, i, j;
 	unsigned char *dst;
 	unsigned char mc;
@@ -244,7 +289,7 @@ void thunder(int x0, int y0, int x1, int y1, unsigned char c0, unsigned char c1,
 	thunder(mx, my, x1, y1, mc, c1, rand(), randomness >> 1, depth - 1);
 }
 
-MyVertex randomVertex() {
+static MyVertex randomVertex() {
 	MyVertex ret;
 	float l;
 
@@ -261,7 +306,7 @@ MyVertex randomVertex() {
 	return ret;
 }
 
-void initMesh() {
+static void initMesh() {
 	int i;
 
 	srand(MESH_RANDOM_SEED);
@@ -271,7 +316,7 @@ void initMesh() {
 	}
 }
 
-void animateMesh() {
+static void animateMesh() {
 	int i = 0;
 	MyVertex bx, by, bz;
 	float yRot;
@@ -309,7 +354,7 @@ void animateMesh() {
 	}
 }
 
-void projectMesh() {
+static void projectMesh() {
 	int i = 0;
 
 	for (i = 0; i < VERTEX_COUNT; i++) {
@@ -325,7 +370,7 @@ void projectMesh() {
 	}
 }
 
-void renderMeshToPointSprites(int seed) {
+static void renderMeshToPointSprites(int seed) {
 	int vertex, j;
 	int sx, sy;
 	unsigned char color;
@@ -345,7 +390,7 @@ void renderMeshToPointSprites(int seed) {
 	}
 }
 
-void renderPointSprites() {
+static void renderPointSprites() {
 	int i,j;
 	PointSprite sprite;
 	unsigned char *dst;
@@ -371,13 +416,13 @@ void renderPointSprites() {
 	}
 }
 
-unsigned char fog(float z) {
+static unsigned char fog(float z) {
 	unsigned int ret = (unsigned int) (((-(z - CAMERA_DISTANCE)) * 0.5f + 0.5f) * (255.0f - MIN_FOGGED)) + MIN_FOGGED;
 	if (ret > 255) ret = 255;
 	return (unsigned char)ret;
 }
 
-void sort(PointSprite *begin, PointSprite *end) {
+static void sort(PointSprite *begin, PointSprite *end) {
 	PointSprite pivotValue;
 	size_t sz;
 	PointSprite *left, *right;
@@ -434,7 +479,11 @@ void sort(PointSprite *begin, PointSprite *end) {
 	sort(left, end);
 }
 
-void sortPointSprites() {
+static void sortPointSprites() {
 	sort(pointSprites, pointSprites + pointSpriteCount);
 }
 
+unsigned char* getThunderBlurBuffer()
+{
+	return finalBuffer8;
+}

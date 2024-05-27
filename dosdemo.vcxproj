@@ -169,6 +169,7 @@
     <ClInclude Include="src\sball.h" />
     <ClInclude Include="src\screen.h" />
     <ClInclude Include="src\scr\smoketxt.h" />
+    <ClInclude Include="src\scr\thunder.h" />
     <ClInclude Include="src\scr\tilemaze.h" />
     <ClInclude Include="src\timer.h" />
     <ClInclude Include="src\tinyfps.h" />

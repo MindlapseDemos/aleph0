@@ -120,9 +120,6 @@
     <ClCompile Include="src\scr\cybersun.c">
       <Filter>src\screens</Filter>
     </ClCompile>
-    <ClCompile Include="src\scr\fract.c">
-      <Filter>src\screens</Filter>
-    </ClCompile>
     <ClCompile Include="src\scr\grise.c">
       <Filter>src\screens</Filter>
     </ClCompile>
@@ -178,9 +175,6 @@
       <Filter>src\screens</Filter>
     </ClCompile>
     <ClCompile Include="src\scr\dott.c">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\scr\break.c">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\scr\opt_3d.c">
@@ -298,6 +292,9 @@
     </ClInclude>
     <ClInclude Include="libs\cgmath\cgmath.h">
       <Filter>cgmath</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scr\thunder.h">
+      <Filter>src\screens</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

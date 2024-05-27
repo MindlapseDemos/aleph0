@@ -20,7 +20,6 @@ typedef struct BlobData
 
 
 void buffer8bppToVram(unsigned char *buffer, unsigned int *colMap16to32);
-void buffer8bppToVramLazyOR(unsigned char* buffer, unsigned int* colMap16to32);
 unsigned int *createColMap16to32(unsigned short *srcPal);
 
 void initOptRasterizer();

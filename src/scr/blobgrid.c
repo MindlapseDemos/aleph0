@@ -8,11 +8,11 @@
 #include "screen.h"
 
 #include "opt_rend.h"
+#include "thunder.h"
 
 
 typedef struct BlobGridParams
 {
-	int effectIndex;
 	int numPoints;
 	int blobSizesNum;
 	int connectionDist;
@@ -28,9 +28,7 @@ typedef struct BlobGridParams
 #define STARS_CUBE_LENGTH 1024
 #define STARS_CUBE_DEPTH 512
 
-BlobGridParams bgParams0 = { 0, 64, 10, 8192, 32};
-BlobGridParams bgParams1 = { 1, 80, 8, 4096, 32};
-BlobGridParams bgParamsStars = { 2, NUM_STARS, 7, 4096, 16};
+BlobGridParams bgParamsStars = { NUM_STARS, 7, 4096, 16};
 
 
 typedef struct Pos3D
@@ -253,42 +251,6 @@ static void drawStars(BlobGridParams *params)
 	}while(--count != 0);
 }
 
-static void drawPoints(BlobGridParams *params, int t)
-{
-	const int numPoints = params->numPoints;
-	const int blobSizesNum = params->blobSizesNum;
-	Pos3D *dst = screenPos;
-
-	int count = numPoints;
-	switch(params->effectIndex) {
-		case 0:
-			do {
-				dst->x = FB_WIDTH / 2 + (int)(sin((t + 478*count)/2924.0) * 148);
-				dst->y = FB_HEIGHT / 2 + (int)(sin((t + 524*count)/2638.0) * 96);
-				drawBlob(dst->x,dst->y,blobSizesNum>>1,2,blobBuffer);
-				++dst;
-			} while(--count != 0);
-			drawConnections(params);
-		break;
-
-		case 1:
-			do {
-				dst->x = FB_WIDTH / 2 + (int)(sin((t/2 + 768*count)/2624.0) * 148);
-				dst->y = FB_HEIGHT / 2 + (int)(sin((t/2 + 624*count)/1238.0) * 96);
-				drawBlob(dst->x,dst->y,blobSizesNum>>1,3,blobBuffer);
-				++dst;
-			} while(--count != 0);
-			drawConnections(params);
-		break;
-		
-		case 2:
-			drawStars(params);
-			drawConnections3D(params);
-		break;
-	}
-}
-
-
 static void moveStars()
 {
 	int count = NUM_STARS;
@@ -313,16 +275,20 @@ static void drawEffect(BlobGridParams *params, int t)
 	const int dt = t - prevT;
 	if (dt < 0 || dt > 20) {
 		moveStars();
+	
+		memset(blobBuffer, 0, FB_WIDTH * FB_HEIGHT);
+		drawStars(params);
+		drawConnections3D(params);
+
 		prevT = t;
 	}
-
-	drawPoints(params, t);
 }
 
-static void draw(void)
+static void mergeThunderScreen()
 {
-	int t = time_msec - startingTime;
-	/* t >>= 6; */
+	int i;
+	unsigned char* src = getThunderBlurBuffer();
+	uint16_t* dst = fb_pixels;
 
 	if (!thunderScreen) {
 		thunderScreen = scr_lookup("thunder");
@@ -330,12 +296,21 @@ static void draw(void)
 
 	thunderScreen->draw();
 
-	memset(blobBuffer, 0, FB_WIDTH * FB_HEIGHT);
+	for (i = 0; i < FB_WIDTH * FB_HEIGHT; ++i) {
+		unsigned char c = *src++ >> 3;
+		*dst++ |= ((c >> (1 + 2)) << 11) | ((c >> 2) << 5) | (c >> 1);
+	}
+}
 
-	/* drawEffect(&bgParams1, t); */
+static void draw(void)
+{
+	int t = time_msec - startingTime;
+
 	drawEffect(&bgParamsStars, t);
 
-	buffer8bppToVramLazyOR(blobBuffer, blobsPal32);
+	buffer8bppToVram(blobBuffer, blobsPal32);
+
+	mergeThunderScreen();
 
 	swap_buffers(0);
 }

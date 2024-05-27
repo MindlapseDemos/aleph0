@@ -24,6 +24,7 @@
 #undef ROTATE
 
 #define BLUR_RAD	5
+#define SINGLE_BLUR
 
 
 static int init(void);
@@ -283,13 +284,15 @@ static void draw(void)
 	}
 
 	/* blur the previous smoke buffer */
-	blur_full_horiz8(prev_smokebuf, cur_smokebuf, BLUR_RAD, 240);
-	/*blur_full_vert8(cur_smokebuf, prev_smokebuf, BLUR_RAD, 240);*/
-
+	blur_xyzzy_horiz8(prev_smokebuf, cur_smokebuf);
+#ifndef SINGLE_BLUR
+	blur_xyzzy_vert8(cur_smokebuf, prev_smokebuf);
+#else
 	/* swap the smoke buffer pointers */
 	tmpptr = cur_smokebuf;
 	cur_smokebuf = prev_smokebuf;
 	prev_smokebuf = tmpptr;
+#endif
 
 	vptr = stx->em.varr;
 	for(i=0; i<stx->em.pcount; i++) {

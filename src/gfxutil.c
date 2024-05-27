@@ -244,10 +244,14 @@ void blur_vert(uint16_t *dest, uint16_t *src, int xsz, int ysz, int rad, int sca
 	BLUR(ysz, xsz, pixel_step, scanline_step);
 }
 
-
-#define BF8_CLAMP(dest, val) dest = val
+/* hardcode and approximate everything */
+#define XYZZY_RAD		5
+#define XYZZY_MIDCOUNT	(320 - XYZZY_RAD * 2)
+/*#define XYZZY_WSUM(x)	(240 * (x) / (11 << 8))*/
+#define XYZZY_WSUM(x)	(((x) >> 4) + ((x) >> 6))
+#define XYZZY_CLAMP(dest, val) dest = val
 /*
-#define BF8_CLAMP(dest, val) \
+#define XYZZY_CLAMP(dest, val) \
 	do { \
 		int res = val; \
 		if(res < 0) res = 0; \
@@ -257,16 +261,14 @@ void blur_vert(uint16_t *dest, uint16_t *src, int xsz, int ysz, int rad, int sca
 */
 
 
-void blur_full_horiz8(uint8_t *dest, uint8_t *src, unsigned int rad, int scale)
+void blur_xyzzy_horiz8(uint8_t *dest, uint8_t *src)
 {
-	int i, j, midcount;
+	int i, j;
 	unsigned char *sptr, *dptr;
-	int sum, first, last, count;
+	int sum, first, last;
 
-	midcount = 320 - rad * 2;
 	sptr = src;
 	dptr = dest;
-	count = (rad * 2 + 1) << 8;
 
 	for(i=0; i<240; i++) {
 		first = sptr[0];
@@ -274,48 +276,45 @@ void blur_full_horiz8(uint8_t *dest, uint8_t *src, unsigned int rad, int scale)
 
 		/* start with the sum corresponding to the pixel just outside */
 		/* add up all outside boundary pixels */
-		sum = first * (rad + 1);
+		sum = first * (XYZZY_RAD + 1);
 		/* add the right part of the kernel which are all inside */
-		for(j=0; j<rad; j++) {
+		for(j=0; j<XYZZY_RAD; j++) {
 			sum += sptr[j];
 		}
 
 		/* first stage: add sptr[rad], subtract one of the outside pixels */
-		for(j=0; j<=rad; j++) {
-			sum = sum + sptr[rad] - first;
+		for(j=0; j<=XYZZY_RAD; j++) {
+			sum = sum + sptr[XYZZY_RAD] - first;
 			sptr++;
-			BF8_CLAMP(dptr[j], scale * sum / count);
+			XYZZY_CLAMP(dptr[j], XYZZY_WSUM(sum));
 		}
-		dptr += rad + 1;
+		dptr += XYZZY_RAD + 1;
 
 		/* iterate for the rest of the scanline until the end boundary condition */
-		for(j=0; j<midcount-1; j++) {
-			sum = sum + sptr[rad] - sptr[-rad-1];
+		for(j=0; j<XYZZY_MIDCOUNT-1; j++) {
+			sum = sum + sptr[XYZZY_RAD] - sptr[-XYZZY_RAD-1];
 			sptr++;
-			BF8_CLAMP(dptr[j], scale * sum / count);
+			XYZZY_CLAMP(dptr[j], XYZZY_WSUM(sum));
 		}
-		dptr += midcount - 1;
+		dptr += XYZZY_MIDCOUNT - 1;
 
 		/* last stage: add last, subtract left */
-		for(j=0; j<rad; j++) {
-			sum = sum + last - sptr[-rad-1];
+		for(j=0; j<XYZZY_RAD; j++) {
+			sum = sum + last - sptr[-XYZZY_RAD-1];
 			sptr++;
-			BF8_CLAMP(dptr[j], scale * sum / count);
+			XYZZY_CLAMP(dptr[j], XYZZY_WSUM(sum));
 		}
-		dptr += rad;
+		dptr += XYZZY_RAD;
 	}
 }
 
-void blur_full_vert8(uint8_t *dest, uint8_t *src, unsigned int rad, int scale)
+#define XYZZY_INOFFS	(XYZZY_RAD * 320)
+#define XYZZY_OUTOFFS	(-(XYZZY_RAD + 1) * 320)
+void blur_xyzzy_vert8(uint8_t *dest, uint8_t *src)
 {
-	int i, j, midcount;
+	int i, j;
 	unsigned char *sptr, *dptr;
-	int sum, first, last, count;
-	int outoffs = -(rad + 1) * 320;
-	int inoffs = rad * 320;
-
-	midcount = 240 - rad * 2;
-	count = (rad * 2 + 1) << 8;
+	int sum, first, last;
 
 	for(i=0; i<320; i++) {
 		sptr = src + i;
@@ -326,33 +325,33 @@ void blur_full_vert8(uint8_t *dest, uint8_t *src, unsigned int rad, int scale)
 
 		/* start with the sum corresponding to the pixel just outside */
 		/* add up all outside boundary pixels */
-		sum = first * (rad + 1);
+		sum = first * (XYZZY_RAD + 1);
 		/* add the right part of the kernel which are all inside */
-		for(j=0; j<rad; j++) {
-			sum += sptr[inoffs];
+		for(j=0; j<XYZZY_RAD; j++) {
+			sum += sptr[XYZZY_INOFFS];
 		}
 
-		/* first stage: add sptr[rad], subtract one of the outside pixels */
-		for(j=0; j<=rad; j++) {
-			sum = sum + sptr[inoffs] - first;
+		/* first stage: add sptr[XYZZY_RAD], subtract one of the outside pixels */
+		for(j=0; j<=XYZZY_RAD; j++) {
+			sum = sum + sptr[XYZZY_INOFFS] - first;
 			sptr += 320;
-			BF8_CLAMP(*dptr, scale * sum / count);
+			XYZZY_CLAMP(*dptr, XYZZY_WSUM(sum));
 			dptr += 320;
 		}
 
 		/* iterate for the rest of the column until the end boundary condition */
-		for(j=0; j<midcount-1; j++) {
-			sum = sum + sptr[inoffs] - sptr[outoffs];
+		for(j=0; j<XYZZY_MIDCOUNT-1; j++) {
+			sum = sum + sptr[XYZZY_INOFFS] - sptr[XYZZY_OUTOFFS];
 			sptr += 320;
-			BF8_CLAMP(*dptr, scale * sum / count);
+			XYZZY_CLAMP(*dptr, XYZZY_WSUM(sum));
 			dptr += 320;
 		}
 
 		/* last stage: add last, subtract left */
-		for(j=0; j<rad; j++) {
-			sum = sum + last - sptr[outoffs];
+		for(j=0; j<XYZZY_RAD; j++) {
+			sum = sum + last - sptr[XYZZY_OUTOFFS];
 			sptr += 320;
-			BF8_CLAMP(*dptr, scale * sum / count);
+			XYZZY_CLAMP(*dptr, XYZZY_WSUM(sum));
 			dptr += 320;
 		}
 	}

@@ -96,8 +96,12 @@ static int loadHeightMapTest()
 	for (y = 0; y < FB_HEIGHT; ++y) {
 		for (x = 0; x < FB_WIDTH; ++x) {
 			uint32_t c32 = src[((y & (imgHeight - 1)) * imgWidth) + (x & (imgWidth - 1))];
-			unsigned char c = ((c32 >> 24) & 255) + ((c32 >> 16) & 255) + ((c32 >> 8) & 255) + (c32 & 255);
-			heightmap[i++] = c >> 2;
+			int a = (c32 >> 24) & 255;
+			int r = (c32 >> 16) & 255;
+			int g = (c32 >> 8) & 255;
+			int b = c32 & 255;
+			int c = (a + r + g + b) / 4;
+			heightmap[i++] = c;
 		}
 	}
 
@@ -119,9 +123,9 @@ static int init(void)
 	/* Just some parameters to temporary test the colors of 3 lights
 	 * if every light uses it's own channel bits, it's better
 	 */
-	const float rgbMul[9] = { 0,0,0.5f,
-								0,0.5f,0,
-								0.5f,0,0 };
+	const float rgbMul[9] = { 0.75, 0,    0,
+							  0,    0.75, 0,
+							  0,    0,    0.75 };
 
 	heightmap = malloc(sizeof(*heightmap) * fb_size);
 	lightmap = malloc(sizeof(*lightmap) * fb_size);
@@ -193,7 +197,7 @@ static int init(void)
 			float invDist = ((float)particleRadius - (float)sqrt(xc * xc + yc * yc)) / (float)particleRadius;
 			if (invDist < 0.0f) invDist = 0.0f;
 
-			c = (int)(pow(invDist, 0.75f) * 63);
+			c = (int)(pow(invDist, 0.75f) * 31);
 			particleLight[i++] = ((c >> 1) << 11) | (c << 5) | (c >> 1);
 		}
 	}
@@ -352,8 +356,8 @@ static void draw(void)
 	animateLights();
 	renderLights();
 
-	/*animateParticles();
-	renderParticles();*/
+	/* animateParticles();
+	renderParticles(); */
 
 	renderBump((unsigned short*)fb_pixels);
 

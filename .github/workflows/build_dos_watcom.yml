@@ -11,11 +11,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: cache toolchain
       id: cache-tc
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ow
         key: openwatcom-cache1
@@ -58,7 +58,7 @@ jobs:
         wmake
         cp ow/binw/dos4gw.exe .
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: watdemo
         path: |

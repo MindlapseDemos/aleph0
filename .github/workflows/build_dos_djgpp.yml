@@ -11,11 +11,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: cache toolchain
       id: cache-tc
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: djgpp
         key: djgpp-cache1
@@ -44,7 +44,7 @@ jobs:
         make -f Makefile.dj
         cp djgpp/i586-pc-msdosdjgpp/bin/cwsdpmi.exe .
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: djdemo
         path: |

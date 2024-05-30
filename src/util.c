@@ -6,7 +6,10 @@
 #include "util.h"
 #include "demo.h"
 
+void (*memcpy64)(void *dest, void *src, int count) = memcpy64_nommx;
+
 uint32_t perf_start_count, perf_interval_count;
+
 
 void *malloc_nf_impl(size_t sz, const char *file, int line)
 {

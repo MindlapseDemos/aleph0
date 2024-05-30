@@ -14,6 +14,7 @@
 #include "tinyfps.h"
 #include "gfxutil.h"
 #include "util.h"
+#include "cpuid.h"
 
 #ifdef __GLIBC__
 #include <malloc.h>
@@ -25,6 +26,8 @@
 
 #define GUARD_XPAD	0
 #define GUARD_YPAD	64
+
+static void init_mmx_routines(void);
 
 int fb_width, fb_height, fb_bpp, fb_scan_size;
 float fb_aspect;
@@ -79,6 +82,9 @@ int demo_init(void)
 	initFpsFonts();
 
 	init_gfxutil();
+	if(CPU_HAVE_MMX) {
+		init_mmx_routines();
+	}
 
 	if(g3d_init() == -1) {
 		return -1;
@@ -315,4 +321,19 @@ void mouse_orbit_update(float *theta, float *phi, float *dist)
 			}
 		}
 	}
+}
+
+
+/* initialize pointers to various routines which have MMX versions if they're
+ * not handled elsewhere
+ */
+static void init_mmx_routines(void)
+{
+	fputs("set up MMX routines: ", stdout);
+
+	fputs("memcpy64", stdout);
+	memcpy64 = memcpy64_mmx;		/* util_s.asm */
+
+	putchar('\n');
+	fflush(stdout);
 }

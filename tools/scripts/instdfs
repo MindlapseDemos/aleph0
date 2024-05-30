@@ -47,7 +47,8 @@ else
 	find data -maxdepth 1 -type f -exec cp '{}' $destdir/data/ ';'
 	cp -r data/3dzoom $destdir/data/
 	mkdir -p $destdir/libs/midas
-	cp libs/midas/midas.lib libs/midas/libmidas.a $destdir/libs/midas
+	cp libs/midas/libmidas.a $destdir/libs/midas
+	cp data/bin/midas.lib $destdir/midas.lib
 	cp watcfg.mk $destdir/watcfg.mk
 fi
 

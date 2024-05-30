@@ -59,5 +59,62 @@ set_msr_:
 	wrmsr
 	ret
 
+	global memcpy64_mmx_
+memcpy64_mmx_:
+	movq mm0, [edx]
+	movq [eax], mm0
+	add edx, 8
+	add eax, 8
+	dec ebx
+	jnz memcpy64_mmx_
+	emms
+	ret
+
+	global memcpy64_nommx_
+memcpy64_nommx_:
+	push esi
+	push edi
+	push ecx
+	mov esi, edx
+	mov edi, eax
+	mov ecx, ebx
+	shl ecx, 1
+	rep movsd
+	pop ecx
+	pop edi
+	pop esi
+	ret
+
+	global memcpy64_mmx
+	global _memcpy64_mmx
+memcpy64_mmx:
+_memcpy64_mmx:
+	mov edx, [esp + 4]
+	mov eax, [esp + 8]
+	mov ecx, [esp + 12]
+.cploop:
+	movq mm0, [eax]
+	movq [edx], mm0
+	add eax, 8
+	add edx, 8
+	dec ecx
+	jnz .cploop
+	emms
+	ret
+
+	global memcpy64_nommx
+	global _memcpy64_nommx
+memcpy64_nommx:
+_memcpy64_nommx:
+	push esi
+	push edi
+	mov esi, [esp + 16]
+	mov edi, [esp + 12]
+	mov ecx, [esp + 20]
+	shl ecx, 1
+	rep movsd
+	pop edi
+	pop esi
+	ret
 
 ; vi:ft=nasm:

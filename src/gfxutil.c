@@ -1,7 +1,9 @@
+#include <stdio.h>
 #include <string.h>
 #include <assert.h>
 #include "demo.h"
 #include "gfxutil.h"
+#include "util.h"
 #include "3dgfx/3dgfx.h"
 
 void (*overlay_alpha)(struct image *dest, int x, int y, const struct image *src,
@@ -374,7 +376,11 @@ void blitfb(uint16_t *dest, uint16_t *src, int width, int height, int pitch_pix)
 {
 	int i;
 	for(i=0; i<height; i++) {
-		memcpy(dest, src, width << 1);
+		if((width & 3) == 0) {
+			memcpy64(dest, src, width >> 2);
+		} else {
+			memcpy(dest, src, width << 1);
+		}
 		dest += 320;
 		src += pitch_pix;
 	}
@@ -420,21 +426,22 @@ void overlay_full_add_pal(uint16_t *dest, uint8_t *src, unsigned int *pal)
 	unsigned int *col;
 	uint16_t pixel;
 
-	for(i=0; i<240; i++) {
-		for(j=0; j<320; j++) {
-			pixel = dest[j];
-			col = pal + ((unsigned int)src[j] << 2);
-			r = UNPACK_R16(pixel) + col[0];
-			g = UNPACK_G16(pixel) + col[1];
-			b = UNPACK_B16(pixel) + col[2];
-			if(r > 255) r = 255;
-			if(g > 255) g = 255;
-			if(b > 255) b = 255;
-			dest[j] = PACK_RGB16(r, g, b);
-		}
-		dest += 320;
-		src += 320;
+	/*perf_start();*/
+
+	for(i=0; i<320*240; i++) {
+		pixel = dest[i];
+		col = pal + ((unsigned int)src[i] << 2);
+		r = UNPACK_R16(pixel) + col[0];
+		g = UNPACK_G16(pixel) + col[1];
+		b = UNPACK_B16(pixel) + col[2];
+		if(r > 255) r = 255;
+		if(g > 255) g = 255;
+		if(b > 255) b = 255;
+		dest[i] = PACK_RGB16(r, g, b);
 	}
+
+	/*perf_end();
+	printf("%lu\n", (unsigned long)perf_interval_count);*/
 }
 
 static void overlay_alpha_c(struct image *dest, int x, int y, const struct image *src,

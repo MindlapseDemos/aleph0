@@ -5,7 +5,7 @@ bin = demo.html
 
 inc = -Isrc -Isrc/3dgfx -Isrc/rt -Isrc/scr -Isrc/utils -Isrc/sdl -Ilibs \
 	  -Ilibs/imago/src -Ilibs/anim/src -Ilibs/mikmod/include -Ilibs/goat3d/include
-def = -DMIKMOD_STATIC
+def = -DMIKMOD_STATIC -DNO_ASM
 warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function -Wno-address
 opt = -O3 -ffast-math
 dbg = -g3

@@ -149,3 +149,15 @@ int strncasecmp(const char *a, const char *b, size_t n)
 	return 0;
 }
 #endif
+
+#ifdef NO_ASM
+void memcpy64_mmx(void *dest, void *src, int count)
+{
+	memcpy(dest, src, count << 3);
+}
+
+void memcpy64_nommx(void *dest, void *src, int count)
+{
+	memcpy(dest, src, count << 3);
+}
+#endif

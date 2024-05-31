@@ -9,6 +9,7 @@
 #include "demo.h"
 #include "screen.h"
 
+#define HOR_THE_VER_STEP
 
 #define FP_VIEWER 8
 #define FP_BASE 12
@@ -20,8 +21,8 @@
 #define SIN_TO_COS (SIN_LENGTH / 4)
 
 #define FOV 48
-#define VIS_NEAR 16
-#define VIS_FAR 224
+#define VIS_NEAR 32
+#define VIS_FAR 384
 
 #define PIXEL_SIZE 1
 #define PIXEL_ABOVE (FB_WIDTH / PIXEL_SIZE)
@@ -34,7 +35,7 @@
 #define V_PLAYER_HEIGHT 176
 #define V_HEIGHT_SCALER_SHIFT 7
 #define V_HEIGHT_SCALER (1 << V_HEIGHT_SCALER_SHIFT)
-#define HORIZON (3 * FB_HEIGHT / 4)
+#define HORIZON (7 * FB_HEIGHT / 8)
 
 #define HMAP_WIDTH 512
 #define HMAP_HEIGHT 512
@@ -56,6 +57,8 @@ static int *heightScaleTab = NULL;
 static int *isin = NULL;
 static Point2D *viewNearPosVec = NULL;
 static Point2D *viewNearStepVec = NULL;
+static int* yMaxHolder = NULL;
+static uint16_t** dstX;
 
 static unsigned char *hmap = NULL;
 static unsigned char *cmap = NULL;
@@ -171,6 +174,8 @@ static int init(void)
 	hmap = malloc(HMAP_SIZE);
 	viewNearPosVec = malloc(VIS_HOR_STEPS * sizeof(Point2D));
 	viewNearStepVec = malloc(VIS_HOR_STEPS * sizeof(Point2D));
+	yMaxHolder = malloc(VIS_HOR_STEPS * sizeof(int));
+	dstX = malloc(VIS_HOR_STEPS * sizeof(uint16_t*));
 
 	if(initHeightmapAndColormap() == -1) {
 		return -1;
@@ -185,6 +190,8 @@ static void destroy(void)
 	free(heightScaleTab);
 	free(viewNearPosVec);
 	free(viewNearStepVec);
+	free(yMaxHolder);
+	free(dstX);
 	free(hmap);
 	free(cmap);
 }
@@ -212,8 +219,9 @@ static void updateRaySamplePosAndStep()
 
 	setPoint2D(&pl, isin[(yawL+SIN_TO_COS)&(SIN_LENGTH-1)]*length, isin[yawL]*length);
 	setPoint2D(&pr, isin[(yawR+SIN_TO_COS)&(SIN_LENGTH-1)]*length, isin[yawR]*length);
-	setPoint2D(&dHor, (pr.x - pl.x) / (VIS_HOR_STEPS - 1), (pr.y - pl.y) / (VIS_HOR_STEPS - 1));
 
+#ifdef HOR_THE_VER_STEP
+	setPoint2D(&dHor, (pr.x - pl.x) / (VIS_HOR_STEPS - 1), (pr.y - pl.y) / (VIS_HOR_STEPS - 1));
 	for (i=0; i<VIS_HOR_STEPS; ++i) {
 		setPoint2D(viewStepVec++, (VIS_VER_SKIP * pl.x) >> FP_BASE, (VIS_VER_SKIP * pl.y) >> FP_BASE);
 		setPoint2D(viewPosVec++, (VIS_NEAR * pl.x) >> FP_BASE, (VIS_NEAR * pl.y) >> FP_BASE);
@@ -221,18 +229,22 @@ static void updateRaySamplePosAndStep()
 		pl.x += dHor.x;
 		pl.y += dHor.y;
 	}
+#else
+	setPoint2D(&viewNearStepVec[0], (VIS_VER_SKIP * pl.x) >> FP_BASE, (VIS_VER_SKIP * pl.y) >> FP_BASE);
+	setPoint2D(&viewNearPosVec[0], (VIS_NEAR * pl.x) >> FP_BASE, (VIS_NEAR * pl.y) >> FP_BASE);
+	setPoint2D(&viewNearStepVec[VIS_HOR_STEPS - 1], (VIS_VER_SKIP * pr.x) >> FP_BASE, (VIS_VER_SKIP * pr.y) >> FP_BASE);
+	setPoint2D(&viewNearPosVec[VIS_HOR_STEPS - 1], (VIS_NEAR * pr.x) >> FP_BASE, (VIS_NEAR * pr.y) >> FP_BASE);
+#endif
 }
 
 static void renderScape()
 {
-	int i,j,l;
+	int i,j;
 
 	const int playerHeight = viewPos.y >> FP_VIEWER;
 	const int viewerOffset = (viewPos.z >> FP_VIEWER) * HMAP_WIDTH + (viewPos.x >> FP_VIEWER);
 
 	uint16_t *dstBase = (uint16_t*)fb_pixels + (FB_HEIGHT-1) * FB_WIDTH;
-
-	updateRaySamplePosAndStep();
 
 	for (j=0; j<VIS_HOR_STEPS; ++j) {
 		int yMax = 0;
@@ -280,14 +292,76 @@ static void renderScape()
 			if (i > VIS_VER_STEPS - PAL_SHADES) pmapPtr += 256;
 		}
 
-		for (l=yMax; l<FB_HEIGHT; ++l) {
-			*dst = 0;
-			dst -= PIXEL_ABOVE;
-		}
-
 		dstBase += PIXEL_SIZE;
 	}
 
+}
+
+static void renderScapeX()
+{
+	int i, j;
+
+	const int playerHeight = viewPos.y >> FP_VIEWER;
+	const int viewerOffset = (viewPos.z >> FP_VIEWER) * HMAP_WIDTH + (viewPos.x >> FP_VIEWER);
+
+	Point2D* posVecL = &viewNearPosVec[0];
+	Point2D* posVecR = &viewNearPosVec[VIS_HOR_STEPS - 1];
+	Point2D* stepVecL = &viewNearStepVec[0];
+	Point2D* stepVecR = &viewNearStepVec[VIS_HOR_STEPS - 1];
+
+	int vxL = posVecL->x;
+	int vxR = posVecR->x;
+	int vyL = posVecL->y;
+	int vyR = posVecR->y;
+	const int dvxL = stepVecL->x;
+	const int dvxR = stepVecR->x;
+	const int dvyL = stepVecL->y;
+	const int dvyR = stepVecR->y;
+
+	uint16_t* dstBase = (uint16_t*)fb_pixels + (FB_HEIGHT - 1) * FB_WIDTH;
+	for (i = 0; i < VIS_HOR_STEPS; ++i) {
+		dstX[i] = dstBase + i;
+	}
+
+	memset(yMaxHolder, 0, VIS_HOR_STEPS * sizeof(int));
+
+	for (j = 0; j < VIS_VER_STEPS; ++j) {
+		int vx = vxL;
+		int vy = vyL;
+		const int dvx = (vxR - vxL) / VIS_HOR_STEPS;
+		const int dvy = (vyR - vyL) / VIS_HOR_STEPS;
+
+		uint16_t* pmapPtr = (uint16_t*)&cmap[HMAP_SIZE];
+		const int heightScale = heightScaleTab[j];
+
+		for (i = 0; i < VIS_HOR_STEPS; ++i) {
+			const int yMax = yMaxHolder[i];
+			if (yMax < FB_HEIGHT - 1) {
+				const int sampleOffset = (vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE);
+				const int mapOffset = (viewerOffset + sampleOffset) & (HMAP_SIZE - 1);
+				const int hm = hmap[mapOffset];
+				int h = (((-playerHeight + hm) * heightScale) >> (FP_REC - V_HEIGHT_SCALER_SHIFT)) + HORIZON;
+				if (h > FB_HEIGHT - 1) h = FB_HEIGHT - 1;
+
+				if (yMax < h) {
+					const uint16_t cv = pmapPtr[cmap[mapOffset]];
+
+					int hCount = h - yMaxHolder[i];
+					uint16_t* dst = dstX[i];
+					do {
+						*dst = cv;
+						dst -= FB_WIDTH;
+					} while (--hCount > 0);
+
+					dstX[i] = dst;
+					yMaxHolder[i] = h;
+				}
+			}
+			vx += dvx; vy += dvy;
+		}
+		vxL += dvxL; vyL += dvyL;
+		vxR += dvxR; vyR += dvyR;
+	}
 }
 
 static void setViewPos(int px, int py, int pz)
@@ -333,13 +407,21 @@ static void move()
 	}
 
 	prevTime = time_msec;
+
+	updateRaySamplePosAndStep();
 }
 
 static void draw(void)
 {
 	move();
 
+	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
+
+#ifdef HOR_THE_VER_STEP
 	renderScape();
+#else
+	renderScapeX();
+#endif
 
 	swap_buffers(0);
 }

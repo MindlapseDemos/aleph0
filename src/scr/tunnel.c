@@ -53,7 +53,7 @@ static struct screen scr = {
 
 #define NUM_TUNPAL		16
 
-static int xsz, ysz, vxsz, vysz;
+static int vxsz, vysz;
 static int pan_width, pan_height;
 static unsigned long start_time;
 static unsigned int *tunnel_map;
@@ -92,13 +92,11 @@ static int init(void)
 	struct img_pixmap pixmap;
 	unsigned char *pal;
 
-	xsz = FB_WIDTH;
-	ysz = FB_HEIGHT;
-	vxsz = xsz * VSCALE;
-	vysz = ysz * VSCALE;
+	vxsz = FB_WIDTH * VSCALE;
+	vysz = FB_HEIGHT * VSCALE;
 
-	pan_width = vxsz - xsz;
-	pan_height = vysz - ysz;
+	pan_width = vxsz - FB_WIDTH;
+	pan_height = vysz - FB_HEIGHT;
 
 	if(gen_tables() == -1) {
 		return -1;
@@ -213,7 +211,7 @@ static void update(float tsec)
 	int i;
 	float t, curspeed;
 
-	num_lines = ysz / NUM_WORK_ITEMS;
+	num_lines = FB_HEIGHT / NUM_WORK_ITEMS;
 	draw_lines = num_lines;
 
 	if(trans_dir) {
@@ -358,7 +356,7 @@ static void draw_tunnel_range(unsigned short *pix, int xoffs, int yoffs, int sta
 	unsigned int *pixels = (unsigned int*)pix + starty * (FB_WIDTH >> 1);
 
 	for(i=0; i<num_lines; i++) {
-		for(j=0; j<(xsz>>1); j++) {
+		for(j=0; j<(FB_WIDTH>>1); j++) {
 			unsigned int col;
 			int r, g, b, idx = j << 1;
 
@@ -412,22 +410,16 @@ static int gen_tables(void)
 	return 0;
 }
 
-/*
-#define R_END	255
-#define G_END	181
-#define B_END	80
-*/
 #define R_END	50
 #define G_END	0
 #define B_END	50
 
 static int gen_colormaps(struct img_pixmap *pixmap)
 {
-	int i, j, xsz, ysz;
+	int i, j;
 	int r, g, b;
 	struct img_colormap *imgpal;
 	uint16_t *cmap;
-	unsigned char *lastpix;
 	int32_t tfix;
 
 	/* populate the first colormap */
@@ -469,29 +461,3 @@ static int count_zeros(unsigned int x)
 	}
 	return num;
 }
-
-/*
-static unsigned int *gen_test_image(int *wptr, int *hptr)
-{
-	int i, j;
-	int xsz = 256, ysz = 256;
-	unsigned int *pixels, *pix;
-
-	if(!(pixels = malloc(xsz * ysz * sizeof *pix))) {
-		return 0;
-	}
-	pix = pixels;
-
-	for(i=0; i<ysz; i++) {
-		for(j=0; j<xsz; j++) {
-			int val = i ^ j;
-
-			*pix++ = PACK_RGB32(val, val / 2, val / 4);
-		}
-	}
-
-	*wptr = xsz;
-	*hptr = ysz;
-	return pixels;
-}
-*/

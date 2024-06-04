@@ -127,6 +127,9 @@ void scr_update(void)
 	if(prev) {  /* we're in the middle of a transition */
 		long interval = time_msec - trans_start;
 		if(interval >= trans_dur) {
+			if(prev->stop) {
+				prev->stop(0);
+			}
 			if(next->start) {
 				next->start(trans_dur);
 			}

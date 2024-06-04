@@ -3,6 +3,7 @@
 
 #include "inttypes.h"
 #include "gfx.h"
+#include "dseq.h"
 #include "image.h"
 #include "cfgopt.h"
 #include "cgmath/cgmath.h"
@@ -76,9 +77,10 @@ void demo_post_draw(void *pixels);
 void demo_keyboard(int key, int press);
 
 
-/* defined in main_*.c */
+/* defined in main.c */
 void demo_quit(void);
 void demo_abort(void);
+void reset_timer(void);
 unsigned long get_msec(void);
 void set_palette(int idx, int r, int g, int b);
 

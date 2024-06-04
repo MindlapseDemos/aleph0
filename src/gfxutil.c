@@ -421,7 +421,7 @@ void overlay_add_full(uint16_t *dest, uint16_t *src)
 
 void overlay_full_add_pal(uint16_t *dest, uint8_t *src, unsigned int *pal)
 {
-	int i, j;
+	int i;
 	unsigned int r, g, b;
 	unsigned int *col;
 	uint16_t pixel;

@@ -9,6 +9,7 @@
 
 static int runcmd(void);
 static int cmd_list(const char *args);
+static int cmd_start(const char *args);
 static int cmd_help(const char *args);
 
 #define CBUF_SIZE	64
@@ -147,6 +148,7 @@ static struct {
 	int (*func)(const char*);
 } cmd[] = {
 	{"ls", cmd_list},
+	{"start", cmd_start},
 	{"help", cmd_help},
 	{"?", cmd_help},
 	{0, 0}
@@ -230,8 +232,15 @@ static int cmd_list(const char *args)
 	return 0;
 }
 
+static int cmd_start(const char *args)
+{
+	reset_timer();
+	dseq_start();
+	return 0;
+}
+
 static int cmd_help(const char *args)
 {
-	con_printf("cmds: /, #, ls, help, ?\n");
+	con_printf("cmds: /, #, ls, start, help, ?\n");
 	return 0;
 }

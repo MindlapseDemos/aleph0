@@ -7,6 +7,7 @@
 #include <limits.h>
 #include "demo.h"
 #include "screen.h"
+#include "dseq.h"
 #include "3dgfx.h"
 #include "audio.h"
 #include "cfgopt.h"
@@ -97,6 +98,12 @@ int demo_init(void)
 		}
 	}
 
+	if(dseq_open("data/demo.seq") == -1) {
+		if(!opt.dbgmode) {
+			return -1;
+		}
+	}
+
 	if(scr_init() == -1) {
 		return -1;
 	}
@@ -113,6 +120,10 @@ int demo_init(void)
 	if(!scr || scr_change(scr, 4000) == -1) {
 		fprintf(stderr, "screen %s not found\n", opt.start_scr ? opt.start_scr : "0");
 		return -1;
+	}
+
+	if(opt.dbgmode) {
+		dseq_start();
 	}
 
 	if(opt.music) {
@@ -200,6 +211,7 @@ void demo_draw(void)
 	if(opt.music) {
 		au_update();
 	}
+	dseq_update();
 	scr_update();
 	scr_draw();
 

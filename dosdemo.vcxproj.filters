@@ -78,6 +78,9 @@
     <ClCompile Include="src\screen.c">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\dseq.c">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="src\tinyfps.c">
       <Filter>src</Filter>
     </ClCompile>
@@ -246,6 +249,9 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\screen.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\dseq.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\timer.h">

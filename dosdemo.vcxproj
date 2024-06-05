@@ -110,6 +110,7 @@
     <ClCompile Include="src\rbtree.c" />
     <ClCompile Include="src\rlebmap.c" />
     <ClCompile Include="src\screen.c" />
+    <ClCompile Include="src\dseq.c" />
     <ClCompile Include="src\scr\bump.c" />
     <ClCompile Include="src\scr\cybersun.c" />
     <ClCompile Include="src\scr\dott.c" />
@@ -168,6 +169,7 @@
     <ClInclude Include="src\rlebmap.h" />
     <ClInclude Include="src\sball.h" />
     <ClInclude Include="src\screen.h" />
+    <ClInclude Include="src\dseq.h" />
     <ClInclude Include="src\scr\smoketxt.h" />
     <ClInclude Include="src\scr\thunder.h" />
     <ClInclude Include="src\scr\tilemaze.h" />

@@ -75,10 +75,12 @@ static long accel_start;
 static const float speedtab[] = {100.0f * UPD_DT, 300.0f * UPD_DT, 500.0f * UPD_DT, 800.0f * UPD_DT};
 
 /* smoketext stuff */
-static struct smktxt *stx;
+static struct smktxt *stx[2];
 static unsigned char *smokebuf, *cur_smokebuf, *prev_smokebuf;
 #define SMOKEBUF_SIZE	(320 * 240)
 static unsigned int smoke_cmap[256 * 4];
+
+static int ev_text_grp, ev_text_pres, text_active;
 
 
 struct screen *tunnel_screen(void)
@@ -141,7 +143,10 @@ static int init(void)
 		return -1;
 	}
 
-	if(!(stx = create_smktxt("data/ml_dsr.png", "data/vfield1"))) {
+	if(!(stx[0] = create_smktxt("data/ml_dsr.png", "data/vfield1"))) {
+		return -1;
+	}
+	if(!(stx[1] = create_smktxt("data/presents.png", "data/vfield1"))) {
 		return -1;
 	}
 	if(!(smokebuf = malloc(SMOKEBUF_SIZE * 2))) {
@@ -161,6 +166,9 @@ static int init(void)
 		smoke_cmap[i * 4 + 2] = pal[i * 3 + 2];
 	}
 	img_free_pixels(pal);
+
+	ev_text_grp = dseq_lookup("tunnel.text_grp");
+	ev_text_pres = dseq_lookup("tunnel.text_pres");
 
 	return 0;
 }
@@ -184,6 +192,8 @@ static void start(long trans_time)
 	tunpos = 0;
 	blurlevel = nextblur = 0;
 	tunspeed = nextspeed = speedtab[0];
+
+	text_active = -1;
 
 	memset(smokebuf, 0, SMOKEBUF_SIZE * 2);
 	start_time = time_msec;
@@ -252,7 +262,29 @@ samespeed:
 	tunpos += curspeed;
 	toffs = cround64(tunpos);
 
-	update_smktxt(stx);
+	if(dseq_triggered(ev_text_grp)) {
+		if(dseq_value(ev_text_grp)) {
+			text_active = 0;
+			/* clear smoke buffer */
+			memset(smokebuf, 0, SMOKEBUF_SIZE * 2);
+		} else {
+			text_active = -1;
+		}
+		printf("DBG: trigger text_grp(%d): %d\n", ev_text_grp, text_active);
+	} else if(dseq_triggered(ev_text_pres)) {
+		if(dseq_value(ev_text_pres)) {
+			text_active = 1;
+			/* clear smoke buffer */
+			memset(smokebuf, 0, SMOKEBUF_SIZE * 2);
+		} else {
+			text_active = -1;
+		}
+		printf("DBG: trigger text_pres(%d): %d\n", ev_text_pres, text_active);
+	}
+
+	if(text_active >= 0) {
+		update_smktxt(stx[text_active]);
+	}
 }
 
 static void draw(void)
@@ -281,35 +313,36 @@ static void draw(void)
 		}
 	}
 
-	/* blur the previous smoke buffer */
-	blur_xyzzy_horiz8(prev_smokebuf, cur_smokebuf);
+	if(text_active >= 0) {
+		/* blur the previous smoke buffer */
+		blur_xyzzy_horiz8(prev_smokebuf, cur_smokebuf);
 #ifndef SINGLE_BLUR
-	blur_xyzzy_vert8(cur_smokebuf, prev_smokebuf);
+		blur_xyzzy_vert8(cur_smokebuf, prev_smokebuf);
 #else
-	/* swap the smoke buffer pointers */
-	tmpptr = cur_smokebuf;
-	cur_smokebuf = prev_smokebuf;
-	prev_smokebuf = tmpptr;
+		/* swap the smoke buffer pointers */
+		tmpptr = cur_smokebuf;
+		cur_smokebuf = prev_smokebuf;
+		prev_smokebuf = tmpptr;
 #endif
 
-	vptr = stx->em.varr;
-	for(i=0; i<stx->em.pcount; i++) {
-		x = ((vptr->x * 220) >> 16) + 160;
-		y = 120 - ((vptr->y * 220) >> 16);
+		vptr = stx[text_active]->em.varr;
+		for(i=0; i<stx[text_active]->em.pcount; i++) {
+			x = ((vptr->x * 220) >> 16) + 160;
+			y = 120 - ((vptr->y * 220) >> 16);
 
-		if(x < 0 || x >= 320 || y < 0 || y >= 240) {
+			if(x < 0 || x >= 320 || y < 0 || y >= 240) {
+				vptr++;
+				continue;
+			}
+
+			cur_smokebuf[y * 320 + x] = 192;
+			/*fb_pixels[y * 320 + x] = PACK_RGB16(200, 180, 64);*/
 			vptr++;
-			continue;
 		}
 
-		cur_smokebuf[y * 320 + x] = 192;
-		/*fb_pixels[y * 320 + x] = PACK_RGB16(200, 180, 64);*/
-		vptr++;
+		/* overlay the current smoke buffer over the image */
+		overlay_full_add_pal(fb_pixels, cur_smokebuf, smoke_cmap);
 	}
-
-	/* overlay the current smoke buffer over the image */
-	overlay_full_add_pal(fb_pixels, cur_smokebuf, smoke_cmap);
-
 
 	swap_buffers(0);
 }

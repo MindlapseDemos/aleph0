@@ -122,7 +122,7 @@ int demo_init(void)
 		return -1;
 	}
 
-	if(opt.dbgmode) {
+	if(!opt.dbgmode) {
 		dseq_start();
 	}
 

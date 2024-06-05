@@ -12,6 +12,7 @@ struct key {
 
 struct track {
 	char *name;
+	int parent;
 	int num;
 	int cur_val;
 	struct key *keys;	/* dynarr */
@@ -30,11 +31,13 @@ static long last_key_time;
 static struct event *events;	/* linked list */
 static struct event *next_event;
 static long prev_upd;
+static int started;
 
 #define TRIGMAP_SIZE	4
 static uint32_t trigmap[TRIGMAP_SIZE];
 
 #define TRIGGER(x)	trigmap[(x) >> 5] |= (1 << ((x) & 31))
+#define CLRTRIG(x)	trigmap[(x) >> 5] &= ~(1 << ((x) & 31))
 #define ISTRIG(x)	(trigmap[(x) >> 5] & (1 << ((x) & 31)))
 
 static int read_event(int parid, struct ts_node *tsn);
@@ -71,7 +74,7 @@ int dseq_open(const char *fname)
 
 	tsnode = ts->child_list;
 	while(tsnode) {
-		if(read_event(-1, tsnode) != -1) {
+		if(read_event(-1, tsnode) == -1) {
 			goto err;
 		}
 
@@ -132,6 +135,8 @@ int dseq_open(const char *fname)
 		trk_key[next_trk]++;
 	}
 
+	started = 0;
+
 	free(trk_key);
 	return 0;
 
@@ -177,6 +182,25 @@ static long first_nonzero_key_time(struct track *trk)
 	return 0;
 }
 
+static int prefix_length(int id)
+{
+	int len = 0;
+	while(id >= 0) {
+		len += strlen(tracks[id].name) + 1;
+		id = tracks[id].parent;
+	}
+	return len;
+}
+
+static int fullpath(char *buf, int id)
+{
+	int len;
+	if(id < 0) return 0;
+
+	len = fullpath(buf, tracks[id].parent);
+	return len + sprintf(buf + len, "%s.", tracks[id].name);
+}
+
 #define SKIP_NOTNUM(attrname) \
 	do { \
 		if(attr->val.type != TS_NUMBER) { \
@@ -185,32 +209,50 @@ static long first_nonzero_key_time(struct track *trk)
 		} \
 	} while(0)
 
-#define ADD_START_DUR(start, dur) \
+#define ADD_START_END(s, e) \
 	do { \
-		add_key(trk, start, 1024); \
-		add_key(trk, start + dur, 0); \
+		add_key(trk, (s), 1024); \
+		add_key(trk, (e), 0); \
+		start = end = -1; \
+	} while(0)
+
+#define ADD_START_DUR(s, d) \
+	do { \
+		add_key(trk, (s), 1024); \
+		add_key(trk, (s) + (d), 0); \
 		start = dur = -1; \
 	} while(0)
 
 
 static int read_event(int parid, struct ts_node *tsn)
 {
-	int id;
+	int id, namelen;
 	char *name;
 	struct ts_attr *attr;
 	struct ts_node *child;
-	struct track *trk;
-	long start = -1, dur = -1;
+	struct track *trk, tmptrk;
+	long start = -1, dur = -1, end = -1;
 	long par_start = 0;
 	long key_time;
 
-	if(!(name = strdup(tsn->name))) {
+	namelen = strlen(tsn->name);
+	if(parid >= 0) {
+		namelen += strlen(tracks[parid].name);
+	}
+	if(!(name = malloc(namelen + 1))) {
 		fprintf(stderr, "dseq_open: failed to allocate track name\n");
 		return -1;
 	}
+	if(parid >= 0) {
+		sprintf(name, "%s.%s", tracks[parid].name, tsn->name);
+	} else {
+		strcpy(name, tsn->name);
+	}
+
+	printf("READ EVENT: %s\n", name);
 
 	id = dynarr_size(tracks);
-	if(!(trk = dynarr_push(tracks, 0))) {
+	if(!(trk = dynarr_push(tracks, &tmptrk))) {
 		fprintf(stderr, "dseq_open: failed to resize tracks\n");
 		return -1;
 	}
@@ -219,6 +261,7 @@ static int read_event(int parid, struct ts_node *tsn)
 	trk->name = name;
 	trk->cur_val = 0;
 	trk->num = 0;
+	trk->parent = parid;
 
 	if(!(trk->keys = dynarr_alloc(0, sizeof *trk->keys))) {
 		fprintf(stderr, "dseq_open: failed to allocate event track\n");
@@ -236,15 +279,26 @@ static int read_event(int parid, struct ts_node *tsn)
 		if(strcmp(attr->name, "start") == 0) {
 			SKIP_NOTNUM("start");
 			start = attr->val.inum + par_start;
-			if(dur > 0) {
+			if(end >= 0) {
+				ADD_START_END(start, end);
+			} else if(dur > 0) {
 				ADD_START_DUR(start, dur);
 			}
 
 		} else if(strcmp(attr->name, "wait") == 0) {
 			SKIP_NOTNUM("wait");
 			start = last_key_time + attr->val.inum;
-			if(dur > 0) {
+			if(end >= 0) {
+				ADD_START_END(start, end);
+			} else if(dur > 0) {
 				ADD_START_DUR(start, dur);
+			}
+
+		} else if(strcmp(attr->name, "end") == 0) {
+			SKIP_NOTNUM("end");
+			end = attr->val.inum;
+			if(start >= 0) {
+				ADD_START_END(start, end);
 			}
 
 		} else if(strcmp(attr->name, "dur") == 0) {
@@ -304,6 +358,8 @@ void dseq_close(void)
 	}
 	dynarr_free(tracks);
 	tracks = 0;
+
+	started = 0;
 }
 
 void dseq_start(void)
@@ -324,15 +380,24 @@ void dseq_start(void)
 	}
 	next_event = events;
 	prev_upd = 0;
+
+	started = 1;
+}
+
+void dseq_stop(void)
+{
+	started = 0;
 }
 
 void dseq_update(void)
 {
 	int i, id;
-	long dt = time_msec - prev_upd;
+	long dt;
 
-	/* clear previous triggers */
-	memset(trigmap, 0, sizeof trigmap);
+	if(!started) return;
+
+	dt = time_msec - prev_upd;
+	prev_upd = time_msec;
 
 	/* TODO active transitions */
 
@@ -340,8 +405,10 @@ void dseq_update(void)
 		id = next_event->id;
 		next_event->reltime -= dt;
 		if(next_event->reltime > 0) break;
+		dt = -next_event->reltime;
 
 		tracks[id].cur_val = next_event->key.val;
+		printf("trigger: %s(%d): %d\n", tracks[id].name, id, tracks[id].cur_val);
 		TRIGGER(id);
 
 		next_event = next_event->next;
@@ -368,5 +435,7 @@ int dseq_value(int evid)
 
 int dseq_triggered(int evid)
 {
-	return ISTRIG(evid);
+	int trig = ISTRIG(evid);
+	CLRTRIG(evid);
+	return trig;
 }

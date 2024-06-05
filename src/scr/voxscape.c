@@ -509,16 +509,17 @@ static void renderSky()
 		uint32_t* dst32;
 		uint32_t c;
 		unsigned short* farPal;
+		int x;
 
 		int palNum = (PAL_SHADES * (FB_HEIGHT - y)) / (FB_HEIGHT / 2);
 		CLAMP(palNum, 0, PAL_SHADES - 1)
 		farPal = skyPal[palNum];
 		dst32 = (uint32_t*)dst;
 		c = farPal[63];
-		uint32_t c32 = (c << 16) | c;
-		int x;
+		c = (c << 16) | c;
+
 		for (x = 0; x < FB_WIDTH; ++x) {
-			*dst32++ = c32;
+			*dst32++ = c;
 		}
 		dst += FB_WIDTH;
 	}

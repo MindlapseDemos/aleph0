@@ -8,6 +8,10 @@
 
 #include "demo.h"
 #include "screen.h"
+#include "noise.h"
+#include "gfxutil.h"
+#include "opt_rend.h"
+
 
 #define HOR_THE_VER_STEP
 
@@ -29,28 +33,33 @@
 #define VIS_VER_SKIP 1
 #define PAL_SHADES 32
 
+#define SKY_HEIGHT 8192
+#define PROJ_MUL 256
+#define FP_SCALE 16
+
 #define VIS_VER_STEPS ((VIS_FAR - VIS_NEAR) / VIS_VER_SKIP)
 #define VIS_HOR_STEPS (FB_WIDTH / PIXEL_SIZE)
 
-#define V_PLAYER_HEIGHT 176
+#define V_PLAYER_HEIGHT 160
 #define V_HEIGHT_SCALER_SHIFT 7
 #define V_HEIGHT_SCALER (1 << V_HEIGHT_SCALER_SHIFT)
-#define HORIZON (7 * FB_HEIGHT / 8)
+#define HORIZON (FB_HEIGHT * 0.7)
 
 #define HMAP_WIDTH 512
 #define HMAP_HEIGHT 512
 #define HMAP_SIZE (HMAP_WIDTH * HMAP_HEIGHT)
 
+#define SKY_TEX_WIDTH 256
+#define SKY_TEX_HEIGHT 256
+
+static unsigned char* skyTex;
+static unsigned short* skyPal[PAL_SHADES];
+
 
 typedef struct Point2D
 {
 	int x,y;
-}Point2D;
-
-typedef struct Vector3D
-{
-	int x,y,z;
-}Vector3D;
+} Point2D;
 
 
 static int *heightScaleTab = NULL;
@@ -163,6 +172,47 @@ static int initHeightmapAndColormap()
 	return 0;
 }
 
+static void initSkyTexture()
+{
+	int x, y, i, n;
+	const float scale = 1.0f / 64.0f;
+	const int perX = (int)(scale * SKY_TEX_WIDTH);
+	const int perY = (int)(scale * SKY_TEX_HEIGHT);
+
+	skyTex = (unsigned char*)malloc(SKY_TEX_WIDTH * SKY_TEX_HEIGHT);
+
+	i = 0;
+	for (y = 0; y < SKY_TEX_HEIGHT; ++y) {
+		for (x = 0; x < SKY_TEX_WIDTH; ++x) {
+			/* float f = pfbm2((float)x * scale, (float)y * scale, perX, perY, 8) + 0.25f; */
+			float f = pturbulence2((float)x * scale, (float)y * scale, perX, perY, 4);
+			CLAMP(f, 0.0f, 0.99f)
+			skyTex[i++] = (int)(f * 255.0f);
+		}
+	}
+
+	for (i = 0; i < PAL_SHADES; ++i) {
+		unsigned short* pal;
+		skyPal[i] = (unsigned short*)malloc(256 * sizeof(unsigned short));
+		pal = skyPal[i];
+		for (n = 0; n < 255; ++n) {
+			int r = n - 64;
+			int g = n - 32;
+			int b = n + 64;
+
+			r = (r * (PAL_SHADES - i - 1)) / (PAL_SHADES / 2) + 48;
+			g = (g * (PAL_SHADES - i - 1)) / (PAL_SHADES / 2) + 16;
+			b = (b * (PAL_SHADES - i - 1)) / (PAL_SHADES / 2) + 32;
+
+			CLAMP(r, 0, 63);
+			CLAMP(g, 0, 160);
+			CLAMP(b, 0, 255);
+
+			*pal++ = PACK_RGB16(r, g, b);
+		}
+	}
+}
+
 
 static int init(void)
 {
@@ -170,6 +220,8 @@ static int init(void)
 
 	initSinTab(SIN_LENGTH, 1, 65536);
 	createHeightScaleTab();
+
+	initSkyTexture();
 
 	hmap = malloc(HMAP_SIZE);
 	viewNearPosVec = malloc(VIS_HOR_STEPS * sizeof(Point2D));
@@ -186,6 +238,8 @@ static int init(void)
 
 static void destroy(void)
 {
+	int i;
+
 	free(isin);
 	free(heightScaleTab);
 	free(viewNearPosVec);
@@ -194,6 +248,11 @@ static void destroy(void)
 	free(dstX);
 	free(hmap);
 	free(cmap);
+	free(skyTex);
+
+	for (i = 0; i < PAL_SHADES; ++i) {
+		free(skyPal[i]);
+	}
 }
 
 
@@ -411,11 +470,65 @@ static void move()
 	updateRaySamplePosAndStep();
 }
 
+static void renderBitmapLineSky(int u, int du, unsigned char* src, unsigned short* pal, unsigned short* dst)
+{
+	int length = FB_WIDTH;
+	while (length-- > 0) {
+		int tu = (u >> FP_SCALE) & (SKY_TEX_WIDTH - 1);
+		*dst++ = pal[src[tu]];
+		u += du;
+	};
+}
+
+static void renderSky()
+{
+	unsigned short* dst = (unsigned short*)fb_pixels;
+	int y;
+	for (y = 0; y < FB_HEIGHT / 2; ++y) {
+		unsigned char* src;
+		int z, u, v, du;
+		int palNum = (PAL_SHADES * y) / (FB_HEIGHT / 2);
+
+		int yp = FB_HEIGHT / 2 - y;
+		if (yp == 0) yp = 1;
+		z = (SKY_HEIGHT * PROJ_MUL) / yp;
+
+		du = z * 3;
+		u = (-FB_WIDTH / 2) * du;
+
+		v = (z >> 8) & (SKY_TEX_HEIGHT - 1);
+		src = &skyTex[v * SKY_TEX_WIDTH];
+
+		CLAMP(palNum, 0, PAL_SHADES - 1)
+			renderBitmapLineSky(u, du, src, skyPal[palNum], dst);
+
+		dst += FB_WIDTH;
+	}
+
+	for (y = FB_HEIGHT / 2; y < FB_HEIGHT / 2 + FB_HEIGHT / 8; ++y) {
+		uint32_t* dst32;
+		uint32_t c;
+		unsigned short* farPal;
+
+		int palNum = (PAL_SHADES * (FB_HEIGHT - y)) / (FB_HEIGHT / 2);
+		CLAMP(palNum, 0, PAL_SHADES - 1)
+		farPal = skyPal[palNum];
+		dst32 = (uint32_t*)dst;
+		c = farPal[63];
+		uint32_t c32 = (c << 16) | c;
+		int x;
+		for (x = 0; x < FB_WIDTH; ++x) {
+			*dst32++ = c32;
+		}
+		dst += FB_WIDTH;
+	}
+}
+
 static void draw(void)
 {
 	move();
 
-	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
+	renderSky();
 
 #ifdef HOR_THE_VER_STEP
 	renderScape();

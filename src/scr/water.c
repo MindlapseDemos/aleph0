@@ -63,18 +63,18 @@ static unsigned short* waterPal[WATER_SHADES];
 static unsigned char* waterBuffer1;
 static unsigned char* waterBuffer2;
 
-unsigned char* wb1, * wb2;
+static unsigned char* wb1, * wb2;
 
-unsigned char* cloudTex;
-unsigned short* cloudPal[CLOUD_SHADES];
+static unsigned char* cloudTex;
+static unsigned short* cloudPal[CLOUD_SHADES];
 
-unsigned char* skyTex;
-unsigned char* waterTex = NULL;
+static unsigned char* skyTex;
+static unsigned char* waterTex = NULL;
 
-Vertex3D* rainDrops;
+static Vertex3D* rainDrops;
 
-Mesh3D* meshFlower;
-Object3D objFlower;
+static Mesh3D* meshFlower;
+static Object3D objFlower;
 
 
 static void swapWaterBuffers()

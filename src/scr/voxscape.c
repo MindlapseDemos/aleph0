@@ -28,7 +28,7 @@
 #define VIS_NEAR 32
 #define VIS_FAR 320
 
-#define PIXEL_SIZE 2
+#define PIXEL_SIZE 1
 #define PIXEL_ABOVE (FB_WIDTH / PIXEL_SIZE)
 #define VIS_VER_SKIP 1
 #define PAL_SHADES 32
@@ -54,8 +54,12 @@
 
 #define REFLECT_SHADE 0.75
 
-static unsigned char* skyTex;
-static unsigned short* skyPal[PAL_SHADES];
+#define DIST_RADIUS 64
+#define MAX_POINTS_PER_RADIUS (DIST_RADIUS * 8) /* hope it's enough */
+#define HBIAS 4
+
+/* Probably should only enable on PC and save on file for preloading in DOS */
+/* #define CALCULATE_DIST_MAP */
 
 
 typedef struct Point2D
@@ -63,6 +67,11 @@ typedef struct Point2D
 	int x,y;
 } Point2D;
 
+static unsigned char* distMap;
+
+static unsigned char* skyTex;
+static unsigned short* skyPal[PAL_SHADES];
+static Vector3D skyPosMove;
 
 static int *heightScaleTab = NULL;
 static int *isin = NULL;
@@ -185,6 +194,64 @@ static int initHeightmapAndColormap()
 	return 0;
 }
 
+
+static void initDistMap()
+{
+	#ifdef CALCULATE_DIST_MAP
+		int x, y, r, n, i;
+
+		int *rCount = malloc(DIST_RADIUS * sizeof(int));
+		Point2D* distOffsets = malloc(DIST_RADIUS * MAX_POINTS_PER_RADIUS * sizeof(Point2D));
+
+		memset(rCount, 0, DIST_RADIUS * sizeof(int));
+
+		for (y = -DIST_RADIUS; y <= DIST_RADIUS; ++y) {
+			for (x = -DIST_RADIUS; x <= DIST_RADIUS; ++x) {
+				const int radius = isqrt(x*x + y*y);
+				if (radius > 0 && radius <= DIST_RADIUS) {
+					const int rIndex = radius - 1;
+					const int pIndex = rCount[rIndex]++;
+					Point2D* p = &distOffsets[rIndex * MAX_POINTS_PER_RADIUS + pIndex];
+					p->x = x;
+					p->y = y;
+				}
+			}
+		}
+	#endif
+
+	distMap = malloc(HMAP_SIZE);
+
+	#ifdef CALCULATE_DIST_MAP
+		i = 0;
+		for (y = 0; y < HMAP_HEIGHT; ++y) {
+			for (x = 0; x < HMAP_WIDTH; ++x) {
+				const int h = hmap[i];
+				int safeR = 0;	/* 0 will mean safe to reflect sky instantly */
+				for (r = 0; r < DIST_RADIUS; ++r) {
+					const int count = rCount[r];
+					Point2D* p = &distOffsets[r * MAX_POINTS_PER_RADIUS];
+					for (n = 0; n < count; ++n) {
+						const int xp = (x + p[n].x) & (HMAP_WIDTH - 1);
+						const int yp = (y + p[n].y) & (HMAP_WIDTH - 1);
+						const int hCheck = hmap[yp * HMAP_WIDTH + xp] - HBIAS;
+						if (h < hCheck) {
+							safeR = r + 1;
+							r = DIST_RADIUS;	/* hack to break again outside */
+							break;
+						}
+					}
+				}
+				distMap[i++] = safeR;
+			}
+		}
+
+		free(rCount);
+		free(distOffsets);
+	#else
+		memset(distMap, 0, HMAP_SIZE); /* 0 will still instantly reflect the clouds but not the mountains which need more thorough steps */
+	#endif
+}
+
 static void initSkyTexture()
 {
 	int x, y, i, n;
@@ -246,6 +313,11 @@ static int init(void)
 		return -1;
 	}
 
+	initDistMap();
+
+	skyPosMove.x = 0;
+	skyPosMove.z = 0;
+
 	return 0;
 }
 
@@ -263,6 +335,7 @@ static void destroy(void)
 	free(cmap);
 	free(shadeVoxOff);
 	free(skyTex);
+	free(distMap);
 
 	for (i = 0; i < PAL_SHADES; ++i) {
 		free(skyPal[i]);
@@ -312,8 +385,8 @@ static void updateRaySamplePosAndStep()
 
 static uint16_t reflectSky(int px, int py, int dvx, int dvy, int vh)
 {
-	int u = ((px + ((dvx * vh) >> FP_SCALE)) >> (FP_SCALE - 6)) & (SKY_TEX_WIDTH - 1);
-	int v = ((py + ((dvy * vh) >> FP_SCALE)) >> (FP_SCALE - 6)) & (SKY_TEX_HEIGHT - 1);
+	int u = ((px + skyPosMove.x + ((dvx * vh) >> FP_SCALE)) >> (FP_SCALE - 7)) & (SKY_TEX_WIDTH - 1);
+	int v = ((py + skyPosMove.z + ((dvy * vh) >> FP_SCALE)) >> (FP_SCALE - 7)) & (SKY_TEX_HEIGHT - 1);
 
 	return skyPal[(int)((PAL_SHADES-1) * REFLECT_SHADE)][skyTex[v * SKY_TEX_WIDTH + u]];
 }
@@ -325,20 +398,27 @@ static uint16_t reflectSample(int px, int py, int dvx, int dvy, int ph, int dh, 
 
 	int vx = px;
 	int vy = py;
-	for (i = 0; i < remainingSteps; i+=2) {
-		const int sampleOffset = (vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE);
-		const int mapOffset = (viewerOffset + sampleOffset) & (HMAP_SIZE - 1);
-		const int hm = hmap[mapOffset];
 
-		const int h = ph >> FP_SCALE;
+	int sampleOffset = (vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE);
+	int mapOffset = (viewerOffset + sampleOffset) & (HMAP_SIZE - 1);
+	for (i = 0; i < remainingSteps;) {
+		const int safeSteps = distMap[mapOffset];
 
-		if (h < hm) {
-			return pal[cmap[mapOffset]];
+		if (safeSteps == 0) {
+			return reflectSky(px, py, dvx, dvy, dh);
+		} else {
+			vx += safeSteps * dvx;
+			vy += safeSteps * dvy;
+			ph += safeSteps * dh;
+
+			sampleOffset = (vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE);
+			mapOffset = (viewerOffset + sampleOffset) & (HMAP_SIZE - 1);
+
+			if ((ph >> FP_SCALE) < hmap[mapOffset]) {
+				return pal[cmap[mapOffset]];
+			}
+			i += safeSteps;
 		}
-
-		vx += dvx;
-		vy += dvy;
-		ph += dh;
 	}
 
 	return reflectSky(px, py, dvx, dvy, dh);
@@ -513,14 +593,20 @@ static void move()
 {
 	const int dt = time_msec - prevTime;
  
-	const int speedX = (dt << FP_VIEWER) >> 8;
-	const int speedZ = (dt << FP_VIEWER) >> 8;
+	const int speedX = (dt << FP_VIEWER) >> 9;
+	const int speedZ = (dt << FP_VIEWER) >> 9;
 
 	const int velX = (speedX * isin[(viewAngle.y + SIN_TO_COS) & (SIN_LENGTH-1)]) >> FP_BASE;
 	const int velZ = (speedZ * isin[viewAngle.y]) >> FP_BASE;
 
 	viewPos.x += velX;
 	viewPos.z += velZ;
+
+	skyPosMove.x += velX;
+	skyPosMove.z += velZ;
+
+	/* some view with water */
+	setViewPos(2 * HMAP_WIDTH / 4, V_PLAYER_HEIGHT/2, HMAP_HEIGHT / 6-96);
 
 	if(mouse_bmask & MOUSE_BN_LEFT) {
 		viewAngle.y = (4*mouse_x) & (SIN_LENGTH-1);
@@ -549,7 +635,7 @@ static void renderSky()
 	unsigned short* dst = (unsigned short*)fb_pixels;
 	int y;
 
-	int tv = viewPos.x >> FP_VIEWER;
+	int tv = skyPosMove.x >> FP_VIEWER;
 
 	for (y = 0; y < FB_HEIGHT / 2; ++y) {
 		unsigned char* src;
@@ -591,12 +677,24 @@ static void renderSky()
 	}
 }
 
+static void testRenderDistMap()
+{
+	int x, y;
+
+	uint16_t* dst = fb_pixels;
+	for (y=0; y<FB_HEIGHT; ++y) {
+		for (x=0; x<FB_WIDTH; ++x) {
+			int c = (distMap[(y & (HMAP_HEIGHT - 1)) * HMAP_WIDTH + (x & (HMAP_WIDTH - 1))] * 256) / DIST_RADIUS;
+			CLAMP(c,0,255)
+			if (c == 0) c = 255;
+			*dst++ = PACK_RGB16(c, c, c);
+		}
+	}
+}
+
 static void draw(void)
 {
 	move();
-
-	/* some view with water */
-	setViewPos(2 * HMAP_WIDTH / 4, V_PLAYER_HEIGHT/2, HMAP_HEIGHT / 6-64);
 
 	renderSky();
 
@@ -605,6 +703,8 @@ static void draw(void)
 #else
 	renderScapeX();
 #endif
+
+	/* testRenderDistMap(); */
 
 	swap_buffers(0);
 }

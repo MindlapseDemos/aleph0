@@ -26,7 +26,7 @@
 
 #define FOV 48
 #define VIS_NEAR 32
-#define VIS_FAR 384
+#define VIS_FAR 320
 
 #define PIXEL_SIZE 1
 #define PIXEL_ABOVE (FB_WIDTH / PIXEL_SIZE)
@@ -71,6 +71,8 @@ static uint16_t** dstX;
 
 static unsigned char *hmap = NULL;
 static unsigned char *cmap = NULL;
+
+static int *shadeVoxOff;
 
 static Vector3D viewPos;
 static Vector3D viewAngle;
@@ -155,6 +157,15 @@ static void initPalShades()
 			const int b = ((c & 31) * shade) / PAL_SHADES;
 			*shadedPmap++ = (r << 11) | (g << 5) | b;
 		}
+	}
+
+	shadeVoxOff = malloc(VIS_VER_STEPS * sizeof(int));
+
+	for (i = 0; i < VIS_VER_STEPS; ++i) {
+		float r = (float)i / (VIS_VER_STEPS - 1);
+		r = -0.125f + pow(r, 1.5f);
+		CLAMP(r,0,1)
+		shadeVoxOff[i] = (int)(r * (PAL_SHADES - 1)) * 256;
 	}
 }
 
@@ -248,6 +259,7 @@ static void destroy(void)
 	free(dstX);
 	free(hmap);
 	free(cmap);
+	free(shadeVoxOff);
 	free(skyTex);
 
 	for (i = 0; i < PAL_SHADES; ++i) {
@@ -304,6 +316,7 @@ static void renderScape()
 	const int viewerOffset = (viewPos.z >> FP_VIEWER) * HMAP_WIDTH + (viewPos.x >> FP_VIEWER);
 
 	uint16_t *dstBase = (uint16_t*)fb_pixels + (FB_HEIGHT-1) * FB_WIDTH;
+	uint16_t* pmapPtr = (uint16_t*)&cmap[HMAP_SIZE];
 
 	for (j=0; j<VIS_HOR_STEPS; ++j) {
 		int yMax = 0;
@@ -320,7 +333,6 @@ static void renderScape()
 		#endif
 
 
-		uint16_t *pmapPtr = (uint16_t*)&cmap[HMAP_SIZE];
 		for (i=0; i<VIS_VER_STEPS; ++i) {
 			const int sampleOffset = (vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE);
 			const int mapOffset = (viewerOffset + sampleOffset) & (HMAP_SIZE - 1);
@@ -329,11 +341,12 @@ static void renderScape()
 			if (h > FB_HEIGHT-1) h = FB_HEIGHT-1;
 
 			if (yMax < h) {
+				uint16_t* pal = pmapPtr + shadeVoxOff[i];
 				#if PIXEL_SIZE == 2
-					const uint16_t c16 = pmapPtr[cmap[mapOffset]];
+					const uint16_t c16 = pal[cmap[mapOffset]];
 					const uint32_t cv = (c16<<16) | c16;
 				#elif PIXEL_SIZE == 1
-					const uint16_t cv = pmapPtr[cmap[mapOffset]];
+					const uint16_t cv = pal[cmap[mapOffset]];
 				#endif
 
 				int hCount = h-yMax;
@@ -348,7 +361,7 @@ static void renderScape()
 			vx += dvx;
 			vy += dvy;
 
-			if (i > VIS_VER_STEPS - PAL_SHADES) pmapPtr += 256;
+			//if (i > VIS_VER_STEPS - PAL_SHADES) pmapPtr += 256;
 		}
 
 		dstBase += PIXEL_SIZE;
@@ -484,6 +497,9 @@ static void renderSky()
 {
 	unsigned short* dst = (unsigned short*)fb_pixels;
 	int y;
+
+	int tv = viewPos.x >> FP_VIEWER;
+
 	for (y = 0; y < FB_HEIGHT / 2; ++y) {
 		unsigned char* src;
 		int z, u, v, du;
@@ -495,8 +511,7 @@ static void renderSky()
 
 		du = z * 3;
 		u = (-FB_WIDTH / 2) * du;
-
-		v = (z >> 8) & (SKY_TEX_HEIGHT - 1);
+		v = ((z >> 8) + tv) & (SKY_TEX_HEIGHT - 1);
 		src = &skyTex[v * SKY_TEX_WIDTH];
 
 		CLAMP(palNum, 0, PAL_SHADES - 1)
@@ -505,7 +520,7 @@ static void renderSky()
 		dst += FB_WIDTH;
 	}
 
-	for (y = FB_HEIGHT / 2; y < FB_HEIGHT / 2 + FB_HEIGHT / 8; ++y) {
+	for (y = FB_HEIGHT / 2; y < FB_HEIGHT / 2 + FB_HEIGHT / 4; ++y) {
 		uint32_t* dst32;
 		uint32_t c;
 		unsigned short* farPal;

@@ -28,7 +28,7 @@
 #define VIS_NEAR 32
 #define VIS_FAR 320
 
-#define PIXEL_SIZE 1
+#define PIXEL_SIZE 2
 #define PIXEL_ABOVE (FB_WIDTH / PIXEL_SIZE)
 #define VIS_VER_SKIP 1
 #define PAL_SHADES 32
@@ -51,6 +51,8 @@
 
 #define SKY_TEX_WIDTH 256
 #define SKY_TEX_HEIGHT 256
+
+#define REFLECT_SHADE 0.75
 
 static unsigned char* skyTex;
 static unsigned short* skyPal[PAL_SHADES];
@@ -308,6 +310,40 @@ static void updateRaySamplePosAndStep()
 #endif
 }
 
+static uint16_t reflectSky(int px, int py, int dvx, int dvy, int vh)
+{
+	int u = ((px + ((dvx * vh) >> FP_SCALE)) >> (FP_SCALE - 6)) & (SKY_TEX_WIDTH - 1);
+	int v = ((py + ((dvy * vh) >> FP_SCALE)) >> (FP_SCALE - 6)) & (SKY_TEX_HEIGHT - 1);
+
+	return skyPal[(int)((PAL_SHADES-1) * REFLECT_SHADE)][skyTex[v * SKY_TEX_WIDTH + u]];
+}
+
+
+static uint16_t reflectSample(int px, int py, int dvx, int dvy, int ph, int dh, int viewerOffset, int remainingSteps, uint16_t* pal)
+{
+	int i;
+
+	int vx = px;
+	int vy = py;
+	for (i = 0; i < remainingSteps; i+=2) {
+		const int sampleOffset = (vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE);
+		const int mapOffset = (viewerOffset + sampleOffset) & (HMAP_SIZE - 1);
+		const int hm = hmap[mapOffset];
+
+		const int h = ph >> FP_SCALE;
+
+		if (h < hm) {
+			return pal[cmap[mapOffset]];
+		}
+
+		vx += dvx;
+		vy += dvy;
+		ph += dh;
+	}
+
+	return reflectSky(px, py, dvx, dvy, dh);
+}
+
 static void renderScape()
 {
 	int i,j;
@@ -333,7 +369,7 @@ static void renderScape()
 		#endif
 
 
-		for (i=0; i<VIS_VER_STEPS; ++i) {
+		for (i=0; i<VIS_VER_STEPS; i++) {
 			const int sampleOffset = (vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE);
 			const int mapOffset = (viewerOffset + sampleOffset) & (HMAP_SIZE - 1);
 			const int hm = hmap[mapOffset];
@@ -341,15 +377,33 @@ static void renderScape()
 			if (h > FB_HEIGHT-1) h = FB_HEIGHT-1;
 
 			if (yMax < h) {
-				uint16_t* pal = pmapPtr + shadeVoxOff[i];
+				int hCount = h - yMax;
+
 				#if PIXEL_SIZE == 2
-					const uint16_t c16 = pal[cmap[mapOffset]];
-					const uint32_t cv = (c16<<16) | c16;
+					uint32_t cv;
 				#elif PIXEL_SIZE == 1
-					const uint16_t cv = pal[cmap[mapOffset]];
+					uint16_t cv;
 				#endif
 
-				int hCount = h-yMax;
+				if (hm > 1) {
+					unsigned char c = cmap[mapOffset];
+					uint16_t* pal = pmapPtr + shadeVoxOff[i];
+					#if PIXEL_SIZE == 2
+						uint16_t c16 = pal[c];
+					cv = (c16 << 16) | c16;
+					#elif PIXEL_SIZE == 1
+						cv = pal[c];
+					#endif
+				} else {
+					const int dh = ((playerHeight - hm) << FP_SCALE) / (i + 1);
+					uint16_t c16 = reflectSample(vx, vy, dvx, dvy, hm << FP_SCALE, dh, viewerOffset, VIS_VER_STEPS - i, pmapPtr + shadeVoxOff[(int)((VIS_VER_STEPS - 1) * REFLECT_SHADE)]);
+					#if PIXEL_SIZE == 2
+						cv = (c16 << 16) | c16;
+					#elif PIXEL_SIZE == 1
+						cv = c16;
+					#endif
+				}
+
 				do {
 					*dst = cv;
 					dst -= PIXEL_ABOVE;
@@ -360,13 +414,10 @@ static void renderScape()
 			}
 			vx += dvx;
 			vy += dvy;
-
-			//if (i > VIS_VER_STEPS - PAL_SHADES) pmapPtr += 256;
 		}
 
 		dstBase += PIXEL_SIZE;
 	}
-
 }
 
 static void renderScapeX()
@@ -403,7 +454,7 @@ static void renderScapeX()
 		const int dvx = (vxR - vxL) / VIS_HOR_STEPS;
 		const int dvy = (vyR - vyL) / VIS_HOR_STEPS;
 
-		uint16_t* pmapPtr = (uint16_t*)&cmap[HMAP_SIZE];
+		uint16_t* pmapPtr = (uint16_t*)&cmap[HMAP_SIZE] + shadeVoxOff[j];
 		const int heightScale = heightScaleTab[j];
 
 		for (i = 0; i < VIS_HOR_STEPS; ++i) {
@@ -543,6 +594,9 @@ static void renderSky()
 static void draw(void)
 {
 	move();
+
+	/* some view with water */
+	setViewPos(2 * HMAP_WIDTH / 4, V_PLAYER_HEIGHT/2, HMAP_HEIGHT / 6-64);
 
 	renderSky();
 

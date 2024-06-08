@@ -1,0 +1,40 @@
+# demo sequencing and event file
+# ------------------------------
+# Any block except the root "demoseq" defines a demo event with the same name.
+# Demo events can take arbitrary values as a function of time. Either by
+# explicitly listing key values, or with start/end/wait/dur attributes.  Key
+# times defined in nested events are relative to the parent event start time
+# which is defined as the time of its first non-zero key.
+#
+# Times are in milliseconds. Values are expected to be 22.10 fixed point, so
+# implicit keys defined by start attributes get a value of 1024.
+#
+# Attribute semantics:
+#   - start: event interval start time, relative to parent.
+#   - wait: interval start time, relative to the last encountered key time
+#   - end: event interval end time, relative to parent.
+#   - dur: event interval duration, pair with start or wait.
+#   - key:<time>: defines explicit value for a specified time
+
+demoseq {
+	tunnel {
+		start = 0
+		dur = 7000
+
+		text_grp {
+			start = 1000
+			dur = 2000
+		}
+		text_pres {
+			wait = 1000
+			dur = 2000
+		}
+	}
+
+	blobgrid {
+		wait = 0
+		dur = 2000
+	}
+}
+
+# vi:ts=4 sts=4 sw=4 ai:

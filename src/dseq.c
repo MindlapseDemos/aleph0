@@ -64,7 +64,6 @@ int dseq_open(const char *fname)
 	}
 
 	if(!(ts = ts_load(fname))) {
-		fprintf(stderr, "failed to load demo sequence: %s\n", fname);
 		return -1;
 	}
 	if(strcmp(ts->name, "demoseq") != 0) {

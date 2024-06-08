@@ -28,6 +28,7 @@
 #define GUARD_XPAD	0
 #define GUARD_YPAD	64
 
+static void screen_evtrig(int evid, int val, void *cls);
 static void init_mmx_routines(void);
 
 int fb_width, fb_height, fb_bpp, fb_scan_size;
@@ -52,6 +53,7 @@ static unsigned int bmask_diff, prev_bmask;
 
 static unsigned long nframes;
 static int con_active;
+static int demo_running;
 
 extern uint16_t loading_pixels[];	/* data.asm */
 
@@ -106,6 +108,19 @@ int demo_init(void)
 
 	if(scr_init() == -1) {
 		return -1;
+	}
+
+	if(dseq_isopen()) {
+		/* find all the events matching screen names and assign trigger callbacks */
+		int i, num_scr, evid;
+
+		num_scr = scr_num_screens();
+		for(i=0; i<num_scr; i++) {
+			scr = scr_screen(i);
+			if((evid = dseq_lookup(scr->name)) >= 0) {
+				dseq_trig_callback(evid, DSEQ_TRIG_ALL, screen_evtrig, (void*)i);
+			}
+		}
 	}
 
 	/* clear the framebuffer at least once */
@@ -335,6 +350,13 @@ void mouse_orbit_update(float *theta, float *phi, float *dist)
 	}
 }
 
+/* process demo sequence triggers for screen changes */
+static void screen_evtrig(int evid, int val, void *cls)
+{
+	if(val <= 0) return;
+
+	change_screen((intptr_t)cls);
+}
 
 /* initialize pointers to various routines which have MMX versions if they're
  * not handled elsewhere

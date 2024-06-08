@@ -16,6 +16,9 @@ struct track {
 	int num;
 	int cur_val;
 	struct key *keys;	/* dynarr */
+
+	dseq_callback_func trigcb;
+	void *trigcls;
 };
 
 struct event {
@@ -23,6 +26,9 @@ struct event {
 	int id;
 	struct key key;
 	struct event *next;
+
+	dseq_callback_func trigcb;
+	void *trigcls;
 };
 
 static struct track *tracks;	/* dynarr */
@@ -117,7 +123,7 @@ int dseq_open(const char *fname)
 		if(!next_key) break;
 
 		/* create event and advance the track pointer */
-		if(!(ev = malloc(sizeof *ev))) {
+		if(!(ev = calloc(1, sizeof *ev))) {
 			fprintf(stderr, "dseq_open: failed to allocate event\n");
 			goto err;
 		}
@@ -258,9 +264,8 @@ static int read_event(int parid, struct ts_node *tsn)
 	}
 	tracks = trk;
 	trk = tracks + id;
+	memset(trk, 0, sizeof *trk);
 	trk->name = name;
-	trk->cur_val = 0;
-	trk->num = 0;
 	trk->parent = parid;
 
 	if(!(trk->keys = dynarr_alloc(0, sizeof *trk->keys))) {
@@ -362,6 +367,11 @@ void dseq_close(void)
 	started = 0;
 }
 
+int dseq_isopen(void)
+{
+	return tracks ? 1 : 0;
+}
+
 void dseq_start(void)
 {
 	int i;
@@ -408,8 +418,14 @@ void dseq_update(void)
 		dt = -next_event->reltime;
 
 		tracks[id].cur_val = next_event->key.val;
-		printf("trigger: %s(%d): %d\n", tracks[id].name, id, tracks[id].cur_val);
 		TRIGGER(id);
+
+		if(next_event->trigcb) {
+			next_event->trigcb(id, next_event->key.val, next_event->trigcls);
+		}
+		if(tracks[id].trigcb) {
+			tracks[id].trigcb(id, next_event->key.val, tracks[id].trigcls);
+		}
 
 		next_event = next_event->next;
 	}
@@ -427,6 +443,10 @@ int dseq_lookup(const char *evname)
 	return -1;
 }
 
+const char *dseq_name(int evid)
+{
+	return tracks[evid].name;
+}
 
 int dseq_value(int evid)
 {
@@ -438,4 +458,28 @@ int dseq_triggered(int evid)
 	int trig = ISTRIG(evid);
 	CLRTRIG(evid);
 	return trig;
+}
+
+#define CHECK_REPLACE(x)	\
+	if(x) fprintf(stderr, "warning replacing previous %s callback\n", type == DSEQ_TRIG_ONCE ? "event" : "track");
+
+void dseq_trig_callback(int evid, enum dseq_trig_type type, dseq_callback_func func, void *cls)
+{
+	struct event *ev;
+
+	if(type == DSEQ_TRIG_ONCE) {
+		ev = events;
+		while(ev) {
+			if(ev->id == evid) {
+				CHECK_REPLACE(ev->trigcb);
+				ev->trigcb = func;
+				ev->trigcls = cls;
+			}
+			ev = ev->next;
+		}
+	} else {
+		CHECK_REPLACE(tracks[evid].trigcb);
+		tracks[evid].trigcb = func;
+		tracks[evid].trigcls = cls;
+	}
 }

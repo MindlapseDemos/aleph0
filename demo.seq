@@ -19,21 +19,29 @@
 demoseq {
 	tunnel {
 		start = 0
-		dur = 7000
+		dur = 0
 
-		text_grp {
-			start = 1000
-			dur = 2000
+		text {
+			key:1000 = 1	# mindlapse & desire solid
+			key:2000 = 2	# mindlapse & desire disperse
+			key:4500 = 0
+			key:5500 = 3	# presents solid
+			key:6500 = 4	# presents disperse
+			key:9000 = 0
 		}
-		text_pres {
+		accel { 
 			wait = 1000
-			dur = 2000
+			dur = 1000
+			wait = 0
+			dur = 1000
+			wait = 0
+			dur = 1000
 		}
 	}
 
 	blobgrid {
 		wait = 0
-		dur = 2000
+		dur = 0
 	}
 }
 

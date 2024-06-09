@@ -419,6 +419,30 @@ void overlay_add_full(uint16_t *dest, uint16_t *src)
 	/* TODO */
 }
 
+void overlay_add_pal(uint16_t *dest, uint8_t *src, int xsz, int ysz, int pitch_pix, unsigned int *pal)
+{
+	int i, j;
+	unsigned int r, g, b;
+	unsigned int *col;
+	uint16_t pixel;
+
+	for(i=0; i<ysz; i++) {
+		for(j=0; j<xsz; j++) {
+			pixel = dest[j];
+			col = pal + ((unsigned int)src[j] << 2);
+			r = UNPACK_R16(pixel) + col[0];
+			g = UNPACK_G16(pixel) + col[1];
+			b = UNPACK_B16(pixel) + col[2];
+			if(r > 255) r = 255;
+			if(g > 255) g = 255;
+			if(b > 255) b = 255;
+			dest[j] = PACK_RGB16(r, g, b);
+		}
+		src += pitch_pix;
+		dest += 320;
+	}
+}
+
 void overlay_full_add_pal(uint16_t *dest, uint8_t *src, unsigned int *pal)
 {
 	int i;

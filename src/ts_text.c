@@ -266,7 +266,7 @@ static int next_token(struct parser *pst)
 	}
 	if(isalpha(c)) {
 		/* token is an identifier */
-		while((c = nextchar(pst)) != -1 && (isalnum(c) || c == '_')) {
+		while((c = nextchar(pst)) != -1 && (isalnum(c) || c == '_' || c == ':')) {
 			DYNARR_STRPUSH(pst->token, c);
 		}
 		if(c != -1) ungetchar(c, pst);

@@ -53,6 +53,7 @@ void blit_key(uint16_t *dest, int destwidth, uint16_t *src, int xsz, int ysz, in
 void overlay_add_full(uint16_t *dest, uint16_t *src);
 
 /* the palette is 256 * 4 ints to avoid unpacking and conversions */
+void overlay_add_pal(uint16_t *dest, uint8_t *src, int xsz, int ysz, int pitch_pix, unsigned int *pal);
 void overlay_full_add_pal(uint16_t *dest, uint8_t *src, unsigned int *pal);
 
 extern void (*overlay_alpha)(struct image *dest, int x, int y, const struct image *src,

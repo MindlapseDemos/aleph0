@@ -75,12 +75,13 @@ static long accel_start;
 static const float speedtab[] = {100.0f * UPD_DT, 300.0f * UPD_DT, 500.0f * UPD_DT, 800.0f * UPD_DT};
 
 /* smoketext stuff */
-static struct smktxt *stx[2];
+static struct smktxt *stx[2], *curstx;
 static unsigned char *smokebuf, *cur_smokebuf, *prev_smokebuf;
 #define SMOKEBUF_SIZE	(320 * 240)
 static unsigned int smoke_cmap[256 * 4];
+static struct img_pixmap textimg[2];
 
-static int ev_text_grp, ev_text_pres, text_active;
+static int ev_text, ev_accel, text_state;
 
 
 struct screen *tunnel_screen(void)
@@ -143,6 +144,20 @@ static int init(void)
 		return -1;
 	}
 
+	img_init(textimg);
+	img_init(textimg + 1);
+
+	if(img_load(textimg, "data/ml_dsr8.png") == -1) {
+		fprintf(stderr, "failed to load image: data/ml_dsr8.png\n");
+		return -1;
+	}
+	img_convert(textimg, IMG_FMT_GREY8);
+	if(img_load(textimg + 1, "data/presents.png") == -1) {
+		fprintf(stderr, "failed to load image: data/presents.png\n");
+		return -1;
+	}
+	img_convert(textimg + 1, IMG_FMT_GREY8);
+
 	if(!(stx[0] = create_smktxt("data/ml_dsr.png", "data/vfield1"))) {
 		return -1;
 	}
@@ -167,9 +182,8 @@ static int init(void)
 	}
 	img_free_pixels(pal);
 
-	ev_text_grp = dseq_lookup("tunnel.text_grp");
-	ev_text_pres = dseq_lookup("tunnel.text_pres");
-
+	ev_text = dseq_lookup("tunnel.text");
+	ev_accel = dseq_lookup("tunnel.accel");
 	return 0;
 }
 
@@ -193,7 +207,8 @@ static void start(long trans_time)
 	blurlevel = nextblur = 0;
 	tunspeed = nextspeed = speedtab[0];
 
-	text_active = -1;
+	curstx = 0;
+	text_state = 0;
 
 	memset(smokebuf, 0, SMOKEBUF_SIZE * 2);
 	start_time = time_msec;
@@ -248,10 +263,8 @@ static void update(float tsec)
 				blurlevel = nextblur;
 				tex_pixels_curblur = tex_pixels + tex_xsz * tex_xsz * blurlevel;
 			}
-			/*printf("speed: %f\n", curspeed);*/
 		} else {
 			tunspeed = nextspeed;
-			/*printf("speed: %f\n", nextspeed);*/
 			goto samespeed;
 		}
 	} else {
@@ -262,28 +275,27 @@ samespeed:
 	tunpos += curspeed;
 	toffs = cround64(tunpos);
 
-	if(dseq_triggered(ev_text_grp)) {
-		if(dseq_value(ev_text_grp)) {
-			text_active = 0;
+	if(dseq_triggered(ev_text)) {
+		text_state = dseq_value(ev_text);
+		if(text_state == 0 || text_state == 2 || text_state == 4) {
+			curstx = text_state ? stx[(text_state >> 1) - 1] : 0;
 			/* clear smoke buffer */
 			memset(smokebuf, 0, SMOKEBUF_SIZE * 2);
 		} else {
-			text_active = -1;
+			curstx = 0;
 		}
-		printf("DBG: trigger text_grp(%d): %d\n", ev_text_grp, text_active);
-	} else if(dseq_triggered(ev_text_pres)) {
-		if(dseq_value(ev_text_pres)) {
-			text_active = 1;
-			/* clear smoke buffer */
-			memset(smokebuf, 0, SMOKEBUF_SIZE * 2);
-		} else {
-			text_active = -1;
+
+	} else if(dseq_triggered(ev_accel)) {
+		if(dseq_value(ev_accel)) {
+			/* accelerate */
+			nextblur = (blurlevel + 1) & 3;
+			nextspeed = speedtab[nextblur];
+			accel_start = time_msec - start_time;
 		}
-		printf("DBG: trigger text_pres(%d): %d\n", ev_text_pres, text_active);
 	}
 
-	if(text_active >= 0) {
-		update_smktxt(stx[text_active]);
+	if(text_state == 2 || text_state == 4) {
+		update_smktxt(curstx);
 	}
 }
 
@@ -313,7 +325,7 @@ static void draw(void)
 		}
 	}
 
-	if(text_active >= 0) {
+	if(curstx) {
 		/* blur the previous smoke buffer */
 		blur_xyzzy_horiz8(prev_smokebuf, cur_smokebuf);
 #ifndef SINGLE_BLUR
@@ -325,10 +337,10 @@ static void draw(void)
 		prev_smokebuf = tmpptr;
 #endif
 
-		vptr = stx[text_active]->em.varr;
-		for(i=0; i<stx[text_active]->em.pcount; i++) {
-			x = ((vptr->x * 220) >> 16) + 160;
-			y = 120 - ((vptr->y * 220) >> 16);
+		vptr = curstx->em.varr;
+		for(i=0; i<curstx->em.pcount; i++) {
+			x = ((vptr->x * 228) >> 16) + 160;
+			y = 120 - ((vptr->y * 228) >> 16);
 
 			if(x < 0 || x >= 320 || y < 0 || y >= 240) {
 				vptr++;
@@ -342,6 +354,12 @@ static void draw(void)
 
 		/* overlay the current smoke buffer over the image */
 		overlay_full_add_pal(fb_pixels, cur_smokebuf, smoke_cmap);
+
+	} else if(text_state > 0) {
+		/* we end up here only when text_state is 1 (ml&dsr solid) or 3 (presents solid) */
+		struct img_pixmap *img = textimg + (text_state >> 1);
+		uint16_t *dest = fb_pixels + (120 - img->height / 2) * 320 + (160 - img->width / 2);
+		overlay_add_pal(dest, img->pixels, img->width, img->height, img->width, smoke_cmap);
 	}
 
 	swap_buffers(0);

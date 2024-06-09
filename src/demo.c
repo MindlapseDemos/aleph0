@@ -134,7 +134,7 @@ int demo_init(void)
 		scr = scr_screen(0);
 	}
 
-	if(!scr || scr_change(scr, 4000) == -1) {
+	if(!scr || scr_change(scr, 2000) == -1) {
 		fprintf(stderr, "screen %s not found\n", opt.start_scr ? opt.start_scr : "0");
 		return -1;
 	}
@@ -269,7 +269,7 @@ void cs_puts_font(cs_font_func csfont, int sz, void *fb, int x, int y, const cha
 void change_screen(int idx)
 {
 	printf("change screen %d\n", idx);
-	scr_change(scr_screen(idx), 4000);
+	scr_change(scr_screen(idx), 2000);
 }
 
 void demo_keyboard(int key, int press)
@@ -306,6 +306,11 @@ void demo_keyboard(int key, int press)
 				con_active = con_input('/');
 				return;
 			}
+
+		case KB_F1:
+			reset_timer();
+			dseq_start();
+			break;
 
 		default:
 			if(con_active) {

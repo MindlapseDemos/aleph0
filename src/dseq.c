@@ -87,7 +87,7 @@ int dseq_open(const char *fname)
 	}
 
 	num_tracks = dynarr_size(tracks);
-	printf("dseq_open: loaded %d event tracks\n", num_tracks);
+	printf("dseq_open(%s): loaded %d event tracks\n", fname, num_tracks);
 	ts_free_tree(ts); ts = 0;
 
 	if(!(trk_key = malloc(num_tracks * sizeof *trk_key))) {
@@ -240,9 +240,10 @@ static int read_event(int parid, struct ts_node *tsn)
 	long par_start = 0;
 	long key_time;
 
+
 	namelen = strlen(tsn->name);
 	if(parid >= 0) {
-		namelen += strlen(tracks[parid].name);
+		namelen += strlen(tracks[parid].name) + 1;
 	}
 	if(!(name = malloc(namelen + 1))) {
 		fprintf(stderr, "dseq_open: failed to allocate track name\n");
@@ -253,8 +254,6 @@ static int read_event(int parid, struct ts_node *tsn)
 	} else {
 		strcpy(name, tsn->name);
 	}
-
-	printf("READ EVENT: %s\n", name);
 
 	id = dynarr_size(tracks);
 	if(!(trk = dynarr_push(tracks, &tmptrk))) {

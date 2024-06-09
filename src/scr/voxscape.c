@@ -12,6 +12,8 @@
 #include "gfxutil.h"
 #include "opt_rend.h"
 
+#include "dos/keyb.h"
+
 
 #define HOR_THE_VER_STEP
 
@@ -25,10 +27,10 @@
 #define SIN_TO_COS (SIN_LENGTH / 4)
 
 #define FOV 48
-#define VIS_NEAR 32
-#define VIS_FAR 320
+#define VIS_NEAR 16
+#define VIS_FAR 256
 
-#define PIXEL_SIZE 2
+#define PIXEL_SIZE 1
 #define PIXEL_ABOVE (FB_WIDTH / PIXEL_SIZE)
 #define VIS_VER_SKIP 1
 #define PAL_SHADES 32
@@ -60,6 +62,8 @@
 
 #define PETRUB_SIZE 1024
 #define PETRUB_RANGE 16
+
+#define SEA_LEVEL 1
 
 /* Probably should only enable on PC and save on file for preloading in DOS */
 /* #define CALCULATE_DIST_MAP */
@@ -503,7 +507,7 @@ static void renderScape()
 					uint16_t cv;
 				#endif
 
-				if (hm > 1) {
+				if (hm > SEA_LEVEL) {
 					unsigned char c = cmap[mapOffset];
 					uint16_t* pal = pmapPtr + shadeVoxOff[i];
 					#if PIXEL_SIZE == 2
@@ -513,7 +517,7 @@ static void renderScape()
 						cv = pal[c];
 					#endif
 				} else {
-					const int petrubation = petrubTab[((i+j-128) + petrT) & (PETRUB_SIZE - 1)];
+					const int petrubation = petrubTab[(((petrubTab[j>>1] + i)>>1) + petrT) & (PETRUB_SIZE - 1)];
 					const int dh = ((playerHeight + petrubation - hm) << FP_SCALE) / (i + 1);
 					uint16_t c16 = reflectSample(vx, vy, dvx, dvy, hm << FP_SCALE, dh, viewerOffset, VIS_VER_STEPS - i, pmapPtr + shadeVoxOff[(int)((VIS_VER_STEPS - 1) * REFLECT_SHADE)] + (petrubation >> 2) * 256, petrubation);
 					#if PIXEL_SIZE == 2
@@ -622,8 +626,9 @@ static void setViewAngle(int rx, int ry, int rz)
 
 static void start(long trans_time)
 {
-	setViewPos(3*HMAP_WIDTH/4, V_PLAYER_HEIGHT, HMAP_HEIGHT/6);
-	setViewAngle(0,128,0);
+	/* some view with water */
+	setViewPos(2 * HMAP_WIDTH / 4+64, V_PLAYER_HEIGHT/4, HMAP_HEIGHT / 6-48);
+	setViewAngle(0,1<<(SIN_SHIFT-3),0);
 
 	prevTime = time_msec;
 }
@@ -632,20 +637,32 @@ static void move()
 {
 	const int dt = time_msec - prevTime;
  
-	const int speedX = (dt << FP_VIEWER) >> 9;
-	const int speedZ = (dt << FP_VIEWER) >> 9;
+	const int speedX = (dt << FP_VIEWER) >> 8;
+	const int speedZ = (dt << FP_VIEWER) >> 8;
 
 	const int velX = (speedX * isin[(viewAngle.y + SIN_TO_COS) & (SIN_LENGTH-1)]) >> FP_BASE;
-	const int velZ = (speedZ * isin[viewAngle.y]) >> FP_BASE;
+	const int velZ = (speedZ * isin[viewAngle.y & (SIN_LENGTH-1)]) >> FP_BASE;
 
-	viewPos.x += velX;
-	viewPos.z += velZ;
+	if (kb_isdown('w')) {
+		viewPos.x += velX;
+		viewPos.z += velZ;
+	}
+
+	if (kb_isdown('s')) {
+		viewPos.x -= velX;
+		viewPos.z -= velZ;
+	}
+
+	if (kb_isdown('a')) {
+		viewAngle.y -= speedX;
+	}
+
+	if (kb_isdown('d')) {
+		viewAngle.y += speedX;
+	}
 
 	skyPosMove.x += velX;
 	skyPosMove.z += velZ;
-
-	/* some view with water */
-	setViewPos(2 * HMAP_WIDTH / 4, V_PLAYER_HEIGHT/2, HMAP_HEIGHT / 6-96);
 
 	if(mouse_bmask & MOUSE_BN_LEFT) {
 		viewAngle.y = (4*mouse_x) & (SIN_LENGTH-1);

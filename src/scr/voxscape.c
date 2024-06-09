@@ -28,7 +28,7 @@
 #define VIS_NEAR 32
 #define VIS_FAR 320
 
-#define PIXEL_SIZE 1
+#define PIXEL_SIZE 2
 #define PIXEL_ABOVE (FB_WIDTH / PIXEL_SIZE)
 #define VIS_VER_SKIP 1
 #define PAL_SHADES 32
@@ -54,12 +54,16 @@
 
 #define REFLECT_SHADE 0.75
 
-#define DIST_RADIUS 64
+#define DIST_RADIUS 128
 #define MAX_POINTS_PER_RADIUS (DIST_RADIUS * 8) /* hope it's enough */
-#define HBIAS 4
+#define HBIAS 8
+
+#define PETRUB_SIZE 1024
+#define PETRUB_RANGE 16
 
 /* Probably should only enable on PC and save on file for preloading in DOS */
 /* #define CALCULATE_DIST_MAP */
+/* #define SAVE_DIST_MAP */
 
 
 typedef struct Point2D
@@ -84,6 +88,7 @@ static unsigned char *hmap = NULL;
 static unsigned char *cmap = NULL;
 
 static int *shadeVoxOff;
+static char* petrubTab;
 
 static Vector3D viewPos;
 static Vector3D viewAngle;
@@ -136,6 +141,20 @@ static void createHeightScaleTab()
 		heightScaleTab[i] = (1 << FP_REC) /  (VIS_NEAR + ((stepZ * VIS_FAR) >> FP_SCAPE));
 		z += dz;
 	}
+}
+
+static int writeMapFile(const char* path, int count, unsigned char* src)
+{
+	FILE* f = fopen(path, "wb");
+	if (!f) {
+		fprintf(stderr, "voxscape: failed to open %s: %s\n", path, strerror(errno));
+		return -1;
+	}
+
+	fwrite(src, 1, count, f);
+
+	fclose(f);
+	return 0;
 }
 
 static int readMapFile(const char *path, int count, void *dst)
@@ -197,8 +216,10 @@ static int initHeightmapAndColormap()
 
 static void initDistMap()
 {
+	int i;
+
 	#ifdef CALCULATE_DIST_MAP
-		int x, y, r, n, i;
+		int x, y, r, n;
 
 		int *rCount = malloc(DIST_RADIUS * sizeof(int));
 		Point2D* distOffsets = malloc(DIST_RADIUS * MAX_POINTS_PER_RADIUS * sizeof(Point2D));
@@ -245,11 +266,25 @@ static void initDistMap()
 			}
 		}
 
+		#ifdef SAVE_DIST_MAP
+			writeMapFile("data/dmap1.bin", HMAP_SIZE, distMap);
+		#endif
+
 		free(rCount);
 		free(distOffsets);
 	#else
-		memset(distMap, 0, HMAP_SIZE); /* 0 will still instantly reflect the clouds but not the mountains which need more thorough steps */
+		if (readMapFile("data/dmap1.bin", HMAP_SIZE, distMap) == -1) {
+			memset(distMap, 127, HMAP_SIZE); /* 0 will still instantly reflect the clouds but not the mountains which need more thorough steps */
+		}
 	#endif
+
+	petrubTab = malloc(PETRUB_SIZE);
+	for (i = 0; i < PETRUB_SIZE; ++i) {
+		const float reps = 32.0f;
+		float f = 2.0f * pturbulence1((float)i * 1.0f/reps, PETRUB_SIZE / reps, 8);
+		CLAMP(f, 0.0f, 1.0f)
+		petrubTab[i] = (int)(f * PETRUB_RANGE);
+	}
 }
 
 static void initSkyTexture()
@@ -336,6 +371,7 @@ static void destroy(void)
 	free(shadeVoxOff);
 	free(skyTex);
 	free(distMap);
+	free(petrubTab);
 
 	for (i = 0; i < PAL_SHADES; ++i) {
 		free(skyPal[i]);
@@ -383,16 +419,16 @@ static void updateRaySamplePosAndStep()
 #endif
 }
 
-static uint16_t reflectSky(int px, int py, int dvx, int dvy, int vh)
+static uint16_t reflectSky(int px, int py, int dvx, int dvy, int vh, int petrubation)
 {
-	int u = ((px + skyPosMove.x + ((dvx * vh) >> FP_SCALE)) >> (FP_SCALE - 7)) & (SKY_TEX_WIDTH - 1);
-	int v = ((py + skyPosMove.z + ((dvy * vh) >> FP_SCALE)) >> (FP_SCALE - 7)) & (SKY_TEX_HEIGHT - 1);
+	int u = (((px + skyPosMove.x + ((dvx * vh) >> FP_SCALE)) >> (FP_SCALE - 7)) + petrubation) & (SKY_TEX_WIDTH - 1);
+	int v = (((py + skyPosMove.z + ((dvy * vh) >> FP_SCALE)) >> (FP_SCALE - 7)) + petrubation) & (SKY_TEX_HEIGHT - 1);
 
-	return skyPal[(int)((PAL_SHADES-1) * REFLECT_SHADE)][skyTex[v * SKY_TEX_WIDTH + u]];
+	return skyPal[(int)((PAL_SHADES-1) * REFLECT_SHADE) + (petrubation>>1)][skyTex[v * SKY_TEX_WIDTH + u]];
 }
 
 
-static uint16_t reflectSample(int px, int py, int dvx, int dvy, int ph, int dh, int viewerOffset, int remainingSteps, uint16_t* pal)
+static uint16_t reflectSample(int px, int py, int dvx, int dvy, int ph, int dh, int viewerOffset, int remainingSteps, uint16_t* pal, int petrubation)
 {
 	int i;
 
@@ -405,7 +441,7 @@ static uint16_t reflectSample(int px, int py, int dvx, int dvy, int ph, int dh, 
 		const int safeSteps = distMap[mapOffset];
 
 		if (safeSteps == 0) {
-			return reflectSky(px, py, dvx, dvy, dh);
+			return reflectSky(px, py, dvx, dvy, dh, petrubation>>1);
 		} else {
 			vx += safeSteps * dvx;
 			vy += safeSteps * dvy;
@@ -421,7 +457,7 @@ static uint16_t reflectSample(int px, int py, int dvx, int dvy, int ph, int dh, 
 		}
 	}
 
-	return reflectSky(px, py, dvx, dvy, dh);
+	return reflectSky(px, py, dvx, dvy, dh, petrubation>>1);
 }
 
 static void renderScape()
@@ -433,6 +469,8 @@ static void renderScape()
 
 	uint16_t *dstBase = (uint16_t*)fb_pixels + (FB_HEIGHT-1) * FB_WIDTH;
 	uint16_t* pmapPtr = (uint16_t*)&cmap[HMAP_SIZE];
+
+	const int petrT = time_msec >> 6;
 
 	for (j=0; j<VIS_HOR_STEPS; ++j) {
 		int yMax = 0;
@@ -475,8 +513,9 @@ static void renderScape()
 						cv = pal[c];
 					#endif
 				} else {
-					const int dh = ((playerHeight - hm) << FP_SCALE) / (i + 1);
-					uint16_t c16 = reflectSample(vx, vy, dvx, dvy, hm << FP_SCALE, dh, viewerOffset, VIS_VER_STEPS - i, pmapPtr + shadeVoxOff[(int)((VIS_VER_STEPS - 1) * REFLECT_SHADE)]);
+					const int petrubation = petrubTab[((i+j-128) + petrT) & (PETRUB_SIZE - 1)];
+					const int dh = ((playerHeight + petrubation - hm) << FP_SCALE) / (i + 1);
+					uint16_t c16 = reflectSample(vx, vy, dvx, dvy, hm << FP_SCALE, dh, viewerOffset, VIS_VER_STEPS - i, pmapPtr + shadeVoxOff[(int)((VIS_VER_STEPS - 1) * REFLECT_SHADE)] + (petrubation >> 2) * 256, petrubation);
 					#if PIXEL_SIZE == 2
 						cv = (c16 << 16) | c16;
 					#elif PIXEL_SIZE == 1

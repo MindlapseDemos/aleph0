@@ -78,10 +78,11 @@ static const float speedtab[] = {100.0f * UPD_DT, 300.0f * UPD_DT, 500.0f * UPD_
 static struct smktxt *stx[2], *curstx;
 static unsigned char *smokebuf, *cur_smokebuf, *prev_smokebuf;
 #define SMOKEBUF_SIZE	(320 * 240)
-static unsigned int smoke_cmap[256 * 4];
+static unsigned int smoke_cmap[256 * 4], fadepal[256 * 4];
 static struct img_pixmap textimg[2];
 
 static int ev_text, ev_accel, text_state;
+static int evdur;
 
 
 struct screen *tunnel_screen(void)
@@ -234,7 +235,7 @@ static long toffs;
 static void update(float tsec)
 {
 	int i;
-	float t, curspeed;
+	float t, curspeed, maxpan;
 
 	num_lines = FB_HEIGHT / NUM_WORK_ITEMS;
 	draw_lines = num_lines;
@@ -251,9 +252,6 @@ static void update(float tsec)
 			trans_dir = 0;
 		}
 	}
-
-	xoffs = (int)(cos(tsec * 0.3) * pan_width / 2) + pan_width / 2;
-	yoffs = (int)(sin(tsec * 0.4) * pan_height / 2) + pan_height / 2;
 
 	if(tunspeed != nextspeed) {
 		if(time_msec < accel_start + ACCEL_DUR) {
@@ -272,11 +270,15 @@ samespeed:
 		curspeed = tunspeed;
 	}
 
+	maxpan = (curspeed - speedtab[0]) / (speedtab[3] - speedtab[0]);
+	xoffs = (int)(cos(tsec * 3) * maxpan * pan_width / 2) + pan_width / 2;
+	yoffs = (int)(sin(tsec * 4) * maxpan * pan_height / 2) + pan_height / 2;
+
 	tunpos += curspeed;
 	toffs = cround64(tunpos);
 
 	if(dseq_triggered(ev_text)) {
-		text_state = dseq_value(ev_text);
+		text_state = dseq_value(ev_text) >> 10;
 		if(text_state == 0 || text_state == 2 || text_state == 4) {
 			curstx = text_state ? stx[(text_state >> 1) - 1] : 0;
 			/* clear smoke buffer */
@@ -295,7 +297,18 @@ samespeed:
 	}
 
 	if(text_state == 2 || text_state == 4) {
+		int fade;
 		update_smktxt(curstx);
+
+		fade = ~dseq_value(ev_text) & 0x3ff;
+		if(fade > 256) fade = 256;
+
+		for(i=0; i<256; i++) {
+			fadepal[i * 4] = (smoke_cmap[i * 4] * fade) >> 8;
+			fadepal[i * 4 + 1] = (smoke_cmap[i * 4 + 1] * fade) >> 8;
+			fadepal[i * 4 + 2] = (smoke_cmap[i * 4 + 2] * fade) >> 8;
+			fadepal[i * 4 + 3] = (smoke_cmap[i * 4 + 3] * fade) >> 8;
+		}
 	}
 }
 
@@ -347,13 +360,12 @@ static void draw(void)
 				continue;
 			}
 
-			cur_smokebuf[y * 320 + x] = 192;
-			/*fb_pixels[y * 320 + x] = PACK_RGB16(200, 180, 64);*/
+			cur_smokebuf[y * 320 + x] = 200;
 			vptr++;
 		}
 
 		/* overlay the current smoke buffer over the image */
-		overlay_full_add_pal(fb_pixels, cur_smokebuf, smoke_cmap);
+		overlay_full_add_pal(fb_pixels, cur_smokebuf, fadepal);
 
 	} else if(text_state > 0) {
 		/* we end up here only when text_state is 1 (ml&dsr solid) or 3 (presents solid) */

@@ -10,12 +10,21 @@ struct key {
 	int val;
 };
 
+struct transition {
+	int id;
+	int val[2];
+	long start, end, dur;
+};
+
 struct track {
 	char *name;
 	int parent;
 	int num;
 	int cur_val;
 	struct key *keys;	/* dynarr */
+	enum dseq_interp interp;
+	int trans_time;		/* transition time, 0 (default) means whole interval */
+	int (*interp_func)(struct transition *trs, int t);
 
 	dseq_callback_func trigcb;
 	void *trigcls;
@@ -24,7 +33,7 @@ struct track {
 struct event {
 	long reltime;
 	int id;
-	struct key key;
+	struct key *key;
 	struct event *next;
 
 	dseq_callback_func trigcb;
@@ -46,9 +55,15 @@ static uint32_t trigmap[TRIGMAP_SIZE];
 #define CLRTRIG(x)	trigmap[(x) >> 5] &= ~(1 << ((x) & 31))
 #define ISTRIG(x)	(trigmap[(x) >> 5] & (1 << ((x) & 31)))
 
+#define MAX_ACTIVE_TRANS	8
+struct transition trans[MAX_ACTIVE_TRANS];
+
 static int read_event(int parid, struct ts_node *tsn);
 static void destroy_track(struct track *trk);
 static int keycmp(const void *a, const void *b);
+static int interp_step(struct transition *trs, int t);
+static int interp_linear(struct transition *trs, int t);
+static int interp_smoothstep(struct transition *trs, int t);
 
 
 int dseq_open(const char *fname)
@@ -128,9 +143,9 @@ int dseq_open(const char *fname)
 		}
 		ev->id = next_trk;
 		ev->next = 0;
-		ev->key = *next_key;
+		ev->key = next_key;
 		if(events) {
-			ev->reltime = next_key->tm - evtail->key.tm;
+			ev->reltime = next_key->tm - evtail->key->tm;
 			evtail->next = ev;
 			evtail = ev;
 		} else {
@@ -173,17 +188,6 @@ static int add_key(struct track *trk, long tm, int val)
 	}
 	trk->keys = tmp;
 	last_key_time = tm;
-	return 0;
-}
-
-static long first_nonzero_key_time(struct track *trk)
-{
-	int i;
-	for(i=0; i<trk->num; i++) {
-		if(trk->keys[i].val) {
-			return trk->keys[i].tm;
-		}
-	}
 	return 0;
 }
 
@@ -274,7 +278,7 @@ static int read_event(int parid, struct ts_node *tsn)
 	}
 
 	if(parid >= 0) {
-		par_start = first_nonzero_key_time(tracks + parid);
+		par_start = tracks[parid].num > 0 ? tracks[parid].keys[0].tm : 0;
 	}
 
 	attr = tsn->attr_list;
@@ -297,8 +301,24 @@ static int read_event(int parid, struct ts_node *tsn)
 				ADD_START_DUR(start, dur);
 			}
 
+		} else if(strcmp(attr->name, "startabs") == 0) {
+			SKIP_NOTNUM("startabs");
+			start = attr->val.inum;
+			if(end >= 0) {
+				ADD_START_END(start, end);
+			} else if(dur > 0) {
+				ADD_START_DUR(start, dur);
+			}
+
 		} else if(strcmp(attr->name, "end") == 0) {
 			SKIP_NOTNUM("end");
+			end = attr->val.inum + par_start;
+			if(start >= 0) {
+				ADD_START_END(start, end);
+			}
+
+		} else if(strcmp(attr->name, "endabs") == 0) {
+			SKIP_NOTNUM("endabs");
 			end = attr->val.inum;
 			if(start >= 0) {
 				ADD_START_END(start, end);
@@ -314,6 +334,35 @@ static int read_event(int parid, struct ts_node *tsn)
 		} else if(sscanf(attr->name, "key:%ld", &key_time) == 1) {
 			SKIP_NOTNUM("key");
 			add_key(trk, key_time + par_start, attr->val.inum);
+
+		} else if(sscanf(attr->name, "keyabs:%ld", &key_time) == 1) {
+			SKIP_NOTNUM("keyabs");
+			add_key(trk, key_time, attr->val.inum);
+
+		} else if(strcmp(attr->name, "interp") == 0) {
+			if(attr->val.type != TS_STRING) {
+				fprintf(stderr, "dseq_open: %s:%s expected string, got: \"%s\"\n",
+						name, attr->name, attr->val.str);
+				goto next;
+			}
+			if(strcmp(attr->val.str, "step") == 0) {
+				trk->interp = DSEQ_STEP;
+				trk->interp_func = interp_step;
+			} else if(strcmp(attr->val.str, "linear") == 0) {
+				trk->interp = DSEQ_LINEAR;
+				trk->interp_func = interp_linear;
+			} else if(strcmp(attr->val.str, "smoothstep") == 0) {
+				trk->interp = DSEQ_SMOOTHSTEP;
+				trk->interp_func = interp_smoothstep;
+			} else {
+				fprintf(stderr, "dseq_open: %s: unrecognized interpolation type: %s\n",
+						name, attr->val.str);
+				goto next;
+			}
+
+		} else if(strcmp(attr->name, "trans") == 0) {
+			SKIP_NOTNUM("trans");
+			trk->trans_time = attr->val.inum;
 
 		} else {
 			fprintf(stderr, "dseq_open: ignoring unknown attribute: \"%s\"\n", attr->name);
@@ -382,12 +431,16 @@ void dseq_start(void)
 
 	ev = events;
 	while(ev) {
-		ev->reltime = ev->key.tm - prev_time;
-		prev_time = ev->key.tm;
+		ev->reltime = ev->key->tm - prev_time;
+		prev_time = ev->key->tm;
 		ev = ev->next;
 	}
 	next_event = events;
 	prev_upd = 0;
+
+	for(i=0; i<MAX_ACTIVE_TRANS; i++) {
+		trans[i].id = -1;
+	}
 
 	started = 1;
 }
@@ -397,32 +450,90 @@ void dseq_stop(void)
 	started = 0;
 }
 
+static char dbgbuf[128];
+static int dbgbuf_len;
+
 void dseq_update(void)
 {
 	int i, id;
 	long dt;
+	int32_t t;
+	struct transition *trs;
+	struct track *trk;
+	struct event *ev;
 
 	if(!started) return;
 
 	dt = time_msec - prev_upd;
 	prev_upd = time_msec;
 
-	/* TODO active transitions */
+	dbgbuf_len = 0;
+	/* update active transitions */
+	for(i=0; i<MAX_ACTIVE_TRANS; i++) {
+		if(trans[i].id == -1) continue;
 
+		trs = trans + i;
+		trk = tracks + trs->id;
+		if(time_msec >= trs->end) {
+			trk->cur_val = trs->val[1];
+			trs->id = -1;
+		} else {
+			t = ((time_msec - trs->start) << 10) / trs->dur;
+			trk->cur_val = trk->interp_func(trs, t);
+		}
+
+		dbgbuf_len += sprintf(dbgbuf + dbgbuf_len, "%s:%d ", trk->name, trk->cur_val);
+	}
+	printf("\r%s               ", dbgbuf);
+	fflush(stdout);
+
+	/* trigger any pending events */
 	while(next_event) {
 		id = next_event->id;
 		next_event->reltime -= dt;
 		if(next_event->reltime > 0) break;
 		dt = -next_event->reltime;
 
-		tracks[id].cur_val = next_event->key.val;
+		trk = tracks + id;
+
+		if(trk->interp != DSEQ_STEP) {
+			/* if interpolator is set to anything other than step, allocate a
+			 * free transition, and set it up. Assuming there's another key
+			 * after this one to interpolate to.
+			 */
+			if(next_event->key >= trk->keys + trk->num) {
+				goto no_trans;
+			}
+
+			for(i=0; i<MAX_ACTIVE_TRANS; i++) {
+				if(trans[i].id == -1) break;
+			}
+			if(i >= MAX_ACTIVE_TRANS) {
+				fprintf(stderr, "failed to allocate transition for %s\n", trk->name);
+				goto no_trans;
+			}
+
+			trs = trans + i;
+			trs->id = id;
+			trs->start = next_event->key->tm;
+			if(trk->trans_time) {
+				trs->end = trs->start + trk->trans_time;
+			} else {
+				trs->end = next_event->key[1].tm;
+			}
+			trs->dur = trs->end - trs->start;
+			trs->val[0] = next_event->key->val;
+			trs->val[1] = next_event->key[1].val;
+		}
+no_trans:
+		trk->cur_val = next_event->key->val;
 		TRIGGER(id);
 
 		if(next_event->trigcb) {
-			next_event->trigcb(id, next_event->key.val, next_event->trigcls);
+			next_event->trigcb(id, next_event->key->val, next_event->trigcls);
 		}
-		if(tracks[id].trigcb) {
-			tracks[id].trigcb(id, next_event->key.val, tracks[id].trigcls);
+		if(trk->trigcb) {
+			trk->trigcb(id, next_event->key->val, trk->trigcls);
 		}
 
 		next_event = next_event->next;
@@ -480,4 +591,19 @@ void dseq_trig_callback(int evid, enum dseq_trig_type type, dseq_callback_func f
 		tracks[evid].trigcb = func;
 		tracks[evid].trigcls = cls;
 	}
+}
+
+static int interp_step(struct transition *trs, int t)
+{
+	return trs->val[0];
+}
+
+static int interp_linear(struct transition *trs, int t)
+{
+	return trs->val[0] + (((trs->val[1] - trs->val[0]) * t) >> 10);
+}
+
+static int interp_smoothstep(struct transition *trs, int t)
+{
+	return trs->val[0];	/* TODO */
 }

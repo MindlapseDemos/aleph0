@@ -1,6 +1,12 @@
 #ifndef DEMO_SEQUENCER_H_
 #define DEMO_SEQUENCER_H_
 
+enum dseq_interp {
+	DSEQ_STEP,
+	DSEQ_LINEAR,
+	DSEQ_SMOOTHSTEP
+};
+
 enum dseq_trig_type {
 	DSEQ_TRIG_ONCE,
 	DSEQ_TRIG_ALL

@@ -15,6 +15,11 @@
 #   - end: event interval end time, relative to parent.
 #   - dur: event interval duration, pair with start or wait.
 #   - key:<time>: defines explicit value for a specified time
+#   - startabs: same as abs, but absolute time, not relative to parent
+#   - endabs: same as end, but absolute time, not relative to parent
+#   - keyabs:<abstime>: same as key, but absolute time, not relative to parent
+#   - interp: one of <step|linear|smoothstep>
+#   - trans: transition duration, 0 (default) means until the next key
 
 demoseq {
 	tunnel {
@@ -22,20 +27,20 @@ demoseq {
 		dur = 0
 
 		text {
-			key:1000 = 1	# mindlapse & desire solid
-			key:2000 = 2	# mindlapse & desire disperse
+			key:1000 = 1024	# mindlapse & desire solid
+			key:2000 = 2048	# mindlapse & desire disperse
 			key:4500 = 0
-			key:5500 = 3	# presents solid
-			key:6500 = 4	# presents disperse
+			key:5500 = 3072	# presents solid
+			key:6500 = 4096	# presents disperse
 			key:9000 = 0
 		}
 		accel { 
 			wait = 1000
-			dur = 1000
+			dur = 1100
 			wait = 0
-			dur = 1000
+			dur = 1100
 			wait = 0
-			dur = 1000
+			dur = 1100
 		}
 	}
 

@@ -278,7 +278,7 @@ static void initDistMap()
 		free(distOffsets);
 	#else
 		if (readMapFile("data/dmap1.bin", HMAP_SIZE, distMap) == -1) {
-			memset(distMap, 127, HMAP_SIZE); /* 0 will still instantly reflect the clouds but not the mountains which need more thorough steps */
+			memset(distMap, 0, HMAP_SIZE); /* 0 will still instantly reflect the clouds but not the mountains which need more thorough steps */
 		}
 	#endif
 

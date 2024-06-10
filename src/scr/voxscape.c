@@ -218,7 +218,7 @@ static int initHeightmapAndColormap()
 }
 
 
-static void initDistMap()
+static int initDistMap()
 {
 	int i;
 
@@ -278,7 +278,8 @@ static void initDistMap()
 		free(distOffsets);
 	#else
 		if (readMapFile("data/dmap1.bin", HMAP_SIZE, distMap) == -1) {
-			memset(distMap, 0, HMAP_SIZE); /* 0 will still instantly reflect the clouds but not the mountains which need more thorough steps */
+			/* memset(distMap, 0, HMAP_SIZE); */ /* 0 will still instantly reflect the clouds but not the mountains which need more thorough steps */ 
+			return -1;
 		}
 	#endif
 
@@ -289,6 +290,8 @@ static void initDistMap()
 		CLAMP(f, 0.0f, 1.0f)
 		petrubTab[i] = (int)(f * PETRUB_RANGE);
 	}
+
+	return 0;
 }
 
 static void initSkyTexture()
@@ -348,11 +351,9 @@ static int init(void)
 	yMaxHolder = malloc(VIS_HOR_STEPS * sizeof(int));
 	dstX = malloc(VIS_HOR_STEPS * sizeof(uint16_t*));
 
-	if(initHeightmapAndColormap() == -1) {
+	if(initHeightmapAndColormap() == -1 || initDistMap() == -1) {
 		return -1;
 	}
-
-	initDistMap();
 
 	skyPosMove.x = 0;
 	skyPosMove.z = 0;

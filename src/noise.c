@@ -38,7 +38,7 @@ static int tables_valid;
 
 #define init_once()	if(!tables_valid) init_noise()
 
-static void init_noise()
+static void init_noise(void)
 {
 	int i;
 	float len;

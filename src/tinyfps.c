@@ -30,7 +30,7 @@ static unsigned long startingFpsTime = 0;
 static int fpsFontsInit = 0;
 static int nFrames = 0;
 
-void initFpsFonts()
+void initFpsFonts(void)
 {
 	if (fpsFontsInit == 0)
 	{

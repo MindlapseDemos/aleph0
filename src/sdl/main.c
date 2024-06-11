@@ -45,6 +45,8 @@ static struct video_mode vmodes[] = {
 };
 static struct video_mode *cur_vmode;
 
+static unsigned int num_pressed;
+static unsigned char keystate[256];
 
 static int use_sball;
 cgm_vec3 sball_pos = {0, 0, 0};
@@ -256,6 +258,25 @@ void blit_frame(void *pixels, int vsync)
 	SDL_Flip(fbsurf);
 }
 
+int kb_isdown(int key)
+{
+	switch(key) {
+	case KB_ANY:
+		return num_pressed;
+
+	case KB_ALT:
+		return keystate[KB_LALT] + keystate[KB_RALT];
+
+	case KB_CTRL:
+		return keystate[KB_LCTRL] + keystate[KB_RCTRL];
+	}
+
+	if(isalpha(key)) {
+		key = tolower(key);
+	}
+	return keystate[key];
+}
+
 static int bnmask(int sdlbn)
 {
 	switch(sdlbn) {
@@ -288,7 +309,13 @@ static void handle_event(SDL_Event *ev)
 			break;
 		}
 		key = sdlkey_to_demokey(ev->key.keysym.sym, ev->key.keysym.mod);
-		demo_keyboard(key, ev->key.state == SDL_PRESSED ? 1 : 0);
+		if(ev->key.state == SDL_PRESSED) {
+			keystate[key] = 1;
+			demo_keyboard(key, 1);
+		} else {
+			keystate[key] = 0;
+			demo_keyboard(key, 0);
+		}
 		break;
 
 	case SDL_MOUSEMOTION:

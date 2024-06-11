@@ -13,7 +13,8 @@ dbg = -g3
 CC = emcc
 CFLAGS = $(warn) $(opt) $(def) -fno-pie -fno-strict-aliasing $(dbg) $(inc) -sUSE_SDL
 LDFLAGS = libs/imago/imago.ema libs/anim/anim.ema libs/goat3d/goat3d.ema \
-		  libs/mikmod/mikmod.ema -lSDL --preload-file data --exclude-file data/.svn \
+		  libs/mikmod/mikmod.ema -lSDL --preload-file data --preload-file demo.seq \
+		  --exclude-file data/.svn \
 		  -sINITIAL_MEMORY=67108864 -sUSE_SDL --shell-file demopage_shell.html
 #		  -gsource-maps --profile-funcs -sSAFE_HEAP=1
 

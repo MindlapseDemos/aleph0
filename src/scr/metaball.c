@@ -10,6 +10,7 @@
 #include "util.h"
 #include "metasurf.h"
 #include "mesh.h"
+#include "imago2.h"
 
 struct metaball {
 	float energy;
@@ -32,12 +33,14 @@ static struct screen scr = {
 };
 
 static float cam_theta, cam_phi = 25;
-static float cam_dist = 10;
+static float cam_dist = 8;
 static struct g3d_mesh mmesh;
+static uint16_t *bgimage, *envmap;
+static int envmap_xsz, envmap_ysz;
 
 static struct metasurface *msurf;
 
-#define VOL_SZ	32
+#define VOL_SZ	22
 #define VOL_SCALE	10.0f
 #define VOX_DIST	(VOL_SCALE / VOL_SZ)
 #define VOL_HALF_SCALE	(VOL_SCALE * 0.5f)
@@ -54,6 +57,15 @@ struct screen *metaballs_screen(void)
 
 static int init(void)
 {
+	int xsz, ysz;
+
+	if(!(bgimage = img_load_pixels("data/blob_bg.png", &xsz, &ysz, IMG_FMT_RGB565))) {
+		return -1;
+	}
+	/*if(!(envmap = img_load_pixels("data/foo.png", &envmap_xsz, &envmap_ysz, IMG_FMT_RGB565))) {
+		return -1;
+	}*/
+
 	mball[0].energy = 1.2;
 	mball[1].energy = 0.8;
 	mball[2].energy = 1.0;
@@ -79,6 +91,7 @@ static int init(void)
 static void destroy(void)
 {
 	msurf_free(msurf);
+	img_free_pixels(bgimage);
 }
 
 static void start(long trans_time)
@@ -125,17 +138,11 @@ static void update(void)
 static void draw(void)
 {
 	int i, j;
+	char buf[32];
 
 	update();
 
-	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
-
-	for(i=0; i<120; i++) {
-		for(j=0; j<160; j++) {
-			fb_pixels[(i + 60) * 320 + (j + 80)] = 0x1e7;
-		}
-	}
-	g3d_viewport(80, 60, 160, 120);
+	memcpy64(fb_pixels, bgimage, 320 * 240 / 4);
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
@@ -149,9 +156,15 @@ static void draw(void)
 
 	g3d_mtl_diffuse(0.6, 0.6, 0.6);
 
+	//g3d_enable(G3D_TEXTURE_2D);
+	g3d_enable(G3D_TEXTURE_GEN);
+	g3d_set_texture(envmap_xsz, envmap_ysz, envmap);
 	draw_mesh(&mmesh);
+	g3d_disable(G3D_TEXTURE_GEN);
+	g3d_disable(G3D_TEXTURE_2D);
 
-	g3d_viewport(0, 0, FB_WIDTH, FB_HEIGHT);
+	sprintf(buf, "%d tris", mmesh.vcount / 3);
+	cs_cputs(fb_pixels, 10, 10, buf);
 
 	swap_buffers(fb_pixels);
 }

@@ -240,7 +240,11 @@ void blit_frame(void *pixels, int vsync)
 			int r = UNPACK_R16(pixel);
 			int g = UNPACK_G16(pixel);
 			int b = UNPACK_B16(pixel);
+#ifdef __EMSCRIPTEN__
 			uint32_t pix32 = PACK_RGB32(b, g, r);
+#else
+			uint32_t pix32 = PACK_RGB32(r, g, b);
+#endif
 
 			for(y=0; y<fbscale; y++) {
 				for(x=0; x<fbscale; x++) {

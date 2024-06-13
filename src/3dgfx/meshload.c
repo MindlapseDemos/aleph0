@@ -335,7 +335,7 @@ int load_named_mesh(struct g3d_mesh *mesh, const char *fname, const char *mname)
 
 int save_mesh(struct g3d_mesh *mesh, const char *fname)
 {
-	int i, fvcount;
+	int i, idx, fvcount, nverts;
 	FILE *fp;
 
 	if(!(fp = fopen(fname, "wb"))) {
@@ -357,8 +357,9 @@ int save_mesh(struct g3d_mesh *mesh, const char *fname)
 	}
 
 	fvcount = mesh->prim;
-	for(i=0; i<mesh->icount; i++) {
-		int idx = mesh->iarr[i] + 1;
+	nverts = mesh->iarr ? mesh->icount : mesh->vcount;
+	for(i=0; i<nverts; i++) {
+		idx = (mesh->iarr ? mesh->iarr[i] : i) + 1;
 
 		if(fvcount == mesh->prim) {
 			fprintf(fp, "\nf");

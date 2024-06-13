@@ -211,7 +211,7 @@ static unsigned int mc_bitcode(float *val, float thres);
 
 static void process_cell(struct metasurface *ms, int xcell, int ycell, int zcell, vec3 cellpos, vec3 cellsz)
 {
-	int i, j, slice_size;
+	int i, j, k, slice_size;
 	vec3 pos[8];
 	float dfdx[8], dfdy[8], dfdz[8];
 	vec3 vert[12], norm[12];
@@ -334,6 +334,15 @@ static void process_cell(struct metasurface *ms, int xcell, int ycell, int zcell
 					fprintf(stderr, "msurf_polygonize: failed to grow vertex buffers to %d elements\n", newsz);
 					return;
 				}
+
+				ms->varr = new_varr + ms->varr_alloc_size;
+				for(k=0; k<newsz - ms->varr_alloc_size; k++) {
+					ms->varr->u = ms->varr->v = 0.0f;
+					ms->varr->r = ms->varr->g = ms->varr->b = ms->varr->a = 255;
+					ms->varr->w = 1.0f;
+					ms->varr++;
+				}
+
 				ms->varr = new_varr;
 				ms->varr_alloc_size = newsz;
 			}
@@ -342,7 +351,6 @@ static void process_cell(struct metasurface *ms, int xcell, int ycell, int zcell
 			vdest->x = v[0];
 			vdest->y = v[1];
 			vdest->z = v[2];
-			vdest->w = 1.0f;
 			vdest->nx = n[0];
 			vdest->ny = n[1];
 			vdest->nz = n[2];

@@ -15,8 +15,6 @@
 #include "dos/keyb.h"
 
 
-#define HOR_THE_VER_STEP
-
 #define FP_VIEWER 8
 #define FP_BASE 12
 #define FP_SCAPE 10
@@ -28,7 +26,10 @@
 
 #define FOV 48
 #define VIS_NEAR 16
-#define VIS_FAR 256
+#define VIS_CLOSE 32
+#define VIS_MID 96
+#define VIS_HAZE 256
+#define VIS_FAR 320
 
 #define PIXEL_SIZE 1
 #define PIXEL_ABOVE (FB_WIDTH / PIXEL_SIZE)
@@ -85,13 +86,13 @@ static int *isin = NULL;
 static Point2D *viewNearPosVec = NULL;
 static Point2D *viewNearStepVec = NULL;
 static int* yMaxHolder = NULL;
-static uint16_t** dstX;
 
 static unsigned char *hmap = NULL;
 static unsigned char *cmap = NULL;
 
 static int *shadeVoxOff;
 static char* petrubTab;
+static char* pixStepY;
 
 static Vector3D viewPos;
 static Vector3D viewAngle;
@@ -292,6 +293,17 @@ static int initDistMap()
 		petrubTab[i] = (int)(f * PETRUB_RANGE);
 	}
 
+	pixStepY = malloc(VIS_VER_STEPS);
+	for (i = 0; i < VIS_VER_STEPS; ++i) {
+		if (i < VIS_CLOSE) {
+			pixStepY[i] = 4;
+		} else if (i < VIS_MID) {
+			pixStepY[i] = 2;
+		} else {
+			pixStepY[i] = 1;
+		}
+	}
+
 	return 0;
 }
 
@@ -350,7 +362,7 @@ static int init(void)
 	viewNearPosVec = malloc(VIS_HOR_STEPS * sizeof(Point2D));
 	viewNearStepVec = malloc(VIS_HOR_STEPS * sizeof(Point2D));
 	yMaxHolder = malloc(VIS_HOR_STEPS * sizeof(int));
-	dstX = malloc(VIS_HOR_STEPS * sizeof(uint16_t*));
+
 
 	if(initHeightmapAndColormap() == -1 || initDistMap() == -1) {
 		return -1;
@@ -371,13 +383,13 @@ static void destroy(void)
 	free(viewNearPosVec);
 	free(viewNearStepVec);
 	free(yMaxHolder);
-	free(dstX);
 	free(hmap);
 	free(cmap);
 	free(shadeVoxOff);
 	free(skyTex);
 	free(distMap);
 	free(petrubTab);
+	free(pixStepY);
 
 	for (i = 0; i < PAL_SHADES; ++i) {
 		free(skyPal[i]);
@@ -461,83 +473,6 @@ static uint16_t reflectSample(int px, int py, int dvx, int dvy, int ph, int dh, 
 
 static void renderScape(int petrT)
 {
-	int i,j;
-
-	const int playerHeight = viewPos.y >> FP_VIEWER;
-
-	uint16_t *dstBase = (uint16_t*)fb_pixels + (FB_HEIGHT-1) * FB_WIDTH;
-	uint16_t* pmapPtr = (uint16_t*)&cmap[HMAP_SIZE];
-	uint16_t* pmapPtrShade = pmapPtr + shadeVoxOff[(int)((VIS_VER_STEPS - 1) * REFLECT_SHADE)];
-
-	for (j=0; j<VIS_HOR_STEPS; ++j) {
-		int yMax = 0;
-
-		int vx = viewNearPosVec[j].x + (viewPos.x << (FP_SCAPE - FP_VIEWER));
-		int vy = viewNearPosVec[j].y + (viewPos.z << (FP_SCAPE - FP_VIEWER));
-		const int dvx = viewNearStepVec[j].x;
-		const int dvy = viewNearStepVec[j].y;
-
-		#if PIXEL_SIZE == 2
-			uint32_t *dst = (uint32_t*)dstBase;
-		#elif PIXEL_SIZE == 1
-			uint16_t *dst = dstBase;
-		#endif
-
-
-		for (i=0; i<VIS_VER_STEPS; i++) {
-			const int sampleOffset = (vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE);
-			const int mapOffset = sampleOffset & (HMAP_SIZE - 1);
-			const int hm = hmap[mapOffset];
-			int h = (((-playerHeight + hm) * heightScaleTab[i]) >> (FP_REC - V_HEIGHT_SCALER_SHIFT)) + HORIZON;
-			if (h > FB_HEIGHT-1) h = FB_HEIGHT-1;
-
-			if (yMax < h) {
-				int hCount = h - yMax;
-
-				#if PIXEL_SIZE == 2
-					uint32_t cv;
-				#elif PIXEL_SIZE == 1
-					uint16_t cv;
-				#endif
-
-				if (hm > SEA_LEVEL) {
-					unsigned char c = cmap[mapOffset];
-					uint16_t* pal = pmapPtr + shadeVoxOff[i];
-					#if PIXEL_SIZE == 2
-						uint16_t c16 = pal[c];
-					cv = (c16 << 16) | c16;
-					#elif PIXEL_SIZE == 1
-						cv = pal[c];
-					#endif
-				} else {
-					const int petrubation = petrubTab[(((petrubTab[j>>1] + i)>>1) + petrT) & (PETRUB_SIZE - 1)];
-					const int dh = ((playerHeight + petrubation - hm) << FP_SCALE) / (i + 1);
-					uint16_t c16 = reflectSample(vx, vy, dvx, dvy, hm << FP_SCALE, dh, VIS_VER_STEPS - i, pmapPtrShade + (petrubation >> 2) * 256, petrubation);
-					#if PIXEL_SIZE == 2
-						cv = (c16 << 16) | c16;
-					#elif PIXEL_SIZE == 1
-						cv = c16;
-					#endif
-				}
-
-				do {
-					*dst = cv;
-					dst -= PIXEL_ABOVE;
-				}while(--hCount > 0);
-
-				yMax = h;
-				if (yMax == FB_HEIGHT - 1) break;
-			}
-			vx += dvx;
-			vy += dvy;
-		}
-
-		dstBase += PIXEL_SIZE;
-	}
-}
-
-static void renderScapeX(int petrT)
-{
 	int i, j;
 
 	const int playerHeight = viewPos.y >> FP_VIEWER;
@@ -558,23 +493,26 @@ static void renderScapeX(int petrT)
 	const int dvyR = stepVecR->y;
 
 	uint16_t* dstBase = (uint16_t*)fb_pixels + (FB_HEIGHT - 1) * FB_WIDTH;
-	for (i = 0; i < VIS_HOR_STEPS; ++i) {
-		dstX[i] = dstBase + i;
-	}
 
 	memset(yMaxHolder, 0, VIS_HOR_STEPS * sizeof(int));
 
 	for (i = 0; i < VIS_VER_STEPS; ++i) {
+		const int pixStep = pixStepY[i];
+
 		int vx = vxL;
 		int vy = vyL;
-		const int dvx = (vxR - vxL) / VIS_HOR_STEPS;
-		const int dvy = (vyR - vyL) / VIS_HOR_STEPS;
+		const int dvx = pixStep * ((vxR - vxL) / VIS_HOR_STEPS);
+		const int dvy = pixStep * ((vyR - vyL) / VIS_HOR_STEPS);
 
 		uint16_t* pmapPtr = (uint16_t*)&cmap[HMAP_SIZE] + shadeVoxOff[i];
-		uint16_t* pmapPtrShade = pmapPtr + shadeVoxOff[(int)((VIS_VER_STEPS - 1) * REFLECT_SHADE)];
+		uint16_t* pmapPtrShade;
 		const int heightScale = heightScaleTab[i];
 
-		for (j = 0; j < VIS_HOR_STEPS; ++j) {
+		int shadePalI = i + (int)((VIS_VER_STEPS - 1) * REFLECT_SHADE);
+		CLAMP(shadePalI, 0, VIS_VER_STEPS-1)
+		pmapPtrShade = (uint16_t*)&cmap[HMAP_SIZE] + shadeVoxOff[shadePalI];
+
+		for (j = 0; j < VIS_HOR_STEPS; j+= pixStep) {
 			const int yMax = yMaxHolder[j];
 			if (yMax < FB_HEIGHT - 1) {
 				const int sampleOffset = (vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE);
@@ -584,6 +522,8 @@ static void renderScapeX(int petrT)
 				if (h > FB_HEIGHT - 1) h = FB_HEIGHT - 1;
 
 				if (yMax < h) {
+					int n, yH;
+					int cvR, cvG, cvB;
 					uint16_t cv;
 					int hCount;
 					uint16_t* dst;
@@ -597,15 +537,46 @@ static void renderScapeX(int petrT)
 						cv = reflectSample(vx, vy, dvxH, dvyH, hm << FP_SCALE, dh, VIS_VER_STEPS - i, pmapPtrShade + (petrubation >> 2) * 256, petrubation);
 					}
 
-					hCount = h - yMaxHolder[j];
-					dst = dstX[j];
+					yH = yMaxHolder[j];
+					if (pixStep == 1) {
+						if (i >= VIS_HAZE) {
+							cvR = (cv >> 11) & 31;
+							cvG = (cv >> 5) & 63;
+							cvB = cv & 31;
+						}
+						yMaxHolder[j] = h;
+					} else {
+						for (n = 0; n < pixStep; ++n) {
+							yMaxHolder[j + n] = h;
+						}
+					}
+
+					hCount = h - yH;
+					dst = dstBase - (yH -1) * FB_WIDTH + j;
 					do {
-						*dst = cv;
+						if (pixStep == 1) {
+							if (i >= VIS_HAZE) {
+								const int hi = i - VIS_HAZE;
+								const uint16_t bg = *dst;
+								const int bgR = (bg >> 11) & 31;
+								const int bgG = (bg >> 5) & 63;
+								const int bgB = bg & 31;
+								const int r = (bgR * hi + cvR * ((VIS_FAR - VIS_HAZE) - hi)) / (VIS_FAR - VIS_HAZE);
+								const int g = (bgG * hi + cvG * ((VIS_FAR - VIS_HAZE) - hi)) / (VIS_FAR - VIS_HAZE);
+								const int b = (bgB * hi + cvB * ((VIS_FAR - VIS_HAZE) - hi)) / (VIS_FAR - VIS_HAZE);
+								cv = (r << 11) | (g << 5) | b;
+							}
+							*dst = cv;
+						}
+						else {
+							for (n = 0; n < pixStep; ++n) {
+								/*if (pixStep == 2) cv |= 15;
+								if (pixStep == 4) cv |= 31;*/
+								*(dst + n) = cv;
+							}
+						}
 						dst -= FB_WIDTH;
 					} while (--hCount > 0);
-
-					dstX[j] = dst;
-					yMaxHolder[j] = h;
 				}
 			}
 			vx += dvx; vy += dvy;
@@ -761,11 +732,7 @@ static void draw(void)
 
 	renderSky();
 
-#ifdef HOR_THE_VER_STEP
 	renderScape(petrT);
-#else
-	renderScapeX(petrT);
-#endif
 
 /*	testRenderDistMap(); */
 

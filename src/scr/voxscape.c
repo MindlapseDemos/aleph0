@@ -28,8 +28,8 @@
 #define VIS_NEAR 16
 #define VIS_CLOSE 32
 #define VIS_MID 96
-#define VIS_HAZE 256
-#define VIS_FAR 320
+#define VIS_FAR 256
+#define VIS_HAZE (VIS_FAR - 64)
 
 #define PIXEL_SIZE 1
 #define PIXEL_ABOVE (FB_WIDTH / PIXEL_SIZE)
@@ -55,7 +55,7 @@
 #define SKY_TEX_WIDTH 256
 #define SKY_TEX_HEIGHT 256
 
-#define REFLECT_SHADE 0.75
+#define REFLECT_SHADE 0.625
 
 #define DIST_RADIUS 128
 #define MAX_POINTS_PER_RADIUS (DIST_RADIUS * 8) /* hope it's enough */
@@ -197,7 +197,8 @@ static void initPalShades()
 
 	for (i = 0; i < VIS_VER_STEPS; ++i) {
 		float r = (float)i / (VIS_VER_STEPS - 1);
-		r = -0.125f + pow(r, 1.5f);
+		/* r = -0.125f + pow(r, 1.5f); */
+		r = r - 0.25f;
 		CLAMP(r,0,1)
 		shadeVoxOff[i] = (int)(r * (PAL_SHADES - 1)) * 256;
 	}
@@ -462,7 +463,7 @@ static uint16_t reflectSample(int px, int py, int dvx, int dvy, int ph, int dh, 
 			mapOffset = sampleOffset & (HMAP_SIZE - 1);
 
 			if ((ph >> FP_SCALE) < hmap[mapOffset]) {
-				return pal[cmap[mapOffset]];
+				return pal[cmap[mapOffset] + (petrubation >> 2) * 256];
 			}
 			i += safeSteps;
 		}
@@ -504,7 +505,7 @@ static void renderScape(int petrT)
 		const int dvx = pixStep * ((vxR - vxL) / VIS_HOR_STEPS);
 		const int dvy = pixStep * ((vyR - vyL) / VIS_HOR_STEPS);
 
-		uint16_t* pmapPtr = (uint16_t*)&cmap[HMAP_SIZE] + shadeVoxOff[i];
+		uint16_t* pmapPtr = (uint16_t*)&cmap[HMAP_SIZE] +shadeVoxOff[i];
 		uint16_t* pmapPtrShade;
 		const int heightScale = heightScaleTab[i];
 
@@ -534,7 +535,7 @@ static void renderScape(int petrT)
 						const int dh = ((playerHeight + petrubation - hm) << FP_SCALE) / (i + 1);
 						const int dvxH = viewNearStepVec[j].x;
 						const int dvyH = viewNearStepVec[j].y;
-						cv = reflectSample(vx, vy, dvxH, dvyH, hm << FP_SCALE, dh, VIS_VER_STEPS - i, pmapPtrShade + (petrubation >> 2) * 256, petrubation);
+						cv = reflectSample(vx, vy, dvxH, dvyH, hm << FP_SCALE, dh, VIS_VER_STEPS - i, pmapPtrShade, petrubation);
 					}
 
 					yH = yMaxHolder[j];
@@ -555,18 +556,21 @@ static void renderScape(int petrT)
 					dst = dstBase - (yH -1) * FB_WIDTH + j;
 					do {
 						if (pixStep == 1) {
-							if (i >= VIS_HAZE) {
-								const int hi = i - VIS_HAZE;
-								const uint16_t bg = *dst;
-								const int bgR = (bg >> 11) & 31;
-								const int bgG = (bg >> 5) & 63;
-								const int bgB = bg & 31;
-								const int r = (bgR * hi + cvR * ((VIS_FAR - VIS_HAZE) - hi)) / (VIS_FAR - VIS_HAZE);
-								const int g = (bgG * hi + cvG * ((VIS_FAR - VIS_HAZE) - hi)) / (VIS_FAR - VIS_HAZE);
-								const int b = (bgB * hi + cvB * ((VIS_FAR - VIS_HAZE) - hi)) / (VIS_FAR - VIS_HAZE);
-								cv = (r << 11) | (g << 5) | b;
+							if (i < VIS_HAZE) {
+								*dst = cv;
+							} else {
+								const int hi = (3*(i - VIS_HAZE)) / 2;
+								if (hi < VIS_FAR - VIS_HAZE) {
+									const uint16_t bg = *dst;
+									const int bgR = (bg >> 11) & 31;
+									const int bgG = (bg >> 5) & 63;
+									const int bgB = bg & 31;
+									const int r = (bgR * hi + cvR * ((VIS_FAR - VIS_HAZE) - hi)) / (VIS_FAR - VIS_HAZE);
+									const int g = (bgG * hi + cvG * ((VIS_FAR - VIS_HAZE) - hi)) / (VIS_FAR - VIS_HAZE);
+									const int b = (bgB * hi + cvB * ((VIS_FAR - VIS_HAZE) - hi)) / (VIS_FAR - VIS_HAZE);
+									*dst = (r << 11) | (g << 5) | b;
+								}
 							}
-							*dst = cv;
 						}
 						else {
 							for (n = 0; n < pixStep; ++n) {

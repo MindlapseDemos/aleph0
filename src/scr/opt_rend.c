@@ -25,6 +25,11 @@
 #define G_UNDER_SHIFT 3
 #define B_UNDER_SHIFT 0
 
+#define ZBUCKET_SIZE 16
+#define ZBUCKET_MAX 16384
+#define ZBUCKETS_NUM (ZBUCKET_MAX / ZBUCKET_SIZE)
+
+
 
 static BlobData blobData[BLOB_SIZES_NUM_MAX][BLOB_SIZEX_PAD];
 
@@ -42,10 +47,28 @@ typedef struct Edge
 
 typedef struct Gradients
 {
-	int dx, dy, dz;
+	int dx, dy;
 	int dc, du, dv;
 }Gradients;
 
+typedef struct LinkedPoly
+{
+	int index;
+	struct LinkedPoly* next;
+}LinkedPoly;
+
+typedef struct Zbucket
+{
+	struct LinkedPoly* first;
+	struct LinkedPoly* last;
+}Zbucket;
+
+Zbucket *zBuckets;
+LinkedPoly* linkedPolys;
+
+
+int minZbucket = 0;
+int maxZbucket = ZBUCKETS_NUM - 1;
 
 static Edge* leftEdge = 0;
 static Edge* rightEdge = 0;
@@ -74,13 +97,6 @@ static int texWidth = 256;
 static int texHeight = 256;
 static unsigned char* texBmp;
 
-static unsigned short* zBuffer;
-
-
-void clearZbuffer()
-{
-	memset(zBuffer, 255, FB_WIDTH * FB_HEIGHT * sizeof(unsigned short));
-}
 
 void setMainTexture(int width, int height, unsigned char *texData)
 {
@@ -116,21 +132,45 @@ int getRenderingMode()
 	return renderingMode;
 }
 
-void initOptRasterizer()
+static void resetZbuckets()
 {
+	int i;
+	for (i = minZbucket; i <= maxZbucket; ++i) {
+		zBuckets[i].first = NULL;
+		zBuckets[i].last = NULL;
+	}
+
+	minZbucket = ZBUCKETS_NUM-1;
+	maxZbucket = 0;
+}
+
+void initOptRasterizer(int maxPolys)
+{
+	int i;
+
 	leftEdge = (Edge*)malloc(FB_HEIGHT * sizeof(Edge));
 	rightEdge = (Edge*)malloc(FB_HEIGHT * sizeof(Edge));
 
 	setRenderingMode(OPT_RAST_FLAT);
 
-	zBuffer = (unsigned short*)malloc(FB_WIDTH * FB_HEIGHT * sizeof(unsigned short));
+	zBuckets = (Zbucket*)malloc(ZBUCKETS_NUM * sizeof(Zbucket));
+	linkedPolys = (LinkedPoly*)malloc(maxPolys * sizeof(LinkedPoly));
+
+	for (i = 0; i < maxPolys; ++i) {
+		linkedPolys[i].index = i;
+		linkedPolys[i].next = NULL;
+	}
+
+	resetZbuckets();
 }
 
 void freeOptRasterizer()
 {
 	free(leftEdge);
 	free(rightEdge);
-	free(zBuffer);
+
+	free(zBuckets);
+	free(linkedPolys);
 }
 
 void setClipValY(int y)
@@ -167,45 +207,35 @@ static void drawEdgeGouraudClipY(int ys, int dx)
 	const int y1 = r->y;
 
 	const int offset = ys * FB_WIDTH + xs0;
-	const int z0 = l->z;
-	const int z1 = r->z;
-	unsigned short* zBuff = zBuffer + offset;
+
 	uint16_t* vram = fb_pixels + offset;
 
 	const int dc = grads.dc;
 	const int dy = grads.dy;
-	const int dz = grads.dz;
 
 	int c = INT_TO_FIXED(c0, FP_RAST);
 	int y = INT_TO_FIXED(y0, FP_RAST);
-	int z = INT_TO_FIXED(z0, FP_RAST);
 
 	int x;
 	for (x = xs0; x < xs1; x++) {
-		const unsigned short zz = (unsigned short)(FIXED_TO_INT(z, FP_RAST));
-		if (zz < *zBuff) {
-			const int cc = FIXED_TO_INT(c, FP_RAST);
-			const int b = cc >> (3 + B_OVER_SHIFT);
+		const int cc = FIXED_TO_INT(c, FP_RAST);
+		const int b = cc >> (3 + B_OVER_SHIFT);
 
-			const int yy = FIXED_TO_INT(y, FP_RAST);
-			if (yy >= clipValY) {
-				const int r = cc >> (3 + R_OVER_SHIFT);
-				const int g = cc >> (2 + G_OVER_SHIFT);
-				*vram = (r << 11) | (g << 5) | b;
-			} else {
-				*vram += (1 + (b >> 3));
-			}
-			*zBuff = zz;
+		const int yy = FIXED_TO_INT(y, FP_RAST);
+		if (yy >= clipValY) {
+			const int r = cc >> (3 + R_OVER_SHIFT);
+			const int g = cc >> (2 + G_OVER_SHIFT);
+			*vram = (r << 11) | (g << 5) | b;
+		} else {
+			*vram += (1 + (b >> 3));
 		}
-		z += dz;
-		zBuff++;
+
 		vram++;
 		c += dc;
 		y += dy;
 	}
 }
 
-#ifndef USE_HALFRES_INTERPOLATION_RASTERIZER
 static void drawEdgeTexturedGouraudClipY(int ys, int dx)
 {
 	const Edge* l = &leftEdge[ys];
@@ -221,164 +251,43 @@ static void drawEdgeTexturedGouraudClipY(int ys, int dx)
 	const int v1 = r->v;
 	const int y0 = l->y;
 	const int y1 = r->y;
-	const int z0 = l->z;
-	const int z1 = r->z;
 
 	uint16_t* vram = fb_pixels + ys * FB_WIDTH + xs0;
-	unsigned short* zBuff = zBuffer + ys * FB_WIDTH + xs0;
 
 	const int dc = grads.dc;
 	const int du = grads.du;
 	const int dv = grads.dv;
 	const int dy = grads.dy;
-	const int dz = grads.dz;
 
 	int c = INT_TO_FIXED(c0, FP_RAST);
 	int u = INT_TO_FIXED(u0, FP_RAST);
 	int v = INT_TO_FIXED(v0, FP_RAST);
 	int y = INT_TO_FIXED(y0, FP_RAST);
-	int z = INT_TO_FIXED(z0, FP_RAST);
 
 	int x;
 	for (x = xs0; x < xs1; x++) {
-		const unsigned short zz = (unsigned short)(FIXED_TO_INT(z, FP_RAST));
-		if (zz < *zBuff) {
-			const int cc = FIXED_TO_INT(c, FP_RAST);
-			const int uu = FIXED_TO_INT(u, FP_RAST);
-			const int vv = FIXED_TO_INT(v, FP_RAST);
-			const int ct = texBmp[(vv & (texHeight - 1)) * texWidth + (uu & (texWidth - 1))];
-			int b = (ct * cc) >> (8 + 3);
+		const int cc = FIXED_TO_INT(c, FP_RAST);
+		const int uu = FIXED_TO_INT(u, FP_RAST);
+		const int vv = FIXED_TO_INT(v, FP_RAST);
+		const int ct = texBmp[(vv & (texHeight - 1)) * texWidth + (uu & (texWidth - 1))];
+		int b = (ct * cc) >> (8 + 3);
 
-			const int yy = FIXED_TO_INT(y, FP_RAST);
-			if (yy >= clipValY) {
-				const int r = 7 + ((ct * cc) >> (8 + 2));
-				const int g = (ct * cc) >> (8 + 1);
-				*vram = (r << 11) | (g << 5) | b;
-			} else {
-				*vram += (1 + ((ct & 31) >> 3));
-			}
-			*zBuff = zz;
+		const int yy = FIXED_TO_INT(y, FP_RAST);
+		if (yy >= clipValY) {
+			const int r = 7 + ((ct * cc) >> (8 + 2));
+			const int g = (ct * cc) >> (8 + 1);
+			*vram = (r << 11) | (g << 5) | b;
+		} else {
+			*vram += (1 + ((ct & 31) >> 3));
 		}
-		zBuff++;
+
 		vram++;
 		c += dc;
 		u += du;
 		v += dv;
 		y += dy;
-		z += dz;
 	}
 }
-#else
-static void drawEdgeTexturedGouraudClipY(int ys, int dx)
-{
-	const Edge* l = &leftEdge[ys];
-	const Edge* r = &rightEdge[ys];
-
-	const int c0 = l->c;
-	const int c1 = r->c;
-	const int u0 = l->u;
-	const int u1 = r->u;
-	const int v0 = l->v;
-	const int v1 = r->v;
-	const int y0 = l->y;
-	const int y1 = r->y;
-	const int z0 = l->z;
-	const int z1 = r->z;
-
-	const int offset = ys * FB_WIDTH + l->xs;
-	uint16_t* vram = fb_pixels + offset;
-	unsigned short* zBuff = zBuffer + offset;
-	int xLength = r->xs - l->xs + 1;
-
-	const int dc = grads.dc;
-	const int du = grads.du;
-	const int dv = grads.dv;
-	const int dy = grads.dy;
-	const int dz = grads.dz;
-
-	int c = INT_TO_FIXED(c0, FP_RAST);
-	int u = INT_TO_FIXED(u0, FP_RAST);
-	int v = INT_TO_FIXED(v0, FP_RAST);
-	int y = INT_TO_FIXED(y0, FP_RAST);
-	int z = INT_TO_FIXED(z0, FP_RAST);
-
-	uint32_t* vram32;
-
-	if (l->xs & 1) {
-		const unsigned short zz = (unsigned short)(FIXED_TO_INT(z, FP_RAST));
-		if (zz < *zBuff) {
-			const int cc = FIXED_TO_INT(c, FP_RAST); const int uu = FIXED_TO_INT(u, FP_RAST); const int vv = FIXED_TO_INT(v, FP_RAST);
-			const int ct = texBmp[(vv & (texHeight - 1)) * texWidth + (uu & (texWidth - 1))];
-			int b = (ct * cc) >> (8 + 3);
-
-			const int yy = FIXED_TO_INT(y, FP_RAST);
-			if (yy >= clipValY) {
-				const int r = 7 + ((ct * cc) >> (8 + 2));
-				const int g = (ct * cc) >> (8 + 1);
-				*vram = (r << 11) | (g << 5) | b;
-			} else {
-				*vram += (1 + ((ct & 31) >> 3));
-			}
-			*zBuff = zz;
-		}
-		zBuff++;
-		vram++;
-		c += dc; u += du; v += dv; y += dy; z += dz;
-		--xLength;
-	}
-
-	{
-		vram32 = (uint32_t*)vram;
-		{
-			while (xLength > 1) {
-				const unsigned short zz = (unsigned short)(FIXED_TO_INT(z, FP_RAST));
-				int pix;
-				if (zz < *(zBuff+1)) {
-					const int cc = FIXED_TO_INT(c, FP_RAST); const int uu = FIXED_TO_INT(u, FP_RAST); const int vv = FIXED_TO_INT(v, FP_RAST);
-					const int ct = texBmp[(vv & (texHeight - 1)) * texWidth + (uu & (texWidth - 1))];
-					int b = (ct * cc) >> (8 + 3);
-
-					const int yy = FIXED_TO_INT(y, FP_RAST);
-					if (yy >= clipValY) {
-						const int r = 7 + ((ct * cc) >> (8 + 2));
-						const int g = (ct * cc) >> (8 + 1);
-						pix = (r << 11) | (g << 5) | b;
-					} else {
-						pix = (*vram32 >> 16) + (1 + ((ct & 31) >> 3));
-					}
-					*vram32 = (pix << 16) | pix;
-					*zBuff = zz;
-					*(zBuff + 1) = zz;
-				}
-				zBuff+=2;
-				vram32++;
-				c += 2 * dc; u += 2 * du; v += 2 * dv; y += 2 * dy; z += 2 * dz;
-				xLength -= 2;
-			}
-		}
-	}
-
-	vram = (uint16_t*)vram32;
-	if (xLength == 1) {
-		const unsigned short zz = (unsigned short)(FIXED_TO_INT(z, FP_RAST));
-		if (zz < *zBuff) {
-			const int cc = FIXED_TO_INT(c, FP_RAST); const int uu = FIXED_TO_INT(u, FP_RAST); const int vv = FIXED_TO_INT(v, FP_RAST);
-			const int ct = texBmp[(vv & (texHeight - 1)) * texWidth + (uu & (texWidth - 1))];
-			int b = (ct * cc) >> (8 + 3);
-
-			const int yy = FIXED_TO_INT(y, FP_RAST);
-			if (yy >= clipValY) {
-				const int r = 7 + ((ct * cc) >> (8 + 2));
-				const int g = (ct * cc) >> (8 + 1);
-				*vram = (r << 11) | (g << 5) | b;
-			} else {
-				*vram += (1 + ((ct & 31) >> 3));
-			}
-			*zBuff = zz;
-		}
-	}
-}
-#endif
 
 static void prepareEdgeListFlat(Vertex3D* v0, Vertex3D* v1)
 {
@@ -470,11 +379,6 @@ static void prepareEdgeListGouraudClipY(Vertex3D* v0, Vertex3D* v1)
 			const int dy = INT_TO_FIXED(y1 - y0, FP_RAST) / dys;
 			int y = INT_TO_FIXED(y0, FP_RAST);
 
-			/* for z-buffer */
-			const int z0 = v0->z; const int z1 = v1->z;
-			const int dz = INT_TO_FIXED(z1 - z0, FP_RAST) / dys;
-			int z = INT_TO_FIXED(z0, FP_RAST);
-
 			do {
 				if (yp >= 0 && yp < FB_HEIGHT) {
 					edgeListToWrite[yp].xs = FIXED_TO_INT(xp, FP_RAST);
@@ -482,14 +386,12 @@ static void prepareEdgeListGouraudClipY(Vertex3D* v0, Vertex3D* v1)
 
 					/* likewise */
 					edgeListToWrite[yp].y = FIXED_TO_INT(y, FP_RAST);
-					edgeListToWrite[yp].z = FIXED_TO_INT(z, FP_RAST);
 				}
 				xp += dxs;
 				c += dc;
 
 				/* likewise */
 				y += dy;
-				z += dz;
 
 			} while (yp++ < ys1);
 		}
@@ -553,11 +455,6 @@ static void prepareEdgeListTexturedGouraudClipY(Vertex3D* v0, Vertex3D* v1)
 			const int dy = INT_TO_FIXED(y1 - y0, FP_RAST) / dys;
 			int y = INT_TO_FIXED(y0, FP_RAST);
 
-			/* for z-buffer */
-			const int z0 = v0->z; const int z1 = v1->z;
-			const int dz = INT_TO_FIXED(z1 - z0, FP_RAST) / dys;
-			int z = INT_TO_FIXED(z0, FP_RAST);
-
 			do {
 				if (yp >= 0 && yp < FB_HEIGHT) {
 					edgeListToWrite[yp].xs = FIXED_TO_INT(xp, FP_RAST);
@@ -567,7 +464,6 @@ static void prepareEdgeListTexturedGouraudClipY(Vertex3D* v0, Vertex3D* v1)
 
 					/* likewise */
 					edgeListToWrite[yp].y = FIXED_TO_INT(y, FP_RAST);
-					edgeListToWrite[yp].z = FIXED_TO_INT(z, FP_RAST);
 				}
 				xp += dxs;
 				c += dc;
@@ -576,7 +472,6 @@ static void prepareEdgeListTexturedGouraudClipY(Vertex3D* v0, Vertex3D* v1)
 
 				/* likewise */
 				y += dy;
-				z += dz;
 
 			} while (yp++ < ys1);
 		}
@@ -632,7 +527,6 @@ static void calculateTriangleGradients(Vertex3D *v0, Vertex3D *v1, Vertex3D *v2)
 		const int z0 = v0->z; const int z1 = v1->z; const int z2 = v2->z;
 		grads.dc = (((c1 - c2) * dys0 - (c0 - c2) * dys1) << FP_RAST) / dd;
 		grads.dy = (((y1 - y2) * dys0 - (y0 - y2) * dys1) << FP_RAST) / dd;
-		grads.dz = (((z1 - z2) * dys0 - (z0 - z2) * dys1) << FP_RAST) / dd;
 	}
 
 	if (renderingMode >= OPT_RAST_TEXTURED_GOURAUD_CLIP_Y) {
@@ -676,6 +570,8 @@ void renderPolygons(Object3D* obj, Vertex3D* screenVertices)
 	const int count = obj->mesh->indicesNum / 3;
 	int* p = obj->mesh->index;
 
+	resetZbuckets();
+
 	for (i = 0; i < count; i++) {
 		Vertex3D* v0 = &screenVertices[*p++];
 		Vertex3D* v1 = &screenVertices[*p++];
@@ -683,9 +579,42 @@ void renderPolygons(Object3D* obj, Vertex3D* screenVertices)
 
 		n = (v0->xs - v1->xs) * (v2->ys - v1->ys) - (v2->xs - v1->xs) * (v0->ys - v1->ys);
 		if (n >= 0) {
+			int avgZ = (v0->z + v1->z + v2->z) / 3;
+			if (avgZ > 0 && avgZ < ZBUCKET_MAX) {
+				const int zbIndex = avgZ / ZBUCKET_SIZE;
+				Zbucket* zb = &zBuckets[zbIndex];
+				LinkedPoly* lp = &linkedPolys[i];
+				if (zb->first==NULL) {
+					zb->first = zb->last = lp;
+					lp->next = NULL;
+					if (zbIndex < minZbucket) minZbucket = zbIndex;
+					if (zbIndex > maxZbucket) maxZbucket = zbIndex;
+				} else {
+					zb->last->next = lp;
+					zb->last = lp;
+					lp->next = NULL;
+				}
+			}
+		}
+	}
+
+	p = obj->mesh->index;
+	for (n=maxZbucket; n>=minZbucket; --n) {
+		Zbucket* zb = &zBuckets[n];
+		LinkedPoly* lp = zb->first;
+		while (lp != NULL) {
+			Vertex3D *v0, *v1, *v2;
+
+			i = 3 * lp->index;
+			v0 = &screenVertices[p[i]];
+			v1 = &screenVertices[p[i + 1]];
+			v2 = &screenVertices[p[i + 2]];
+
 			calculateTriangleGradients(v0, v1, v2);
 			drawTriangle(v0, v1, v2);
-		}
+
+			lp = lp->next;
+		};
 	}
 }
 

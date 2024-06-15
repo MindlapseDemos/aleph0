@@ -356,7 +356,7 @@ static void renderBitmapLineWater(int u, int du, unsigned char* src1, unsigned c
 		int wat1 = src1[(tu1 + 2) & (WATER_TEX_WIDTH - 1)];
 		int dx = (wat1 - wat0) << 1;
 		int tu2 = (tu + dx) & (CLOUD_TEX_WIDTH - 1);
-		*dst++ = pal[src1[tu1] + (src2[tu2] >> 2)];
+		*dst++ = pal[(src1[tu1] >> 1) + (src2[tu2] >> 2)];
 		u += du;
 	};
 }
@@ -456,19 +456,18 @@ static void drawRain(int zRangeMin, int zRangeMax)
 
 static void sceneRunFlower(int t)
 {
-	int xp = (int)(sin((float)t / 384.0f) * 128);
-	int yp = (int)((sin((float)t / 768.0f) * 64 - 32) * 2.5f);
-	int zp = (int)(sin((float)t / 512.0f) * 128) - 32;
+	int xp = (int)(sin((float)t / (1.5f * 384.0f)) * 128);
+	int yp = (int)((sin((float)t / (1.5f * 768.0f)) * 64 - 32) * 1.75f);
+	int zp = (int)(sin((float)t / (1.5f * 512.0f)) * 128) - 32;
 
-	clearZbuffer();
 #ifdef PAUSE_FOR_PERFORMANCE_TEST
 	t = 1536;
 	setObjectPos(0, 16, 384, &objFlower);
 #else
-	setObjectPos(xp, yp, 640 + zp, &objFlower);
+	setObjectPos(xp, yp, 576 + zp, &objFlower);
 #endif
 
-	setObjectRot(t, 2 * t, 3 * t, &objFlower);
+	setObjectRot(2 * t, 6 * t, 4 * t, &objFlower);
 
 	transformObject3D(&objFlower);
 	renderObject3D(&objFlower);

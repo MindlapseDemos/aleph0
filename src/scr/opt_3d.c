@@ -699,7 +699,7 @@ Mesh3D* genMesh(int type, int length)
 		{
 			float kk = (float)length;
 			int pNum = 24;
-			float pDiv = 2.0f;
+			float pDiv = 4.0f;
 
 			mesh = generateSpherical(pNum, pNum, 1.5f, 2.0f, kk / pDiv, kk / pDiv, kk);
 
@@ -858,7 +858,7 @@ void initOptEngine(int maxPoints)
 	screenPointsObject.v = (Vertex3D*)malloc(maxPoints * sizeof(Vertex3D));
 	screenPointsObject.vNormals = (Vector3D*)malloc(maxPoints * sizeof(Vector3D));
 
-	initOptRasterizer();
+	initOptRasterizer(2 * maxPoints);
 }
 
 void freeOptEngine()

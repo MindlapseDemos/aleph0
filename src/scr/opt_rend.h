@@ -23,7 +23,7 @@ void buffer8bppToVram(unsigned char *buffer, unsigned int *colMap16to32);
 void buffer8bppORwithVram(unsigned char* buffer, unsigned int* colMap16to32);
 unsigned int *createColMap16to32(unsigned short *srcPal);
 
-void initOptRasterizer();
+void initOptRasterizer(int maxPolys);
 void freeOptRasterizer();
 
 void initBlobGfx();
@@ -37,8 +37,6 @@ void setPalGradient(int c0, int c1, int r0, int g0, int b0, int r1, int g1, int 
 void setMainTexture(int width, int height, unsigned char* texData);
 
 void renderPolygons(Object3D* obj, Vertex3D* screenVertices);
-
-void clearZbuffer();
 
 void setRenderingMode(int mode);
 int getRenderingMode();

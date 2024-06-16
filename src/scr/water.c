@@ -76,6 +76,9 @@ static Vertex3D* rainDrops;
 static Mesh3D* meshFlower;
 static Object3D objFlower;
 
+static uint16_t *flowerShadesPal;
+
+
 
 static void swapWaterBuffers()
 {
@@ -158,11 +161,31 @@ static void initRainDrops()
 	}
 }
 
+static void initFlowerShadesPal()
+{
+	int i, j;
+
+	flowerShadesPal = (uint16_t*)malloc(TEX_SHADES_NUM * 256 * sizeof(uint16_t));
+
+	for (j = 0; j < TEX_SHADES_NUM; ++j) {
+		for (i = 0; i < 256; ++i) {
+			const int r = 7 + ((i * j) >> (8 + 2));
+			const int g = (i * j) >> (8 + 1);
+			const int b = (i * j) >> (8 + 4);
+			flowerShadesPal[j * TEX_SHADES_NUM + i] = (r << 11) | (g << 5) | b;
+		}
+	}
+
+	setTexShadePal(flowerShadesPal);
+}
+
 static void initObjects()
 {
-	meshFlower = genMesh(GEN_OBJ_SPHERICAL, 80);
+	meshFlower = genMesh(GEN_OBJ_SPHERICAL, 80, 4.0f);
 
 	objFlower.mesh = meshFlower;
+
+	initFlowerShadesPal();
 
 	setClipValY(CLIP_VAL_Y);
 }
@@ -216,6 +239,7 @@ static void destroy(void)
 	free(skyTex);
 	free(waterBuffer1);
 	free(waterBuffer2);
+	free(flowerShadesPal);
 
 	freeMesh(meshFlower);
 	freeOptEngine();
@@ -467,7 +491,7 @@ static void sceneRunFlower(int t)
 	setObjectPos(xp, yp, 576 + zp, &objFlower);
 #endif
 
-	setObjectRot(2 * t, 6 * t, 4 * t, &objFlower);
+	setObjectRot(2 * t, 3 * t, 4 * t, &objFlower);
 
 	transformObject3D(&objFlower);
 	renderObject3D(&objFlower);

@@ -86,7 +86,7 @@ void drawBoxLines();
 
 int isqrt(int x);
 
-Mesh3D* genMesh(int type, int length);
+Mesh3D* genMesh(int type, int length, float param1);
 void freeMesh(Mesh3D* mesh);
 
 void setObjectPos(int x, int y, int z, Object3D* obj);

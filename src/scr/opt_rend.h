@@ -2,13 +2,15 @@
 #define OPT_REND_H
 
 #include "opt_3d.h"
+#include "demo.h"
 
 #define CLAMP(v,a,b) if (v < a) v = a; if (v > b) v = b;
 #define CLAMP01(v) if (v < 0.0f) v = 0.0f; if (v > 1.0f) v = 1.0f;
 
+#define TEX_SHADES_NUM 256
+
 enum {
 	OPT_RAST_FLAT, 
-	OPT_RAST_GOURAUD_CLIP_Y,
 	OPT_RAST_TEXTURED_GOURAUD_CLIP_Y
 };
 
@@ -35,6 +37,7 @@ void drawAntialiasedLine16bpp(Vertex3D* v1, Vertex3D* v2, int shadeShift, unsign
 
 void setPalGradient(int c0, int c1, int r0, int g0, int b0, int r1, int g1, int b1, unsigned short* pal);
 void setMainTexture(int width, int height, unsigned char* texData);
+void setTexShadePal(uint16_t* pal);
 
 void renderPolygons(Object3D* obj, Vertex3D* screenVertices);
 

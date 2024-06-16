@@ -643,7 +643,7 @@ static Mesh3D* generateSpherical(int spx, int spy, float f1, float f2, float k1,
 	return mesh;
 }
 
-Mesh3D* genMesh(int type, int length)
+Mesh3D* genMesh(int type, int length, float param1)
 {
 	int x, y, z;
 	const int halfLength = length / 2;
@@ -699,7 +699,7 @@ Mesh3D* genMesh(int type, int length)
 		{
 			float kk = (float)length;
 			int pNum = 24;
-			float pDiv = 4.0f;
+			float pDiv = param1;
 
 			mesh = generateSpherical(pNum, pNum, 1.5f, 2.0f, kk / pDiv, kk / pDiv, kk);
 
@@ -826,10 +826,6 @@ void transformObject3D(Object3D* obj)
 	switch(renderingMode) {
 		case OPT_RAST_FLAT:
 			setVerticesMaterial(obj);
-		break;
-
-		case OPT_RAST_GOURAUD_CLIP_Y:
-			calcVertexLights(obj);
 		break;
 
 		case OPT_RAST_TEXTURED_GOURAUD_CLIP_Y:

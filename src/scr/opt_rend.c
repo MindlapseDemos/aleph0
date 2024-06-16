@@ -7,8 +7,6 @@
 #include "demo.h"
 #include "screen.h"
 
-/* #define USE_HALFRES_INTERPOLATION_RASTERIZER */
-
 #define BLOB_SIZES_NUM_MAX 16
 #define BLOB_SIZEX_PAD 4
 #define MAX_BLOB_COLOR 15
@@ -81,12 +79,10 @@ static Gradients grads;
 
 static void(*drawEdge)(int, int);
 static void drawEdgeFlat(int y, int dx);
-static void drawEdgeGouraudClipY(int y, int dx);
 static void drawEdgeTexturedGouraudClipY(int y, int dx);
 
 static void (*prepareEdgeList)(Vertex3D*, Vertex3D*);
 static void prepareEdgeListFlat(Vertex3D* v0, Vertex3D* v1);
-static void prepareEdgeListGouraudClipY(Vertex3D* v0, Vertex3D* v1);
 static void prepareEdgeListTexturedGouraudClipY(Vertex3D* v0, Vertex3D* v1);
 
 static int renderingMode;
@@ -97,6 +93,12 @@ static int texWidth = 256;
 static int texHeight = 256;
 static unsigned char* texBmp;
 
+static uint16_t* texShadePal;
+
+void setTexShadePal(uint16_t* pal)
+{
+	texShadePal = pal;
+}
 
 void setMainTexture(int width, int height, unsigned char *texData)
 {
@@ -111,11 +113,6 @@ void setRenderingMode(int mode)
 		case OPT_RAST_FLAT:
 			prepareEdgeList = prepareEdgeListFlat;
 			drawEdge = drawEdgeFlat;
-		break;
-
-		case OPT_RAST_GOURAUD_CLIP_Y:
-			prepareEdgeList = prepareEdgeListGouraudClipY;
-			drawEdge = drawEdgeGouraudClipY;
 		break;
 
 		case OPT_RAST_TEXTURED_GOURAUD_CLIP_Y:
@@ -175,7 +172,7 @@ void freeOptRasterizer()
 
 void setClipValY(int y)
 {
-	clipValY = y;
+	clipValY = y << FP_RAST;
 }
 
 static void drawEdgeFlat(int ys, int dx)
@@ -194,48 +191,6 @@ static void drawEdgeFlat(int ys, int dx)
 	}
 }
 
-static void drawEdgeGouraudClipY(int ys, int dx)
-{
-	const Edge* l = &leftEdge[ys];
-	const Edge* r = &rightEdge[ys];
-
-	const int xs0 = l->xs;
-	const int xs1 = r->xs;
-	const int c0 = l->c;
-	const int c1 = r->c;
-	const int y0 = l->y;
-	const int y1 = r->y;
-
-	const int offset = ys * FB_WIDTH + xs0;
-
-	uint16_t* vram = fb_pixels + offset;
-
-	const int dc = grads.dc;
-	const int dy = grads.dy;
-
-	int c = INT_TO_FIXED(c0, FP_RAST);
-	int y = INT_TO_FIXED(y0, FP_RAST);
-
-	int x;
-	for (x = xs0; x < xs1; x++) {
-		const int cc = FIXED_TO_INT(c, FP_RAST);
-		const int b = cc >> (3 + B_OVER_SHIFT);
-
-		const int yy = FIXED_TO_INT(y, FP_RAST);
-		if (yy >= clipValY) {
-			const int r = cc >> (3 + R_OVER_SHIFT);
-			const int g = cc >> (2 + G_OVER_SHIFT);
-			*vram = (r << 11) | (g << 5) | b;
-		} else {
-			*vram += (1 + (b >> 3));
-		}
-
-		vram++;
-		c += dc;
-		y += dy;
-	}
-}
-
 static void drawEdgeTexturedGouraudClipY(int ys, int dx)
 {
 	const Edge* l = &leftEdge[ys];
@@ -243,14 +198,6 @@ static void drawEdgeTexturedGouraudClipY(int ys, int dx)
 
 	const int xs0 = l->xs;
 	const int xs1 = r->xs;
-	const int c0 = l->c;
-	const int c1 = r->c;
-	const int u0 = l->u;
-	const int u1 = r->u;
-	const int v0 = l->v;
-	const int v1 = r->v;
-	const int y0 = l->y;
-	const int y1 = r->y;
 
 	uint16_t* vram = fb_pixels + ys * FB_WIDTH + xs0;
 
@@ -259,26 +206,22 @@ static void drawEdgeTexturedGouraudClipY(int ys, int dx)
 	const int dv = grads.dv;
 	const int dy = grads.dy;
 
-	int c = INT_TO_FIXED(c0, FP_RAST);
-	int u = INT_TO_FIXED(u0, FP_RAST);
-	int v = INT_TO_FIXED(v0, FP_RAST);
-	int y = INT_TO_FIXED(y0, FP_RAST);
+	int c = l->c;
+	int u = l->u;
+	int v = l->v;
+	int y = l->y;
 
 	int x;
 	for (x = xs0; x < xs1; x++) {
-		const int cc = FIXED_TO_INT(c, FP_RAST);
 		const int uu = FIXED_TO_INT(u, FP_RAST);
 		const int vv = FIXED_TO_INT(v, FP_RAST);
 		const int ct = texBmp[(vv & (texHeight - 1)) * texWidth + (uu & (texWidth - 1))];
-		int b = (ct * cc) >> (8 + 3);
 
-		const int yy = FIXED_TO_INT(y, FP_RAST);
-		if (yy >= clipValY) {
-			const int r = 7 + ((ct * cc) >> (8 + 2));
-			const int g = (ct * cc) >> (8 + 1);
-			*vram = (r << 11) | (g << 5) | b;
+		if (y >= clipValY) {
+			const int cc = FIXED_TO_INT(c, FP_RAST);
+			*vram = texShadePal[ct * TEX_SHADES_NUM + cc];
 		} else {
-			*vram += (1 + ((ct & 31) >> 3));
+			*vram += (1 + ((ct & 31) >> 4));
 		}
 
 		vram++;
@@ -326,75 +269,6 @@ static void prepareEdgeListFlat(Vertex3D* v0, Vertex3D* v1)
 			}
 			xp += dxs;
 		} while (yp++ < ys1);
-	}
-}
-
-static void prepareEdgeListGouraudClipY(Vertex3D* v0, Vertex3D* v1)
-{
-	const int yp0 = v0->ys;
-	int yp1 = v1->ys;
-
-	Edge* edgeListToWrite;
-
-	if (yp0 == yp1) return;
-
-	if (yp0 < yp1) {
-		edgeListToWrite = leftEdge;
-	}
-	else {
-		edgeListToWrite = rightEdge;
-		{
-			Vertex3D* vTemp = v0;
-			v0 = v1;
-			v1 = vTemp;
-		}
-	}
-
-	{
-		const int xs0 = v0->xs; const int ys0 = v0->ys;
-		const int xs1 = v1->xs; const int ys1 = v1->ys;
-		const int dys = ys1 - ys0;
-
-		const int dxs = INT_TO_FIXED(xs1 - xs0, FP_RAST) / dys;
-		int xp = INT_TO_FIXED(xs0, FP_RAST);
-		int yp = ys0;
-
-		if (edgeListToWrite == rightEdge) {
-			do {
-				if (yp >= 0 && yp < FB_HEIGHT) {
-					edgeListToWrite[yp].xs = FIXED_TO_INT(xp, FP_RAST);
-				}
-				xp += dxs;
-			} while (yp++ < ys1);
-		} else {
-			const int c0 = v0->c; const int c1 = v1->c;
-
-			const int dc = INT_TO_FIXED(c1 - c0, FP_RAST) / dys;
-
-			int c = INT_TO_FIXED(c0, FP_RAST);
-
-			/* Extra interpolant to have 3D y interpolated only used for water floor object collision test */
-			/* If I reuse those functions for other 3D I don't need to interpolate everything, will see how I'll refactor if things get slow (or even code duplicate) */
-			const int y0 = v0->y; const int y1 = v1->y;
-			const int dy = INT_TO_FIXED(y1 - y0, FP_RAST) / dys;
-			int y = INT_TO_FIXED(y0, FP_RAST);
-
-			do {
-				if (yp >= 0 && yp < FB_HEIGHT) {
-					edgeListToWrite[yp].xs = FIXED_TO_INT(xp, FP_RAST);
-					edgeListToWrite[yp].c = FIXED_TO_INT(c, FP_RAST);
-
-					/* likewise */
-					edgeListToWrite[yp].y = FIXED_TO_INT(y, FP_RAST);
-				}
-				xp += dxs;
-				c += dc;
-
-				/* likewise */
-				y += dy;
-
-			} while (yp++ < ys1);
-		}
 	}
 }
 
@@ -458,12 +332,12 @@ static void prepareEdgeListTexturedGouraudClipY(Vertex3D* v0, Vertex3D* v1)
 			do {
 				if (yp >= 0 && yp < FB_HEIGHT) {
 					edgeListToWrite[yp].xs = FIXED_TO_INT(xp, FP_RAST);
-					edgeListToWrite[yp].c = FIXED_TO_INT(c, FP_RAST);
-					edgeListToWrite[yp].u = FIXED_TO_INT(u, FP_RAST);
-					edgeListToWrite[yp].v = FIXED_TO_INT(v, FP_RAST);
+					edgeListToWrite[yp].c = c;
+					edgeListToWrite[yp].u = u;
+					edgeListToWrite[yp].v = v;
 
 					/* likewise */
-					edgeListToWrite[yp].y = FIXED_TO_INT(y, FP_RAST);
+					edgeListToWrite[yp].y = y;
 				}
 				xp += dxs;
 				c += dc;
@@ -521,17 +395,15 @@ static void calculateTriangleGradients(Vertex3D *v0, Vertex3D *v1, Vertex3D *v2)
 
 	if (dd == 0) return;
 
-	if (renderingMode >= OPT_RAST_GOURAUD_CLIP_Y) {
+	if (renderingMode >= OPT_RAST_TEXTURED_GOURAUD_CLIP_Y) {
 		const int c0 = v0->c; const int c1 = v1->c; const int c2 = v2->c;
 		const int y0 = v0->y; const int y1 = v1->y; const int y2 = v2->y;
 		const int z0 = v0->z; const int z1 = v1->z; const int z2 = v2->z;
-		grads.dc = (((c1 - c2) * dys0 - (c0 - c2) * dys1) << FP_RAST) / dd;
-		grads.dy = (((y1 - y2) * dys0 - (y0 - y2) * dys1) << FP_RAST) / dd;
-	}
-
-	if (renderingMode >= OPT_RAST_TEXTURED_GOURAUD_CLIP_Y) {
 		const int tu0 = v0->u; const int tu1 = v1->u; const int tu2 = v2->u;
 		const int tv0 = v0->v; const int tv1 = v1->v; const int tv2 = v2->v;
+
+		grads.dc = (((c1 - c2) * dys0 - (c0 - c2) * dys1) << FP_RAST) / dd;
+		grads.dy = (((y1 - y2) * dys0 - (y0 - y2) * dys1) << FP_RAST) / dd;
 		grads.du = (((tu1 - tu2) * dys0 - (tu0 - tu2) * dys1) << FP_RAST) / dd;
 		grads.dv = (((tv1 - tv2) * dys0 - (tv0 - tv2) * dys1) << FP_RAST) / dd;
 	}

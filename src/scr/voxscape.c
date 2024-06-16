@@ -43,7 +43,10 @@
 #define VIS_VER_STEPS ((VIS_FAR - VIS_NEAR) / VIS_VER_SKIP)
 #define VIS_HOR_STEPS (FB_WIDTH / PIXEL_SIZE)
 
-#define V_PLAYER_HEIGHT 160
+#define LOCK_PLAYER_TO_GROUND
+
+#define FLY_HEIGHT 128
+#define V_PLAYER_HEIGHT 32
 #define V_HEIGHT_SCALER_SHIFT 7
 #define V_HEIGHT_SCALER (1 << V_HEIGHT_SCALER_SHIFT)
 #define HORIZON (FB_HEIGHT * 0.7)
@@ -52,8 +55,8 @@
 #define HMAP_HEIGHT 512
 #define HMAP_SIZE (HMAP_WIDTH * HMAP_HEIGHT)
 
-#define SKY_TEX_WIDTH 256
-#define SKY_TEX_HEIGHT 256
+#define SKY_TEX_WIDTH 128
+#define SKY_TEX_HEIGHT 128
 
 #define REFLECT_SHADE 0.625
 
@@ -607,10 +610,21 @@ static void setViewAngle(int rx, int ry, int rz)
 static void start(long trans_time)
 {
 	/* some view with water */
-	setViewPos(2 * HMAP_WIDTH / 4+64, V_PLAYER_HEIGHT/4, HMAP_HEIGHT / 6-48);
+	setViewPos(2 * HMAP_WIDTH / 4+64, FLY_HEIGHT, HMAP_HEIGHT / 6-48);
 	setViewAngle(0,1<<(SIN_SHIFT-3),0);
 
 	prevTime = time_msec;
+}
+
+static unsigned char getVoxelHeightUnderPlayer()
+{
+	const int vx = viewPos.x >> FP_VIEWER;
+	const int vy = viewPos.z >> FP_VIEWER;
+
+	const int sampleOffset = vy * HMAP_WIDTH + vx;
+	const int mapOffset = sampleOffset & (HMAP_SIZE - 1);
+
+	return hmap[mapOffset];
 }
 
 static void move()
@@ -650,6 +664,10 @@ static void move()
 	if(mouse_bmask & MOUSE_BN_RIGHT) {
 		viewPos.y = mouse_y << FP_VIEWER;
 	}
+
+	#ifdef LOCK_PLAYER_TO_GROUND
+		viewPos.y = (getVoxelHeightUnderPlayer() + V_PLAYER_HEIGHT) << FP_VIEWER;
+	#endif
 
 	prevTime = time_msec;
 

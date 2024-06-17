@@ -97,9 +97,9 @@ static int init(void)
 	float sg = 0.5f;
 	float sb = 1.0f;
 
-	const float dr = (0.8f - sr) / JULIA_LAYERS;
-	const float dg = (0.2f - sg) / JULIA_LAYERS;
-	const float db = (0.6f - sb) / JULIA_LAYERS;
+	const float dr = (0.7f - sr) / JULIA_LAYERS;
+	const float dg = (0.3f - sg) / JULIA_LAYERS;
+	const float db = (0.9f - sb) / JULIA_LAYERS;
 
 	const int juliaQuarterSize = JULIA_QUARTER_WIDTH * JULIA_QUARTER_HEIGHT;
 	juliaQuarterBuffer = (unsigned char*)malloc(juliaQuarterSize);
@@ -478,12 +478,13 @@ static void draw(void)
 	const float ts = (float)((t & (JULIA_ANIM_REPEAT-1)) / (float)(JULIA_ANIM_REPEAT-1));
 	const float scale = 1.0f + pow(ts, 1.15);	/* magic number for smooth transmition between repeat scale, don.t know why this value works exactly :P */
 
-	tt = t / 8192.0f;
-	CLAMP(tt, 0, 1);
+	//tt = t / 1024.0f;
+	//CLAMP(tt, 0, 1);
+	tt = sin(t / 512.0f) * 0.125 + 0.875;
 
 	for (i=0; i<JULIA_LAYERS; ++i) {
 		const int ti = (i - layerAdv) << 9;
-		xp_l[i] = (int)((sin((t + ti)/812.0) * FP_MUL) / (1.5 + 1.25*tt));
+		xp_l[i] = (int)((sin((t + ti)/812.0) * FP_MUL) / (1.5 + 1.5*tt));
 		yp_l[i] = (int)((sin((t + ti)/1482.0) * FP_MUL) / (1 + tt));
 		/* xp_l[i] = 1280; */
 		/* yp_l[i] = 1280; */

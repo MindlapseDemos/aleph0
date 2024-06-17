@@ -55,8 +55,8 @@
 #define HMAP_HEIGHT 512
 #define HMAP_SIZE (HMAP_WIDTH * HMAP_HEIGHT)
 
-#define SKY_TEX_WIDTH 128
-#define SKY_TEX_HEIGHT 128
+#define SKY_TEX_WIDTH 256
+#define SKY_TEX_HEIGHT 256
 
 #define REFLECT_SHADE 0.625
 
@@ -80,9 +80,9 @@ typedef struct Point2D
 
 static unsigned char* distMap;
 
+static unsigned char* cloudTex;
 static unsigned char* skyTex;
 static unsigned short* skyPal[PAL_SHADES];
-static Vector3D skyPosMove;
 
 static int *heightScaleTab = NULL;
 static int *isin = NULL;
@@ -311,14 +311,14 @@ static int initDistMap()
 	return 0;
 }
 
-static void initSkyTexture()
+static void initSkyAndCloudTextures()
 {
 	int x, y, i, n;
 	const float scale = 1.0f / 64.0f;
 	const int perX = (int)(scale * SKY_TEX_WIDTH);
 	const int perY = (int)(scale * SKY_TEX_HEIGHT);
 
-	skyTex = (unsigned char*)malloc(SKY_TEX_WIDTH * SKY_TEX_HEIGHT);
+	cloudTex = (unsigned char*)malloc(SKY_TEX_WIDTH * SKY_TEX_HEIGHT);
 
 	i = 0;
 	for (y = 0; y < SKY_TEX_HEIGHT; ++y) {
@@ -326,9 +326,11 @@ static void initSkyTexture()
 			/* float f = pfbm2((float)x * scale, (float)y * scale, perX, perY, 8) + 0.25f; */
 			float f = pturbulence2((float)x * scale, (float)y * scale, perX, perY, 4);
 			CLAMP(f, 0.0f, 0.99f)
-			skyTex[i++] = (int)(f * 255.0f);
+			cloudTex[i++] = (int)(f * 255.0f);
 		}
 	}
+
+	skyTex = (unsigned char*)malloc(SKY_TEX_WIDTH * SKY_TEX_HEIGHT);
 
 	for (i = 0; i < PAL_SHADES; ++i) {
 		unsigned short* pal;
@@ -360,7 +362,7 @@ static int init(void)
 	initSinTab(SIN_LENGTH, 1, 65536);
 	createHeightScaleTab();
 
-	initSkyTexture();
+	initSkyAndCloudTextures();
 
 	hmap = malloc(HMAP_SIZE);
 	viewNearPosVec = malloc(VIS_HOR_STEPS * sizeof(Point2D));
@@ -371,9 +373,6 @@ static int init(void)
 	if(initHeightmapAndColormap() == -1 || initDistMap() == -1) {
 		return -1;
 	}
-
-	skyPosMove.x = 0;
-	skyPosMove.z = 0;
 
 	return 0;
 }
@@ -390,6 +389,7 @@ static void destroy(void)
 	free(hmap);
 	free(cmap);
 	free(shadeVoxOff);
+	free(cloudTex);
 	free(skyTex);
 	free(distMap);
 	free(petrubTab);
@@ -436,8 +436,8 @@ static void updateRaySamplePosAndStep()
 
 static uint16_t reflectSky(int px, int py, int dvx, int dvy, int vh, int petrubation)
 {
-	int u = (((px + skyPosMove.x + ((dvx * vh) >> FP_SCALE)) >> (FP_SCALE - 7)) + petrubation) & (SKY_TEX_WIDTH - 1);
-	int v = (((py + skyPosMove.z + ((dvy * vh) >> FP_SCALE)) >> (FP_SCALE - 7)) + petrubation) & (SKY_TEX_HEIGHT - 1);
+	int u = (((px + ((dvx * vh) >> FP_SCALE)) >> (FP_SCALE - 7)) + petrubation) & (SKY_TEX_WIDTH - 1);
+	int v = (((py + ((dvy * vh) >> FP_SCALE)) >> (FP_SCALE - 7)) + petrubation) & (SKY_TEX_HEIGHT - 1);
 
 	return skyPal[(int)((PAL_SHADES-1) * REFLECT_SHADE) + (petrubation>>1)][skyTex[v * SKY_TEX_WIDTH + u]];
 }
@@ -627,10 +627,8 @@ static unsigned char getVoxelHeightUnderPlayer()
 	return hmap[mapOffset];
 }
 
-static void move()
+static void move(int dt)
 {
-	const int dt = time_msec - prevTime;
- 
 	const int speedX = (dt << FP_VIEWER) >> 8;
 	const int speedZ = (dt << FP_VIEWER) >> 8;
 
@@ -655,9 +653,6 @@ static void move()
 		viewAngle.y += speedX;
 	}
 
-	skyPosMove.x += velX;
-	skyPosMove.z += velZ;
-
 	if(mouse_bmask & MOUSE_BN_LEFT) {
 		viewAngle.y = (4*mouse_x) & (SIN_LENGTH-1);
 	}
@@ -674,13 +669,15 @@ static void move()
 	updateRaySamplePosAndStep();
 }
 
-static void renderBitmapLineSky(int u, int du, unsigned char* src, unsigned short* pal, unsigned short* dst)
+static void renderBitmapLineSky(int u, int du, int v, int dv, unsigned char* src, unsigned short* pal, unsigned short* dst)
 {
 	int length = FB_WIDTH;
 	while (length-- > 0) {
 		int tu = (u >> FP_SCALE) & (SKY_TEX_WIDTH - 1);
-		*dst++ = pal[src[tu]];
+		int tv = (v >> FP_SCALE) & (SKY_TEX_HEIGHT - 1);
+		*dst++ = pal[src[tv * SKY_TEX_WIDTH + tu]];
 		u += du;
+		v += dv;
 	};
 }
 
@@ -689,11 +686,16 @@ static void renderSky()
 	unsigned short* dst = (unsigned short*)fb_pixels;
 	int y;
 
-	int tv = skyPosMove.x >> FP_VIEWER;
+	static float angleTest = 0.0f;
+	float rx = sin(angleTest);
+	float ry = cos(angleTest);
+
+	angleTest += 0.01f;
+
 
 	for (y = 0; y < FB_HEIGHT / 2; ++y) {
 		unsigned char* src;
-		int z, u, v, du;
+		int z, u, v, ru, rv, du, dv;
 		int palNum = (PAL_SHADES * y) / (FB_HEIGHT / 2);
 
 		int yp = FB_HEIGHT / 2 - y;
@@ -701,12 +703,17 @@ static void renderSky()
 		z = (SKY_HEIGHT * PROJ_MUL) / yp;
 
 		du = z * 3;
+		dv = 0;
+
+		ru = du; /* ry* du - rx * dv; */
+		rv = dv; /* rx* du + ry * dv; */
+
 		u = (-FB_WIDTH / 2) * du;
-		v = ((z >> 8) + tv) & (SKY_TEX_HEIGHT - 1);
+		v = (z >> 8) & (SKY_TEX_HEIGHT - 1);
 		src = &skyTex[v * SKY_TEX_WIDTH];
 
 		CLAMP(palNum, 0, PAL_SHADES - 1)
-			renderBitmapLineSky(u, du, src, skyPal[palNum], dst);
+			renderBitmapLineSky(u, ru, v, rv, src, skyPal[palNum], dst);
 
 		dst += FB_WIDTH;
 	}
@@ -746,17 +753,42 @@ static void testRenderDistMap()
 	}
 }
 
+static void moveClouds(int dt)
+{
+	static int skyMove = 0;
+
+	unsigned int* dst = (unsigned int*)skyTex;
+
+	const int skyMoveOff = skyMove >> FP_VIEWER;
+
+	int y;
+	for (y = 0; y < SKY_TEX_HEIGHT; ++y) {
+		const int yi = (y + skyMoveOff) & (SKY_TEX_HEIGHT - 1);
+		unsigned int* src = (unsigned int*)&cloudTex[yi * SKY_TEX_WIDTH];
+
+		memcpy(dst, src, SKY_TEX_WIDTH);
+
+		src += SKY_TEX_WIDTH / 4;
+		dst += SKY_TEX_WIDTH / 4;
+	}
+
+	skyMove += 8*dt;
+}
+
 static void draw(void)
 {
+	const int dt = time_msec - prevTime;
 	const int petrT = time_msec >> 6;
 
-	move();
+	move(dt);
 
 	renderSky();
 
 	renderScape(petrT);
 
 /*	testRenderDistMap(); */
+
+	moveClouds(dt);
 
 	swap_buffers(0);
 }

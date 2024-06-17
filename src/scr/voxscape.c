@@ -681,39 +681,47 @@ static void renderBitmapLineSky(int u, int du, int v, int dv, unsigned char* src
 	};
 }
 
+static void rotatePoint2D(int *x, int *y, float angle)
+{
+	float rx = cos(angle);
+	float ry = sin(angle);
+
+	float xp = (int)*x;
+	float yp = (int)*y;
+
+	*x = (int)(xp * rx - yp * ry);
+	*y = (int)(xp * ry + yp * rx);
+}
+
 static void renderSky()
 {
 	unsigned short* dst = (unsigned short*)fb_pixels;
 	int y;
 
 	static float angleTest = 0.0f;
-	float rx = sin(angleTest);
-	float ry = cos(angleTest);
 
-	angleTest += 0.01f;
-
+	angleTest = ((float)(viewAngle.y - SIN_LENGTH / 4) / SIN_LENGTH) * -2.0f * 3.1415926536f;
 
 	for (y = 0; y < FB_HEIGHT / 2; ++y) {
-		unsigned char* src;
-		int z, u, v, ru, rv, du, dv;
+		int z, u, v, du, dv;
 		int palNum = (PAL_SHADES * y) / (FB_HEIGHT / 2);
 
 		int yp = FB_HEIGHT / 2 - y;
 		if (yp == 0) yp = 1;
 		z = (SKY_HEIGHT * PROJ_MUL) / yp;
-
-		du = z * 3;
+		u = 0;
+		v = z << (FP_SCALE - 7);
+		du = 2 * z;
 		dv = 0;
 
-		ru = du; /* ry* du - rx * dv; */
-		rv = dv; /* rx* du + ry * dv; */
+		rotatePoint2D(&u, &v, angleTest);
+		rotatePoint2D(&du, &dv, angleTest);
 
-		u = (-FB_WIDTH / 2) * du;
-		v = (z >> 8) & (SKY_TEX_HEIGHT - 1);
-		src = &skyTex[v * SKY_TEX_WIDTH];
+		u += (-FB_WIDTH / 2) * du;
+		v += (-FB_WIDTH / 2) * dv;
 
 		CLAMP(palNum, 0, PAL_SHADES - 1)
-			renderBitmapLineSky(u, ru, v, rv, src, skyPal[palNum], dst);
+			renderBitmapLineSky(u, du, v, dv, skyTex, skyPal[palNum], dst);
 
 		dst += FB_WIDTH;
 	}

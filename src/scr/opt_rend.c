@@ -535,7 +535,7 @@ void initBlobGfx()
 		int i,j,x,y;
 
 		for (i=0; i<BLOB_SIZES_NUM_MAX; ++i) {
-			const int blobSizeY = i+3;	/* 3 to 15 */
+			const int blobSizeY = i+3;  /* 3 to 15 */
 			const int blobSizeX = (((blobSizeY+3) >> 2) << 2) + BLOB_SIZEX_PAD;    /* We are padding this, as we generate four pixels offset(for dword rendering) */
 			const float blobSizeYhalf = blobSizeY / 2.0f;
 			const float blobSizeXhalf = blobSizeX / 2.0f;
@@ -586,18 +586,18 @@ void drawBlobs(Vertex3D *v, int count, unsigned char *blobBuffer)
 	if (count <=0) return;
 
 	do {
-		const int size = 1 + (v->z >> 6);
+		const unsigned int size = 1 + (v->z >> 6);
 		if (size < BLOB_SIZES_NUM_MAX) {
 			const int posX = v->xs;
 			const int posY = v->ys;
 			BlobData *bd = &blobData[size][posX & (BLOB_SIZEX_PAD-1)];
-			const int sizeX = bd->sizeX;
-			const int sizeY = bd->sizeY;
+			const unsigned int sizeX = bd->sizeX;
+			const unsigned int sizeY = bd->sizeY;
 
 			if (!(posX <= sizeX / 2 || posX >= FB_WIDTH - sizeX / 2 || posY <= sizeY / 2 || posY >= FB_HEIGHT - sizeY / 2))
 			{
-				const int posX32 = posX & ~(BLOB_SIZEX_PAD-1);
-				const int wordsX = sizeX / 4;
+				const unsigned int posX32 = posX & ~(BLOB_SIZEX_PAD-1);
+				const unsigned int wordsX = sizeX / 4;
 
 				unsigned int *dst = (unsigned int*)(blobBuffer + (posY - sizeY / 2) * FB_WIDTH + (posX32 - sizeX / 2));
 				unsigned int *src = (unsigned int*)bd->data;
@@ -608,6 +608,7 @@ void drawBlobs(Vertex3D *v, int count, unsigned char *blobBuffer)
 					for (x=0; x<wordsX; ++x) {
 						*(dst+x) += *(src+x);
 					}
+
 					src += wordsX;
 					dst += FB_WIDTH / 4;
 				}
@@ -655,17 +656,17 @@ void drawAntialiasedLine8bpp(Vertex3D *v1, Vertex3D *v2, int shadeShift, unsigne
 	int vramofs;
 	int frac, shade;
 
-    int chdx, chdy;
+	int chdx, chdy;
 
 	int dx = x2 - x1;
 	int dy = y2 - y1;
 
 	if (dx==0 && dy==0) return;
 
-    chdx = dx;
+	chdx = dx;
 	chdy = dy;
-    if (dx<0) chdx = -dx;
-    if (dy<0) chdy = -dy;
+	if (dx<0) chdx = -dx;
+	if (dy<0) chdy = -dy;
 
 	if (chdy < chdx) {
 		int x, yy, ddy;
@@ -675,8 +676,8 @@ void drawAntialiasedLine8bpp(Vertex3D *v1, Vertex3D *v2, int shadeShift, unsigne
 		}
 
 		if (dx==0) return;
-        ddy = (dy << LN_BASE) / dx;
-        yy = y1 << LN_BASE;
+		ddy = (dy << LN_BASE) / dx;
+		yy = y1 << LN_BASE;
 		for (x=x1; x<x2; x++) {
 			const int yp = yy >> LN_BASE;
 
@@ -690,7 +691,7 @@ void drawAntialiasedLine8bpp(Vertex3D *v1, Vertex3D *v2, int shadeShift, unsigne
 				shade = frac >> shadeShift;
 				*(buffer + vramofs+FB_WIDTH) |= shade;
 			}
-            yy+=ddy;
+			yy+=ddy;
 		}
 	}
 	else {
@@ -701,8 +702,8 @@ void drawAntialiasedLine8bpp(Vertex3D *v1, Vertex3D *v2, int shadeShift, unsigne
 		}
 
 		if (dy==0) return;
-        ddx = (dx << LN_BASE) / dy;
-        xx = x1 << LN_BASE;
+		ddx = (dx << LN_BASE) / dy;
+		xx = x1 << LN_BASE;
 
 		for (y=y1; y<y2; y++) {
 			const int xp = xx >> LN_BASE;
@@ -717,7 +718,7 @@ void drawAntialiasedLine8bpp(Vertex3D *v1, Vertex3D *v2, int shadeShift, unsigne
 				shade = frac >> shadeShift;
 				*(buffer + vramofs + 1) |= shade;
 			}
-            xx+=ddx;
+			xx+=ddx;
 		}
 	}
 }

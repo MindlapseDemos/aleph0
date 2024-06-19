@@ -22,7 +22,7 @@
 #define AXIS_HEIGHT (VERTICES_HEIGHT<<AXIS_SHIFT)
 #define AXIS_DEPTH (VERTICES_DEPTH<<AXIS_SHIFT)
 
-#define PSIN_SIZE 2048
+#define PSIN_SIZE 1024
 
 #define BLOB_SIZE 12
 #define NUM_BLOBS 16
@@ -57,9 +57,15 @@ static unsigned char* volumeData;
 
 static int* recDivZ;
 
-static int *radius;
-static int *latitude;
-static int *longitude;
+typedef struct PolarData
+{
+	unsigned char radius;
+	unsigned char latitude;
+	unsigned char longitude;    
+} PolarData;
+
+PolarData *polarData;
+
 
 static Vector3D gridPos[2];
 
@@ -174,8 +180,8 @@ static void initAxes3D()
 	axisVerticesZ = (Vertex3D*)malloc(VERTICES_DEPTH * sizeof(Vertex3D));
 
 	v = objectAxesVertices;
-	SET_OPT_VERTEX(AXIS_WIDTH, 0, 0, v)	++v;
-	SET_OPT_VERTEX(0, AXIS_HEIGHT, 0, v)	++v;
+	SET_OPT_VERTEX(AXIS_WIDTH, 0, 0, v) ++v;
+	SET_OPT_VERTEX(0, AXIS_HEIGHT, 0, v)    ++v;
 	SET_OPT_VERTEX(0, 0, AXIS_DEPTH, v)
 }
 
@@ -211,6 +217,7 @@ static void OptGrid3Dfree()
 	free(axisVerticesY);
 	free(axisVerticesZ);
 
+	free(polarData);
 	free(recDivZ);
 }
 
@@ -223,13 +230,13 @@ static void updateDotsVolumeBufferPlasma(int t)
 
 	int countZ = VERTICES_DEPTH;
 	do {
-		const int p3z = psin3[(3*countZ-tt) & 2047];
+		const int p3z = psin3[(3*countZ-tt) & (PSIN_SIZE-1)];
 		int countY = VERTICES_HEIGHT;
 		do {
-			const int p2y = psin2[(2*countY+tt) & 2047];
+			const int p2y = psin2[(2*countY+tt) & (PSIN_SIZE-1)];
 			int countX = VERTICES_WIDTH;
 			do {
-				unsigned char c = psin1[(2*countX+tt) & 2047] + p2y + p3z;
+				unsigned char c = psin1[(2*countX+tt) & (PSIN_SIZE-1)] + p2y + p3z;
 				if (c < 192) {
 					c = 0;
 				} else {
@@ -252,9 +259,11 @@ static void updateDotsVolumeBufferRadial(int t)
 	unsigned char* dst = volumeData;
 
 	for (i=0; i<size; ++i) {
-		const int r1 = latitude[i];
-		const int r2 = longitude[i];
-		const int r = radius[i] + (psin1[(r1-tt) & 2047] >> 5) + (psin2[(r2+tt) & 2047] >> 5);
+		PolarData *pData = &polarData[i];
+		const int r0 = pData->radius;
+		const int r1 = pData->latitude;
+		const int r2 = pData->longitude;
+		const int r = r0 + (psin1[(r1-tt) & (PSIN_SIZE-1)] >> 5) + (psin2[(r2+tt) & (PSIN_SIZE-1)] >> 5);
 
 		if (r >= thres1 && r <= thres2) {
 			const int rr = 32 + ((r - thres1) << 4);
@@ -277,13 +286,14 @@ static void updateDotsVolumeBufferRadialRays(int t)
 	unsigned char* dst = volumeData;
 
 	for (i=0; i<size; ++i) {
-		const int r1 = latitude[i];
-		const int r2 = longitude[i];
-		const int r = radius[i];
-		const int d = (psin1[(r1-tt) & 2047] + psin2[(r2+tt) & 2047] + psin3[(r1+r2+tt) & 2047]) & 255;
+		PolarData *pData = &polarData[i];
+		const int r0 = pData->radius;
+		const int r1 = pData->latitude;
+		const int r2 = pData->longitude;
+		const int d = (psin1[(r1-tt) & (PSIN_SIZE-1)] + psin2[(r2+tt) & (PSIN_SIZE-1)] + psin3[(r1+r2+tt) & (PSIN_SIZE-1)]) & 255;
 
 		if (d >= thres) {
-			int rr = 255 - ((r*r) >> 1);
+			int rr = 255 - ((r0*r0) >> 1);
 			if (rr < 0) rr = 0;
 			*dst = rr;
 		} else {
@@ -393,7 +403,7 @@ static void drawBoxLines(unsigned char* buffer, int orderSign, int objIndex)
 
 static void OptGrid3Drun(unsigned char* buffer, int ticks)
 {
-	const int objIndex = 1;
+	const int objIndex = 0;
 
 	ticks >>= 1;
 
@@ -406,7 +416,7 @@ static void OptGrid3Drun(unsigned char* buffer, int ticks)
 	drawBoxLines(buffer, -1, objIndex);
 
 	drawBlobs(screenPointsGrid.v, screenPointsGrid.num, buffer);
-
+	
 	drawBoxLines(buffer, 1, objIndex);
 }
 
@@ -461,9 +471,7 @@ static void initRadialEffects()
 	int x,y,z,i;
 	const int size = VERTICES_WIDTH * VERTICES_HEIGHT * VERTICES_DEPTH;
 
-	radius = (int*)malloc(size * sizeof(int));
-	latitude = (int*)malloc(size * sizeof(int));
-	longitude = (int*)malloc(size * sizeof(int));
+	polarData = (PolarData*)malloc(size * sizeof(PolarData));
 
 	i = 0;
 	for (z=0; z<VERTICES_DEPTH; ++z) {
@@ -476,9 +484,10 @@ static void initRadialEffects()
 				float r = sqrt(xc*xc + yc*yc + zc*zc);
 				if (r<0.001f) r = 0.001f;
 
-				radius[i] = (int)r;
-				latitude[i] = (int)((atan2(yc,xc) * 256) / (2.0 * M_PI)) + 128;
-				longitude[i] = (int)((acos(zc / r) * 256) / M_PI);
+				polarData[i].radius = (unsigned char)r;
+				polarData[i].latitude = (unsigned char)((atan2(yc,xc) * 256) / (2.0 * M_PI)) + 128;
+				polarData[i].longitude = (unsigned char)((acos(zc / r) * 256) / M_PI);
+
 				++i;
 			}
 		}
@@ -529,10 +538,6 @@ static void destroy(void)
 	free(psin3);
 
 	free(blob3D);
-
-	free(radius);
-	free(latitude);
-	free(longitude);
 }
 
 static void start(long trans_time)
@@ -543,8 +548,8 @@ static void start(long trans_time)
 static void draw(void)
 {
 	const int t = time_msec - startingTime;
-	const int tt = 0;// (t >> 13) & 1;
-	
+	const int tt = (t >> 13) & 3;
+
 	memset(polkaBuffer, 0, FB_WIDTH * FB_HEIGHT);
 
 	switch(tt) {

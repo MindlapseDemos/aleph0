@@ -59,7 +59,9 @@ static const int celloffs[][3] = {
 #define VOL_XSCALE	10.0f
 #define VOL_YSCALE	10.0f
 #define VOL_ZSCALE	10.0f
-#define VOX_DIST	(VOL_SCALE / VOL_SZ)
+#define VOX_XDIST	(VOL_XSCALE / VOL_XSZ)
+#define VOX_YDIST	(VOL_YSCALE / VOL_YSZ)
+#define VOX_ZDIST	(VOL_ZSCALE / VOL_ZSZ)
 #define VOL_HALF_XSCALE	(VOL_XSCALE * 0.5f)
 #define VOL_HALF_YSCALE	(VOL_YSCALE * 0.5f)
 #define VOL_HALF_ZSCALE	(VOL_ZSCALE * 0.5f)
@@ -239,21 +241,6 @@ static void draw(void)
 
 static void calc_voxel_field(void)
 {
-	int i, ix, iy, iz;
-	struct metaball *mb;
-
-	mb = mball;
-	for(i=0; i<NUM_MBALLS; i++) {
-		/* for each ball start from its position and traverse the voxel field */
-		ix = 
-
-		mb++;
-	}
-}
-
-/*
-static void calc_voxel_field(void)
-{
 	int i, j, k, b;
 	float *voxptr;
 
@@ -262,14 +249,14 @@ static void calc_voxel_field(void)
 		abort();
 	}
 
-	for(i=0; i<VOL_SZ; i++) {
-		float z = -VOL_HALF_SCALE + i * VOX_DIST;
+	for(i=0; i<VOL_ZSZ; i++) {
+		float z = -VOL_HALF_ZSCALE + i * VOX_ZDIST;
 
-		for(j=0; j<VOL_SZ; j++) {
-			float y = -VOL_HALF_SCALE + j * VOX_DIST;
+		for(j=0; j<VOL_YSZ; j++) {
+			float y = -VOL_HALF_YSCALE + j * VOX_YDIST;
 
-			for(k=0; k<VOL_SZ; k++) {
-				float x = -VOL_HALF_SCALE + k * VOX_DIST;
+			for(k=0; k<VOL_XSZ; k++) {
+				float x = -VOL_HALF_XSCALE + k * VOX_XDIST;
 
 				float val = 0.0f;
 				for(b=0; b<NUM_MBALLS; b++) {
@@ -288,7 +275,6 @@ static void calc_voxel_field(void)
 	}
 	++dbg;
 }
-*/
 
 static INLINE float *voxel_at(int x, int y, int z)
 {

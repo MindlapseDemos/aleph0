@@ -17,12 +17,19 @@ struct metaball {
 	float pos[3];
 };
 
+struct volcell {
+	float *val[8];
+	unsigned int flags;
+};
+
 static int init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
 
 static void calc_voxel_field(void);
+
+static INLINE float *voxel_at(int x, int y, int z);
 
 static struct screen scr = {
 	"metaballs",
@@ -40,13 +47,35 @@ static int envmap_xsz, envmap_ysz;
 
 static struct metasurface *msurf;
 
-#define VOL_SZ	22
-#define VOL_SCALE	10.0f
+static const int celloffs[][3] = {
+	{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0},
+	{0, 0, 1}, {1, 0, 1}, {1, 1, 1}, {0, 1, 1}
+};
+
+
+#define VOL_XSZ	24
+#define VOL_YSZ	24
+#define VOL_ZSZ	24
+#define VOL_XSCALE	10.0f
+#define VOL_YSCALE	10.0f
+#define VOL_ZSCALE	10.0f
 #define VOX_DIST	(VOL_SCALE / VOL_SZ)
-#define VOL_HALF_SCALE	(VOL_SCALE * 0.5f)
+#define VOL_HALF_XSCALE	(VOL_XSCALE * 0.5f)
+#define VOL_HALF_YSCALE	(VOL_YSCALE * 0.5f)
+#define VOL_HALF_ZSCALE	(VOL_ZSCALE * 0.5f)
+#define NUM_VOX		(VOL_XSZ * VOL_YSZ * VOL_ZSZ)
+
+#define CELL_XSZ	(VOL_XSZ - 1)
+#define CELL_YSZ	(VOL_YSZ - 1)
+#define CELL_ZSZ	(VOL_ZSZ - 1)
+#define NUM_CELLS	(CELL_XSZ * CELL_YSZ * CELL_ZSZ)
 
 #define NUM_MBALLS	3
 static struct metaball mball[NUM_MBALLS];
+static float *voxels, **voxslice;
+static cgm_vec3 *grads, **gradslice;
+static unsigned int *voxflags, **voxflags_slice;
+static struct volcell *cells, **cellslice;
 
 static int dbg;
 
@@ -57,7 +86,8 @@ struct screen *metaballs_screen(void)
 
 static int init(void)
 {
-	int xsz, ysz;
+	int i, j, x, y, z, xsz, ysz;
+	struct volcell *cellptr;
 
 	if(!(bgimage = img_load_pixels("data/blob_bg.png", &xsz, &ysz, IMG_FMT_RGB565))) {
 		return -1;
@@ -74,11 +104,46 @@ static int init(void)
 		fprintf(stderr, "failed to initialize metasurf\n");
 		return -1;
 	}
-	msurf_set_resolution(msurf, VOL_SZ, VOL_SZ, VOL_SZ);
-	msurf_set_bounds(msurf, -VOL_HALF_SCALE, -VOL_HALF_SCALE, -VOL_HALF_SCALE,
-			VOL_HALF_SCALE, VOL_HALF_SCALE, VOL_HALF_SCALE);
+	msurf_set_resolution(msurf, VOL_XSZ, VOL_YSZ, VOL_ZSZ);
+	msurf_set_bounds(msurf, -VOL_HALF_XSCALE, -VOL_HALF_YSCALE, -VOL_HALF_ZSCALE,
+			VOL_HALF_XSCALE, VOL_HALF_YSCALE, VOL_HALF_ZSCALE);
 	msurf_set_threshold(msurf, 1.7);
 	msurf_set_inside(msurf, MSURF_GREATER);
+
+	voxels = msurf_voxels(msurf);
+	if(!(voxslice = malloc(VOL_ZSZ * sizeof *voxslice))) {
+		fprintf(stderr, "failed to allocate voxel slice buffer\n");
+		return -1;
+	}
+	if(!(voxflags = calloc(1, NUM_VOX * sizeof *voxflags + VOL_ZSZ * sizeof *voxflags_slice))) {
+		fprintf(stderr, "failed to allocate voxel flags buffer\n");
+		return -1;
+	}
+	voxflags_slice = (unsigned int**)(voxflags + NUM_VOX);
+	for(i=0; i<VOL_ZSZ; i++) {
+		voxslice[i] = voxels + i * VOL_XSZ * VOL_YSZ;
+		voxflags_slice[i] = voxflags + i * VOL_XSZ * VOL_YSZ;
+	}
+	if(!(cells = malloc(NUM_CELLS * sizeof *cells + CELL_ZSZ * sizeof *cellslice))) {
+		fprintf(stderr, "failed to allocate voxel cells\n");
+		return -1;
+	}
+	cellslice = (struct volcell**)(cells + NUM_CELLS);
+	for(z=0; z<CELL_ZSZ; z++) {
+		cellslice[z] = cells + z * CELL_XSZ * CELL_YSZ;
+
+		cellptr = cellslice[z];
+		for(y=0; y<CELL_YSZ; y++) {
+			for(x=0; x<CELL_XSZ; x++) {
+				for(i=0; i<8; i++) {
+					cellptr->val[i] = voxel_at(z + celloffs[i][0], y + celloffs[i][1],
+							x + celloffs[i][2]);
+					cellptr->flags = 0;
+					cellptr++;
+				}
+			}
+		}
+	}
 
 	mmesh.prim = G3D_TRIANGLES;
 	mmesh.varr = 0;
@@ -90,12 +155,15 @@ static int init(void)
 
 static void destroy(void)
 {
+	free(voxslice);
+	free(voxflags);
 	msurf_free(msurf);
 	img_free_pixels(bgimage);
 }
 
 static void start(long trans_time)
 {
+
 	g3d_matrix_mode(G3D_PROJECTION);
 	g3d_load_identity();
 	g3d_perspective(50.0, 1.3333333, 0.5, 100.0);
@@ -171,6 +239,21 @@ static void draw(void)
 
 static void calc_voxel_field(void)
 {
+	int i, ix, iy, iz;
+	struct metaball *mb;
+
+	mb = mball;
+	for(i=0; i<NUM_MBALLS; i++) {
+		/* for each ball start from its position and traverse the voxel field */
+		ix = 
+
+		mb++;
+	}
+}
+
+/*
+static void calc_voxel_field(void)
+{
 	int i, j, k, b;
 	float *voxptr;
 
@@ -204,4 +287,10 @@ static void calc_voxel_field(void)
 		}
 	}
 	++dbg;
+}
+*/
+
+static INLINE float *voxel_at(int x, int y, int z)
+{
+	return voxslice[z] + y * VOL_YSZ + x;
 }

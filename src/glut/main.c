@@ -27,7 +27,6 @@ static void sball_motion(int x, int y, int z);
 static void sball_rotate(int x, int y, int z);
 static void sball_button(int bn, int st);
 static void recalc_sball_matrix(float *xform);
-static unsigned int next_pow2(unsigned int x);
 static void set_fullscreen(int fs);
 static void set_vsync(int vsync);
 
@@ -513,17 +512,6 @@ static void recalc_sball_matrix(float *xform)
 	xform[14] = sball_pos.z;
 }
 
-
-static unsigned int next_pow2(unsigned int x)
-{
-	x--;
-	x |= x >> 1;
-	x |= x >> 2;
-	x |= x >> 4;
-	x |= x >> 8;
-	x |= x >> 16;
-	return x + 1;
-}
 
 static void set_fullscreen(int fs)
 {

@@ -260,4 +260,7 @@ int strcasecmp(const char *a, const char *b);
 int strncasecmp(const char *a, const char *b, size_t n);
 #endif
 
+unsigned int next_pow2(unsigned int x);
+unsigned int calc_shift(unsigned int x);
+
 #endif	/* UTIL_H_ */

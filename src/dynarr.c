@@ -99,8 +99,9 @@ void *dynarr_push(void *da, void *item)
 	}
 
 	if(item) {
-		memcpy((char*)da + desc->nelem++ * desc->szelem, item, desc->szelem);
+		memcpy((char*)da + desc->nelem * desc->szelem, item, desc->szelem);
 	}
+	desc->nelem++;
 	return da;
 }
 

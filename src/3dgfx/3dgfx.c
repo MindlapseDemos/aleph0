@@ -485,16 +485,6 @@ void g3d_mtl_shininess(float shin)
 	st->mtl.shin = shin;
 }
 
-static INLINE int calc_shift(unsigned int x)
-{
-	int res = -1;
-	while(x) {
-		x >>= 1;
-		++res;
-	}
-	return res;
-}
-
 static INLINE int calc_mask(unsigned int x)
 {
 	return x - 1;

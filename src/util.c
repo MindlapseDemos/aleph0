@@ -161,3 +161,24 @@ void memcpy64_nommx(void *dest, void *src, int count)
 	memcpy(dest, src, count << 3);
 }
 #endif
+
+unsigned int next_pow2(unsigned int x)
+{
+	x--;
+	x |= x >> 1;
+	x |= x >> 2;
+	x |= x >> 4;
+	x |= x >> 8;
+	x |= x >> 16;
+	return x + 1;
+}
+
+unsigned int calc_shift(unsigned int x)
+{
+	int res = -1;
+	while(x) {
+		x >>= 1;
+		++res;
+	}
+	return res;
+}

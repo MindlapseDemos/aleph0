@@ -1,13 +1,6 @@
 #ifndef OPT_3D_H
 #define OPT_3D_H
 
-#define VERTICES_WIDTH 32
-#define VERTICES_HEIGHT 32
-#define VERTICES_DEPTH 32
-#define MAX_VERTEX_ELEMENTS_NUM (VERTICES_WIDTH * VERTICES_HEIGHT * VERTICES_DEPTH)
-#define SET_OPT_VERTEX(xp,yp,zp,v) v->x = (xp); v->y = (yp); v->z = (zp);
-
-
 #define FLOAT_TO_FIXED(f,b) ((int)((f) * (1 << (b))))
 #define INT_TO_FIXED(i,b) ((i) * (1 << (b)))
 #define UINT_TO_FIXED(i,b) ((i) << (b))
@@ -17,13 +10,25 @@
 #define FIXED_DIV(x,y,b) (((x) << (b)) / (y))
 #define FIXED_SQRT(x,b) (isqrt((x) << (b)))
 
+#define FLOAT_TO_INT(x,b)		FLOAT_TO_FIXED(x,b)
+#define AFTER_MUL_ADDS(x,b)		FIXED_TO_INT(x,b)
+#define AFTER_RECZ_MUL(x,b)		FIXED_TO_INT(x,b)
+
 #define DEG_TO_RAD_256(x) (((2 * M_PI) * (x)) / 256)
 #define RAD_TO_DEG_256(x) ((256 * (x)) / (2 * M_PI))
 
+#define REC_DIV_Z_MAX 2048
 
-#define AFTER_MUL_ADDS(x,b)		FIXED_TO_INT(x,b)
-#define AFTER_RECZ_MUL(x,b)		FIXED_TO_INT(x,b)
-#define FLOAT_TO_int(x,b)		FLOAT_TO_FIXED(x,b)
+#define FP_CORE 16
+#define FP_BASE 12
+#define FP_BASE_TO_CORE (FP_CORE - FP_BASE)
+#define FP_NORM 8
+
+#define PROJ_SHR 8
+#define PROJ_MUL (1 << PROJ_SHR)
+
+#define D2R (180.0 / M_PI)
+
 
 
 enum {
@@ -76,14 +81,6 @@ typedef struct Object3D
 	Vector3D pos, rot;
 }Object3D;
 
-
-void OptGrid3Dinit(void);
-void OptGrid3Dfree(void);
-void OptGrid3Drun(unsigned char *buffer, int ticks);
-
-unsigned char *getDotsVolumeBuffer();
-void drawBoxLines();
-
 int isqrt(int x);
 
 Mesh3D* genMesh(int type, int length, float param1);
@@ -94,6 +91,7 @@ void setObjectRot(int x, int y, int z, Object3D* obj);
 
 void transformObject3D(Object3D* obj);
 void renderObject3D(Object3D* obj);
+void rotateVertices(Vertex3D* src, Vertex3D* dst, int count, int rx, int ry, int rz);
 
 ScreenPoints* getObjectScreenPoints();
 

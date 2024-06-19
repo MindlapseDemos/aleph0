@@ -43,7 +43,7 @@ static struct screen scr = {
 #define SKY_HEIGHT 8192
 #define WATER_FLOOR 2048
 #define WATER_SHADES 16
-#define PROJ_MUL 256
+
 #define CLIP_VAL_Y (-WATER_FLOOR / 16)
 #define CLIP_VAL_Y_DEEP (CLIP_VAL_Y + CLIP_VAL_Y / 8)
 

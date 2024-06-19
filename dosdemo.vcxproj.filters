@@ -187,7 +187,7 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\scr\polka.c">
-      <Filter>src</Filter>
+      <Filter>src\screens</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

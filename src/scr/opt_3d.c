@@ -8,48 +8,14 @@
 #include "screen.h"
 #include "util.h"
 
-#define OBJECT_POS_Z 1024
-#define REC_DIV_Z_MAX 2048
-
-#define AXIS_SHIFT 4
-#define AXIS_WIDTH (VERTICES_WIDTH<<AXIS_SHIFT)
-#define AXIS_HEIGHT (VERTICES_HEIGHT<<AXIS_SHIFT)
-#define AXIS_DEPTH (VERTICES_DEPTH<<AXIS_SHIFT)
-
-#define FP_CORE 16
-#define FP_BASE 12
-#define FP_BASE_TO_CORE (FP_CORE - FP_BASE)
-#define FP_NORM 8
-
-#define PROJ_SHR 8
-#define PROJ_MUL (1 << PROJ_SHR)
-
-#define DOT_COLOR				0xFFFF
-#define D2R (180.0 / M_PI)
-
 
 static int rotMat[9];
 static int rotMatInv[9];
 
-
-static Vertex3D *objectGridVertices;
-static Vertex3D *transformedGridVertices;
-static Vertex3D *objectAxesVertices;
-static Vertex3D *transformedAxesVertices;
-
-static ScreenPoints screenPointsGrid;
 static ScreenPoints screenPointsObject;
-
-static Vertex3D *axisVerticesX, *axisVerticesY, *axisVerticesZ;
-
-static int *recDivZ;
-
-static unsigned char *volumeData;
 
 static Vertex3D* transformedObjectVertices;
 static int* currentIndexPtr;
-
-static int isOpt3Dinit = 0;
 
 
 int isqrt(int x)
@@ -72,12 +38,6 @@ int isqrt(int x)
     return r;
 }
 
-
-unsigned char *getDotsVolumeBuffer()
-{
-	return volumeData;
-}
-
 static void createRotationMatrixValues(int rotX, int rotY, int rotZ, int *mat)
 {
 	int *rotVecs = (int*)mat;
@@ -86,12 +46,12 @@ static void createRotationMatrixValues(int rotX, int rotY, int rotZ, int *mat)
 	const float aY = (float)(DEG_TO_RAD_256((float)rotY / 64.0f));
 	const float aZ = (float)(DEG_TO_RAD_256((float)rotZ / 64.0f));
 
-	const int cosxr = (int)(FLOAT_TO_int(cos(aX), FP_BASE));
-	const int cosyr = (int)(FLOAT_TO_int(cos(aY), FP_BASE));
-	const int coszr = (int)(FLOAT_TO_int(cos(aZ), FP_BASE));
-	const int sinxr = (int)(FLOAT_TO_int(sin(aX), FP_BASE));
-	const int sinyr = (int)(FLOAT_TO_int(sin(aY), FP_BASE));
-	const int sinzr = (int)(FLOAT_TO_int(sin(aZ), FP_BASE));
+	const int cosxr = (int)(FLOAT_TO_INT(cos(aX), FP_BASE));
+	const int cosyr = (int)(FLOAT_TO_INT(cos(aY), FP_BASE));
+	const int coszr = (int)(FLOAT_TO_INT(cos(aZ), FP_BASE));
+	const int sinxr = (int)(FLOAT_TO_INT(sin(aX), FP_BASE));
+	const int sinyr = (int)(FLOAT_TO_INT(sin(aY), FP_BASE));
+	const int sinzr = (int)(FLOAT_TO_INT(sin(aZ), FP_BASE));
 
 	*rotVecs++ = (FIXED_MUL(cosyr, coszr, FP_BASE)) << FP_BASE_TO_CORE;
 	*rotVecs++ = (FIXED_MUL(FIXED_MUL(sinxr, sinyr, FP_BASE), coszr, FP_BASE) - FIXED_MUL(cosxr, sinzr, FP_BASE)) << FP_BASE_TO_CORE;
@@ -170,7 +130,7 @@ static void translateAndProjectVertices(Vertex3D *src, Vertex3D *dst, int count,
 	}
 }
 
-static void rotateVertices(Vertex3D *src, Vertex3D *dst, int count, int rx, int ry, int rz)
+void rotateVertices(Vertex3D *src, Vertex3D *dst, int count, int rx, int ry, int rz)
 {
 	createRotationMatrixValues(rx, ry, rz, rotMat);
 
@@ -191,200 +151,6 @@ static void renderVertices(ScreenPoints *pt)
 		}
 		++src;
 	}
-}
-
-static void transformAndProjectAxesBoxDotsEffect()
-{
-	unsigned char *src = volumeData;
-
-	Vertex3D *dst = screenPointsGrid.v;
-	Vertex3D *axisZ = axisVerticesZ;
-	int countZ = VERTICES_DEPTH;
-	do {
-		Vertex3D *axisY = axisVerticesY;
-		int countY = VERTICES_HEIGHT;
-		do {
-		
-			Vertex3D *axisX = axisVerticesX;
-			int countX = VERTICES_WIDTH;
-			do {
-				const unsigned char c = *src++;
-				if (c != 0) {
-					const int sz = AFTER_MUL_ADDS(axisX->z + axisY->z + axisZ->z, FP_CORE) + OBJECT_POS_Z;
-					if (sz > 0 && sz < REC_DIV_Z_MAX) {
-						const int recZ = recDivZ[(int)sz];
-						const int sx = FB_WIDTH / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);
-						const int sy = FB_HEIGHT / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);
-
-						dst->xs = sx;
-						dst->ys = sy;
-						dst->z = c;
-						screenPointsGrid.num++;
-						++dst;
-					}
-				}
-				++axisX;
-			} while(--countX != 0);
-			++axisY;
-		} while(--countY != 0);
-		++axisZ;
-	} while(--countZ != 0);
-}
-
-static void generateAxisVertices(Vertex3D *rotatedAxis, Vertex3D *dstAxis, int count)
-{
-	const float dx = (float)rotatedAxis->x / (VERTICES_WIDTH - 1);
-	const float dy = (float)rotatedAxis->y / (VERTICES_HEIGHT - 1);
-	const float dz = (float)rotatedAxis->z / (VERTICES_DEPTH - 1);
-	const float halfSteps = (float)count / 2;
-	float px = -halfSteps * dx;
-	float py = -halfSteps * dy;
-	float pz = -halfSteps * dz;
-	do {
-		const int x = FLOAT_TO_int(px, FP_CORE);
-		const int y = FLOAT_TO_int(py, FP_CORE);
-		const int z = FLOAT_TO_int(pz, FP_CORE);
-		SET_OPT_VERTEX(x,y,z,dstAxis);
-		px += dx;
-		py += dy;
-		pz += dz;
-		++dstAxis;
-	} while(--count != 0);
-}
-
-static void generateAxesVertices(Vertex3D *axesEnds)
-{
-	generateAxisVertices(&axesEnds[0], axisVerticesX, VERTICES_WIDTH);
-	generateAxisVertices(&axesEnds[1], axisVerticesY, VERTICES_HEIGHT);
-	generateAxisVertices(&axesEnds[2], axisVerticesZ, VERTICES_DEPTH);
-}
-
-static void initGrid3D()
-{
-	objectGridVertices = (Vertex3D*)malloc(MAX_VERTEX_ELEMENTS_NUM * sizeof(Vertex3D));
-	transformedGridVertices = (Vertex3D*)malloc(MAX_VERTEX_ELEMENTS_NUM * sizeof(Vertex3D));
-
-	volumeData = (unsigned char*)malloc(MAX_VERTEX_ELEMENTS_NUM);
-	memset(volumeData, 0, MAX_VERTEX_ELEMENTS_NUM);
-}
-
-static void initAxes3D()
-{
-	Vertex3D* v;
-
-	objectAxesVertices = (Vertex3D*)malloc(3 * sizeof(Vertex3D));
-	transformedAxesVertices = (Vertex3D*)malloc(3 * sizeof(Vertex3D));
-
-	axisVerticesX = (Vertex3D*)malloc(VERTICES_WIDTH * sizeof(Vertex3D));
-	axisVerticesY = (Vertex3D*)malloc(VERTICES_HEIGHT * sizeof(Vertex3D));
-	axisVerticesZ = (Vertex3D*)malloc(VERTICES_DEPTH * sizeof(Vertex3D));
-
-	v = objectAxesVertices;
-	SET_OPT_VERTEX(AXIS_WIDTH,0,0,v)	++v;
-	SET_OPT_VERTEX(0,AXIS_HEIGHT,0,v)	++v;
-	SET_OPT_VERTEX(0,0,AXIS_DEPTH,v)
-}
-
-static void initScreenPointsGrid(Vertex3D *src)
-{
-	screenPointsGrid.num = 0;
-	screenPointsGrid.v = src;
-}
-
-void OptGrid3Dinit()
-{
-	if (!isOpt3Dinit) {
-		int z;
-
-		initAxes3D();
-		initGrid3D();
-
-		recDivZ = (int*)malloc(REC_DIV_Z_MAX * sizeof(int));
-		for (z=1; z<REC_DIV_Z_MAX; ++z) {
-			recDivZ[z] = FLOAT_TO_int(1/(float)z, FP_CORE);
-		}
-
-		isOpt3Dinit = 1;
-	}
-}
-
-void OptGrid3Dfree()
-{
-	if (isOpt3Dinit) {
-		free(objectAxesVertices);
-		free(transformedAxesVertices);
-
-		free(objectGridVertices);
-		free(transformedGridVertices);
-		free(volumeData);
-
-		free(axisVerticesX);
-		free(axisVerticesY);
-		free(axisVerticesZ);
-
-		free(recDivZ);
-
-		isOpt3Dinit = 0;
-	}
-}
-
-static void drawQuadLines(Vertex3D *v0, Vertex3D *v1, Vertex3D *v2, Vertex3D *v3, unsigned char *buffer, int orderSign)
-{
-	if (orderSign * ((v0->xs - v1->xs) * (v2->ys - v1->ys) - (v2->xs - v1->xs) * (v0->ys - v1->ys)) <= 0) {
-		const int shadeShift = 3 - orderSign;
-		drawAntialiasedLine8bpp(v0, v1, shadeShift, buffer);
-		drawAntialiasedLine8bpp(v1, v2, shadeShift, buffer);
-		drawAntialiasedLine8bpp(v2, v3, shadeShift, buffer);
-		drawAntialiasedLine8bpp(v3, v0, shadeShift, buffer);
-	}
-}
-
-void drawBoxLines(unsigned char *buffer, int orderSign)
-{
-	Vertex3D v[8];
-	int x,y,z,i=0;
-
-	for (z=0; z<=1; ++z) {
-		Vertex3D *axisZ = &axisVerticesZ[z * (VERTICES_DEPTH-1)];
-		for (y=0; y<=1; ++y) {
-			Vertex3D *axisY = &axisVerticesY[y * (VERTICES_HEIGHT-1)];
-			for (x=0; x<=1; ++x) {
-				Vertex3D *axisX = &axisVerticesX[x * (VERTICES_WIDTH-1)];
-				const int sz = AFTER_MUL_ADDS(axisX->z + axisY->z + axisZ->z, FP_CORE) + OBJECT_POS_Z;
-				if (sz > 0 && sz < REC_DIV_Z_MAX) {
-					const int recZ = recDivZ[(int)sz];
-					v[i].xs = FB_WIDTH / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);
-					v[i].ys = FB_HEIGHT / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);
-					v[i].z = sz;
-				}
-				++i;
-			}
-		}
-	}
-
-	drawQuadLines(&v[0], &v[1], &v[3], &v[2], buffer, orderSign);
-	drawQuadLines(&v[1], &v[5], &v[7], &v[3], buffer, orderSign);
-	drawQuadLines(&v[5], &v[4], &v[6], &v[7], buffer, orderSign);
-	drawQuadLines(&v[4], &v[0], &v[2], &v[6], buffer, orderSign);
-	drawQuadLines(&v[2], &v[3], &v[7], &v[6], buffer, orderSign);
-	drawQuadLines(&v[4], &v[5], &v[1], &v[0], buffer, orderSign);
-}
-
-void OptGrid3Drun(unsigned char *buffer, int ticks)
-{
-	ticks >>= 1;
-
-	initScreenPointsGrid(transformedGridVertices);
-	rotateVertices(objectAxesVertices, transformedAxesVertices, 3, ticks, 2 * ticks, 3 * ticks);
-	generateAxesVertices(transformedAxesVertices);
-
-	transformAndProjectAxesBoxDotsEffect();
-
-	drawBoxLines(buffer, -1);
-
-	drawBlobs(screenPointsGrid.v, screenPointsGrid.num, buffer);
-
-	drawBoxLines(buffer, 1);
 }
 
 static void setVertexPos(int x, int y, int z, Vertex3D* v)
@@ -663,7 +429,6 @@ Mesh3D* genMesh(int type, int length, float param1)
 					for (x = -1; x <= 1; x += 2) {
 						setVertexPos(x * halfLength, y * halfLength, z * halfLength, v);
 						setElementCol(rand() & 255, e);
-						/* setVertexTexCoords() */
 						++v;
 						++e;
 					}
@@ -754,9 +519,6 @@ static void calcVertexLights(Object3D* obj)
 	Vector3D light;
 	Vertex3D vLight;	/* it happens that MulManyVec3Mat33 thing works with Vertex3D which is way more than Vector3D. I will refactor */
 
-	/* static int min = (1 << 30) - 1;
-	static int max = -(1 << 30); */
-
 	calcInvertedRotationMatrix(rotMat, rotMatInv);
 
 	vLight.x = 0; vLight.y = 0; vLight.z = 1 << FP_NORM;
@@ -768,21 +530,15 @@ static void calcVertexLights(Object3D* obj)
 		CLAMP(d, 16, 240);	/* 1 to 254 hacky solution to avoid the unstable gradient step go slightly out of bounds for now */
 		dst->c = d;
 
-		/* if (vNormal->x < min) min = vNormal->x; if (vNormal->x > max) max = vNormal->x;
-		if (vNormal->y < min) min = vNormal->y; if (vNormal->y > max) max = vNormal->y;
-		if (vNormal->z < min) min = vNormal->z; if (vNormal->z > max) max = vNormal->z; */
-
 		++dst;
 		++vNormal;
 	} while (--count > 0);
-	/* printf("%d %d\n", min, max); */
 }
 
 static void calculateVertexEnvmapTC(Object3D* obj)
 {
 	int count = obj->mesh->verticesNum;
 
-	/* Texture* tex = &mesh->tex[0]; */
 	const int texWidth = 256;	/* hack values for now */
 	const int texHeight = 256; /* I don't have tex info yet */
 
@@ -793,22 +549,16 @@ static void calculateVertexEnvmapTC(Object3D* obj)
 
 	Vector3D* vNormal = screenPointsObject.vNormals;
 	Vertex3D* dst = screenPointsObject.v;
-	/* static int min = (1 << 30) - 1;
-	static int max = -(1 << 30); */
+
 	do {
 		if (vNormal->z != 0) {
 			dst->u = ((vNormal->x >> wShiftHalf) + texWidthHalf) & (texWidth - 1);
 			dst->v = ((vNormal->y >> hShiftHalf) + texHeightHalf) & (texHeight - 1);
-
-			/* if (vNormal->x < min) min = vNormal->x; if (vNormal->x > max) max = vNormal->x;
-			if (vNormal->y < min) min = vNormal->y; if (vNormal->y > max) max = vNormal->y;
-			if (vNormal->z < min) min = vNormal->z; if (vNormal->z > max) max = vNormal->z; */
 		}
 
 		++dst;
 		++vNormal;
 	} while (--count > 0);
-	/* printf("%d %d\n", min, max); */
 }
 
 static void rotateVertexNormals(Object3D* obj)

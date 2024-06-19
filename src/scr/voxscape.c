@@ -11,6 +11,7 @@
 #include "noise.h"
 #include "gfxutil.h"
 #include "opt_rend.h"
+#include "opt_3d.h"
 
 #include "dos/keyb.h"
 
@@ -37,7 +38,6 @@
 #define PAL_SHADES 32
 
 #define SKY_HEIGHT 8192
-#define PROJ_MUL 256
 #define FP_SCALE 16
 
 #define VIS_VER_STEPS ((VIS_FAR - VIS_NEAR) / VIS_VER_SKIP)

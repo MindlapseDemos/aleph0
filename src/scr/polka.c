@@ -11,10 +11,24 @@
 #include <math.h>
 
 
+#define VERTICES_WIDTH 32
+#define VERTICES_HEIGHT 32
+#define VERTICES_DEPTH 32
+#define MAX_VERTEX_ELEMENTS_NUM (VERTICES_WIDTH * VERTICES_HEIGHT * VERTICES_DEPTH)
+#define SET_OPT_VERTEX(xp,yp,zp,v) v->x = (xp); v->y = (yp); v->z = (zp);
+
+#define AXIS_SHIFT 4
+#define AXIS_WIDTH (VERTICES_WIDTH<<AXIS_SHIFT)
+#define AXIS_HEIGHT (VERTICES_HEIGHT<<AXIS_SHIFT)
+#define AXIS_DEPTH (VERTICES_DEPTH<<AXIS_SHIFT)
+
 #define PSIN_SIZE 2048
 
 #define BLOB_SIZE 12
 #define NUM_BLOBS 16
+
+#define DOT_COLOR 0xFFFF
+
 
 static int init(void);
 static void destroy(void);
@@ -30,9 +44,25 @@ static unsigned char *psin1, *psin2, *psin3;
 static unsigned char *blob3D;
 static Vertex3D blobPos[NUM_BLOBS];
 
+static Vertex3D* objectGridVertices;
+static Vertex3D* transformedGridVertices;
+static Vertex3D* objectAxesVertices;
+static Vertex3D* transformedAxesVertices;
+
+static ScreenPoints screenPointsGrid;
+
+static Vertex3D* axisVerticesX, * axisVerticesY, * axisVerticesZ;
+
+static unsigned char* volumeData;
+
+static int* recDivZ;
+
 static int *radius;
 static int *latitude;
 static int *longitude;
+
+static Vector3D gridPos[2];
+
 
 static struct screen scr = {
 	"polka",
@@ -51,9 +81,144 @@ struct screen *polka_screen(void)
 }
 
 
+
+static void transformAndProjectAxesBoxDotsEffect(int objIndex)
+{
+	unsigned char* src = volumeData;
+
+	Vertex3D* dst = screenPointsGrid.v;
+	Vertex3D* axisZ = axisVerticesZ;
+	int countZ = VERTICES_DEPTH;
+
+	const int objPosX = gridPos[objIndex].x;
+	const int objPosY = gridPos[objIndex].y;
+	const int objPosZ = gridPos[objIndex].z;
+
+	do {
+		Vertex3D* axisY = axisVerticesY;
+		int countY = VERTICES_HEIGHT;
+		do {
+
+			Vertex3D* axisX = axisVerticesX;
+			int countX = VERTICES_WIDTH;
+			do {
+				const unsigned char c = *src++;
+				if (c != 0) {
+					const int sz = FIXED_TO_INT(axisX->z + axisY->z + axisZ->z, FP_CORE) + objPosZ;
+					if (sz > 0 && sz < REC_DIV_Z_MAX) {
+						const int recZ = recDivZ[(int)sz];
+						const int sx = FB_WIDTH / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE) + objPosX;
+						const int sy = FB_HEIGHT / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE) + objPosY;
+
+						dst->xs = sx;
+						dst->ys = sy;
+						dst->z = c;
+						screenPointsGrid.num++;
+						++dst;
+					}
+				}
+				++axisX;
+			} while (--countX != 0);
+			++axisY;
+		} while (--countY != 0);
+		++axisZ;
+	} while (--countZ != 0);
+}
+
+static void generateAxisVertices(Vertex3D* rotatedAxis, Vertex3D* dstAxis, int count)
+{
+	const float dx = (float)rotatedAxis->x / (VERTICES_WIDTH - 1);
+	const float dy = (float)rotatedAxis->y / (VERTICES_HEIGHT - 1);
+	const float dz = (float)rotatedAxis->z / (VERTICES_DEPTH - 1);
+	const float halfSteps = (float)count / 2;
+	float px = -halfSteps * dx;
+	float py = -halfSteps * dy;
+	float pz = -halfSteps * dz;
+	do {
+		const int x = FLOAT_TO_INT(px, FP_CORE);
+		const int y = FLOAT_TO_INT(py, FP_CORE);
+		const int z = FLOAT_TO_INT(pz, FP_CORE);
+		SET_OPT_VERTEX(x, y, z, dstAxis);
+		px += dx;
+		py += dy;
+		pz += dz;
+		++dstAxis;
+	} while (--count != 0);
+}
+
+static void generateAxesVertices(Vertex3D* axesEnds)
+{
+	generateAxisVertices(&axesEnds[0], axisVerticesX, VERTICES_WIDTH);
+	generateAxisVertices(&axesEnds[1], axisVerticesY, VERTICES_HEIGHT);
+	generateAxisVertices(&axesEnds[2], axisVerticesZ, VERTICES_DEPTH);
+}
+
+static void initGrid3D()
+{
+	objectGridVertices = (Vertex3D*)malloc(MAX_VERTEX_ELEMENTS_NUM * sizeof(Vertex3D));
+	transformedGridVertices = (Vertex3D*)malloc(MAX_VERTEX_ELEMENTS_NUM * sizeof(Vertex3D));
+
+	volumeData = (unsigned char*)malloc(MAX_VERTEX_ELEMENTS_NUM);
+	memset(volumeData, 0, MAX_VERTEX_ELEMENTS_NUM);
+}
+
+static void initAxes3D()
+{
+	Vertex3D* v;
+
+	objectAxesVertices = (Vertex3D*)malloc(3 * sizeof(Vertex3D));
+	transformedAxesVertices = (Vertex3D*)malloc(3 * sizeof(Vertex3D));
+
+	axisVerticesX = (Vertex3D*)malloc(VERTICES_WIDTH * sizeof(Vertex3D));
+	axisVerticesY = (Vertex3D*)malloc(VERTICES_HEIGHT * sizeof(Vertex3D));
+	axisVerticesZ = (Vertex3D*)malloc(VERTICES_DEPTH * sizeof(Vertex3D));
+
+	v = objectAxesVertices;
+	SET_OPT_VERTEX(AXIS_WIDTH, 0, 0, v)	++v;
+	SET_OPT_VERTEX(0, AXIS_HEIGHT, 0, v)	++v;
+	SET_OPT_VERTEX(0, 0, AXIS_DEPTH, v)
+}
+
+static void initScreenPointsGrid(Vertex3D* src)
+{
+	screenPointsGrid.num = 0;
+	screenPointsGrid.v = src;
+}
+
+void OptGrid3Dinit()
+{
+	int z;
+
+	initAxes3D();
+	initGrid3D();
+
+	recDivZ = (int*)malloc(REC_DIV_Z_MAX * sizeof(int));
+	for (z = 1; z < REC_DIV_Z_MAX; ++z) {
+		recDivZ[z] = FLOAT_TO_INT(1 / (float)z, FP_CORE);
+	}
+}
+
+static void OptGrid3Dfree()
+{
+	free(objectAxesVertices);
+	free(transformedAxesVertices);
+
+	free(objectGridVertices);
+	free(transformedGridVertices);
+	free(volumeData);
+
+	free(axisVerticesX);
+	free(axisVerticesY);
+	free(axisVerticesZ);
+
+	free(recDivZ);
+}
+
+
+
 static void updateDotsVolumeBufferPlasma(int t)
 {
-	unsigned char *dst = getDotsVolumeBuffer();
+	unsigned char *dst = volumeData;
 	const int tt = t >> 5;
 
 	int countZ = VERTICES_DEPTH;
@@ -84,7 +249,7 @@ static void updateDotsVolumeBufferRadial(int t)
 	const int thres1 = VERTICES_WIDTH / 2;
 	const int thres2 = thres1 + 3;
 
-	unsigned char *dst = getDotsVolumeBuffer();
+	unsigned char* dst = volumeData;
 
 	for (i=0; i<size; ++i) {
 		const int r1 = latitude[i];
@@ -109,7 +274,7 @@ static void updateDotsVolumeBufferRadialRays(int t)
 	const int size = VERTICES_WIDTH * VERTICES_HEIGHT * VERTICES_DEPTH;
 	const int thres = 192;
 
-	unsigned char *dst = getDotsVolumeBuffer();
+	unsigned char* dst = volumeData;
 
 	for (i=0; i<size; ++i) {
 		const int r1 = latitude[i];
@@ -129,90 +294,9 @@ static void updateDotsVolumeBufferRadialRays(int t)
 	}
 }
 
-static void updateDotsVolumeBufferFireball(int t)
+/*static void updateDotsVolumeBufferRandomWalk(int t)
 {
-	int i;
-	const int size = VERTICES_WIDTH * VERTICES_HEIGHT * VERTICES_DEPTH;
-	const int thres1 = (VERTICES_WIDTH * VERTICES_WIDTH) / 8;
-	const int thres2 = thres1 + 64;
-
-	unsigned char *dst = getDotsVolumeBuffer();
-
-	for (i=0; i<size; ++i) {
-		const int r = radius[i];
-		if (r >= thres1 && r <= thres2) {
-			*dst = 255;
-		} else {
-			*dst = 0;
-		}
-		++dst;
-	}
-}
-
-static void updateDotsVolumeBufferRandomWalk(int t)
-{
-}
-
-static float qp[13*4] = {	-1.0f, 0.2f, 0.0f, 0.0f, 
-						-0.291f, -0.399f, 0.339f, 0.437f, 
-						-0.2f, 0.4f, -0.4f, -0.4f, 
-						-0.213f, -0.041f, -0.563f, -0.56f,
-						-0.2f, 0.6f, 0.2f, 0.2f, 
-						-0.162f, 0.163f, 0.56f, -0.599f, 
-						-0.2f, 0.8f, 0.0f, 0.0f, 
-						-0.445f, 0.339f, -0.0889f, -0.562f, 
-						0.185f, 0.478f, 0.125f, -0.392f, 
-						-0.45f, -0.447f, 0.181f, 0.306f, 
-						-0.218f, -0.113f, -0.181f, -0.496f, 
-						-0.137f, -0.630f, -0.475f, -0.046f, 
-						-0.125f, -0.256f, 0.847f, 0.0895f };
-
-static void updateDotsVolumeBufferQuaternionJulia(int t)
-{
-	int x,y,z;
-
-	unsigned char *dst = getDotsVolumeBuffer();
-
-	const int index = (t >> 10) % 13;
-	const float xp = qp[4*index];
-	const float yp = qp[4*index+1];
-	const float zp = qp[4*index+2];
-	const float wp = qp[4*index+3];
-
-	/*const float xp = sin(t * 0.004f) * 0.4f;
-	const float yp = sin(t * 0.003f) * 0.4f;
-	const float zp = sin(t * 0.002f) * 0.4f;
-	const float wp = sin(t * 0.001f) * 0.6f;*/
-
-	for (z=0; z<VERTICES_DEPTH; ++z) {
-		for (y=0; y<VERTICES_HEIGHT; ++y) {
-			for (x=0; x<VERTICES_WIDTH; ++x) {
-				float xc = ((float)x - VERTICES_WIDTH/2) / (VERTICES_WIDTH/2);
-				float yc = ((float)y - VERTICES_HEIGHT/2) / (VERTICES_HEIGHT/2);
-				float zc = ((float)z - VERTICES_DEPTH/2) / (VERTICES_DEPTH/2);
-				float wc = 0; /*zc; */
-
-				int i;
-				for (i=0; i<16; ++i) {
-					const float xd = xc*xc - yc*yc - zc*zc - wc*wc + xp;
-					const float yd = 2 * xc * yc + yp;
-					const float zd = 2 * xc * zc + zp;
-					const float wd = 2 * xc * wc + wp;
-
-					const float r = xd*xd + yd*yd + zd*zd + wd*wd;
-					if (r > 2.0f) break;
-					
-					xc = xd;
-					yc = yd;
-					zc = zd;
-					wc = wd;
-				}
-				if (i < 12) i = 0;
-				*dst++ = i << 2;
-			}
-		}
-	}
-}
+}*/
 
 static void drawBlob3D(Vertex3D *pos, unsigned char *buffer)
 {
@@ -247,7 +331,7 @@ static void drawBlob3D(Vertex3D *pos, unsigned char *buffer)
 static void updateDotsVolumeBufferBlobs(int t)
 {
 	int i;
-	unsigned char *dst = getDotsVolumeBuffer();
+	unsigned char* dst = volumeData;
 	const int tt = t >> 3;
 
 	memset(dst, 0, VERTICES_WIDTH * VERTICES_HEIGHT * VERTICES_DEPTH);
@@ -259,6 +343,71 @@ static void updateDotsVolumeBufferBlobs(int t)
 
 		drawBlob3D(&blobPos[i], dst);
 	}
+}
+
+static void drawQuadLines(Vertex3D* v0, Vertex3D* v1, Vertex3D* v2, Vertex3D* v3, unsigned char* buffer, int orderSign)
+{
+	if (orderSign * ((v0->xs - v1->xs) * (v2->ys - v1->ys) - (v2->xs - v1->xs) * (v0->ys - v1->ys)) <= 0) {
+		const int shadeShift = 3 - orderSign;
+		drawAntialiasedLine8bpp(v0, v1, shadeShift, buffer);
+		drawAntialiasedLine8bpp(v1, v2, shadeShift, buffer);
+		drawAntialiasedLine8bpp(v2, v3, shadeShift, buffer);
+		drawAntialiasedLine8bpp(v3, v0, shadeShift, buffer);
+	}
+}
+
+static void drawBoxLines(unsigned char* buffer, int orderSign, int objIndex)
+{
+	Vertex3D v[8];
+	int x, y, z, i = 0;
+
+	const int objPosX = gridPos[objIndex].x;
+	const int objPosY = gridPos[objIndex].y;
+	const int objPosZ = gridPos[objIndex].z;
+
+	for (z = 0; z <= 1; ++z) {
+		Vertex3D* axisZ = &axisVerticesZ[z * (VERTICES_DEPTH - 1)];
+		for (y = 0; y <= 1; ++y) {
+			Vertex3D* axisY = &axisVerticesY[y * (VERTICES_HEIGHT - 1)];
+			for (x = 0; x <= 1; ++x) {
+				Vertex3D* axisX = &axisVerticesX[x * (VERTICES_WIDTH - 1)];
+				const int sz = AFTER_MUL_ADDS(axisX->z + axisY->z + axisZ->z, FP_CORE) + objPosZ;
+				if (sz > 0 && sz < REC_DIV_Z_MAX) {
+					const int recZ = recDivZ[(int)sz];
+					v[i].xs = FB_WIDTH / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE) + objPosX;
+					v[i].ys = FB_HEIGHT / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE) + objPosY;
+					v[i].z = sz;
+				}
+				++i;
+			}
+		}
+	}
+
+	drawQuadLines(&v[0], &v[1], &v[3], &v[2], buffer, orderSign);
+	drawQuadLines(&v[1], &v[5], &v[7], &v[3], buffer, orderSign);
+	drawQuadLines(&v[5], &v[4], &v[6], &v[7], buffer, orderSign);
+	drawQuadLines(&v[4], &v[0], &v[2], &v[6], buffer, orderSign);
+	drawQuadLines(&v[2], &v[3], &v[7], &v[6], buffer, orderSign);
+	drawQuadLines(&v[4], &v[5], &v[1], &v[0], buffer, orderSign);
+}
+
+static void OptGrid3Drun(unsigned char* buffer, int ticks)
+{
+	const int objIndex = 1;
+
+	ticks >>= 1;
+
+	initScreenPointsGrid(transformedGridVertices);
+	rotateVertices(objectAxesVertices, transformedAxesVertices, 3, ticks, 2 * ticks, 3 * ticks);
+	generateAxesVertices(transformedAxesVertices);
+
+	transformAndProjectAxesBoxDotsEffect(objIndex);
+
+	drawBoxLines(buffer, -1, objIndex);
+
+	drawBlobs(screenPointsGrid.v, screenPointsGrid.num, buffer);
+
+	drawBoxLines(buffer, 1, objIndex);
 }
 
 
@@ -336,6 +485,13 @@ static void initRadialEffects()
 	}
 }
 
+static void setGridPos(Vector3D* pos, int x, int y, int z)
+{
+	pos->x = x;
+	pos->y = y;
+	pos->z = z;
+}
+
 static int init(void)
 {
 	OptGrid3Dinit();
@@ -353,6 +509,9 @@ static int init(void)
 	initBlobs3D();
 	initRadialEffects();
 
+	setGridPos(&gridPos[0], 0, 0, 1024);
+	setGridPos(&gridPos[1], 128, 0, 1024);
+	
 	return 0;
 }
 
@@ -384,12 +543,9 @@ static void start(long trans_time)
 static void draw(void)
 {
 	const int t = time_msec - startingTime;
-	const int tt = (t >> 13) & 3;
+	const int tt = 0;// (t >> 13) & 1;
 	
 	memset(polkaBuffer, 0, FB_WIDTH * FB_HEIGHT);
-
-	/* updateDotsVolumeBufferPlasma(t); */
-	/* updateDotsVolumeBufferBlobs(t); */
 
 	switch(tt) {
 		case 0:
@@ -400,13 +556,17 @@ static void draw(void)
 			updateDotsVolumeBufferRadialRays(t);
 		break;
 
+		case 2:
+			updateDotsVolumeBufferPlasma(t);
+		break;
+
+		case 3:
+			//updateDotsVolumeBufferRandomWalk(t);
+		break;
+
 		default:
-			updateDotsVolumeBufferQuaternionJulia(t);
 		break;
 	}
-
-	/* updateDotsVolumeBufferFireball(t); */
-	/* updateDotsVolumeBufferRandomWalk(t); */
 
 	OptGrid3Drun(polkaBuffer, t);
 

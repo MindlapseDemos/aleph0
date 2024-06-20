@@ -15,6 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#ifndef __APPLE__
 #if defined(__unix__)
 
 #include <X11/Xlib.h>
@@ -2475,3 +2476,4 @@ static void draw_patch(int *index, int flip, float scale)
 
 	glEnd();
 }
+#endif	/* __APPLE__ */

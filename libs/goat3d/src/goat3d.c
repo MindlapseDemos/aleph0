@@ -1468,8 +1468,11 @@ GOAT3DAPI void goat3d_set_track_type(struct goat3d_track *trk, enum goat3d_track
 	switch(BASETYPE(type)) {
 	case GOAT3D_TRACK_QUAT:
 	case GOAT3D_TRACK_VEC4:
+	case GOAT3D_TRACK_ROT:
 		anm_set_track_default(trk->trk + 3, 1);
 	case GOAT3D_TRACK_VEC3:
+	case GOAT3D_TRACK_POS:
+	case GOAT3D_TRACK_SCALE:
 		anm_set_track_default(trk->trk + 1, 0);
 		anm_set_track_default(trk->trk + 2, 0);
 	case GOAT3D_TRACK_VAL:

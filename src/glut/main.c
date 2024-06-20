@@ -2,7 +2,11 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <assert.h>
+#ifndef __APPLE__
 #include "miniglut.h"
+#else
+#include <GL/glut.h>
+#endif
 #include "demo.h"
 #include "gfx.h"
 #include "gfxutil.h"
@@ -104,9 +108,11 @@ int main(int argc, char **argv)
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_CULL_FACE);
 
+#ifndef NO_ASM
 	if(read_cpuid(&cpuid) == 0) {
 		print_cpuid(&cpuid);
 	}
+#endif
 
 	if(!set_video_mode(match_video_mode(FB_WIDTH, FB_HEIGHT, FB_BPP), 1)) {
 		return 1;
@@ -543,5 +549,11 @@ static void set_vsync(int vsync)
 	if(wgl_swap_interval_ext) {
 		wgl_swap_interval_ext(vsync);
 	}
+}
+#endif
+#ifdef __APPLE__
+static void set_vsync(int vsync)
+{
+	/* TODO */
 }
 #endif

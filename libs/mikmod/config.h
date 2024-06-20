@@ -18,7 +18,7 @@
 #define HAVE_SNPRINTF 1
 #endif
 
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
 #define HAVE_DLFCN_H 1
 #define HAVE_RTLD_GLOBAL 1
 #define HAVE_FCNTL_H 1

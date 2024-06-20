@@ -1,3 +1,5 @@
+include ../libs.mk
+
 src = $(wildcard drivers/*.c) \
 	  $(wildcard loaders/*.c) \
 	  $(wildcard mmio/*.c) \
@@ -9,7 +11,7 @@ alib = libmikmod.a
 
 def = -DHAVE_CONFIG_H -DMIKMOD_BUILD
 inc = -I. -Iinclude
-CFLAGS = -m32 -g $(def) $(inc)
+CFLAGS = $(arch) -g $(def) $(inc)
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

@@ -1,3 +1,5 @@
+include ../libs.mk
+
 src = $(wildcard src/*.c) \
 	  $(wildcard zlib/*.c) \
 	  $(wildcard libpng/*.c) \
@@ -5,12 +7,7 @@ src = $(wildcard src/*.c) \
 obj = $(src:.c=.o)
 alib = libimago.a
 
-CC = gcc
 CFLAGS = $(arch) -fno-pie -Wno-main -g -O3 -Izlib -Ilibpng -Ijpeglib
-
-ifeq ($(shell uname -m), x86_64)
-	arch = -m32
-endif
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

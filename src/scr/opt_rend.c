@@ -581,12 +581,11 @@ void freeBlobGfx()
 	}
 }
 
-void drawBlobs(Vertex3D *v, int count, unsigned char *blobBuffer)
+void drawBlobs(Vertex3D *v, int count, unsigned char *blobBuffer, unsigned int size)
 {
 	if (count <=0) return;
 
 	do {
-		const unsigned int size = 1 + (v->z >> 6);
 		if (size < BLOB_SIZES_NUM_MAX) {
 			const int posX = v->xs;
 			const int posY = v->ys;

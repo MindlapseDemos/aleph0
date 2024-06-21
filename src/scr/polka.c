@@ -24,10 +24,8 @@
 
 #define PSIN_SIZE 1024
 
-#define BLOB_SIZE 12
-#define NUM_BLOBS 16
-
 #define DOT_COLOR 0xFFFF
+#define VOLS_NUM 2
 
 
 static int init(void);
@@ -35,14 +33,11 @@ static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
 
-static unsigned short *polkaPal;
-static unsigned int *polkaPal32;
-static unsigned char *polkaBuffer;
+static unsigned short *tempPal;
+static unsigned int *polkaPal32[VOLS_NUM];
+static unsigned char *polkaBuffer[VOLS_NUM];
 
 static unsigned char *psin1, *psin2, *psin3;
-
-static unsigned char *blob3D;
-static Vertex3D blobPos[NUM_BLOBS];
 
 static Vertex3D* objectGridVertices;
 static Vertex3D* transformedGridVertices;
@@ -290,7 +285,8 @@ static void updateDotsVolumeBufferRadialRays(int t)
 		const int r0 = pData->radius;
 		const int r1 = pData->latitude;
 		const int r2 = pData->longitude;
-		const int d = (psin1[(r1-tt) & (PSIN_SIZE-1)] + psin2[(r2+tt) & (PSIN_SIZE-1)] + psin3[(r1+r2+tt) & (PSIN_SIZE-1)]) & 255;
+		/* const int d = (psin1[(r1 - tt) & (PSIN_SIZE - 1)] + psin2[(r2 + tt) & (PSIN_SIZE - 1)] + psin3[(r1 + r2 + tt) & (PSIN_SIZE - 1)]) & 255; */
+		const int d = (psin1[(r1 - tt) & (PSIN_SIZE - 1)] + psin2[(r2 + tt) & (PSIN_SIZE - 1)]) & 255;
 
 		if (d >= thres) {
 			int rr = 255 - ((r0*r0) >> 1);
@@ -301,57 +297,6 @@ static void updateDotsVolumeBufferRadialRays(int t)
 		}
 
 		++dst;
-	}
-}
-
-/*static void updateDotsVolumeBufferRandomWalk(int t)
-{
-}*/
-
-static void drawBlob3D(Vertex3D *pos, unsigned char *buffer)
-{
-	int x,y,z;
-	unsigned char *src = blob3D;
-	unsigned char *dst = buffer;
-
-	for (z=0; z<BLOB_SIZE; ++z) {
-		const int zp = pos->z + z - BLOB_SIZE/2;
-		if (zp>=0 && zp<VERTICES_DEPTH) {
-			const int zi = zp * VERTICES_WIDTH * VERTICES_HEIGHT;
-			for (y=0; y<BLOB_SIZE; ++y) {
-				const int yp = pos->y + y - BLOB_SIZE/2;
-				if (yp>=0 && yp<VERTICES_HEIGHT) {
-					const int yi = yp * VERTICES_WIDTH;
-					for (x=0; x<BLOB_SIZE; ++x) {
-						const int xp = pos->x + x - BLOB_SIZE/2;
-						if (xp>=0 && xp<VERTICES_WIDTH) {
-							const int i = zi + yi + xp;
-							int c = *(dst + i) + *src;
-							if (c > 255) c =  255;
-							*(dst + i) = c;
-						}
-						++src;
-					}
-				}
-			}
-		}
-	}
-}
-
-static void updateDotsVolumeBufferBlobs(int t)
-{
-	int i;
-	unsigned char* dst = volumeData;
-	const int tt = t >> 3;
-
-	memset(dst, 0, VERTICES_WIDTH * VERTICES_HEIGHT * VERTICES_DEPTH);
-
-	for (i=0; i<NUM_BLOBS; ++i) {
-		blobPos[i].x = (int)(VERTICES_WIDTH / 2 + sin((72*i+1*tt) / 45.0f) * ((VERTICES_WIDTH / 2) - 2*BLOB_SIZE/3));
-		blobPos[i].y = (int)(VERTICES_HEIGHT / 2 + sin((91*i+2*tt) / 63.0f) * ((VERTICES_WIDTH / 2) - 2*BLOB_SIZE/3));
-		blobPos[i].z = (int)(VERTICES_DEPTH / 2 + sin((114*i+3*tt) / 127.0f) * ((VERTICES_WIDTH / 2) - 2*BLOB_SIZE/3));
-
-		drawBlob3D(&blobPos[i], dst);
 	}
 }
 
@@ -401,22 +346,20 @@ static void drawBoxLines(unsigned char* buffer, int orderSign, int objIndex)
 	drawQuadLines(&v[4], &v[5], &v[1], &v[0], buffer, orderSign);
 }
 
-static void OptGrid3Drun(unsigned char* buffer, int ticks)
+static void OptGrid3Drun(int objIndex, unsigned char* buffer, int ticks)
 {
-	const int objIndex = 0;
-
 	ticks >>= 1;
 
 	initScreenPointsGrid(transformedGridVertices);
-	rotateVertices(objectAxesVertices, transformedAxesVertices, 3, ticks, 2 * ticks, 3 * ticks);
+	rotateVertices(objectAxesVertices, transformedAxesVertices, 3, (2-objIndex) * ticks, (2+objIndex) * ticks, (3-objIndex) * ticks);
 	generateAxesVertices(transformedAxesVertices);
 
 	transformAndProjectAxesBoxDotsEffect(objIndex);
 
 	drawBoxLines(buffer, -1, objIndex);
 
-	drawBlobs(screenPointsGrid.v, screenPointsGrid.num, buffer);
-	
+	drawBlobs(screenPointsGrid.v, screenPointsGrid.num, buffer, 2);
+
 	drawBoxLines(buffer, 1, objIndex);
 }
 
@@ -435,34 +378,6 @@ static void initPlasma3D()
 		psin1[i] = (unsigned char)(sin((l * (double)i) / 7.0) * s*123.0 + s*123.0);
 		psin2[i] = (unsigned char)(sin((l * (double)i) / 11.0) * s*176.0 + s*176.0);
 		psin3[i] = (unsigned char)(sin((l * (double)i) / 9.0) * s*118.0 + s*118.0);
-	}
-}
-
-static void initBlobs3D()
-{
-	int x,y,z;
-	int i = 0;
-
-	blob3D = (unsigned char*)malloc(BLOB_SIZE * BLOB_SIZE * BLOB_SIZE);
-
-	for (z=0; z<BLOB_SIZE; ++z) {
-		const float zc = (float)z - BLOB_SIZE/2 + 0.5f;
-		const float zci = zc / (BLOB_SIZE/2 - 0.5f);
-		for (y=0; y<BLOB_SIZE; ++y) {
-			const float yc = (float)y - BLOB_SIZE/2 + 0.5f;
-			const float yci = yc / (BLOB_SIZE/2 - 0.5f);
-			for (x=0; x<BLOB_SIZE; ++x) {
-				const float xc = (float)x - BLOB_SIZE/2 + 0.5f;
-				const float xci = xc / (BLOB_SIZE/2 - 0.5f);
-
-				unsigned int c = 0;
-				float r = 1.0f - (xci*xci + yci*yci + zci*zci);
-				CLAMP01(r)
-				if (r > 0.0f) c = (int)(64.0f/pow(r, 2.0f));
-				if (c > 64) c = 64;
-				blob3D[i++] = c;
-			}
-		}
 	}
 }
 
@@ -503,41 +418,55 @@ static void setGridPos(Vector3D* pos, int x, int y, int z)
 
 static int init(void)
 {
+	int i;
+
 	OptGrid3Dinit();
 	initBlobGfx();
 
-	polkaBuffer = (unsigned char*)malloc(FB_WIDTH * FB_HEIGHT);
-	polkaPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
 
-	setPalGradient(0,127, 0,0,0, 31,63,63, polkaPal);
-	setPalGradient(128,255, 31,63,31, 23,15,7, polkaPal);
+	tempPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
 
-	polkaPal32 = createColMap16to32(polkaPal);
+	for (i = 0; i < VOLS_NUM; ++i) {
+		polkaBuffer[i] = (unsigned char*)malloc(FB_WIDTH * FB_HEIGHT);
+
+		switch(i) {
+			case 0:
+				setPalGradient(0, 127, 0, 0, 0, 0, 31, 63, tempPal);
+				setPalGradient(128, 255, 0, 31, 63, 15, 47, 63, tempPal);
+			break;
+
+			case 1:
+				setPalGradient(0, 127, 0, 0, 0, 63, 31, 7, tempPal);
+				setPalGradient(128, 255, 63, 31, 7, 63, 47, 23, tempPal);
+			break;
+		}
+
+		polkaPal32[i] = createColMap16to32(tempPal);
+	}
+
+	free(tempPal);
 
 	initPlasma3D();
-	initBlobs3D();
 	initRadialEffects();
-
-	setGridPos(&gridPos[0], 0, 0, 1024);
-	setGridPos(&gridPos[1], 128, 0, 1024);
 	
 	return 0;
 }
 
 static void destroy(void)
 {
+	int i;
+
 	OptGrid3Dfree();
 	freeBlobGfx();
-
-	free(polkaBuffer);
-	free(polkaPal);
-	free(polkaPal32);
 
 	free(psin1);
 	free(psin2);
 	free(psin3);
 
-	free(blob3D);
+	for (i = 0; i < VOLS_NUM; ++i) {
+		free(polkaBuffer[i]);
+		free(polkaPal32[i]);
+	}
 }
 
 static void start(long trans_time)
@@ -548,34 +477,24 @@ static void start(long trans_time)
 static void draw(void)
 {
 	const int t = time_msec - startingTime;
-	const int tt = (t >> 13) & 3;
 
-	memset(polkaBuffer, 0, FB_WIDTH * FB_HEIGHT);
+	int i;
+	for (i = 0; i < VOLS_NUM; ++i) {
+		memset(polkaBuffer[i], 0, FB_WIDTH * FB_HEIGHT);
 
-	switch(tt) {
-		case 0:
+		if (i == 0) {
 			updateDotsVolumeBufferRadial(t);
-		break;
-
-		case 1:
+		} else {
 			updateDotsVolumeBufferRadialRays(t);
-		break;
+			/* updateDotsVolumeBufferPlasma(t); */
+		}
+		setGridPos(&gridPos[i], sin((3550*i + (i+1)*t) / 2277.0f) * 64, sin((4950 * i + (2-i)*t) / 1567.0f) * 48, 1024);
 
-		case 2:
-			updateDotsVolumeBufferPlasma(t);
-		break;
-
-		case 3:
-			//updateDotsVolumeBufferRandomWalk(t);
-		break;
-
-		default:
-		break;
+		OptGrid3Drun(i, polkaBuffer[i], t);
 	}
 
-	OptGrid3Drun(polkaBuffer, t);
-
-	buffer8bppToVram(polkaBuffer, polkaPal32);
+	buffer8bppToVram(polkaBuffer[0], polkaPal32[0]);
+	buffer8bppORwithVram(polkaBuffer[1], polkaPal32[1]);
 
 	swap_buffers(0);
 }

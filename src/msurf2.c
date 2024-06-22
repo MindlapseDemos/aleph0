@@ -1,11 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "cgmath/cgmath.h"
 #include "msurf2.h"
 #include "mcubes.h"
 
 #define NORMALIZE_GRAD
 #undef NORMALIZE_NORMAL
+
+#define CELL_FRAME_BITS		0x00ff
+#define CELL_CODE_BITS		0xff00
+
+int dbg_visited;
 
 int msurf_init(struct msurf_volume *vol)
 {
@@ -61,7 +67,7 @@ static const int celloffs[][3] = {
 	{0, 0, 1}, {1, 0, 1}, {1, 1, 1}, {0, 1, 1}
 };
 
-void msurf_begin(struct msurf_volume *vol)
+int msurf_begin(struct msurf_volume *vol)
 {
 	int i, x, y, z, vx, vy, vz;
 	struct msurf_cell *cell;
@@ -81,33 +87,40 @@ void msurf_begin(struct msurf_volume *vol)
 
 		if(!(vol->voxels = calloc(vol->num_store, sizeof *vol->voxels))) {
 			fprintf(stderr, "failed to allocate voxels\n");
-			abort();
+			return -1;
 		}
 		if(!(vol->cells = malloc(vol->num_store * sizeof *vol->cells))) {
 			fprintf(stderr, "failed to allocate volume cells\n");
-			abort();
+			free(vol->voxels);
+			return -1;
 		}
 
 		cell = vol->cells;
 		for(z=0; z<vol->zres; z++) {
-			for(y=0; y<vol->yres; y++) {
-				for(x=0; x<vol->xres; x++) {
-					cell->vol = vol;
-					cell->x = x;
-					cell->y = y;
-					cell->z = z;
-					for(i=0; i<8; i++) {
-						vx = x + celloffs[i][0];
-						vy = y + celloffs[i][1];
-						vz = z + celloffs[i][2];
-						cell->vox[i] = vol->voxels + msurf_addr(vol, vx, vy, vz);
+			for(y=0; y<vol->ystore; y++) {
+				for(x=0; x<vol->xstore; x++) {
+					/* vol==0 for padding cells not part of the volume */
+					if(x >= vol->xres || y >= vol->yres) {
+						memset(cell, 0, sizeof *cell);
+						cell->x = x;
+						cell->y = y;
+						cell->z = z;
+					} else {
+						cell->vol = vol;
+						cell->x = x;
+						cell->y = y;
+						cell->z = z;
+						for(i=0; i<8; i++) {
+							vx = x + celloffs[i][0];
+							vy = y + celloffs[i][1];
+							vz = z + celloffs[i][2];
+							cell->vox[i] = vol->voxels + msurf_addr(vol, vx, vy, vz);
+						}
+						cell->flags = 0;
 					}
-					cell->flags = 0;
 					cell++;
 				}
-				cell += vol->xstore - vol->xres;
 			}
-			cell += vol->ystore - vol->yres;
 		}
 	}
 
@@ -134,6 +147,8 @@ void msurf_begin(struct msurf_volume *vol)
 	}
 
 	vol->cur++;
+	dbg_visited = 0;
+	return 0;
 }
 
 static void calc_grad(struct msurf_volume *vol, int x, int y, int z, cgm_vec3 *grad)
@@ -159,38 +174,56 @@ static void calc_grad(struct msurf_volume *vol, int x, int y, int z, cgm_vec3 *g
 #endif
 }
 
-void msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell)
+int msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell)
 {
 	int i, j, x, y, z, p0, p1;
-	float t;
-	unsigned int code;
+	float t, lensq;
+	unsigned int code, frmid;
 	struct g3d_vertex vert[12];
-	struct msurf_voxel *vox0, *vox1;
-	cgm_vec3 norm;
+	struct msurf_voxel *vox, *vox0, *vox1;
+	cgm_vec3 dir, norm;
 
 	static const int pidx[12][2] = {
 		{0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6},
 		{6, 7},	{7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7}
 	};
 
-	/* calulcate the marching cubes bit code */
+	frmid = vol->cur & 0xff;
+
+	/* update the metaball field if necessary */
+	for(i=0; i<8; i++) {
+		vox = cell->vox[i];
+		if(((vox->flags & 0xff00) >> 8) != frmid) {
+			vox->val = 0;
+			for(j=0; j<vol->num_mballs; j++) {
+				dir = vol->mballs[j].pos;
+				cgm_vsub(&dir, &vox->pos);
+				lensq = cgm_vlength_sq(&dir);
+				vox->val += lensq == 0.0f ? 1024.0f : vol->mballs[j].energy / lensq;
+			}
+			vox->flags = (vox->flags & ~0xff00) | (frmid << 8);
+		}
+	}
+
+	/* calculcate the marching cubes bit code */
 	code = 0;
 	for(i=0; i<8; i++) {
 		if(cell->vox[i]->val > vol->isoval) {
 			code |= 1 << i;
 		}
 	}
+	cell->flags = (code << 8) | vol->cur;
 
-	if((code | ~code) == 0) return;
+	if((code | ~code) == 0) return 0;
 
 	/* for each of the voxels, make sure we have valid gradients */
 	for(i=0; i<8; i++) {
-		if((cell->vox[i]->flags & 0xf) != vol->cur) {
+		if((cell->vox[i]->flags & 0xff) != frmid) {
 			x = cell->x + celloffs[i][0];
 			y = cell->y + celloffs[i][1];
 			z = cell->z + celloffs[i][2];
 			calc_grad(vol, x, y, z, &cell->vox[i]->grad);
-			cell->vox[i]->flags = (cell->vox[i]->flags & ~0xf) | (vol->cur & 0xf);
+			cell->vox[i]->flags = (cell->vox[i]->flags & ~0xff) | frmid;
 		}
 	}
 
@@ -234,20 +267,93 @@ void msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell)
 			vol->varr[vol->num_verts++] = vert[idx];
 		}
 	}
+
+	return 1;
 }
 
-#if 0
-void msurf_polygonize(struct msurf_volume *vol)
+#define ADDOPEN(c) \
+	do { \
+		struct msurf_cell *cp = (c); \
+		if(cp->vol && ((cp->flags & 0xff) != frmid)) { \
+			cp->next = openlist; \
+			openlist = cp; \
+		} \
+	} while(0)
+
+/* start from the center of each metaball and go outwards until we hit the
+ * isosurface, then follow it
+ */
+void msurf_genmesh(struct msurf_volume *vol)
 {
-	int i, cx, cy, cz;
-	struct msurf_cell *cell;
+	int i, cx, cy, cz, foundsurf;
+	struct msurf_cell *cell, *cellptr, *openlist = 0;
+	unsigned int frmid = vol->cur & 0xff;
 
 	for(i=0; i<vol->num_mballs; i++) {
-		/* start from the center of each metaball and go outwards until we hit
-		 * the isosurface, then follow it
-		 */
 		msurf_pos_to_cell(vol, vol->mballs[i].pos, &cx, &cy, &cz);
 		cell = vol->cells + msurf_addr(vol, cx, cy, cz);
+		ADDOPEN(cell);
+
+		foundsurf = 0;
+		while(openlist) {
+			cell = openlist;
+			openlist = openlist->next;
+
+			dbg_visited++;
+
+			/* examine the current cell, if it's on the surface expand the search to
+			 * its neighbors, otherwise keep going towards the same direction if we
+			 * haven't hit the surface, ignore it if we have.
+			 */
+			if(msurf_proc_cell(vol, cell)) {
+				/* this is part of the surface, add all neighbors */
+				foundsurf = 1;
+				ADDOPEN(cell - 1);
+				ADDOPEN(cell + 1);
+				ADDOPEN(cell - vol->xstore - 1);
+				ADDOPEN(cell - vol->xstore);
+				ADDOPEN(cell - vol->xstore + 1);
+				ADDOPEN(cell + vol->xstore - 1);
+				ADDOPEN(cell + vol->xstore);
+				ADDOPEN(cell + vol->xstore + 1);
+				if(cell->z > 0) {
+					cellptr = cell - vol->xystore;
+					ADDOPEN(cellptr - 1);
+					ADDOPEN(cellptr);
+					ADDOPEN(cellptr + 1);
+					ADDOPEN(cellptr - vol->xstore - 1);
+					ADDOPEN(cellptr - vol->xstore);
+					ADDOPEN(cellptr - vol->xstore + 1);
+					ADDOPEN(cellptr + vol->xstore - 1);
+					ADDOPEN(cellptr + vol->xstore);
+					ADDOPEN(cellptr + vol->xstore + 1);
+				}
+				if(cell->z < vol->zres - 1) {
+					cellptr = cell + vol->xystore;
+					ADDOPEN(cellptr - 1);
+					ADDOPEN(cellptr);
+					ADDOPEN(cellptr + 1);
+					ADDOPEN(cellptr - vol->xstore - 1);
+					ADDOPEN(cellptr - vol->xstore);
+					ADDOPEN(cellptr - vol->xstore + 1);
+					ADDOPEN(cellptr + vol->xstore - 1);
+					ADDOPEN(cellptr + vol->xstore);
+					ADDOPEN(cellptr + vol->xstore + 1);
+				}
+			} else {
+				/* not part of the surface, if we haven't found the surface yet
+				 * expand along the Z axis, otherwise ignore
+				 */
+				if(!foundsurf) {
+					if(cell->z > 0) {
+						ADDOPEN(cell - vol->xystore);
+					}
+					if(cell->z < vol->zres - 1) {
+						ADDOPEN(cell + vol->xystore);
+					}
+				}
+			}
+		}
 	}
+
 }
-#endif

@@ -25,6 +25,7 @@ struct msurf_cell {
 	unsigned int x, y, z;
 	struct msurf_voxel *vox[8];
 	unsigned int flags;
+	struct msurf_cell *next;
 };
 
 struct metaball {
@@ -57,7 +58,7 @@ struct msurf_volume {
 };
 
 #define msurf_addr(ms, x, y, z) \
-	(((z) << ((ms)->xshift + (ms)->yshift)) + ((y) << (ms)->xshift) + (x))
+	(((z) << (ms)->xyshift) + ((y) << (ms)->xshift) + (x))
 
 
 int msurf_init(struct msurf_volume *vol);
@@ -67,10 +68,9 @@ void msurf_resolution(struct msurf_volume *vol, int x, int y, int z);
 void msurf_size(struct msurf_volume *vol, float x, float y, float z);
 int msurf_metaballs(struct msurf_volume *vol, int count);
 
-void msurf_validate(struct msurf_volume *vol);	/* apply all pending changes */
-
-void msurf_begin(struct msurf_volume *vol);
-void msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell);
+int msurf_begin(struct msurf_volume *vol);
+int msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell);
+void msurf_genmesh(struct msurf_volume *vol);
 
 static INLINE void msurf_pos_to_cell(struct msurf_volume *vol, cgm_vec3 pos,
 		int *cx, int *cy, int *cz)

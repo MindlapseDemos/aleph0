@@ -307,14 +307,18 @@ void msurf_genmesh(struct msurf_volume *vol)
 
 			dbg_visited++;
 
-			/* each bit is 1 if it has cells to the corresponding side */
+			/* each bit is 1 if it has cells to the corresponding side, then in
+			 * ADDOPEN we test (dirvalid & dir) == dir, to make sure all required
+			 * direction bits are set before attempting to add the cell.
+			 * Bits [0,5] are [... | +Z +Y +X | -Z -Y -X] <- bit 0 is -X.
+			 */
 			dirvalid = 0;
-			if(cell->x > 0) dirvalid |= 001;
-			if(cell->y > 0) dirvalid |= 002;
-			if(cell->z > 0) dirvalid |= 004;
-			if(cell->x < vol->xres - 2) dirvalid |= 010;
-			if(cell->y < vol->yres - 2) dirvalid |= 020;
-			if(cell->z < vol->zres - 2) dirvalid |= 040;
+			if(cell->x > 0) dirvalid |= 001;				/* X-1 is valid */
+			if(cell->y > 0) dirvalid |= 002;				/* Y-1 is valid */
+			if(cell->z > 0) dirvalid |= 004;				/* Z-1 is valid */
+			if(cell->x < vol->xres - 2) dirvalid |= 010;	/* X+1 is valid */
+			if(cell->y < vol->yres - 2) dirvalid |= 020;	/* Y+1 is valid */
+			if(cell->z < vol->zres - 2) dirvalid |= 040;	/* Z+1 is valid */
 
 			/* examine the current cell, if it's on the surface expand the search to
 			 * its neighbors, otherwise keep going towards the same direction if we

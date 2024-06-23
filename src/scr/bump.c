@@ -282,13 +282,24 @@ static void renderBigLights()
 		dst = lightmap + (y0 + LMAP_OFFSET_Y) * LMAP_WIDTH + x0 + LMAP_OFFSET_X;
 		src = bigLight + yl * BIG_LIGHT_WIDTH + xl;
 
-		for (y = y0; y < y1; y++) {
-			for (x = x0; x < x1; x++) {
-				unsigned short c = *src++ << shiftCol[i];
-				*dst++ |= c;
+		if (i==0) {
+			for (y = y0; y < y1; y++) {
+				for (x = x0; x < x1; x++) {
+					*dst++ = *src++;
+				}
+				dst += LMAP_WIDTH - dx;
+				src += BIG_LIGHT_WIDTH - dx;
 			}
-			dst += LMAP_WIDTH - dx;
-			src += BIG_LIGHT_WIDTH - dx;
+		} else {
+			const int shCol = shiftCol[i];
+			for (y = y0; y < y1; y++) {
+				for (x = x0; x < x1; x++) {
+					unsigned short c = *src++ << shCol;
+					*dst++ |= c;
+				}
+				dst += LMAP_WIDTH - dx;
+				src += BIG_LIGHT_WIDTH - dx;
+			}
 		}
 	}
 }

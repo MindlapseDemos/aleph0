@@ -8,6 +8,7 @@
 #include "demo.h"
 #include "screen.h"
 #include "imago2.h"
+#include "opt_rend.h"
 
 static int init(void);
 static void destroy(void);
@@ -27,20 +28,28 @@ struct point {
 	int x, y;
 };
 
+typedef struct Diff {
+	short x, y;
+} Diff;
+
 #define NUM_BIG_LIGHTS 3
 #define BIG_LIGHT_WIDTH 256
 #define BIG_LIGHT_HEIGHT BIG_LIGHT_WIDTH
 
 #define NUM_PARTICLES 64
-#define PARTICLE_LIGHT_WIDTH 32
-#define PARTICLE_LIGHT_HEIGHT 32
+#define PARTICLE_LIGHT_WIDTH 16
+#define PARTICLE_LIGHT_HEIGHT 16
+
+#define HMAP_WIDTH 256
+#define HMAP_HEIGHT 256
 
 
 static unsigned long startingTime;
 
 static unsigned char *heightmap;
 static unsigned short *lightmap;
-static int *bumpOffset;
+static Diff *bumpOffset;
+static Diff *bumpOffsetFinal;
 
 static unsigned short *bigLight[NUM_BIG_LIGHTS];
 static struct point bigLightPoint[NUM_BIG_LIGHTS];
@@ -52,26 +61,6 @@ static struct point particlePoint[NUM_PARTICLES];
 struct screen *bump_screen(void)
 {
 	return &scr;
-}
-
-static void generateHeightmapTest()
-{
-	const int numBlurs = 2;
-	const int fb_size = FB_WIDTH * FB_HEIGHT;
-
-	int i,j;
-
-	/* Create random junk */
-	for (i = 0; i < fb_size; i++) {
-		heightmap[i] = rand() & 255;
-	}
-
-	/* Blur to smooth */
-	for (j = 0; j < numBlurs; j++) {
-		for (i = 0; i < fb_size; i++) {
-			heightmap[i] = (heightmap[abs((i - 1) % fb_size)] + heightmap[abs((i + 1) % fb_size)] + heightmap[abs((i - FB_WIDTH) % fb_size)] + heightmap[abs((i + FB_WIDTH) % fb_size)]) >> 2;
-		}
-	}
 }
 
 static int loadHeightMapTest()
@@ -93,8 +82,8 @@ static int loadHeightMapTest()
 	imgHeight = bumpPic.width;
 
 	i = 0;
-	for (y = 0; y < FB_HEIGHT; ++y) {
-		for (x = 0; x < FB_WIDTH; ++x) {
+	for (y = 0; y < HMAP_HEIGHT; ++y) {
+		for (x = 0; x < HMAP_WIDTH; ++x) {
 			uint32_t c32 = src[((y & (imgHeight - 1)) * imgWidth) + (x & (imgWidth - 1))];
 			int a = (c32 >> 24) & 255;
 			int r = (c32 >> 16) & 255;
@@ -112,6 +101,7 @@ static int init(void)
 {
 	int i, j, x, y, c, r, g, b;
 
+	const int hm_size = HMAP_WIDTH * HMAP_HEIGHT;
 	const int fb_size = FB_WIDTH * FB_HEIGHT;
 
 	const int lightRadius = BIG_LIGHT_WIDTH / 2;
@@ -127,9 +117,10 @@ static int init(void)
 							  0,    0.75, 0,
 							  0,    0,    0.75 };
 
-	heightmap = malloc(sizeof(*heightmap) * fb_size);
+	heightmap = malloc(sizeof(*heightmap) * hm_size);
 	lightmap = malloc(sizeof(*lightmap) * fb_size);
-	bumpOffset = malloc(sizeof(*bumpOffset) * fb_size);
+	bumpOffset = malloc(sizeof(*bumpOffset) * hm_size);
+	bumpOffsetFinal = malloc(sizeof(*bumpOffset) * hm_size);
 
 	for (i = 0; i < NUM_BIG_LIGHTS; i++)
 		bigLight[i] = malloc(sizeof(*bigLight[i]) * bigLightSize);
@@ -137,32 +128,33 @@ static int init(void)
 	particleLight = malloc(sizeof(*particleLight) * particleLightSize);
 
 	memset(lightmap, 0, sizeof(*lightmap) * fb_size);
-	memset(bumpOffset, 0, sizeof(*bumpOffset) * fb_size);
+	memset(bumpOffset, 0, sizeof(*bumpOffset) * hm_size);
 	memset(particlePoint, 0, sizeof(*particlePoint) * NUM_PARTICLES);
 
-	/* generateHeightmapTest(); */
 	if (loadHeightMapTest() == -1) return - 1;
 
 
 	/* Inclination precalculation */
 	i = 0;
-	for (y = 0; y < FB_HEIGHT; y++) {
-		for (x = 0; x < FB_WIDTH; x++) {
+	for (y = 0; y < HMAP_HEIGHT; y++) {
+		const int yp0 = y * HMAP_WIDTH;
+		const int yp1 = ((y+1) & (HMAP_HEIGHT-1)) * HMAP_WIDTH;
+		for (x = 0; x < HMAP_WIDTH; x++) {
+			const int ii = yp0 + x;
+			const int iRight = yp0 + ((x + 1) & (HMAP_WIDTH - 1));
+			const int iDown = yp1 + x;
 			const float offsetPower = 0.75f;
-			int dx, dy, xp, yp;
+			int dx, dy;
 
-			dx = i < fb_size - 1 ? (int)((heightmap[i] - heightmap[i + 1]) * offsetPower) : 0;
-			dy = i < fb_size - FB_WIDTH ? (int)((heightmap[i] - heightmap[i + FB_WIDTH]) * offsetPower) : 0;
+			dx = (int)((heightmap[ii] - heightmap[iRight]) * offsetPower);
+			dy = (int)((heightmap[ii] - heightmap[iDown]) * offsetPower);
 
-			xp = x + dx;
-			if (xp < 0) xp = 0;
-			if (xp > FB_WIDTH - 1) xp = FB_WIDTH - 1;
+			CLAMP(dx, -32768, 32767);
+			CLAMP(dy, -32768, 32767);
 
-			yp = y + dy;
-			if (yp < 0) yp = 0;
-			if (yp > FB_HEIGHT - 1) yp = FB_HEIGHT - 1;
-
-			bumpOffset[i++] = yp * FB_WIDTH + xp;
+			bumpOffset[i].x = dx;
+			bumpOffset[i].y = dy;
+			++i;
 		}
 	}
 
@@ -214,32 +206,6 @@ static void start(long trans_time)
 	startingTime = time_msec;
 }
 
-static void eraseArea(struct point *p, int width, int height)
-{
-	int y, dx;
-	unsigned short *dst;
-
-	int x0 = p->x;
-	int y0 = p->y;
-	int x1 = p->x + width;
-	int y1 = p->y + height;
-
-	if (x0 < 0) x0 = 0;
-	if (y0 < 0) y0 = 0;
-	if (x1 > FB_WIDTH) x1 = FB_WIDTH;
-	if (y1 > FB_HEIGHT) y1 = FB_HEIGHT;
-
-	dx = x1 - x0;
-
-	dst = lightmap + y0 * FB_WIDTH + x0;
-
-	for (y = y0; y < y1; y++) {
-		memset(dst, 0, 2*dx);
-		dst += FB_WIDTH;
-	}
-}
-
-
 static void renderLight(struct point *p, int width, int height, unsigned short *light)
 {
 	int x, y, dx;
@@ -277,14 +243,6 @@ static void renderLight(struct point *p, int width, int height, unsigned short *
 		}
 		dst += FB_WIDTH - dx;
 		src += width - dx;
-	}
-}
-
-static void eraseLights()
-{
-	int i;
-	for (i = 0; i < NUM_BIG_LIGHTS; i++) {
-		eraseArea(&bigLightPoint[i], BIG_LIGHT_WIDTH, BIG_LIGHT_HEIGHT);
 	}
 }
 
@@ -326,10 +284,17 @@ static void animateLights()
 
 static void renderBump(unsigned short *vram)
 {
-	int i;
-	for (i = 0; i < FB_WIDTH * FB_HEIGHT; i++) {
-		unsigned short c = lightmap[bumpOffset[i]];
-		*vram++ = c;
+	int x,y,i=0;
+	for (y = 0; y < FB_HEIGHT; ++y) {
+		const int yp = (y & (HMAP_HEIGHT - 1)) * HMAP_WIDTH;
+		for (x = 0; x < FB_WIDTH; ++x) {
+			Diff* d = &bumpOffsetFinal[yp + (x & (HMAP_WIDTH - 1))];
+			int ix = x + d->x;
+			int iy = y + d->y;
+			CLAMP(ix, 0, FB_WIDTH - 1);
+			CLAMP(iy, 0, FB_HEIGHT - 1);
+			vram[i++] = lightmap[iy * FB_WIDTH + ix];
+		}
 	}
 }
 
@@ -338,7 +303,7 @@ static void animateParticles()
 	int i;
 	struct point center;
 	float dt = (float)(time_msec - startingTime) / 2000.0f;
-	float tt = sin(dt);
+	float tt = 0.25f * sin(dt) + 0.75f;
 
 	center.x = (FB_WIDTH >> 1) - (PARTICLE_LIGHT_WIDTH / 2);
 	center.y = (FB_HEIGHT >> 1) - (PARTICLE_LIGHT_HEIGHT / 2);
@@ -349,8 +314,21 @@ static void animateParticles()
 	}
 }
 
+static void moveBumpOffset(int t)
+{
+	const int tt = t >> 5;
+	int y;
+	for (y = 0; y < HMAP_HEIGHT; ++y) {
+		const int yp = (y + tt) & (HMAP_HEIGHT - 1);
+
+		memcpy(&bumpOffsetFinal[y * HMAP_WIDTH], &bumpOffset[yp * HMAP_WIDTH], HMAP_WIDTH * sizeof(*bumpOffsetFinal));
+	}
+}
+
 static void draw(void)
 {
+	const int t = time_msec - startingTime;
+
 	memset(lightmap, 0, FB_WIDTH * FB_HEIGHT * sizeof(*lightmap));
 
 	animateLights();
@@ -358,6 +336,8 @@ static void draw(void)
 
 	/* animateParticles();
 	renderParticles(); */
+
+	moveBumpOffset(t);
 
 	renderBump((unsigned short*)fb_pixels);
 

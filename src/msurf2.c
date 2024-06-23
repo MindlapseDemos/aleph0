@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include "cgmath/cgmath.h"
 #include "msurf2.h"
 #include "mcubes.h"
@@ -12,6 +13,7 @@
 #define CELL_CODE_BITS		0xff00
 
 int dbg_visited;
+static unsigned int frmid;
 
 int msurf_init(struct msurf_volume *vol)
 {
@@ -100,7 +102,7 @@ int msurf_begin(struct msurf_volume *vol)
 			for(y=0; y<vol->ystore; y++) {
 				for(x=0; x<vol->xstore; x++) {
 					/* vol==0 for padding cells not part of the volume */
-					if(x >= vol->xres || y >= vol->yres) {
+					if(x >= vol->xres - 1 || y >= vol->yres - 1 || z >= vol->zres - 1) {
 						memset(cell, 0, sizeof *cell);
 						cell->x = x;
 						cell->y = y;
@@ -115,6 +117,8 @@ int msurf_begin(struct msurf_volume *vol)
 							vy = y + celloffs[i][1];
 							vz = z + celloffs[i][2];
 							cell->vox[i] = vol->voxels + msurf_addr(vol, vx, vy, vz);
+							assert(cell->vox[i] >= vol->voxels);
+							assert(cell->vox[i] < vol->voxels + vol->num_store);
 						}
 						cell->flags = 0;
 					}
@@ -146,7 +150,9 @@ int msurf_begin(struct msurf_volume *vol)
 		vol->flags |= MSURF_VALID | MSURF_POSVALID;
 	}
 
+	vol->num_verts = 0;
 	vol->cur++;
+	frmid = vol->cur & 0xff;
 	dbg_visited = 0;
 	return 0;
 }
@@ -178,7 +184,7 @@ int msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell)
 {
 	int i, j, x, y, z, p0, p1;
 	float t, lensq;
-	unsigned int code, frmid;
+	unsigned int code;
 	struct g3d_vertex vert[12];
 	struct msurf_voxel *vox, *vox0, *vox1;
 	cgm_vec3 dir, norm;
@@ -188,12 +194,10 @@ int msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell)
 		{6, 7},	{7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7}
 	};
 
-	frmid = vol->cur & 0xff;
-
 	/* update the metaball field if necessary */
 	for(i=0; i<8; i++) {
 		vox = cell->vox[i];
-		if(((vox->flags & 0xff00) >> 8) != frmid) {
+		if((vox->flags & 0xff00) != (frmid << 8)) {
 			vox->val = 0;
 			for(j=0; j<vol->num_mballs; j++) {
 				dir = vol->mballs[j].pos;
@@ -212,7 +216,7 @@ int msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell)
 			code |= 1 << i;
 		}
 	}
-	cell->flags = (code << 8) | vol->cur;
+	cell->flags = (code << 8) | frmid;
 
 	if((code | ~code) == 0) return 0;
 
@@ -242,6 +246,7 @@ int msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell)
 			vert[i].nx = vox0->grad.x + (vox1->grad.x - vox0->grad.x) * t;
 			vert[i].ny = vox0->grad.y + (vox1->grad.y - vox0->grad.y) * t;
 			vert[i].nz = vox0->grad.z + (vox1->grad.z - vox0->grad.z) * t;
+			vert[i].r = vert[i].g = vert[i].b = vert[i].a = 0xff;
 #ifdef NORMALIZE_NORMAL
 			fast_normalize(&vert[i].nx);
 #endif
@@ -271,12 +276,13 @@ int msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell)
 	return 1;
 }
 
-#define ADDOPEN(c) \
+#define ADDOPEN(dir, c) \
 	do { \
 		struct msurf_cell *cp = (c); \
-		if(cp->vol && ((cp->flags & 0xff) != frmid)) { \
+		if((dirvalid & dir) == dir && ((cp->flags & 0xff) != frmid)) { \
 			cp->next = openlist; \
 			openlist = cp; \
+			cp->flags = (cp->flags & ~0xff) | frmid; \
 		} \
 	} while(0)
 
@@ -286,13 +292,13 @@ int msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell)
 void msurf_genmesh(struct msurf_volume *vol)
 {
 	int i, cx, cy, cz, foundsurf;
+	unsigned int dirvalid;
 	struct msurf_cell *cell, *cellptr, *openlist = 0;
-	unsigned int frmid = vol->cur & 0xff;
 
 	for(i=0; i<vol->num_mballs; i++) {
 		msurf_pos_to_cell(vol, vol->mballs[i].pos, &cx, &cy, &cz);
 		cell = vol->cells + msurf_addr(vol, cx, cy, cz);
-		ADDOPEN(cell);
+		ADDOPEN(0, cell);
 
 		foundsurf = 0;
 		while(openlist) {
@@ -301,6 +307,15 @@ void msurf_genmesh(struct msurf_volume *vol)
 
 			dbg_visited++;
 
+			/* each bit is 1 if it has cells to the corresponding side */
+			dirvalid = 0;
+			if(cell->x > 0) dirvalid |= 001;
+			if(cell->y > 0) dirvalid |= 002;
+			if(cell->z > 0) dirvalid |= 004;
+			if(cell->x < vol->xres - 2) dirvalid |= 010;
+			if(cell->y < vol->yres - 2) dirvalid |= 020;
+			if(cell->z < vol->zres - 2) dirvalid |= 040;
+
 			/* examine the current cell, if it's on the surface expand the search to
 			 * its neighbors, otherwise keep going towards the same direction if we
 			 * haven't hit the surface, ignore it if we have.
@@ -308,49 +323,41 @@ void msurf_genmesh(struct msurf_volume *vol)
 			if(msurf_proc_cell(vol, cell)) {
 				/* this is part of the surface, add all neighbors */
 				foundsurf = 1;
-				ADDOPEN(cell - 1);
-				ADDOPEN(cell + 1);
-				ADDOPEN(cell - vol->xstore - 1);
-				ADDOPEN(cell - vol->xstore);
-				ADDOPEN(cell - vol->xstore + 1);
-				ADDOPEN(cell + vol->xstore - 1);
-				ADDOPEN(cell + vol->xstore);
-				ADDOPEN(cell + vol->xstore + 1);
-				if(cell->z > 0) {
-					cellptr = cell - vol->xystore;
-					ADDOPEN(cellptr - 1);
-					ADDOPEN(cellptr);
-					ADDOPEN(cellptr + 1);
-					ADDOPEN(cellptr - vol->xstore - 1);
-					ADDOPEN(cellptr - vol->xstore);
-					ADDOPEN(cellptr - vol->xstore + 1);
-					ADDOPEN(cellptr + vol->xstore - 1);
-					ADDOPEN(cellptr + vol->xstore);
-					ADDOPEN(cellptr + vol->xstore + 1);
-				}
-				if(cell->z < vol->zres - 1) {
-					cellptr = cell + vol->xystore;
-					ADDOPEN(cellptr - 1);
-					ADDOPEN(cellptr);
-					ADDOPEN(cellptr + 1);
-					ADDOPEN(cellptr - vol->xstore - 1);
-					ADDOPEN(cellptr - vol->xstore);
-					ADDOPEN(cellptr - vol->xstore + 1);
-					ADDOPEN(cellptr + vol->xstore - 1);
-					ADDOPEN(cellptr + vol->xstore);
-					ADDOPEN(cellptr + vol->xstore + 1);
-				}
+				ADDOPEN(001, cell - 1);
+				ADDOPEN(010, cell + 1);
+				ADDOPEN(003, cell - vol->xstore - 1);
+				ADDOPEN(002, cell - vol->xstore);
+				ADDOPEN(012, cell - vol->xstore + 1);
+				ADDOPEN(021, cell + vol->xstore - 1);
+				ADDOPEN(020, cell + vol->xstore);
+				ADDOPEN(030, cell + vol->xstore + 1);
+				cellptr = cell - vol->xystore;
+				ADDOPEN(005, cellptr - 1);
+				ADDOPEN(004, cellptr);
+				ADDOPEN(014, cellptr + 1);
+				ADDOPEN(007, cellptr - vol->xstore - 1);
+				ADDOPEN(006, cellptr - vol->xstore);
+				ADDOPEN(016, cellptr - vol->xstore + 1);
+				ADDOPEN(025, cellptr + vol->xstore - 1);
+				ADDOPEN(024, cellptr + vol->xstore);
+				ADDOPEN(034, cellptr + vol->xstore + 1);
+				cellptr = cell + vol->xystore;
+				ADDOPEN(041, cellptr - 1);
+				ADDOPEN(040, cellptr);
+				ADDOPEN(050, cellptr + 1);
+				ADDOPEN(043, cellptr - vol->xstore - 1);
+				ADDOPEN(042, cellptr - vol->xstore);
+				ADDOPEN(052, cellptr - vol->xstore + 1);
+				ADDOPEN(061, cellptr + vol->xstore - 1);
+				ADDOPEN(060, cellptr + vol->xstore);
+				ADDOPEN(070, cellptr + vol->xstore + 1);
 			} else {
 				/* not part of the surface, if we haven't found the surface yet
 				 * expand along the Z axis, otherwise ignore
 				 */
 				if(!foundsurf) {
-					if(cell->z > 0) {
-						ADDOPEN(cell - vol->xystore);
-					}
-					if(cell->z < vol->zres - 1) {
-						ADDOPEN(cell + vol->xystore);
-					}
+					ADDOPEN(004, cell - vol->xystore);
+					ADDOPEN(040, cell + vol->xystore);
 				}
 			}
 		}

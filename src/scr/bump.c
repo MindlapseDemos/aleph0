@@ -44,7 +44,7 @@ typedef struct Diff {
 #define HMAP_HEIGHT 256
 
 #define LMAP_WIDTH 512
-#define LMAP_HEIGHT 512
+#define LMAP_HEIGHT 240
 #define LMAP_OFFSET_X ((LMAP_WIDTH - FB_WIDTH) / 2)
 #define LMAP_OFFSET_Y ((LMAP_HEIGHT - FB_HEIGHT) / 2)
 
@@ -56,7 +56,7 @@ static unsigned short *lightmap;
 static Diff *bumpOffset;
 static Diff *bumpOffsetFinal;
 
-static unsigned short *bigLight[NUM_BIG_LIGHTS];
+static unsigned char *bigLight;
 static struct point bigLightPoint[NUM_BIG_LIGHTS];
 
 static unsigned short *particleLight;
@@ -104,7 +104,7 @@ static int loadHeightMapTest()
 
 static int init(void)
 {
-	int i, j, x, y, c, r, g, b;
+	int i, x, y, c;
 
 	const int hm_size = HMAP_WIDTH * HMAP_HEIGHT;
 	const int lm_size = LMAP_WIDTH * LMAP_HEIGHT;
@@ -115,20 +115,12 @@ static int init(void)
 	const int bigLightSize = BIG_LIGHT_WIDTH * BIG_LIGHT_HEIGHT;
 	const int particleLightSize = PARTICLE_LIGHT_WIDTH * PARTICLE_LIGHT_HEIGHT;
 
-	/* Just some parameters to temporary test the colors of 3 lights
-	 * if every light uses it's own channel bits, it's better
-	 */
-	const float rgbMul[9] = { 0.75, 0,    0,
-							  0,    0.75, 0,
-							  0,    0,    0.75 };
-
 	heightmap = malloc(sizeof(*heightmap) * hm_size);
 	lightmap = malloc(sizeof(*lightmap) * lm_size);
 	bumpOffset = malloc(sizeof(*bumpOffset) * hm_size);
 	bumpOffsetFinal = malloc(sizeof(*bumpOffset) * hm_size);
 
-	for (i = 0; i < NUM_BIG_LIGHTS; i++)
-		bigLight[i] = malloc(sizeof(*bigLight[i]) * bigLightSize);
+	bigLight = malloc(sizeof(*bigLight) * bigLightSize);
 
 	particleLight = malloc(sizeof(*particleLight) * particleLightSize);
 
@@ -173,15 +165,7 @@ static int init(void)
 			float invDist = ((float)lightRadius - (float)sqrt(xc * xc + yc * yc)) / (float)lightRadius;
 			if (invDist < 0.0f) invDist = 0.0f;
 
-			c = (int)(invDist * 63);
-			r = c >> 1;
-			g = c;
-			b = c >> 1;
-
-			for (j = 0; j < NUM_BIG_LIGHTS; j++) {
-				bigLight[j][i] = ((int)(r * rgbMul[j * 3]) << 11) | ((int)(g * rgbMul[j * 3 + 1]) << 5) | (int)(b * rgbMul[j * 3 + 2]);
-			}
-			i++;
+			bigLight[i++] = (int)(invDist * 31);
 		}
 	}
 
@@ -211,7 +195,8 @@ static void start(long trans_time)
 	startingTime = time_msec;
 }
 
-static void renderLight(struct point *p, int width, int height, unsigned short *light)
+
+static void renderParticleLight(struct point *p, int width, int height, unsigned short *light)
 {
 	int x, y, dx;
 	unsigned short *src, *dst;
@@ -251,23 +236,64 @@ static void renderLight(struct point *p, int width, int height, unsigned short *
 	}
 }
 
-static void renderLights()
-{
-	int i;
-	for (i = 0; i < NUM_BIG_LIGHTS; i++) {
-		renderLight(&bigLightPoint[i], BIG_LIGHT_WIDTH, BIG_LIGHT_HEIGHT, bigLight[i]);
-	}
-}
-
 static void renderParticles()
 {
 	int i;
 	for (i = 0; i < NUM_PARTICLES; i++) {
-		renderLight(&particlePoint[i], PARTICLE_LIGHT_WIDTH, PARTICLE_LIGHT_HEIGHT, particleLight);
+		renderParticleLight(&particlePoint[i], PARTICLE_LIGHT_WIDTH, PARTICLE_LIGHT_HEIGHT, particleLight);
 	}
 }
 
-static void animateLights()
+static void renderBigLights()
+{
+	static int shiftCol[3] = { 0, 6, 11};
+
+	int i;
+	for (i = 0; i < NUM_BIG_LIGHTS; i++) {
+		int x, y, dx;
+		unsigned char* src;
+		unsigned short* dst;
+
+		struct point* p = &bigLightPoint[i];
+
+		int x0 = p->x;
+		int y0 = p->y;
+		int x1 = p->x + BIG_LIGHT_WIDTH;
+		int y1 = p->y + BIG_LIGHT_HEIGHT;
+
+		int xl = 0;
+		int yl = 0;
+
+		if (x0 < 0) {
+			xl = -x0;
+			x0 = 0;
+		}
+
+		if (y0 < 0) {
+			yl = -y0;
+			y0 = 0;
+		}
+
+		if (x1 > FB_WIDTH) x1 = FB_WIDTH;
+		if (y1 > FB_HEIGHT) y1 = FB_HEIGHT;
+
+		dx = x1 - x0;
+
+		dst = lightmap + (y0 + LMAP_OFFSET_Y) * LMAP_WIDTH + x0 + LMAP_OFFSET_X;
+		src = bigLight + yl * BIG_LIGHT_WIDTH + xl;
+
+		for (y = y0; y < y1; y++) {
+			for (x = x0; x < x1; x++) {
+				unsigned short c = *src++ << shiftCol[i];
+				*dst++ |= c;
+			}
+			dst += LMAP_WIDTH - dx;
+			src += BIG_LIGHT_WIDTH - dx;
+		}
+	}
+}
+
+static void animateBigLights()
 {
 	struct point center;
 	float dt = (float)(time_msec - startingTime) / 1000.0f;
@@ -300,7 +326,7 @@ static void renderBump(unsigned short *vram)
 			++bumpSrc;
 
 			//CLAMP(ix, 0, FB_WIDTH - 1);
-			//CLAMP(iy, 0, FB_HEIGHT - 1);
+			CLAMP(iy, 0, FB_HEIGHT - 1);
 			vram[i++] = lightSrc[iy * LMAP_WIDTH + ix];
 		}
 		bumpSrc -= HMAP_WIDTH;
@@ -310,7 +336,7 @@ static void renderBump(unsigned short *vram)
 			++bumpSrc;
 
 			//CLAMP(ix, 0, FB_WIDTH - 1);
-			//CLAMP(iy, 0, FB_HEIGHT - 1);
+			CLAMP(iy, 0, FB_HEIGHT - 1);
 			vram[i++] = lightSrc[iy * LMAP_WIDTH + ix];
 		}
 	}
@@ -358,8 +384,8 @@ static void draw(void)
 
 	clearLightMapVisibleArea();
 
-	animateLights();
-	renderLights();
+	animateBigLights();
+	renderBigLights();
 
 	/* animateParticles();
 	renderParticles(); */

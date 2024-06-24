@@ -113,7 +113,7 @@ static void start(long trans_time)
 	g3d_load_identity();
 	g3d_perspective(50.0, 1.3333333, 0.5, 100.0);
 
-	/*g3d_enable(G3D_DEPTH_TEST);*/
+	g3d_enable(G3D_DEPTH_TEST);
 	g3d_enable(G3D_CULL_FACE);
 	g3d_enable(G3D_LIGHTING);
 	g3d_enable(G3D_LIGHT0);
@@ -164,7 +164,7 @@ static void draw(void)
 
 	update();
 
-	/*g3d_clear(G3D_DEPTH_BUFFER_BIT);*/
+	g3d_clear(G3D_DEPTH_BUFFER_BIT);
 	memcpy64(fb_pixels, bgimage, 320 * 240 / 4);
 
 	g3d_matrix_mode(G3D_MODELVIEW);
@@ -175,7 +175,7 @@ static void draw(void)
 
 	g3d_light_pos(0, -10, 10, 20);
 
-	zsort_mesh(&mmesh);
+	/*zsort_mesh(&mmesh);*/
 
 	g3d_mtl_diffuse(0.6, 0.6, 0.6);
 
@@ -215,8 +215,8 @@ static void draw(void)
 
 	sprintf(buf, "%d tris", mmesh.vcount / 3);
 	cs_cputs(fb_pixels, 10, 10, buf);
-	sprintf(buf, "visit %d", dbg_visited);
-	cs_cputs(fb_pixels, 10, 20, buf);
+	/*sprintf(buf, "visit %d", dbg_visited);
+	cs_cputs(fb_pixels, 10, 20, buf);*/
 
 	swap_buffers(fb_pixels);
 }

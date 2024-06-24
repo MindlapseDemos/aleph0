@@ -16,15 +16,13 @@ static int init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
-static void keypress(int key);
 
 static struct screen scr = {
 	"metaballs",
 	init,
 	destroy,
 	start, 0,
-	draw,
-	keypress
+	draw
 };
 
 static float cam_theta, cam_phi = 25;

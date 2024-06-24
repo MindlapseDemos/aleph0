@@ -105,7 +105,7 @@
     <ClCompile Include="src\glut\miniglut.c" />
     <ClCompile Include="src\glut\w32dir.c" />
     <ClCompile Include="src\image.c" />
-    <ClCompile Include="src\metasurf.c" />
+    <ClCompile Include="src\msurf2.c" />
     <ClCompile Include="src\noise.c" />
     <ClCompile Include="src\rbtree.c" />
     <ClCompile Include="src\rlebmap.c" />
@@ -163,7 +163,7 @@
     <ClInclude Include="src\glut\w32dir.h" />
     <ClInclude Include="src\image.h" />
     <ClInclude Include="src\mcubes.h" />
-    <ClInclude Include="src\metasurf.h" />
+    <ClInclude Include="src\msurf2.h" />
     <ClInclude Include="src\noise.h" />
     <ClInclude Include="src\rbtree.h" />
     <ClInclude Include="src\rlebmap.h" />

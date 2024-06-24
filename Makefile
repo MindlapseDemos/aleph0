@@ -7,7 +7,7 @@ dosobj = src/dos/audos.obj src/dos/djdpmi.obj src/dos/gfx.obj src/dos/keyb.obj &
 	src/3dgfx/polyclip.obj src/3dgfx/polyfill.obj src/3dgfx/scene.obj
 rtobj = src/rt/rt.obj src/rt/rtgeom.obj
 srcobj = src/bsptree.obj src/cfgopt.obj src/console.obj src/demo.obj &
-	src/dynarr.obj src/gfxutil.obj src/metasurf.obj src/noise.obj &
+	src/dynarr.obj src/gfxutil.obj src/msurf2.obj src/noise.obj &
 	src/rbtree.obj src/screen.obj src/tinyfps.obj src/treestor.obj &
 	src/image.obj src/ts_text.obj src/util.obj src/util_s.obj src/cpuid.obj &
 	src/cpuid_s.obj src/darray.obj src/data.obj src/rlebmap.obj src/dseq.obj
@@ -36,7 +36,7 @@ dosobj = src\dos\audos.obj src\dos\djdpmi.obj src\dos\gfx.obj src\dos\keyb.obj &
 	src\3dgfx\polyclip.obj src\3dgfx\polyfill.obj src\3dgfx\scene.obj
 rtobj = src\rt\rt.obj src\rt\rtgeom.obj
 srcobj = src\bsptree.obj src\cfgopt.obj src\console.obj src\demo.obj &
-	src\dynarr.obj src\gfxutil.obj src\metasurf.obj src\noise.obj &
+	src\dynarr.obj src\gfxutil.obj src\msurf2.obj src\noise.obj &
 	src\rbtree.obj src\screen.obj src\tinyfps.obj src\treestor.obj &
 	src\image.obj src\ts_text.obj src\util.obj src\util_s.obj src\cpuid.obj &
 	src\cpuid_s.obj src\darray.obj src\data.obj src\rlebmap.obj src\dseq.obj

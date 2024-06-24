@@ -63,7 +63,7 @@
     <ClCompile Include="src\image.c">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\metasurf.c">
+    <ClCompile Include="src\msurf2.c">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\noise.c">
@@ -233,7 +233,7 @@
     <ClInclude Include="src\mcubes.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\metasurf.h">
+    <ClInclude Include="src\msurf2.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\noise.h">

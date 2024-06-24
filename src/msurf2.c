@@ -293,7 +293,7 @@ int msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell)
 void msurf_genmesh(struct msurf_volume *vol)
 {
 	int i, cx, cy, cz, foundsurf;
-	unsigned int dirvalid;
+	unsigned int dirvalid = 0;
 	struct msurf_cell *cell, *cellptr, *openlist = 0;
 
 	for(i=0; i<vol->num_mballs; i++) {

@@ -153,7 +153,7 @@ int msurf_begin(struct msurf_volume *vol)
 
 	vol->num_verts = 0;
 	vol->cur++;
-	frmid = vol->cur & 0xff;
+	frmid = vol->cur & 0xffff;
 	dbg_visited = 0;
 	return 0;
 }
@@ -198,7 +198,7 @@ int msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell)
 	/* update the metaball field if necessary */
 	for(i=0; i<8; i++) {
 		vox = cell->vox[i];
-		if((vox->flags & 0xff00) != (frmid << 8)) {
+		if((vox->flags & 0xffff) != frmid) {
 			vox->val = 0;
 			for(j=0; j<vol->num_mballs; j++) {
 				dir = vol->mballs[j].pos;
@@ -206,7 +206,7 @@ int msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell)
 				lensq = cgm_vlength_sq(&dir);
 				vox->val += lensq == 0.0f ? 1024.0f : vol->mballs[j].energy / lensq;
 			}
-			vox->flags = (vox->flags & ~0xff00) | (frmid << 8);
+			vox->flags = (vox->flags & ~0xffff) | frmid;
 		}
 	}
 
@@ -217,18 +217,18 @@ int msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell)
 			code |= 1 << i;
 		}
 	}
-	cell->flags = (code << 8) | frmid;
+	cell->flags = (code << 16) | frmid;
 
 	if(code == 0 || code == 0xff) return 0;
 
 	/* for each of the voxels, make sure we have valid gradients */
 	for(i=0; i<8; i++) {
-		if((cell->vox[i]->flags & 0xff) != frmid) {
+		if((cell->vox[i]->flags & 0xffff0000) != (frmid << 16)) {
 			x = cell->x + celloffs[i][0];
 			y = cell->y + celloffs[i][1];
 			z = cell->z + celloffs[i][2];
 			calc_grad(vol, x, y, z, &cell->vox[i]->grad);
-			cell->vox[i]->flags = (cell->vox[i]->flags & ~0xff) | frmid;
+			cell->vox[i]->flags = (cell->vox[i]->flags & ~0xffff0000) | (frmid << 16);
 		}
 	}
 
@@ -280,10 +280,10 @@ int msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell)
 #define ADDOPEN(dir, c) \
 	do { \
 		struct msurf_cell *cp = (c); \
-		if((dirvalid & dir) == dir && ((cp->flags & 0xff) != frmid)) { \
+		if((dirvalid & dir) == dir && ((cp->flags & 0xffff) != frmid)) { \
 			cp->next = openlist; \
 			openlist = cp; \
-			cp->flags = (cp->flags & ~0xff) | frmid; \
+			cp->flags = (cp->flags & ~0xffff) | frmid; \
 		} \
 	} while(0)
 

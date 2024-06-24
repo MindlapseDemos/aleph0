@@ -12,6 +12,8 @@
 #include "mesh.h"
 #include "imago2.h"
 
+#define DBG_VISIT
+
 static int init(void);
 static void destroy(void);
 static void start(long trans_time);
@@ -188,21 +190,19 @@ static void draw(void)
 	g3d_disable(G3D_TEXTURE_GEN);
 	g3d_disable(G3D_TEXTURE_2D);
 
-	/*
+#ifdef DBG_VISIT
 	g3d_disable(G3D_LIGHTING);
 	g3d_begin(G3D_POINTS);
 	cell = vol.cells;
 	for(z=0; z<vol.zres - 1; z++) {
 		for(y=0; y<vol.yres - 1; y++) {
 			for(x=0; x<vol.xres - 1; x++) {
-				if((cell->flags & 0xff) == (vol.cur & 0xff)) {
+				if((cell->flags & 0xffff) == (vol.cur & 0xffff)) {
 					g3d_color3b(32, 128, 32);
-				} else {
-					g3d_color3b(64, 64, 64);
-				}
-				g3d_vertex(cell->vox[0]->pos.x + vol.dx * 0.5f,
+					g3d_vertex(cell->vox[0]->pos.x + vol.dx * 0.5f,
 						cell->vox[0]->pos.y + vol.dy * 0.5f,
 						cell->vox[0]->pos.z + vol.dz * 0.5f);
+				}
 				cell++;
 			}
 			cell += vol.xstore - (vol.xres - 1);
@@ -211,12 +211,13 @@ static void draw(void)
 	}
 	g3d_end();
 	g3d_enable(G3D_LIGHTING);
-	*/
+
+	sprintf(buf, "visit %d", dbg_visited);
+	cs_cputs(fb_pixels, 10, 200, buf);
+#endif
 
 	sprintf(buf, "%d tris", mmesh.vcount / 3);
 	cs_cputs(fb_pixels, 10, 10, buf);
-	/*sprintf(buf, "visit %d", dbg_visited);
-	cs_cputs(fb_pixels, 10, 20, buf);*/
 
 	swap_buffers(fb_pixels);
 }

@@ -12,7 +12,7 @@
 #include "mesh.h"
 #include "imago2.h"
 
-#define DBG_VISIT
+#undef DBG_VISIT
 
 static int init(void);
 static void destroy(void);
@@ -42,18 +42,9 @@ static struct msurf_volume vol;
 #define VOL_XSCALE	10.0f
 #define VOL_YSCALE	10.0f
 #define VOL_ZSCALE	10.0f
-#define VOX_XDIST	(VOL_XSCALE / VOL_XSZ)
-#define VOX_YDIST	(VOL_YSCALE / VOL_YSZ)
-#define VOX_ZDIST	(VOL_ZSCALE / VOL_ZSZ)
 #define VOL_HALF_XSCALE	(VOL_XSCALE * 0.5f)
 #define VOL_HALF_YSCALE	(VOL_YSCALE * 0.5f)
 #define VOL_HALF_ZSCALE	(VOL_ZSCALE * 0.5f)
-#define NUM_VOX		(VOL_XSZ * VOL_YSZ * VOL_ZSZ)
-
-#define CELL_XSZ	(VOL_XSZ - 1)
-#define CELL_YSZ	(VOL_YSZ - 1)
-#define CELL_ZSZ	(VOL_ZSZ - 1)
-#define NUM_CELLS	(CELL_XSZ * CELL_YSZ * CELL_ZSZ)
 
 #define NUM_MBALLS	3
 

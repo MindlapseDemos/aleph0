@@ -8,35 +8,23 @@
 #include "3dgfx.h"
 #include "gfxutil.h"
 #include "util.h"
-#include "metasurf.h"
+#include "msurf2.h"
 #include "mesh.h"
 #include "imago2.h"
-
-struct metaball {
-	float energy;
-	float pos[3];
-};
-
-struct volcell {
-	float *val[8];
-	unsigned int flags;
-};
 
 static int init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
-
-static void calc_voxel_field(void);
-
-static INLINE float *voxel_at(int x, int y, int z);
+static void keypress(int key);
 
 static struct screen scr = {
 	"metaballs",
 	init,
 	destroy,
 	start, 0,
-	draw
+	draw,
+	keypress
 };
 
 static float cam_theta, cam_phi = 25;
@@ -45,17 +33,12 @@ static struct g3d_mesh mmesh;
 static uint16_t *bgimage, *envmap;
 static int envmap_xsz, envmap_ysz;
 
-static struct metasurface *msurf;
+static struct msurf_volume vol;
 
-static const int celloffs[][3] = {
-	{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0},
-	{0, 0, 1}, {1, 0, 1}, {1, 1, 1}, {0, 1, 1}
-};
-
-
-#define VOL_XSZ	24
-#define VOL_YSZ	24
-#define VOL_ZSZ	24
+#define VOL_SIZE	24
+#define VOL_XSZ	VOL_SIZE
+#define VOL_YSZ	VOL_SIZE
+#define VOL_ZSZ	VOL_SIZE
 #define VOL_XSCALE	10.0f
 #define VOL_YSCALE	10.0f
 #define VOL_ZSCALE	10.0f
@@ -73,13 +56,6 @@ static const int celloffs[][3] = {
 #define NUM_CELLS	(CELL_XSZ * CELL_YSZ * CELL_ZSZ)
 
 #define NUM_MBALLS	3
-static struct metaball mball[NUM_MBALLS];
-static float *voxels, **voxslice;
-static cgm_vec3 *grads, **gradslice;
-static unsigned int *voxflags, **voxflags_slice;
-static struct volcell *cells, **cellslice;
-
-static int dbg;
 
 struct screen *metaballs_screen(void)
 {
@@ -89,7 +65,6 @@ struct screen *metaballs_screen(void)
 static int init(void)
 {
 	int i, j, x, y, z, xsz, ysz;
-	struct volcell *cellptr;
 
 	if(!(bgimage = img_load_pixels("data/blob_bg.png", &xsz, &ysz, IMG_FMT_RGB565))) {
 		return -1;
@@ -98,53 +73,25 @@ static int init(void)
 		return -1;
 	}*/
 
-	mball[0].energy = 1.2;
-	mball[1].energy = 0.8;
-	mball[2].energy = 1.0;
-
-	if(!(msurf = msurf_create())) {
+	if(msurf_init(&vol) == -1) {
 		fprintf(stderr, "failed to initialize metasurf\n");
 		return -1;
 	}
-	msurf_set_resolution(msurf, VOL_XSZ, VOL_YSZ, VOL_ZSZ);
-	msurf_set_bounds(msurf, -VOL_HALF_XSCALE, -VOL_HALF_YSCALE, -VOL_HALF_ZSCALE,
-			VOL_HALF_XSCALE, VOL_HALF_YSCALE, VOL_HALF_ZSCALE);
-	msurf_set_threshold(msurf, 1.7);
-	msurf_set_inside(msurf, MSURF_GREATER);
+	if(msurf_metaballs(&vol, NUM_MBALLS) == -1) {
+		msurf_destroy(&vol);
+		return -1;
+	}
+	msurf_resolution(&vol, VOL_XSZ, VOL_YSZ, VOL_ZSZ);
+	msurf_size(&vol, VOL_XSCALE, VOL_YSCALE, VOL_ZSCALE);
+	vol.isoval = 1.7;
 
-	voxels = msurf_voxels(msurf);
-	if(!(voxslice = malloc(VOL_ZSZ * sizeof *voxslice))) {
-		fprintf(stderr, "failed to allocate voxel slice buffer\n");
-		return -1;
-	}
-	if(!(voxflags = calloc(1, NUM_VOX * sizeof *voxflags + VOL_ZSZ * sizeof *voxflags_slice))) {
-		fprintf(stderr, "failed to allocate voxel flags buffer\n");
-		return -1;
-	}
-	voxflags_slice = (unsigned int**)(voxflags + NUM_VOX);
-	for(i=0; i<VOL_ZSZ; i++) {
-		voxslice[i] = voxels + i * VOL_XSZ * VOL_YSZ;
-		voxflags_slice[i] = voxflags + i * VOL_XSZ * VOL_YSZ;
-	}
-	if(!(cells = malloc(NUM_CELLS * sizeof *cells + CELL_ZSZ * sizeof *cellslice))) {
-		fprintf(stderr, "failed to allocate voxel cells\n");
-		return -1;
-	}
-	cellslice = (struct volcell**)(cells + NUM_CELLS);
-	for(z=0; z<CELL_ZSZ; z++) {
-		cellslice[z] = cells + z * CELL_XSZ * CELL_YSZ;
+	vol.mballs[0].energy = 1.2;
+	vol.mballs[1].energy = 0.8;
+	vol.mballs[2].energy = 1.0;
 
-		cellptr = cellslice[z];
-		for(y=0; y<CELL_YSZ; y++) {
-			for(x=0; x<CELL_XSZ; x++) {
-				for(i=0; i<8; i++) {
-					cellptr->val[i] = voxel_at(z + celloffs[i][0], y + celloffs[i][1],
-							x + celloffs[i][2]);
-					cellptr->flags = 0;
-					cellptr++;
-				}
-			}
-		}
+	if(msurf_begin(&vol) == -1) {	/* force allocation now */
+		msurf_destroy(&vol);
+		return -1;
 	}
 
 	mmesh.prim = G3D_TRIANGLES;
@@ -157,9 +104,7 @@ static int init(void)
 
 static void destroy(void)
 {
-	free(voxslice);
-	free(voxflags);
-	msurf_free(msurf);
+	msurf_destroy(&vol);
 	img_free_pixels(bgimage);
 }
 
@@ -170,7 +115,7 @@ static void start(long trans_time)
 	g3d_load_identity();
 	g3d_perspective(50.0, 1.3333333, 0.5, 100.0);
 
-	g3d_disable(G3D_DEPTH_TEST);
+	/*g3d_enable(G3D_DEPTH_TEST);*/
 	g3d_enable(G3D_CULL_FACE);
 	g3d_enable(G3D_LIGHTING);
 	g3d_enable(G3D_LIGHT0);
@@ -194,24 +139,34 @@ static void update(void)
 
 		for(j=0; j<3; j++) {
 			float x = sin(t + j * M_PI / 2.0);
-			mball[i].pos[j] = offset[i][j] + x * scale[i][j];
+			(&vol.mballs[i].pos.x)[j] = offset[i][j] + x * scale[i][j];
 		}
+
+		vol.mballs[i].pos.x += VOL_HALF_XSCALE;
+		vol.mballs[i].pos.y += VOL_HALF_YSCALE;
+		vol.mballs[i].pos.z += VOL_HALF_ZSCALE;
 	}
 
-	calc_voxel_field();
-	msurf_polygonize(msurf);
+	msurf_begin(&vol);
+	msurf_genmesh(&vol);
 
-	mmesh.vcount = msurf_vertex_count(msurf);
-	mmesh.varr = msurf_vertices(msurf);
+	mmesh.vcount = vol.num_verts;
+	mmesh.varr = vol.varr;
 }
+
+extern int dbg_visited;
 
 static void draw(void)
 {
 	int i, j;
-	char buf[32];
+	char buf[128];
+	int x, y, z;
+	struct msurf_voxel *vox;
+	struct msurf_cell *cell;
 
 	update();
 
+	/*g3d_clear(G3D_DEPTH_BUFFER_BIT);*/
 	memcpy64(fb_pixels, bgimage, 320 * 240 / 4);
 
 	g3d_matrix_mode(G3D_MODELVIEW);
@@ -226,57 +181,44 @@ static void draw(void)
 
 	g3d_mtl_diffuse(0.6, 0.6, 0.6);
 
-	//g3d_enable(G3D_TEXTURE_2D);
+	g3d_translate(-VOL_HALF_XSCALE, -VOL_HALF_YSCALE, -VOL_HALF_ZSCALE);
+
+	/*g3d_enable(G3D_TEXTURE_2D);*/
 	g3d_enable(G3D_TEXTURE_GEN);
 	g3d_set_texture(envmap_xsz, envmap_ysz, envmap);
 	draw_mesh(&mmesh);
 	g3d_disable(G3D_TEXTURE_GEN);
 	g3d_disable(G3D_TEXTURE_2D);
 
+	/*
+	g3d_disable(G3D_LIGHTING);
+	g3d_begin(G3D_POINTS);
+	cell = vol.cells;
+	for(z=0; z<vol.zres - 1; z++) {
+		for(y=0; y<vol.yres - 1; y++) {
+			for(x=0; x<vol.xres - 1; x++) {
+				if((cell->flags & 0xff) == (vol.cur & 0xff)) {
+					g3d_color3b(32, 128, 32);
+				} else {
+					g3d_color3b(64, 64, 64);
+				}
+				g3d_vertex(cell->vox[0]->pos.x + vol.dx * 0.5f,
+						cell->vox[0]->pos.y + vol.dy * 0.5f,
+						cell->vox[0]->pos.z + vol.dz * 0.5f);
+				cell++;
+			}
+			cell += vol.xstore - (vol.xres - 1);
+		}
+		cell += (vol.ystore - (vol.yres - 1)) << vol.xshift;
+	}
+	g3d_end();
+	g3d_enable(G3D_LIGHTING);
+	*/
+
 	sprintf(buf, "%d tris", mmesh.vcount / 3);
 	cs_cputs(fb_pixels, 10, 10, buf);
+	sprintf(buf, "visit %d", dbg_visited);
+	cs_cputs(fb_pixels, 10, 20, buf);
 
 	swap_buffers(fb_pixels);
-}
-
-static void calc_voxel_field(void)
-{
-	int i, j, k, b;
-	float *voxptr;
-
-	if(!(voxptr = msurf_voxels(msurf))) {
-		fprintf(stderr, "failed to allocate voxel field\n");
-		abort();
-	}
-
-	for(i=0; i<VOL_ZSZ; i++) {
-		float z = -VOL_HALF_ZSCALE + i * VOX_ZDIST;
-
-		for(j=0; j<VOL_YSZ; j++) {
-			float y = -VOL_HALF_YSCALE + j * VOX_YDIST;
-
-			for(k=0; k<VOL_XSZ; k++) {
-				float x = -VOL_HALF_XSCALE + k * VOX_XDIST;
-
-				float val = 0.0f;
-				for(b=0; b<NUM_MBALLS; b++) {
-					float dx = mball[b].pos[0] - x;
-					float dy = mball[b].pos[1] - y;
-					float dz = mball[b].pos[2] - z;
-
-					float lensq = dx * dx + dy * dy + dz * dz;
-
-					val += lensq == 0.0f ? 1024.0f : mball[b].energy / lensq;
-				}
-
-				*voxptr++ = val;
-			}
-		}
-	}
-	++dbg;
-}
-
-static INLINE float *voxel_at(int x, int y, int z)
-{
-	return voxslice[z] + y * VOL_YSZ + x;
 }

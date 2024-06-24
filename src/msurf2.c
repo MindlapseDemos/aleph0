@@ -117,6 +117,7 @@ int msurf_begin(struct msurf_volume *vol)
 							vy = y + celloffs[i][1];
 							vz = z + celloffs[i][2];
 							cell->vox[i] = vol->voxels + msurf_addr(vol, vx, vy, vz);
+							assert(msurf_addr(vol, vx, vy, vz) == vz * vol->xystore + vy * vol->xstore + vx);
 							assert(cell->vox[i] >= vol->voxels);
 							assert(cell->vox[i] < vol->voxels + vol->num_store);
 						}
@@ -138,7 +139,7 @@ int msurf_begin(struct msurf_volume *vol)
 				}
 				vox += vol->xstore - vol->xres;
 			}
-			vox += vol->ystore - vol->yres;
+			vox += (vol->ystore - vol->yres) << vol->xshift;
 		}
 	}
 
@@ -218,7 +219,7 @@ int msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell)
 	}
 	cell->flags = (code << 8) | frmid;
 
-	if((code | ~code) == 0) return 0;
+	if(code == 0 || code == 0xff) return 0;
 
 	/* for each of the voxels, make sure we have valid gradients */
 	for(i=0; i<8; i++) {

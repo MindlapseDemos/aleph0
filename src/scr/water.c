@@ -21,7 +21,7 @@ static void start(long trans_time);
 static void draw(void);
 
 #define FP_SCALE 16
-#define MAX_OBJ_VERTS 4096
+#define MAX_OBJ_VERTS 2048
 
 static struct screen scr = {
 	"water",
@@ -485,12 +485,11 @@ static void sceneRunFlower(int t)
 	int zp = (int)(sin((float)t / (1.5f * 512.0f)) * 128) - 32;
 
 #ifdef PAUSE_FOR_PERFORMANCE_TEST
-	t = 1536;
-	setObjectPos(0, 16, 384, &objFlower);
+	t = 0;
+	setObjectPos(0, 16, 256, &objFlower);
 #else
 	setObjectPos(xp, yp, 576 + zp, &objFlower);
 #endif
-
 	setObjectRot(2 * t, 3 * t, 4 * t, &objFlower);
 
 	transformObject3D(&objFlower);

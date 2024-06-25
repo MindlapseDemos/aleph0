@@ -362,8 +362,8 @@ static Mesh3D* generateSpherical(int spx, int spy, float f1, float f2, float k1,
 	int x, y;
 	float ro, phi, theta;
 
-	int numVertices = spx * spy;
-	int numPolys = 2 * spx * spy - 2 * spy;
+	int numVertices = spx * spy + 1;
+	int numPolys = 2 * spx * spy -2 * spy + spx;
 	int numIndices = 3 * numPolys;
 	Mesh3D* mesh = newMesh(numVertices, numIndices);
 
@@ -376,7 +376,7 @@ static Mesh3D* generateSpherical(int spx, int spy, float f1, float f2, float k1,
 		float ro0 = sin((theta * f1) / D2R * 4) * k1;
 		float cth = cos(theta / D2R);
 		float sth = sin(theta / D2R);
-		for (phi = 0.0; phi < 180.0; phi += (180.0 / spy)) {
+		for (phi = 0.0; phi < 180.0f; phi += (180.0f / (float)spy)) {
 			if (vCount < numVertices) {
 				ro = ro0 + sin((phi * f2) / D2R * 4) * k2 + kk;
 				vrtx->x = (int)(ro * sin(phi / D2R) * cth);
@@ -387,9 +387,15 @@ static Mesh3D* generateSpherical(int spx, int spy, float f1, float f2, float k1,
 			}
 		}
 	}
+	if (vCount < numVertices) {
+		ro = k2 + kk;
+		vrtx->x = 0;
+		vrtx->y = 0;
+		vrtx->z = (int)(ro * cos(180.0 / D2R));
+	}
 
 	for (x = 0; x < spx; x++) {
-		for (y = 0; y < spy - 1; y++) {
+		for (y = 0; y < spy-1; y++) {
 			if (iCount < numIndices) {
 				*index++ = (y % spy) + (x % spx) * spy;
 				*index++ = (y % spy) + 1 + (x % spx) * spy;
@@ -401,6 +407,13 @@ static Mesh3D* generateSpherical(int spx, int spy, float f1, float f2, float k1,
 				iCount += 6;
 			}
 		}
+	}
+
+	for (x = 0; x < spx; x++) {
+		int spLast = spy - 2;
+		*index++ = spLast + ((x + 1) % spx) * spy;
+		*index++ = spLast + (x % spx) * spy;
+		*index++ = numVertices-1;
 	}
 
 	calcPolyNormals(mesh, 0);

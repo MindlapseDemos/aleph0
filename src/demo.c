@@ -300,17 +300,17 @@ void demo_keyboard(int key, int press)
 			}
 			return;
 
+		case KB_F1:
+			reset_timer();
+			dseq_start();
+			break;
+
 		case '/':
 			if(!con_active) {
 				con_start();
 				con_active = con_input('/');
 				return;
 			}
-
-		case KB_F1:
-			reset_timer();
-			dseq_start();
-			break;
 
 		default:
 			if(con_active) {

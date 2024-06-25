@@ -32,6 +32,10 @@ typedef struct Diff {
 	short x, y;
 } Diff;
 
+typedef struct Edge {
+	short xIn, xOut;
+} Edge;
+
 #define NUM_BIG_LIGHTS 3
 #define BIG_LIGHT_WIDTH 256
 #define BIG_LIGHT_HEIGHT BIG_LIGHT_WIDTH
@@ -58,6 +62,7 @@ static Diff *bumpOffsetFinal;
 
 static unsigned short *bigLight[NUM_BIG_LIGHTS];
 static Point2D bigLightPoint[NUM_BIG_LIGHTS];
+static Edge *bigLightEdges;
 
 static unsigned short *particleLight;
 static Point2D particlePoint[NUM_PARTICLES];
@@ -127,6 +132,8 @@ static int init(void)
 	bumpOffset = malloc(sizeof(*bumpOffset) * hm_size);
 	bumpOffsetFinal = malloc(sizeof(*bumpOffset) * hm_size);
 
+	bigLightEdges = (Edge*)malloc(BIG_LIGHT_HEIGHT * sizeof(*bigLightEdges));
+
 	for (i = 0; i < NUM_BIG_LIGHTS; i++) {
 		bigLight[i] = malloc(sizeof(*bigLight[i]) * bigLightSize);
 	}
@@ -167,6 +174,9 @@ static int init(void)
 	i = 0;
 	for (y = 0; y < BIG_LIGHT_HEIGHT; y++) {
 		int yc = y - (BIG_LIGHT_HEIGHT / 2);
+		int xIn = -1;
+		int xOut = -1;
+		int lastC = 0;
 		for (x = 0; x < BIG_LIGHT_WIDTH; x++) {
 			int xc = x - (BIG_LIGHT_WIDTH / 2);
 			float d = (float)sqrt(xc * xc + yc * yc);
@@ -178,11 +188,21 @@ static int init(void)
 			g = c;
 			b = c >> 1;
 
+			if (lastC == 0 && c > 0) {
+				xIn = x;
+			}
+			if (lastC != 0 && c == 0) {
+				xOut = x;
+			}
+			lastC = c;
+
 			for (j = 0; j < NUM_BIG_LIGHTS; j++) {
 				bigLight[j][i] = ((int)(r * rgbMul[j * 3]) << 11) | ((int)(g * rgbMul[j * 3 + 1]) << 5) | (int)(b * rgbMul[j * 3 + 2]);
 			}
 			i++;
 		}
+		bigLightEdges[y].xIn = xIn;
+		bigLightEdges[y].xOut = xOut;
 	}
 
 	i = 0;
@@ -211,6 +231,7 @@ static void destroy(void)
 	free(bumpOffset);
 	free(bumpOffsetFinal);
 	free(particleLight);
+	free(bigLightEdges);
 
 	for (i=0; i<NUM_BIG_LIGHTS; ++i) {
 		free(bigLight[i]);
@@ -289,17 +310,17 @@ static void renderBigLights()
 		int xl = 0;
 		int yl = 0;
 
-		if (x0 < 0) {
+		/*if (x0 < 0) {
 			xl = -x0;
 			x0 = 0;
-		}
+		}*/
 
 		if (y0 < 0) {
 			yl = -y0;
 			y0 = 0;
 		}
 
-		if (x1 > FB_WIDTH) x1 = FB_WIDTH;
+		/* if (x1 > FB_WIDTH) x1 = FB_WIDTH; */
 		if (y1 > FB_HEIGHT) y1 = FB_HEIGHT;
 
 		dx = x1 - x0;
@@ -308,37 +329,69 @@ static void renderBigLights()
 		src = bigLight[i] + yl * BIG_LIGHT_WIDTH + xl;
 
 		if (i==0) {
-			for (y = y0; y < y1; y++) {
-				memcpy(dst, src, 2 * dx);
+			int yLine = yl;
+			/*for (y = y0; y < y1; y++) {
+				const short xIn = bigLightEdges[yLine].xIn;
+				if (xIn != -1) {
+					const short xOut = bigLightEdges[yLine].xOut;
+					int dx = xOut - xIn;
+					if (dx > 0) {
+						memcpy(dst + xIn - xl, src + xIn - xl, 2 * dx);
+					}
+				}
 				dst += LMAP_WIDTH;
 				src += BIG_LIGHT_WIDTH;
+				yLine++;
+			}*/
+			for (y = y0; y < y1; y++) {
+				const short xIn = bigLightEdges[yLine].xIn;
+				if (xIn != -1) {
+					const short xOut = bigLightEdges[yLine].xOut;
+					memcpy(dst + xIn, src + xIn, 2 * (xOut - xIn));
+				}
+				dst += LMAP_WIDTH;
+				src += BIG_LIGHT_WIDTH;
+				yLine++;
 			}
 		} else {
+			int yLine = yl;
 			for (y = y0; y < y1; y++) {
-				uint32_t *src32, *dst32;
-				int count;
+				const short xIn = bigLightEdges[yLine].xIn;
+				if (xIn != -1) {
+					const short xOut = bigLightEdges[yLine].xOut;
 
-				if (x0 & 1) {
-					*dst++ |= *src++;
-					++x0;
-					--dx;
+					uint16_t* srcIn = src + xIn;
+					uint16_t* dstIn = dst + xIn;
+
+					uint32_t* src32, * dst32;
+					int count;
+
+					int xp0 = x0 + xIn;
+					int xp1 = xp0 + xOut - xIn - 1;
+
+					if (xp0 & 1) {
+						*dstIn++ |= *srcIn++;
+						++xp0;
+						--dx;
+					}
+
+					src32 = (uint32_t*)srcIn;
+					dst32 = (uint32_t*)dstIn;
+					count = (xp1 - xp0) >> 1;
+					while (count-- != 0) {
+						*dst32++ |= *src32++;
+					};
+
+					srcIn = (uint16_t*)src32;
+					dstIn = (uint16_t*)dst32;
+					if (xp1 & 1) {
+						*dstIn++ |= *srcIn++;
+					}
+
+					dst += LMAP_WIDTH - dx;
+					src += BIG_LIGHT_WIDTH - dx;
 				}
-
-				src32 = (uint32_t*)src;
-				dst32 = (uint32_t*)dst;
-				count = (x1 - x0) >> 1;
-				while (count-- != 0) {
-					*dst32++ |= *src32++;
-				};
-
-				src = (uint16_t*)src32;
-				dst = (uint16_t*)dst32;
-				if (x1 & 1) {
-					*dst++ |= *src++;
-				}
-
-				dst += LMAP_WIDTH - dx;
-				src += BIG_LIGHT_WIDTH - dx;
+				yLine++;
 			}
 		}
 	}

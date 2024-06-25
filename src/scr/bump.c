@@ -1,5 +1,3 @@
-/* Bump effect (not moving yet of course, I have many ideas on this to commit before it's ready) */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -296,7 +294,7 @@ static void renderBigLights()
 {
 	int i;
 	for (i = 0; i < NUM_BIG_LIGHTS; i++) {
-		int y, dx;
+		int y;
 		unsigned short* src;
 		unsigned short* dst;
 
@@ -310,39 +308,18 @@ static void renderBigLights()
 		int xl = 0;
 		int yl = 0;
 
-		/*if (x0 < 0) {
-			xl = -x0;
-			x0 = 0;
-		}*/
-
 		if (y0 < 0) {
 			yl = -y0;
 			y0 = 0;
 		}
 
-		/* if (x1 > FB_WIDTH) x1 = FB_WIDTH; */
 		if (y1 > FB_HEIGHT) y1 = FB_HEIGHT;
-
-		dx = x1 - x0;
 
 		dst = lightmap + (y0 + LMAP_OFFSET_Y) * LMAP_WIDTH + x0 + LMAP_OFFSET_X;
 		src = bigLight[i] + yl * BIG_LIGHT_WIDTH + xl;
 
 		if (i==0) {
 			int yLine = yl;
-			/*for (y = y0; y < y1; y++) {
-				const short xIn = bigLightEdges[yLine].xIn;
-				if (xIn != -1) {
-					const short xOut = bigLightEdges[yLine].xOut;
-					int dx = xOut - xIn;
-					if (dx > 0) {
-						memcpy(dst + xIn - xl, src + xIn - xl, 2 * dx);
-					}
-				}
-				dst += LMAP_WIDTH;
-				src += BIG_LIGHT_WIDTH;
-				yLine++;
-			}*/
 			for (y = y0; y < y1; y++) {
 				const short xIn = bigLightEdges[yLine].xIn;
 				if (xIn != -1) {
@@ -367,12 +344,11 @@ static void renderBigLights()
 					int count;
 
 					int xp0 = x0 + xIn;
-					int xp1 = xp0 + xOut - xIn - 1;
+					int xp1 = x0 + xOut - 1;
 
 					if (xp0 & 1) {
 						*dstIn++ |= *srcIn++;
 						++xp0;
-						--dx;
 					}
 
 					src32 = (uint32_t*)srcIn;
@@ -387,10 +363,9 @@ static void renderBigLights()
 					if (xp1 & 1) {
 						*dstIn++ |= *srcIn++;
 					}
-
-					dst += LMAP_WIDTH - dx;
-					src += BIG_LIGHT_WIDTH - dx;
 				}
+				dst += LMAP_WIDTH;
+				src += BIG_LIGHT_WIDTH;
 				yLine++;
 			}
 		}
@@ -422,15 +397,15 @@ static void renderBump(unsigned short *vram)
 	int x,y,i=0;
 
 	unsigned short* lightSrc = &lightmap[LMAP_OFFSET_Y * LMAP_WIDTH + LMAP_OFFSET_X];
-	for (y = 0; y < FB_HEIGHT; ++y) {
+
+	for (y = 0; y < 64; ++y) {
 		Diff* bumpSrc = &bumpOffsetFinal[(y & (HMAP_HEIGHT - 1)) * HMAP_WIDTH];
 		for (x = 0; x < HMAP_WIDTH; ++x) {
 			int ix = x + bumpSrc->x;
 			int iy = y + bumpSrc->y;
 			++bumpSrc;
 
-			//CLAMP(ix, 0, FB_WIDTH - 1);
-			CLAMP(iy, 0, FB_HEIGHT - 1);
+			if (iy < 0) iy = 0;
 			vram[i++] = lightSrc[iy * LMAP_WIDTH + ix];
 		}
 		bumpSrc -= HMAP_WIDTH;
@@ -439,8 +414,47 @@ static void renderBump(unsigned short *vram)
 			int iy = y + bumpSrc->y;
 			++bumpSrc;
 
-			//CLAMP(ix, 0, FB_WIDTH - 1);
-			CLAMP(iy, 0, FB_HEIGHT - 1);
+			if (iy < 0) iy = 0;
+			vram[i++] = lightSrc[iy * LMAP_WIDTH + ix];
+		}
+	}
+
+	for (y = 64; y < FB_HEIGHT-64; ++y) {
+		Diff* bumpSrc = &bumpOffsetFinal[(y & (HMAP_HEIGHT - 1)) * HMAP_WIDTH];
+		for (x = 0; x < HMAP_WIDTH; ++x) {
+			int ix = x + bumpSrc->x;
+			int iy = y + bumpSrc->y;
+			++bumpSrc;
+
+			vram[i++] = lightSrc[iy * LMAP_WIDTH + ix];
+		}
+		bumpSrc -= HMAP_WIDTH;
+		for (x = HMAP_WIDTH; x < FB_WIDTH; ++x) {
+			int ix = x + bumpSrc->x;
+			int iy = y + bumpSrc->y;
+			++bumpSrc;
+
+			vram[i++] = lightSrc[iy * LMAP_WIDTH + ix];
+		}
+	}
+
+	for (y = FB_HEIGHT-64; y < FB_HEIGHT; ++y) {
+		Diff* bumpSrc = &bumpOffsetFinal[(y & (HMAP_HEIGHT - 1)) * HMAP_WIDTH];
+		for (x = 0; x < HMAP_WIDTH; ++x) {
+			int ix = x + bumpSrc->x;
+			int iy = y + bumpSrc->y;
+			++bumpSrc;
+
+			if (iy > FB_HEIGHT - 1) iy = FB_HEIGHT - 1;
+			vram[i++] = lightSrc[iy * LMAP_WIDTH + ix];
+		}
+		bumpSrc -= HMAP_WIDTH;
+		for (x = HMAP_WIDTH; x < FB_WIDTH; ++x) {
+			int ix = x + bumpSrc->x;
+			int iy = y + bumpSrc->y;
+			++bumpSrc;
+
+			if (iy > FB_HEIGHT - 1) iy = FB_HEIGHT - 1;
 			vram[i++] = lightSrc[iy * LMAP_WIDTH + ix];
 		}
 	}
@@ -473,20 +487,11 @@ static void moveBumpOffset(int t)
 	}
 }
 
-static void clearLightMapVisibleArea()
-{
-	int y;
-
-	for (y=0; y<FB_HEIGHT; ++y) {
-		memset(&lightmap[(y + LMAP_OFFSET_Y) * LMAP_WIDTH + LMAP_OFFSET_X], 0, FB_WIDTH * sizeof(*lightmap));
-	}
-}
-
 static void draw(void)
 {
 	const int t = time_msec - startingTime;
 
-	clearLightMapVisibleArea();
+	memset(lightmap, 0, 2 * LMAP_WIDTH * LMAP_HEIGHT);
 
 	animateBigLights();
 	renderBigLights();

@@ -590,13 +590,13 @@ void drawBlobs(Vertex3D *v, int count, unsigned char *blobBuffer, unsigned int s
 			const int posX = v->xs;
 			const int posY = v->ys;
 			BlobData *bd = &blobData[size][posX & (BLOB_SIZEX_PAD-1)];
-			const unsigned int sizeX = bd->sizeX;
-			const unsigned int sizeY = bd->sizeY;
+			const int sizeX = bd->sizeX;
+			const int sizeY = bd->sizeY;
 
 			if (!(posX <= sizeX / 2 || posX >= FB_WIDTH - sizeX / 2 || posY <= sizeY / 2 || posY >= FB_HEIGHT - sizeY / 2))
 			{
-				const unsigned int posX32 = posX & ~(BLOB_SIZEX_PAD-1);
-				const unsigned int wordsX = sizeX / 4;
+				const int posX32 = posX & ~(BLOB_SIZEX_PAD-1);
+				const int wordsX = sizeX / 4;
 
 				unsigned int *dst = (unsigned int*)(blobBuffer + (posY - sizeY / 2) * FB_WIDTH + (posX32 - sizeX / 2));
 				unsigned int *src = (unsigned int*)bd->data;

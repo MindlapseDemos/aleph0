@@ -20,7 +20,6 @@ static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
 
-#define FP_SCALE 16
 #define MAX_OBJ_VERTS 2048
 
 static struct screen scr = {

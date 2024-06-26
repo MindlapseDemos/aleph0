@@ -9,6 +9,8 @@
 
 #define TEX_SHADES_NUM 256
 
+#define FP_SCALE 16
+
 enum {
 	OPT_RAST_FLAT, 
 	OPT_RAST_TEXTURED_GOURAUD_CLIP_Y

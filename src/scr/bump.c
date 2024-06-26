@@ -6,7 +6,9 @@
 #include "demo.h"
 #include "screen.h"
 #include "imago2.h"
+
 #include "opt_rend.h"
+
 
 static int init(void);
 static void destroy(void);
@@ -470,6 +472,44 @@ static void moveBumpOffset(int t)
 	}
 }
 
+static void renderBitmapLineBump(int u, int du, int* src, int* dst)
+{
+	int length = FB_WIDTH;
+	while (length-- > 0) {
+		int tu = (u >> FP_SCALE) & (HMAP_WIDTH - 1);
+		*dst++ = src[tu];
+		u += du;
+	};
+}
+
+static void testBlitBumpTex(int t)
+{
+	const int tt = t >> 5;
+
+	int* dst = bumpOffsetScreen;
+	int y;
+	for (y = 0; y < FB_HEIGHT; ++y) {
+		const int yi = (y + tt) & (HMAP_HEIGHT - 1);
+		int* src;
+		int z, u, v, du;
+
+		int yp = FB_HEIGHT + sin((y + 4*tt) / 56.0f) * (FB_HEIGHT / 6) + sin((y + 6 * tt) / 48.0f) * (FB_HEIGHT / 8);
+		if (yp == 0) yp = 1;
+		z = (1024 * PROJ_MUL) / yp;
+
+		du = 64 * z;
+		u = (-FB_WIDTH / 2) * du;
+
+		v = ((z >> 8) + yi) & (HMAP_HEIGHT - 1);
+		src = &bumpOffset[v * HMAP_WIDTH];
+
+		renderBitmapLineBump(u, du, src, dst);
+
+		dst += FB_WIDTH;
+	}
+}
+
+
 static void draw(void)
 {
 	const int t = time_msec - startingTime;
@@ -482,7 +522,8 @@ static void draw(void)
 	/* animateParticles();
 	renderParticles(); */
 
-	moveBumpOffset(t);
+	//moveBumpOffset(t);
+	testBlitBumpTex(t);
 
 	renderBump((unsigned short*)fb_pixels);
 

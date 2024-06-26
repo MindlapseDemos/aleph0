@@ -162,7 +162,7 @@ static int init(void)
 			CLAMP(dx, -32768, 32767);
 			CLAMP(dy, -32768, 32767);
 
-			bumpOffset[i].x = dx;
+			bumpOffset[i].x = x + dx;
 			bumpOffset[i].y = dy;
 			++i;
 		}
@@ -392,70 +392,64 @@ static void animateBigLights()
 	bigLightPoint[2].y = center.y + sin(1.3f * dt) * (56.0f + disperse);
 }
 
+
+#define SAFE_OFF_Y_TOP 60
+#define SAFE_OFF_Y_BOTTOM 60
+
 static void renderBump(unsigned short *vram)
 {
-	int x,y,i=0;
+	int x,y;
 
 	unsigned short* lightSrc = &lightmap[LMAP_OFFSET_Y * LMAP_WIDTH + LMAP_OFFSET_X];
 
-	for (y = 0; y < 64; ++y) {
+	for (y = 0; y < SAFE_OFF_Y_TOP; ++y) {
 		Diff* bumpSrc = &bumpOffsetFinal[(y & (HMAP_HEIGHT - 1)) * HMAP_WIDTH];
 		for (x = 0; x < HMAP_WIDTH; ++x) {
-			int ix = x + bumpSrc->x;
 			int iy = y + bumpSrc->y;
-			++bumpSrc;
 
 			if (iy < 0) iy = 0;
-			vram[i++] = lightSrc[iy * LMAP_WIDTH + ix];
+			*vram++ = lightSrc[iy * LMAP_WIDTH + bumpSrc->x];
+			++bumpSrc;
 		}
 		bumpSrc -= HMAP_WIDTH;
 		for (x = HMAP_WIDTH; x < FB_WIDTH; ++x) {
-			int ix = x + bumpSrc->x;
 			int iy = y + bumpSrc->y;
-			++bumpSrc;
 
 			if (iy < 0) iy = 0;
-			vram[i++] = lightSrc[iy * LMAP_WIDTH + ix];
+			*vram++ = lightSrc[iy * LMAP_WIDTH + bumpSrc->x + HMAP_WIDTH];
+			++bumpSrc;
 		}
 	}
 
-	for (y = 64; y < FB_HEIGHT-64; ++y) {
+	for (y = SAFE_OFF_Y_TOP; y < FB_HEIGHT-SAFE_OFF_Y_BOTTOM; ++y) {
 		Diff* bumpSrc = &bumpOffsetFinal[(y & (HMAP_HEIGHT - 1)) * HMAP_WIDTH];
 		for (x = 0; x < HMAP_WIDTH; ++x) {
-			int ix = x + bumpSrc->x;
-			int iy = y + bumpSrc->y;
+			*vram++ = lightSrc[(y + bumpSrc->y) * LMAP_WIDTH + bumpSrc->x];
 			++bumpSrc;
-
-			vram[i++] = lightSrc[iy * LMAP_WIDTH + ix];
 		}
 		bumpSrc -= HMAP_WIDTH;
 		for (x = HMAP_WIDTH; x < FB_WIDTH; ++x) {
-			int ix = x + bumpSrc->x;
-			int iy = y + bumpSrc->y;
+			*vram++ = lightSrc[(y + bumpSrc->y) * LMAP_WIDTH + bumpSrc->x + HMAP_WIDTH];
 			++bumpSrc;
-
-			vram[i++] = lightSrc[iy * LMAP_WIDTH + ix];
 		}
 	}
 
-	for (y = FB_HEIGHT-64; y < FB_HEIGHT; ++y) {
+	for (y = FB_HEIGHT-SAFE_OFF_Y_BOTTOM; y < FB_HEIGHT; ++y) {
 		Diff* bumpSrc = &bumpOffsetFinal[(y & (HMAP_HEIGHT - 1)) * HMAP_WIDTH];
 		for (x = 0; x < HMAP_WIDTH; ++x) {
-			int ix = x + bumpSrc->x;
 			int iy = y + bumpSrc->y;
-			++bumpSrc;
 
 			if (iy > FB_HEIGHT - 1) iy = FB_HEIGHT - 1;
-			vram[i++] = lightSrc[iy * LMAP_WIDTH + ix];
+			*vram++ = lightSrc[iy * LMAP_WIDTH + bumpSrc->x];
+			++bumpSrc;
 		}
 		bumpSrc -= HMAP_WIDTH;
 		for (x = HMAP_WIDTH; x < FB_WIDTH; ++x) {
-			int ix = x + bumpSrc->x;
 			int iy = y + bumpSrc->y;
-			++bumpSrc;
 
 			if (iy > FB_HEIGHT - 1) iy = FB_HEIGHT - 1;
-			vram[i++] = lightSrc[iy * LMAP_WIDTH + ix];
+			*vram++ = lightSrc[iy * LMAP_WIDTH + bumpSrc->x + HMAP_WIDTH];
+			++bumpSrc;
 		}
 	}
 }

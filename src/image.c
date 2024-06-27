@@ -7,6 +7,7 @@
 #include "treestor.h"
 #include "util.h"
 #include "gfxutil.h"
+#include "dynarr.h"
 
 /* TODO support alpha masks in raw image dumps */
 
@@ -310,4 +311,152 @@ void init_image(struct image *img, int x, int y, uint16_t *pixels, int scanlen)
 	img->pixels = pixels;
 
 	calc_pow2(img);
+}
+
+#define RLE_OP_SKIP			0
+#define RLE_OP_COPY			0x8000
+#define RLE_OP_BITS			0x8000
+#define RLE_COUNT_BITS		0x7fff
+
+#define ADD_RLE_SKIP(skip) \
+	do { \
+		void *tmp; \
+		uint16_t foo = RLE_OP_SKIP | ((skip) & RLE_COUNT_BITS); \
+		if(!(tmp = dynarr_push(rledata, &foo))) { \
+			fprintf(stderr, "failed to append RLE data\n"); \
+			goto err; \
+		} \
+		rledata = tmp; \
+		num_rle_ops++; \
+	} while(0)
+
+#define ADD_RLE_SPAN(count, ptr) \
+	do { \
+		int i; \
+		void *tmp; \
+		uint16_t *p = ptr; \
+		uint16_t foo = RLE_OP_COPY | ((count) & RLE_COUNT_BITS); \
+		if(!(tmp = dynarr_push(rledata, &foo))) { \
+			fprintf(stderr, "failed to append to RLE data\n"); \
+			goto err; \
+		} \
+		rledata = tmp; \
+		for(i=0; i<count; i++) { \
+			if(!(tmp = dynarr_push(rledata, p++))) { \
+				fprintf(stderr, "failed to append to RLE data\n"); \
+				goto err; \
+			} \
+			rledata = tmp; \
+		} \
+		num_rle_ops++; \
+	} while(0)
+
+
+int conv_rle(struct image *img, uint16_t ckey)
+{
+	int i, j;
+	long count, skip;
+	uint16_t *rledata, *sptr;
+	unsigned int num_rle_ops = 0;
+
+	if(!(rledata = dynarr_alloc(0, 2))) {
+		fprintf(stderr, "conv_rle: failed to allocate dynamic array\n");
+		return -1;
+	}
+
+	sptr = img->pixels;
+	for(i=0; i<img->height; i++) {
+		count = skip = 0;
+		for(j=0; j<img->width; j++) {
+			if(*sptr == ckey) {
+				/* transparent pixel */
+				if(count) {
+					/* we had non-transparent up to now, add a span */
+					ADD_RLE_SPAN(count, sptr - count);
+					count = 0;
+				} else {
+					/* previous was transparent, increment skip */
+					skip++;
+				}
+			} else {
+				/* non-transparent pixel */
+				if(skip) {
+					/* we had transparent up to now, add a skip */
+					ADD_RLE_SKIP(skip);
+					skip = 0;
+				} else {
+					/* previous was non-transparent, increment count */
+					count++;
+				}
+			}
+			sptr++;
+		}
+
+		/* end of scanline, add any residuals */
+		if(count) {
+			ADD_RLE_SPAN(count, sptr - count);
+			count = 0;
+		}
+		ADD_RLE_SKIP(0);	/* skip with 0 count means skip to next scanline */
+		skip = 0;
+	}
+
+	free(img->pixels);
+	img->pixels = dynarr_finalize(rledata);
+	return 0;
+
+err:
+	dynarr_free(rledata);
+	return -1;
+}
+
+void blitfb_rle(uint16_t *fb, int x, int y, struct image *img)
+{
+	int endx, endy, xpos, len;
+	uint16_t *fbptr, *rleptr, *pixptr;
+	unsigned int rle, count;
+
+	endy = y + img->height;
+	if(endy > 240) endy = 240;
+
+	xpos = x;
+
+	fb += (y << 8) + (y << 6);
+	rleptr = img->pixels;
+	while(y < endy) {
+		rle = (unsigned int)*rleptr++;
+		count = rle & RLE_COUNT_BITS;
+
+		if(rle & 0x8000) {
+			/* RLE OP COPY */
+			pixptr = rleptr;
+			rleptr += count;
+			if(y < 0) break;
+
+			endx = x + (int)count;
+			if(endx <= 0) {
+				x = endx;
+				break;
+			}
+
+			if(x < 0) x = 0;
+			if(endx > 320) endx = 320;
+
+			len = endx - x;
+			if(len > 0) {
+				memcpy(fb + x, pixptr, len * 2);
+			}
+			x = endx;
+		} else {
+			/* RLE OP SKIP */
+			if(count) {
+				x += count;
+			} else {
+				/* skip with 0 count means next scanline */
+				fb += 320;
+				x = xpos;
+				y++;
+			}
+		}
+	}
 }

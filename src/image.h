@@ -34,4 +34,7 @@ void destroy_cubemap(struct image *cube);
 /* scanlen == 0 means tightly packed (scanlen = width) */
 void init_image(struct image *img, int x, int y, uint16_t *pixels, int scanlen);
 
+int conv_rle(struct image *img, uint16_t ckey);
+void blitfb_rle(uint16_t *fb, int x, int y, struct image *img);
+
 #endif	/* IMAGE_H_ */

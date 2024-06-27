@@ -33,6 +33,11 @@ static struct g3d_mesh mmesh;
 static uint16_t *bgimage, *envmap;
 static int envmap_xsz, envmap_ysz;
 
+#define NUM_SPR		4
+static struct image spr[NUM_SPR];
+static const char *sprfile[NUM_SPR] = {"data/blob_top.png", "data/blob_bot.png",
+	"data/blobterm.png", "data/blobgirl.png"};
+
 static struct msurf_volume vol;
 
 #define VOL_SIZE	24
@@ -59,6 +64,15 @@ static int init(void)
 
 	if(!(bgimage = img_load_pixels("data/blob_bg.png", &xsz, &ysz, IMG_FMT_RGB565))) {
 		return -1;
+	}
+	for(i=0; i<NUM_SPR; i++) {
+		if(load_image(spr + i, sprfile[i]) == -1) {
+			return -1;
+		}
+		if(conv_rle(spr + i, 0xf81f) == -1) {
+			destroy_image(spr + i);
+			return -1;
+		}
 	}
 	/*if(!(envmap = img_load_pixels("data/foo.png", &envmap_xsz, &envmap_ysz, IMG_FMT_RGB565))) {
 		return -1;
@@ -159,6 +173,13 @@ static void draw(void)
 
 	g3d_clear(G3D_DEPTH_BUFFER_BIT);
 	memcpy64(fb_pixels, bgimage, 320 * 240 / 4);
+
+	/* sprites */
+	blitfb_rle(fb_pixels, 160 - 121/2, 0, spr);
+	blitfb_rle(fb_pixels, 160 - 197/2, 240 - 45, spr + 1);
+	blitfb_rle(fb_pixels, -10, 20, spr + 2);
+	blitfb_rle(fb_pixels, 320 - 98, 21, spr + 3);
+
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();

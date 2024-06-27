@@ -177,7 +177,7 @@ static void draw(void)
 	/* sprites */
 	blitfb_rle(fb_pixels, 160 - 121/2, 0, spr);
 	blitfb_rle(fb_pixels, 160 - 197/2, 240 - 45, spr + 1);
-	blitfb_rle(fb_pixels, -10, 20, spr + 2);
+	blitfb_rle(fb_pixels, -40, 20, spr + 2);
 	blitfb_rle(fb_pixels, 320 - 98, 21, spr + 3);
 
 

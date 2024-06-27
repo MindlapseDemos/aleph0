@@ -431,15 +431,18 @@ void blitfb_rle(uint16_t *fb, int x, int y, struct image *img)
 			/* RLE OP COPY */
 			pixptr = rleptr;
 			rleptr += count;
-			if(y < 0) break;
+			if(y < 0) continue;
 
 			endx = x + (int)count;
 			if(endx <= 0) {
 				x = endx;
-				break;
+				continue;
 			}
 
-			if(x < 0) x = 0;
+			if(x < 0) {
+				pixptr -= x;
+				x = 0;
+			}
 			if(endx > 320) endx = 320;
 
 			len = endx - x;

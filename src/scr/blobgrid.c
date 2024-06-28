@@ -6,6 +6,7 @@
 
 #include "demo.h"
 #include "screen.h"
+#include "noise.h"
 
 #include "opt_rend.h"
 #include "thunder.h"
@@ -27,6 +28,11 @@ typedef struct BlobGridParams
 #define NUM_STARS MAX_NUM_POINTS
 #define STARS_CUBE_LENGTH 1024
 #define STARS_CUBE_DEPTH 512
+
+#define FAINT_BG_WIDTH 256
+#define FAINT_BG_HEIGHT 256
+
+static unsigned char* faintBgTex;
 
 BlobGridParams bgParamsStars = { NUM_STARS, 7, 4096, 16};
 
@@ -69,6 +75,26 @@ struct screen *blobgrid_screen(void)
 	return &scr;
 }
 
+static void initFaintBackground()
+{
+	int x, y, i;
+	const float scale = 1.0f / 32.0f;
+	const int perX = (int)(scale * FAINT_BG_WIDTH);
+	const int perY = (int)(scale * FAINT_BG_HEIGHT);
+
+	faintBgTex = (unsigned char*)malloc(FAINT_BG_WIDTH * FAINT_BG_HEIGHT);
+
+	i = 0;
+	for (y = 0; y < FAINT_BG_HEIGHT; ++y) {
+		for (x = 0; x < FAINT_BG_WIDTH; ++x) {
+			float f = pfbm2((float)x * scale, (float)y * scale, perX, perY, 8) + 0.25f;
+			//float f = pturbulence2((float)x * scale, (float)y * scale, perX, perY, 4);
+			CLAMP(f, 0.0f, 0.99f);
+			faintBgTex[i++] = (int)(f * 5.0f);
+		}
+	}
+}
+
 static void initStars(void)
 {
 	int i;
@@ -104,6 +130,8 @@ static int init(void)
 
 	initStars();
 
+	initFaintBackground();
+
 	return 0;
 }
 
@@ -115,6 +143,7 @@ static void destroy(void)
 	free(thunderPal32);
 	free(origPos);
 	free(screenPos);
+	free(faintBgTex);
 }
 
 static void start(long trans_time)
@@ -304,6 +333,25 @@ static void mergeThunderScreen()
 	buffer8bppORwithVram(getThunderBlurBuffer(), thunderPal32);
 }
 
+static void renderFaintBackground(int t)
+{
+	static int flipflop = 0;
+
+	int x, y;
+	int tt = t >> 6;
+
+	unsigned int* dst = (unsigned int*)(fb_pixels + flipflop * FB_WIDTH);
+	for (y = 0; y < FB_HEIGHT; y+=2) {
+		unsigned char* src = &faintBgTex[((y + flipflop) & (FAINT_BG_HEIGHT-1)) * FAINT_BG_WIDTH];
+		for (x = 0; x < FB_WIDTH/2; ++x) {
+			int c = src[(x+tt) & (FAINT_BG_WIDTH - 1)] + src[(x + 2*tt) & (FAINT_BG_WIDTH - 1)];
+			*dst++ |= (c << 16) | c;
+		}
+		dst += FB_WIDTH/2;
+	}
+	flipflop = (flipflop + 1) & 1;
+}
+
 static void draw(void)
 {
 	int t = time_msec - startingTime;
@@ -313,6 +361,8 @@ static void draw(void)
 	buffer8bppToVram(blobBuffer, blobsPal32);
 
 	mergeThunderScreen();
+
+	renderFaintBackground(t);
 
 	swap_buffers(0);
 }

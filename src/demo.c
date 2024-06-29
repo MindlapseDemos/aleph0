@@ -240,8 +240,8 @@ void demo_post_draw(void *pixels)
 {
 	if(opt.dbgmode) {
 		drawFps(pixels);
-		if(dbg_curscr_name) {
-			cs_dputs(pixels, dbg_curscr_name_pos, 240 - 16, dbg_curscr_name);
+		if(curscr_name) {
+			cs_dputs(pixels, curscr_name_pos, 240 - 16, curscr_name);
 		}
 	}
 
@@ -274,6 +274,8 @@ void change_screen(int idx)
 
 void demo_keyboard(int key, int press)
 {
+	int evid;
+
 	if(press) {
 		switch(key) {
 		case 27:
@@ -301,7 +303,9 @@ void demo_keyboard(int key, int press)
 			return;
 
 		case KB_F1:
-			reset_timer();
+			if(curscr_name && (evid = dseq_lookup(curscr_name)) >= 0) {
+				reset_timer(dseq_evstart(evid));
+			}
 			dseq_start();
 			break;
 

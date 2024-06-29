@@ -7,9 +7,9 @@ void init_timer(int res_hz)
 {
 }
 
-void reset_timer(void)
+void reset_timer(unsigned long ms)
 {
-	start_time = SDL_GetTicks();
+	start_time = SDL_GetTicks() - ms;
 }
 
 unsigned long get_msec(void)

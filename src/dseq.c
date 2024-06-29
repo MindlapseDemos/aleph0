@@ -450,6 +450,11 @@ void dseq_stop(void)
 	started = 0;
 }
 
+void dseq_ffwd(long tm)
+{
+	/* XXX cont. */
+}
+
 static char dbgbuf[128];
 static int dbgbuf_len;
 
@@ -555,6 +560,11 @@ int dseq_lookup(const char *evname)
 const char *dseq_name(int evid)
 {
 	return tracks[evid].name;
+}
+
+long dseq_evstart(int evid)
+{
+	return tracks[evid].num > 0 ? tracks[evid].keys[0].tm : -1;
 }
 
 int dseq_value(int evid)

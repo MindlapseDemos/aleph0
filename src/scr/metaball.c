@@ -177,7 +177,7 @@ static void draw(void)
 	/* sprites */
 	blitfb_rle(fb_pixels, 160 - 121/2, 0, spr);
 	blitfb_rle(fb_pixels, 160 - 197/2, 240 - 45, spr + 1);
-	blitfb_rle(fb_pixels, -40, 20, spr + 2);
+	blitfb_rle(fb_pixels, 0, 20, spr + 2);
 	blitfb_rle(fb_pixels, 320 - 98, 21, spr + 3);
 
 
@@ -201,32 +201,6 @@ static void draw(void)
 	draw_mesh(&mmesh);
 	g3d_disable(G3D_TEXTURE_GEN);
 	g3d_disable(G3D_TEXTURE_2D);
-
-#ifdef DBG_VISIT
-	g3d_disable(G3D_LIGHTING);
-	g3d_begin(G3D_POINTS);
-	cell = vol.cells;
-	for(z=0; z<vol.zres - 1; z++) {
-		for(y=0; y<vol.yres - 1; y++) {
-			for(x=0; x<vol.xres - 1; x++) {
-				if((cell->flags & 0xffff) == (vol.cur & 0xffff)) {
-					g3d_color3b(32, 128, 32);
-					g3d_vertex(cell->vox[0]->pos.x + vol.dx * 0.5f,
-						cell->vox[0]->pos.y + vol.dy * 0.5f,
-						cell->vox[0]->pos.z + vol.dz * 0.5f);
-				}
-				cell++;
-			}
-			cell += vol.xstore - (vol.xres - 1);
-		}
-		cell += (vol.ystore - (vol.yres - 1)) << vol.xshift;
-	}
-	g3d_end();
-	g3d_enable(G3D_LIGHTING);
-
-	sprintf(buf, "visit %d", dbg_visited);
-	cs_cputs(fb_pixels, 10, 200, buf);
-#endif
 
 	sprintf(buf, "%d tris", mmesh.vcount / 3);
 	cs_cputs(fb_pixels, 10, 10, buf);

@@ -48,6 +48,11 @@ demoseq {
 		wait = 0
 		dur = 0
 	}
+
+	metaballs {
+		wait = 0
+		dur = 0
+	}
 }
 
 # vi:ts=4 sts=4 sw=4 ai:

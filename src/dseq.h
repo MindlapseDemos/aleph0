@@ -19,6 +19,8 @@ void dseq_close(void);
 int dseq_isopen(void);
 
 void dseq_start(void);
+void dseq_stop(void);
+void dseq_ffwd(long tm);
 
 void dseq_update(void);
 
@@ -26,6 +28,8 @@ void dseq_update(void);
 int dseq_lookup(const char *evname);
 
 const char *dseq_name(int evid);
+
+long dseq_evstart(int evid);
 
 /* returns the current value of event track by id */
 int dseq_value(int evid);

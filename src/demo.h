@@ -6,6 +6,7 @@
 #include "dseq.h"
 #include "image.h"
 #include "cfgopt.h"
+#include "timer.h"
 #include "cgmath/cgmath.h"
 
 extern int fb_width, fb_height, fb_bpp;
@@ -80,8 +81,6 @@ void demo_keyboard(int key, int press);
 /* defined in main.c */
 void demo_quit(void);
 void demo_abort(void);
-void reset_timer(void);
-unsigned long get_msec(void);
 void set_palette(int idx, int r, int g, int b);
 
 #define swap_buffers(pix)	blit_frame(pix ? pix : fb_pixels, opt.vsync)

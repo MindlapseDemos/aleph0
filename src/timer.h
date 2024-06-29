@@ -10,7 +10,8 @@ extern "C" {
  */
 void init_timer(int res_hz);
 
-void reset_timer(void);
+/* reset timer to start counting from ms (usually 0) */
+void reset_timer(unsigned long ms);
 unsigned long get_msec(void);
 
 void sleep_msec(unsigned long msec);

@@ -7,11 +7,11 @@
 #include "gfxutil.h"
 #include "timer.h"
 
-#define DBG_SCRCHG \
+#define SCRCHG \
 	do { \
-		dbg_curscr_name = cur->name ? cur->name : "<unknown>"; \
-		dbg_curscr_name_len = strlen(dbg_curscr_name); \
-		dbg_curscr_name_pos = 320 - dbg_curscr_name_len * 9; \
+		curscr_name = cur->name ? cur->name : "<unknown>"; \
+		curscr_name_len = strlen(curscr_name); \
+		curscr_name_pos = 320 - curscr_name_len * 9; \
 	} while(0)
 
 struct screen *tunnel_screen(void);
@@ -46,8 +46,8 @@ static int num_screens;
 static struct screen *cur, *prev, *next;
 static long trans_start, trans_dur;
 
-const char *dbg_curscr_name;
-int dbg_curscr_name_len, dbg_curscr_name_pos;
+const char *curscr_name;
+int curscr_name_len, curscr_name_pos;
 
 void populate_screens(void)
 {
@@ -137,7 +137,7 @@ void scr_update(void)
 			cur = next;
 			next = 0;
 
-			DBG_SCRCHG;
+			SCRCHG;
 		}
 	}
 }
@@ -202,7 +202,7 @@ int scr_change(struct screen *s, long trans_time)
 		cur = s;
 		prev = 0;
 
-		DBG_SCRCHG;
+		SCRCHG;
 	}
 	return 0;
 }

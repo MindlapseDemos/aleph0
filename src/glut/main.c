@@ -141,7 +141,7 @@ int main(int argc, char **argv)
 	}
 	atexit(demo_cleanup);
 
-	reset_timer();
+	reset_timer(0);
 
 	glutMainLoop();
 	return 0;
@@ -315,9 +315,9 @@ void init_timer(int res_hz)
 {
 }
 
-void reset_timer(void)
+void reset_timer(unsigned long ms)
 {
-	start_time = glutGet(GLUT_ELAPSED_TIME);
+	start_time = glutGet(GLUT_ELAPSED_TIME) - ms;
 }
 
 unsigned long get_msec(void)

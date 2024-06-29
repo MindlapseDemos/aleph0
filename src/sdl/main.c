@@ -109,7 +109,7 @@ int main(int argc, char **argv)
 		use_sball = 1;
 	}
 
-	reset_timer();
+	reset_timer(0);
 
 #ifdef __EMSCRIPTEN__
 	emscripten_set_main_loop(mainloop_iter, -1, 0);

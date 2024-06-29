@@ -95,7 +95,7 @@ int main(int argc, char **argv)
 	}*/
 
 	fflush(stdout);
-	reset_timer();
+	reset_timer(0);
 
 	for(;;) {
 		int key;

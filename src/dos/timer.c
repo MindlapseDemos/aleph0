@@ -51,7 +51,7 @@ static _go32_dpmi_seginfo intr, prev_intr;
 static void INTERRUPT timer_irq();
 
 static volatile unsigned long ticks;
-static unsigned long tick_interval, ticks_per_dos_intr;
+static unsigned long tick_interval, ticks_per_dos_intr, toffs;
 static int inum;
 
 void init_timer(int res_hz)
@@ -120,14 +120,15 @@ static void cleanup(void)
 	_enable();
 }
 
-void reset_timer(void)
+void reset_timer(unsigned long ms)
 {
 	ticks = 0;
+	toffs = ms;
 }
 
 unsigned long get_msec(void)
 {
-	return ticks * tick_interval;
+	return (ticks * tick_interval) + toffs;
 }
 
 void sleep_msec(unsigned long msec)

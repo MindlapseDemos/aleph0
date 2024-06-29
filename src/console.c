@@ -234,7 +234,7 @@ static int cmd_list(const char *args)
 
 static int cmd_start(const char *args)
 {
-	reset_timer();
+	reset_timer(0);
 	dseq_start();
 	return 0;
 }

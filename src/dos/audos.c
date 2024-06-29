@@ -199,7 +199,7 @@ int au_music_volume(int vol)
  * and implement all the timer functions here, using MIDAS callbacks
  */
 static volatile unsigned long ticks;
-static unsigned long tick_interval;
+static unsigned long tick_interval, toffs;
 
 static void MIDAS_CALL midas_timer(void)
 {
@@ -216,14 +216,15 @@ void init_timer(int res_hz)
 	tick_interval = DIV_ROUND(1000, res_hz);
 }
 
-void reset_timer(void)
+void reset_timer(unsigned long ms)
 {
 	ticks = 0;
+	toffs = ms;
 }
 
 unsigned long get_msec(void)
 {
-	return ticks * tick_interval;
+	return (ticks * tick_interval) + toffs;
 }
 
 void sleep_msec(unsigned long msec)

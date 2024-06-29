@@ -34,7 +34,7 @@ typedef struct BlobGridParams
 
 static unsigned char* faintBgTex;
 
-BlobGridParams bgParamsStars = { NUM_STARS, 7, 4096, 16};
+BlobGridParams bgParamsStars = { NUM_STARS, 5, 2*4096, 16};
 
 
 typedef struct Pos3D
@@ -90,7 +90,7 @@ static void initFaintBackground()
 			float f = pfbm2((float)x * scale, (float)y * scale, perX, perY, 8) + 0.25f;
 			//float f = pturbulence2((float)x * scale, (float)y * scale, perX, perY, 4);
 			CLAMP(f, 0.0f, 0.99f);
-			faintBgTex[i++] = (int)(f * 5.0f);
+			faintBgTex[i++] = (int)(f * 9.0f);
 		}
 	}
 }
@@ -117,11 +117,11 @@ static int init(void)
 	blobsPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
 	thunderPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
 
-	setPalGradient(0,127, 0,0,0, 31,63,63, blobsPal);
-	setPalGradient(128,255, 31,63,31, 23,15,7, blobsPal);
+	setPalGradient(0,63, 0,0,0, 31,63,63, blobsPal);
+	setPalGradient(64,255, 31,63,31, 23,15,7, blobsPal);
 
-	setPalGradient(0, 127, 0, 0, 0, 11, 7, 7, thunderPal);
-	setPalGradient(127, 255, 11, 7, 7, 3, 7, 31, thunderPal);
+	setPalGradient(0, 127, 0, 0, 0, 7, 9, 15, thunderPal);
+	setPalGradient(128, 255, 7, 9, 15, 31, 27, 7, thunderPal);
 
 	blobsPal32 = createColMap16to32(blobsPal);
 	thunderPal32 = createColMap16to32(thunderPal);
@@ -298,8 +298,8 @@ static void moveStars()
 		#ifndef STARS_NORMAL
 			src->x += (((count) & 7) + 1);
 			src->y += (((count) & 3) + 2);
-			if (src->x >= STARS_CUBE_DEPTH / 2) src->x = - STARS_CUBE_DEPTH / 2;
-			if (src->y >= STARS_CUBE_DEPTH / 2) src->y = - STARS_CUBE_DEPTH / 2;
+			if (src->x >= STARS_CUBE_DEPTH / 1) src->x = - STARS_CUBE_DEPTH / 1;
+			if (src->y >= STARS_CUBE_DEPTH / 1) src->y = - STARS_CUBE_DEPTH / 1;
 		#endif			
 
 		src->z = (src->z - ((count & 3) + 1)) & (STARS_CUBE_DEPTH - 1);
@@ -360,9 +360,9 @@ static void draw(void)
 
 	buffer8bppToVram(blobBuffer, blobsPal32);
 
-	mergeThunderScreen();
-
 	renderFaintBackground(t);
+
+	mergeThunderScreen();
 
 	swap_buffers(0);
 }

@@ -4,6 +4,8 @@
 #include "treestor.h"
 #include "dynarr.h"
 #include "demo.h"
+#include "util.h"
+#include "cgmath/cgmath.h"
 
 struct key {
 	long tm;
@@ -64,6 +66,8 @@ static int keycmp(const void *a, const void *b);
 static int interp_step(struct transition *trs, int t);
 static int interp_linear(struct transition *trs, int t);
 static int interp_smoothstep(struct transition *trs, int t);
+
+static void dump_track(FILE *fp, struct track *trk);
 
 
 int dseq_open(const char *fname)
@@ -156,6 +160,16 @@ int dseq_open(const char *fname)
 	}
 
 	started = 0;
+
+	/*{
+		FILE *fp = fopen("tracks", "wb");
+		if(fp) {
+			for(i=0; i<num_tracks; i++) {
+				dump_track(fp, tracks + i);
+			}
+			fclose(fp);
+		}
+	}*/
 
 	free(trk_key);
 	return 0;
@@ -278,7 +292,7 @@ static int read_event(int parid, struct ts_node *tsn)
 	}
 
 	if(parid >= 0) {
-		par_start = tracks[parid].num > 0 ? tracks[parid].keys[0].tm : 0;
+		par_start = dynarr_empty(tracks[parid].keys) ? 0 : tracks[parid].keys[0].tm;
 	}
 
 	attr = tsn->attr_list;
@@ -455,8 +469,44 @@ void dseq_ffwd(long tm)
 	/* XXX cont. */
 }
 
-static char dbgbuf[128];
-static int dbgbuf_len;
+int setup_transition(int id, struct event *trigev)
+{
+	int i;
+	long trans_time;
+	struct track *trk = tracks + id;
+	struct transition *trs;
+
+	for(i=0; i<MAX_ACTIVE_TRANS; i++) {
+		if(trans[i].id == -1) break;
+	}
+	if(i >= MAX_ACTIVE_TRANS) {
+		fprintf(stderr, "failed to allocate transition for %s\n", trk->name);
+		return -1;
+	}
+
+	trs = trans + i;
+	trs->id = id;
+	trs->start = next_event->key->tm;
+
+
+	/* if trans_time is non-zero, we ignore the interval and set the
+	 * transition duration to whatever was requested.  Also if there's no
+	 * other key after this, assume a transition time of 1sec
+	 */
+	if(trk->trans_time || next_event->key >= trk->keys + trk->num - 1) {
+		trans_time = trk->trans_time ? trk->trans_time : 1000;
+		trs->end = trs->start + trans_time;
+		trs->val[0] = trk->cur_val;
+		trs->val[1] = next_event->key->val;
+	} else {
+		trs->end = next_event->key[1].tm;
+		trs->val[0] = next_event->key->val;
+		trs->val[1] = next_event->key[1].val;
+	}
+	trs->dur = trs->end - trs->start;
+
+	return 0;
+}
 
 void dseq_update(void)
 {
@@ -472,7 +522,6 @@ void dseq_update(void)
 	dt = time_msec - prev_upd;
 	prev_upd = time_msec;
 
-	dbgbuf_len = 0;
 	/* update active transitions */
 	for(i=0; i<MAX_ACTIVE_TRANS; i++) {
 		if(trans[i].id == -1) continue;
@@ -486,11 +535,7 @@ void dseq_update(void)
 			t = ((time_msec - trs->start) << 10) / trs->dur;
 			trk->cur_val = trk->interp_func(trs, t);
 		}
-
-		dbgbuf_len += sprintf(dbgbuf + dbgbuf_len, "%s:%d ", trk->name, trk->cur_val);
 	}
-	printf("\r%s               ", dbgbuf);
-	fflush(stdout);
 
 	/* trigger any pending events */
 	while(next_event) {
@@ -501,39 +546,13 @@ void dseq_update(void)
 
 		trk = tracks + id;
 
-		if(trk->interp != DSEQ_STEP) {
-			/* if interpolator is set to anything other than step, allocate a
-			 * free transition, and set it up. Assuming there's another key
-			 * after this one to interpolate to.
-			 */
-			if(next_event->key >= trk->keys + trk->num) {
-				goto no_trans;
-			}
-
-			for(i=0; i<MAX_ACTIVE_TRANS; i++) {
-				if(trans[i].id == -1) break;
-			}
-			if(i >= MAX_ACTIVE_TRANS) {
-				fprintf(stderr, "failed to allocate transition for %s\n", trk->name);
-				goto no_trans;
-			}
-
-			trs = trans + i;
-			trs->id = id;
-			trs->start = next_event->key->tm;
-			if(trk->trans_time) {
-				trs->end = trs->start + trk->trans_time;
-			} else {
-				trs->end = next_event->key[1].tm;
-			}
-			trs->dur = trs->end - trs->start;
-			trs->val[0] = next_event->key->val;
-			trs->val[1] = next_event->key[1].val;
+		/* step can't have transitions */
+		if(trk->interp == DSEQ_STEP || setup_transition(id, next_event) == -1) {
+			trk->cur_val = next_event->key->val;
 		}
-no_trans:
-		trk->cur_val = next_event->key->val;
 		TRIGGER(id);
 
+		/* call trigger callbacks */
 		if(next_event->trigcb) {
 			next_event->trigcb(id, next_event->key->val, next_event->trigcls);
 		}
@@ -615,5 +634,18 @@ static int interp_linear(struct transition *trs, int t)
 
 static int interp_smoothstep(struct transition *trs, int t)
 {
-	return trs->val[0];	/* TODO */
+	float tt = cgm_smoothstep(0, trs->dur, t);
+	return cround64(trs->val[0] + (trs->val[1] - trs->val[0]) * tt);	/* TODO: fixed point */
+}
+
+static void dump_track(FILE *fp, struct track *trk)
+{
+	int i;
+	static const char *interpstr[] = {"step", "linear", "smoothstep"};
+
+	fprintf(fp, "%s (%s/%d)\n", trk->name, interpstr[trk->interp], trk->trans_time);
+
+	for(i=0; i<trk->num; i++) {
+		fprintf(fp, "\t%ld: %d\n", trk->keys[i].tm, trk->keys[i].val);
+	}
 }

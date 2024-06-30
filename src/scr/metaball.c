@@ -53,6 +53,9 @@ static struct msurf_volume vol;
 
 #define NUM_MBALLS	3
 
+static int evid_faces;
+
+
 struct screen *metaballs_screen(void)
 {
 	return &scr;
@@ -104,6 +107,7 @@ static int init(void)
 	mmesh.iarr = 0;
 	mmesh.vcount = mmesh.icount = 0;
 
+	evid_faces = dseq_lookup("metaballs.faces");
 	return 0;
 }
 
@@ -168,6 +172,7 @@ static void draw(void)
 	int x, y, z;
 	struct msurf_voxel *vox;
 	struct msurf_cell *cell;
+	int faces;
 
 	update();
 
@@ -177,9 +182,11 @@ static void draw(void)
 	/* sprites */
 	blitfb_rle(fb_pixels, 160 - 121/2, 0, spr);
 	blitfb_rle(fb_pixels, 160 - 197/2, 240 - 45, spr + 1);
-	blitfb_rle(fb_pixels, 0, 20, spr + 2);
-	blitfb_rle(fb_pixels, 320 - 98, 21, spr + 3);
-
+	if((faces = dseq_value(evid_faces))) {
+		int offs = faces * 98 >> 10;
+		blitfb_rle(fb_pixels, offs - 98, 20, spr + 2);
+		blitfb_rle(fb_pixels, 320 - offs, 21, spr + 3);
+	}
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
@@ -204,6 +211,9 @@ static void draw(void)
 
 	sprintf(buf, "%d tris", mmesh.vcount / 3);
 	cs_cputs(fb_pixels, 10, 10, buf);
+
+	sprintf(buf, "ev: %d", dseq_value(evid_faces));
+	cs_cputs(fb_pixels, 10, 20, buf);
 
 	swap_buffers(fb_pixels);
 }

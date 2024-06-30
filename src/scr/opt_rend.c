@@ -490,26 +490,43 @@ void renderPolygons(Object3D* obj, Vertex3D* screenVertices)
 	}
 }
 
+void clearBlobBuffer(unsigned char* buffer)
+{
+	int y;
+	unsigned char* dst = buffer + ((POLKA_BUFFER_HEIGHT - FB_HEIGHT) / 2) * POLKA_BUFFER_WIDTH + (POLKA_BUFFER_WIDTH - FB_WIDTH) / 2;
+
+	for (y = 0; y < FB_HEIGHT; ++y) {
+		memset(dst, 0, FB_WIDTH);
+		dst += POLKA_BUFFER_WIDTH;
+	}
+}
+
 /* Needs 8bpp chunky buffer and then permutations of two pixels(256 * 256) to 32bit(two 16bit pixels) */
 void buffer8bppToVram(unsigned char *buffer, unsigned int *colMap16to32)
 {
-	int i;
-	unsigned short *src = (unsigned short*)buffer;
+	int x,y;
+	unsigned short *src = (unsigned short*)buffer + ((POLKA_BUFFER_HEIGHT - FB_HEIGHT) / 2) * (POLKA_BUFFER_WIDTH / 2) + (POLKA_BUFFER_WIDTH - FB_WIDTH) / 4;
 	unsigned int *dst = (unsigned int*)fb_pixels;
 
-	for (i=0; i<FB_WIDTH * FB_HEIGHT / 2; ++i) {
-		*dst++ = colMap16to32[*src++];
+	for (y = 0; y < FB_HEIGHT; ++y) {
+		for (x = 0; x < FB_WIDTH / 2; ++x) {
+			*dst++ = colMap16to32[*(src + x)];
+		}
+		src += POLKA_BUFFER_WIDTH / 2;
 	}
 }
-/* will need this alternative for faster OR with thunder screen anyway */
+
 void buffer8bppORwithVram(unsigned char* buffer, unsigned int* colMap16to32)
 {
-	int i;
-	unsigned short* src = (unsigned short*)buffer;
+	int x, y;
+	unsigned short* src = (unsigned short*)buffer + ((POLKA_BUFFER_HEIGHT - FB_HEIGHT) / 2) * (POLKA_BUFFER_WIDTH / 2) + (POLKA_BUFFER_WIDTH - FB_WIDTH) / 4;
 	unsigned int* dst = (unsigned int*)fb_pixels;
 
-	for (i = 0; i < FB_WIDTH * FB_HEIGHT / 2; ++i) {
-		*dst++ |= colMap16to32[*src++];
+	for (y = 0; y < FB_HEIGHT; ++y) {
+		for (x = 0; x < FB_WIDTH / 2; ++x) {
+			*dst++ |= colMap16to32[*(src + x)];
+		}
+		src += POLKA_BUFFER_WIDTH / 2;
 	}
 }
 
@@ -531,14 +548,14 @@ unsigned int *createColMap16to32(unsigned short *srcPal)
 
 void initBlobGfx()
 {
-	static unsigned char tempData[(BLOB_SIZES_NUM_MAX + 3) * (BLOB_SIZES_NUM_MAX + BLOB_SIZEX_PAD)];
+	static unsigned char tempData[(BLOB_SIZES_NUM_MAX + 3) * (BLOB_SIZES_NUM_MAX + 4 * BLOB_SIZEX_PAD)];
 
 	if (!isBlobGfxInit) {
 		int i,j,x,y;
 
 		for (i=0; i<BLOB_SIZES_NUM_MAX; ++i) {
 			const int blobSizeY = i+3;  /* 3 to 15 */
-			const int blobSizeX = (((blobSizeY+3) >> 2) << 2) + BLOB_SIZEX_PAD;    /* We are padding this, as we generate four pixels offset(for dword rendering) */
+			const int blobSizeX = (((blobSizeY+3) >> 2) << 2) + 4 * BLOB_SIZEX_PAD;    /* We are padding this, as we generate four pixels offset(for dword rendering) (I also added extra dummy padding by mul by 4 because something happens and big blobs are cut on the right. But the later code will cut the zero pads anyway, so we don't render more than we should) */
 			const float blobSizeYhalf = blobSizeY / 2.0f;
 			const float blobSizeXhalf = blobSizeX / 2.0f;
 
@@ -551,7 +568,7 @@ void initBlobGfx()
 			for (j=0; j<BLOB_SIZEX_PAD; ++j) {
 				unsigned char *src,*dst;
 				uint32_t* src32;
-				/* printf("%d %d\n----------\n\n", j, i); */
+				/*printf("%d %d\n----------\n\n", j, i);*/
 				dst = tempData;
 				for (y=0; y<blobSizeY; ++y) {
 					const float yc = (float)y - blobSizeYhalf + 0.5f;
@@ -565,12 +582,12 @@ void initBlobGfx()
 						float r = 1.0f - (xci*xci + yci*yci);
 						CLAMP01(r);
 						c = (int)(pow(r, 2.0f) * MAX_BLOB_COLOR);
-						/* printf("%d ", c); */
+						/*printf("%d ", c);*/
 						*dst++ = c;
 					}
-					/* printf("\n"); */
+					/*printf("\n");*/
 				}
-				/* printf("\n\n=========\n\n"); */
+				/*printf("\n\n=========\n\n");*/
 
 				minPadX = blobSizeX;
 				maxPadX = 0;
@@ -611,24 +628,29 @@ void initBlobGfx()
 				finalSizeX = maxPadX - minPadX + 1;
 				finalSizeY = maxPadY - minPadY + 1;
 
-				blobData[i][j].sizeX = finalSizeX;
+				blobData[i][j].wordSizeX = finalSizeX / 4;
 				blobData[i][j].sizeY = finalSizeY;
-				blobData[i][j].wordsOffX = minPadX / 4;
-				blobData[i][j].rowsOffY = minPadY;
+				blobData[i][j].centerX = blobSizeX / 2 - minPadX;
+				blobData[i][j].centerY = blobSizeY / 2 - minPadY;
 
 				blobData[i][j].data = (unsigned char*)malloc(finalSizeX * finalSizeY);
+
+				/*printf("\nwordSizeX =   %d\n", blobData[i][j].wordSizeX);
+				printf("sizeY     =   %d\n", blobData[i][j].sizeY);
+				printf("wordsOffX =   %d\n", blobData[i][j].centerX);
+				printf("rowsOffY  =   %d\n\n", blobData[i][j].centerY);*/
 
 				src = &tempData[minPadY * blobSizeX];
 				dst = blobData[i][j].data;
 				for (y = minPadY; y <= maxPadY; ++y) {
 					for (x = minPadX; x <= maxPadX; ++x) {
 						*dst++ = *(src + x);
-						/* printf("%d ", *(src + x)); */
+						/*printf("%d ", *(src + x));*/
 					}
 					src += blobSizeX;
-					/* printf("\n"); */
+					/*printf("\n");*/
 				}
-				/* printf("\n\n"); */
+				/*printf("\n\n");*/
 			}
 		}
 
@@ -652,34 +674,34 @@ void freeBlobGfx()
 void drawBlobsPointsPolka(Vertex3D* v, int count, unsigned char* blobBuffer, int size)
 {
 	BlobData* bd0 = blobData[size];
+	const int offY = bd0->centerY;
 
 	if (count <= 0) return;
 
 	do {
 		const int posX = v->xs;
-		const int posY = v->ys + bd0->rowsOffY;
+		const int posY = v->ys;
 
-		if (!(posX <= 0 || posX >= FB_WIDTH || posY <= 0 || posY >= FB_HEIGHT))
+		if (!(posX <= POLKA_BUFFER_PAD || posX >= POLKA_BUFFER_PAD + FB_WIDTH || posY <= POLKA_BUFFER_PAD || posY >= POLKA_BUFFER_PAD + FB_HEIGHT))
 		{
 			BlobData* bd = &bd0[posX & (BLOB_SIZEX_PAD - 1)];
-			const int sizeX = bd->sizeX;
+			const int sizeX = bd->wordSizeX;
 			const int sizeY = bd->sizeY;
 
-			const int posX32 = (posX & ~(BLOB_SIZEX_PAD - 1)) + bd->wordsOffX;
-			const int wordsX = sizeX / 4;
+			const int posX32 = (posX & ~(BLOB_SIZEX_PAD - 1)) - bd->centerX;
 
-			unsigned int* dst = (unsigned int*)(blobBuffer + (posY - sizeY / 2) * FB_WIDTH + (posX32 - sizeX / 2));
+			unsigned int* dst = (unsigned int*)(blobBuffer + (posY - offY) * POLKA_BUFFER_WIDTH + posX32);
 			unsigned int* src = (unsigned int*)bd->data;
 
 			int y;
 			for (y = 0; y < sizeY; ++y) {
 				int x;
-				for (x = 0; x < wordsX; ++x) {
+				for (x = 0; x < sizeX; ++x) {
 					*(dst + x) += *(src + x);
 				}
 
-				src += wordsX;
-				dst += FB_WIDTH / 4;
+				src += sizeX;
+				dst += POLKA_BUFFER_WIDTH / 4;
 			}
 		}
 		++v;
@@ -687,67 +709,30 @@ void drawBlobsPointsPolka(Vertex3D* v, int count, unsigned char* blobBuffer, int
 }
 
 
-void drawBlobs(Vertex3D *v, int count, unsigned char *blobBuffer, unsigned int size)
-{
-	if (count <=0) return;
-
-	do {
-		if (size < BLOB_SIZES_NUM_MAX) {
-			const int posX = v->xs;
-			BlobData* bd = &blobData[size][posX & (BLOB_SIZEX_PAD - 1)];
-			const int posY = v->ys + bd->rowsOffY;
-			const int sizeX = bd->sizeX;
-			const int sizeY = bd->sizeY;
-
-			if (!(posX <= sizeX / 2 || posX >= FB_WIDTH - sizeX / 2 || posY <= sizeY / 2 || posY >= FB_HEIGHT - sizeY / 2))
-			{
-				const int posX32 = (posX & ~(BLOB_SIZEX_PAD-1)) + bd->wordsOffX;
-				const int wordsX = sizeX / 4;
-
-				unsigned int *dst = (unsigned int*)(blobBuffer + (posY - sizeY / 2) * FB_WIDTH + (posX32 - sizeX / 2));
-				unsigned int *src = (unsigned int*)bd->data;
-
-				int y;
-				for (y=0; y<sizeY; ++y) {
-					int x;
-					for (x=0; x<wordsX; ++x) {
-						*(dst+x) += *(src+x);
-					}
-
-					src += wordsX;
-					dst += FB_WIDTH / 4;
-				}
-			}
-		}
-		++v;
-	}while(--count != 0);
-}
-
 void drawBlob(int posX, int posY, int size, int shift, unsigned char *blobBuffer)
 {
 	int x,y;
-		
-	BlobData *bd = &blobData[size][posX & (BLOB_SIZEX_PAD-1)];
-	const int sizeX = bd->sizeX;
-	const int sizeY = bd->sizeY;
-	int posYfinal = posY + bd->rowsOffY;
 
-	if (posX <= sizeX / 2 || posX >= FB_WIDTH - sizeX / 2 || posYfinal <= sizeY / 2 || posYfinal >= FB_HEIGHT - sizeY / 2) return;
+	BlobData *bd = &blobData[size][posX & (BLOB_SIZEX_PAD-1)];
+	const int sizeX = bd->wordSizeX;
+	const int sizeY = bd->sizeY;
+	int posYfinal = posY - bd->centerY;
+
+	if (posX <= POLKA_BUFFER_PAD || posX >= POLKA_BUFFER_PAD + FB_WIDTH || posYfinal <= POLKA_BUFFER_PAD || posYfinal >= POLKA_BUFFER_PAD + FB_HEIGHT) return;
 
 	{
-		const int posX32 = (posX & ~(BLOB_SIZEX_PAD - 1)) + bd->wordsOffX;
-		unsigned int* dst = (unsigned int*)(blobBuffer + (posYfinal - sizeY / 2) * FB_WIDTH + (posX32 - sizeX / 2));
+		const int posX32 = (posX & ~(BLOB_SIZEX_PAD - 1)) - bd->centerX;
+		unsigned int* dst = (unsigned int*)(blobBuffer + posYfinal * POLKA_BUFFER_WIDTH + posX32);
 
-		const int wordsX = sizeX / 4;
 		unsigned int* src = (unsigned int*)bd->data;
 
 		for (y = 0; y < sizeY; ++y) {
-			for (x = 0; x < wordsX; ++x) {
+			for (x = 0; x < sizeX; ++x) {
 				const unsigned int c = *(src + x) << shift;
 				*(dst + x) += c;
 			}
-			src += wordsX;
-			dst += FB_WIDTH / 4;
+			src += sizeX;
+			dst += POLKA_BUFFER_WIDTH / 4;
 		}
 	}
 }
@@ -788,14 +773,14 @@ void drawAntialiasedLine8bpp(Vertex3D *v1, Vertex3D *v2, int shadeShift, unsigne
 			const int yp = yy >> LN_BASE;
 
 			if (x >= 0 && x < FB_WIDTH && yp >=0 && yp < FB_HEIGHT - 1) {
-				vramofs = yp*FB_WIDTH + x;
+				vramofs = yp* POLKA_BUFFER_WIDTH + x;
 				frac = yy & LN_AND;
 
 				shade = (LN_AND - frac) >> shadeShift;
 				*(buffer + vramofs) |= shade;
 
 				shade = frac >> shadeShift;
-				*(buffer + vramofs+FB_WIDTH) |= shade;
+				*(buffer + vramofs+ POLKA_BUFFER_WIDTH) |= shade;
 			}
 			yy+=ddy;
 		}
@@ -815,7 +800,7 @@ void drawAntialiasedLine8bpp(Vertex3D *v1, Vertex3D *v2, int shadeShift, unsigne
 			const int xp = xx >> LN_BASE;
 
 			if (y >= 0 && y < FB_HEIGHT && xp >=0 && xp < FB_WIDTH - 1) {
-				vramofs = y*FB_WIDTH + xp;
+				vramofs = y* POLKA_BUFFER_WIDTH + xp;
 				frac = xx & LN_AND;
 
 				shade = (LN_AND - frac) >> shadeShift;

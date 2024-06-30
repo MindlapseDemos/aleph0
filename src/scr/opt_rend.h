@@ -11,6 +11,10 @@
 
 #define FP_SCALE 16
 
+#define POLKA_BUFFER_PAD 32
+#define POLKA_BUFFER_WIDTH (FB_WIDTH + 2 * POLKA_BUFFER_PAD)
+#define POLKA_BUFFER_HEIGHT (FB_HEIGHT + 2 * POLKA_BUFFER_PAD)
+
 enum {
 	OPT_RAST_FLAT, 
 	OPT_RAST_TEXTURED_GOURAUD_CLIP_Y
@@ -18,12 +22,13 @@ enum {
 
 typedef struct BlobData
 {
-	int sizeX, sizeY;
-	int wordsOffX, rowsOffY;
+	int wordSizeX, sizeY;
+	int centerX, centerY;
 	unsigned char *data;
 } BlobData;
 
 
+void clearBlobBuffer(unsigned char* buffer);
 void buffer8bppToVram(unsigned char *buffer, unsigned int *colMap16to32);
 void buffer8bppORwithVram(unsigned char* buffer, unsigned int* colMap16to32);
 unsigned int *createColMap16to32(unsigned short *srcPal);

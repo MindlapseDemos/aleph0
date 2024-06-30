@@ -108,8 +108,8 @@ static void transformAndProjectAxesBoxDotsEffect(int objIndex)
 					const int sz = FIXED_TO_INT(axisX->z + axisY->z + axisZ->z, FP_CORE) + objPosZ;
 					if (sz > 0 && sz < REC_DIV_Z_MAX) {
 						const int recZ = recDivZ[(int)sz];
-						const int sx = FB_WIDTH / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE) + objPosX;
-						const int sy = FB_HEIGHT / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE) + objPosY;
+						const int sx = POLKA_BUFFER_WIDTH / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE) + objPosX;
+						const int sy = POLKA_BUFFER_HEIGHT / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE) + objPosY;
 
 						dst->xs = sx;
 						dst->ys = sy;
@@ -329,8 +329,8 @@ static void drawBoxLines(unsigned char* buffer, int orderSign, int objIndex)
 				const int sz = AFTER_MUL_ADDS(axisX->z + axisY->z + axisZ->z, FP_CORE) + objPosZ;
 				if (sz > 0 && sz < REC_DIV_Z_MAX) {
 					const int recZ = recDivZ[(int)sz];
-					v[i].xs = FB_WIDTH / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE) + objPosX;
-					v[i].ys = FB_HEIGHT / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE) + objPosY;
+					v[i].xs = POLKA_BUFFER_WIDTH / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE) + objPosX;
+					v[i].ys = POLKA_BUFFER_HEIGHT / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE) + objPosY;
 					v[i].z = sz;
 				}
 				++i;
@@ -427,7 +427,7 @@ static int init(void)
 	tempPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
 
 	for (i = 0; i < VOLS_NUM; ++i) {
-		polkaBuffer[i] = (unsigned char*)malloc(FB_WIDTH * FB_HEIGHT);
+		polkaBuffer[i] = (unsigned char*)malloc(POLKA_BUFFER_WIDTH * POLKA_BUFFER_HEIGHT);
 
 		switch(i) {
 			case 0:
@@ -480,7 +480,7 @@ static void draw(void)
 
 	int i;
 	for (i = 0; i < VOLS_NUM; ++i) {
-		memset(polkaBuffer[i], 0, FB_WIDTH * FB_HEIGHT);
+		clearBlobBuffer(polkaBuffer[i]);
 
 		if (i == 0) {
 			updateDotsVolumeBufferRadial(t);

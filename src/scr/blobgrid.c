@@ -113,7 +113,7 @@ static int init(void)
 	origPos = (Pos3D*)malloc(sizeof(Pos3D) * MAX_NUM_POINTS);
 	screenPos = (Pos3D*)malloc(sizeof(Pos3D) * MAX_NUM_POINTS);
 
-	blobBuffer = (unsigned char*)malloc(FB_WIDTH * FB_HEIGHT);
+	blobBuffer = (unsigned char*)malloc(POLKA_BUFFER_WIDTH * POLKA_BUFFER_HEIGHT);
 	blobsPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
 	thunderPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
 
@@ -270,14 +270,14 @@ static void drawStars(BlobGridParams *params)
 
 		dst->z = z;
 		if (z > 0) {
-			int xp = (FB_WIDTH / 2) + (x << 6) / z;
-			int yp = (FB_HEIGHT / 2) + (y << 6) / z;
+			int xp = (POLKA_BUFFER_WIDTH / 2) + (x << 6) / z;
+			int yp = (POLKA_BUFFER_HEIGHT / 2) + (y << 6) / z;
 
 			int size = ((blobSizesNum - 1) * (STARS_CUBE_DEPTH - z)) / STARS_CUBE_DEPTH;
 			int shifter = (4 * (STARS_CUBE_DEPTH - z)) / STARS_CUBE_DEPTH;
 
-			if (xp < 0) xp = 0; if (xp > FB_WIDTH-1) xp = FB_WIDTH-1;
-			if (yp < 0) yp = 0; if (yp > FB_HEIGHT-1) yp = FB_HEIGHT-1;
+			if (xp < POLKA_BUFFER_PAD) xp = POLKA_BUFFER_PAD; if (xp > 2 * POLKA_BUFFER_PAD + FB_WIDTH-1) xp = 2 * POLKA_BUFFER_PAD + FB_WIDTH-1;
+			if (yp < POLKA_BUFFER_PAD) yp = POLKA_BUFFER_PAD; if (yp > 2 * POLKA_BUFFER_PAD + FB_HEIGHT-1) yp = 2 * POLKA_BUFFER_PAD + FB_HEIGHT-1;
 
 			dst->x = xp;
 			dst->y = yp;
@@ -309,18 +309,38 @@ static void moveStars()
 
 static void drawEffect(BlobGridParams *params, int t)
 {
+	/* int i, s; */
 	static int prevT = 0;
 	const int dt = t - prevT;
 	if (dt < 0 || dt > 20) {
 		moveStars();
 	
-		memset(blobBuffer, 0, FB_WIDTH * FB_HEIGHT);
+		clearBlobBuffer(blobBuffer);
 		drawStars(params);
 		drawConnections3D(params);
+
+		/*for (s = 0; s < 16; ++s) {
+			for (i = 0; i < 4; ++i) {
+				drawBlob(16 * (s+1) + i, 16 + i * 2 * (s + 1), s, 0, blobBuffer);
+			}
+		}*/
 
 		prevT = t;
 	}
 }
+
+
+void blendThunder8bppWithVram(unsigned char* buffer, unsigned int* colMap16to32)
+{
+	int i;
+	unsigned short* src = (unsigned short*)buffer;
+	unsigned int* dst = (unsigned int*)fb_pixels;
+
+	for (i = 0; i < (FB_WIDTH * FB_HEIGHT) / 2; ++i) {
+		*dst++ |= colMap16to32[*src++];
+	}
+}
+
 
 static void mergeThunderScreen()
 {
@@ -330,7 +350,7 @@ static void mergeThunderScreen()
 
 	thunderScreen->draw();
 
-	buffer8bppORwithVram(getThunderBlurBuffer(), thunderPal32);
+	blendThunder8bppWithVram(getThunderBlurBuffer(), thunderPal32);
 }
 
 static void renderFaintBackground(int t)

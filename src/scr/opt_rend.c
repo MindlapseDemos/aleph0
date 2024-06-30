@@ -531,6 +531,8 @@ unsigned int *createColMap16to32(unsigned short *srcPal)
 
 void initBlobGfx()
 {
+	static unsigned char tempData[(BLOB_SIZES_NUM_MAX + 3) * (BLOB_SIZES_NUM_MAX + BLOB_SIZEX_PAD)];
+
 	if (!isBlobGfxInit) {
 		int i,j,x,y;
 
@@ -540,15 +542,17 @@ void initBlobGfx()
 			const float blobSizeYhalf = blobSizeY / 2.0f;
 			const float blobSizeXhalf = blobSizeX / 2.0f;
 
+			int padX;
+			int minPadX, maxPadX;
+			int minPadY, maxPadY;
+			int finalSizeX, finalSizeY;
+			int prevInNonZero = 0;
+
 			for (j=0; j<BLOB_SIZEX_PAD; ++j) {
-				unsigned char *dst;
-
-				blobData[i][j].sizeX = blobSizeX;
-				blobData[i][j].sizeY = blobSizeY;
-
-				blobData[i][j].data = (unsigned char*)malloc(blobSizeX * blobSizeY);
-				dst = blobData[i][j].data;
-
+				unsigned char *src,*dst;
+				uint32_t* src32;
+				/* printf("%d %d\n----------\n\n", j, i); */
+				dst = tempData;
 				for (y=0; y<blobSizeY; ++y) {
 					const float yc = (float)y - blobSizeYhalf + 0.5f;
 					const float yci = yc / (blobSizeYhalf - 0.5f);
@@ -557,13 +561,77 @@ void initBlobGfx()
 						const int xc = (float)(x - j) - blobSizeXhalf + 0.5f;
 						const float xci = xc / (blobSizeYhalf - 0.5f);
 
+						int c;
 						float r = 1.0f - (xci*xci + yci*yci);
-						CLAMP01(r)
-						*dst++ = (int)(pow(r, 2.0f) * MAX_BLOB_COLOR);
+						CLAMP01(r);
+						c = (int)(pow(r, 2.0f) * MAX_BLOB_COLOR);
+						/* printf("%d ", c); */
+						*dst++ = c;
 					}
+					/* printf("\n"); */
 				}
+				/* printf("\n\n=========\n\n"); */
+
+				minPadX = blobSizeX;
+				maxPadX = 0;
+				minPadY = blobSizeY;
+				maxPadY = 0;
+				src32 = (uint32_t*)tempData;
+				for (y = 0; y < blobSizeY; ++y) {
+					int nonZeroRow = 0;
+					unsigned int prevC = 0;
+					for (x = 0; x < blobSizeX/4; ++x) {
+						unsigned int c = *src32++;
+						if (c != 0) {
+							nonZeroRow = 1;
+							if (prevC == 0) {
+								padX = 4 * x;
+								if (padX < minPadX) minPadX = padX;
+							}
+						} else {
+							if (prevC != 0) {
+								padX = 4 * (x - 1) + 3;
+								if (padX > maxPadX) maxPadX = padX;
+							}
+						}
+						prevC = c;
+					}
+					if (nonZeroRow == 1) {
+						if (prevInNonZero == 0) minPadY = y;
+					} else {
+						if (prevInNonZero == 1) maxPadY = y-1;
+					}
+					prevInNonZero = nonZeroRow;
+				}
+				if (minPadX == blobSizeX) minPadX = 0;
+				if (maxPadX == 0) maxPadX = blobSizeX - 1;
+				if (minPadY == blobSizeY) minPadY = 0;
+				if (maxPadY == 0) maxPadY = blobSizeY - 1;
+
+				finalSizeX = maxPadX - minPadX + 1;
+				finalSizeY = maxPadY - minPadY + 1;
+
+				blobData[i][j].sizeX = finalSizeX;
+				blobData[i][j].sizeY = finalSizeY;
+				blobData[i][j].wordsOffX = minPadX / 4;
+				blobData[i][j].rowsOffY = minPadY;
+
+				blobData[i][j].data = (unsigned char*)malloc(finalSizeX * finalSizeY);
+
+				src = &tempData[minPadY * blobSizeX];
+				dst = blobData[i][j].data;
+				for (y = minPadY; y <= maxPadY; ++y) {
+					for (x = minPadX; x <= maxPadX; ++x) {
+						*dst++ = *(src + x);
+						/* printf("%d ", *(src + x)); */
+					}
+					src += blobSizeX;
+					/* printf("\n"); */
+				}
+				/* printf("\n\n"); */
 			}
 		}
+
 		isBlobGfxInit = 1;
 	}
 }
@@ -581,6 +649,44 @@ void freeBlobGfx()
 	}
 }
 
+void drawBlobsPointsPolka(Vertex3D* v, int count, unsigned char* blobBuffer, int size)
+{
+	BlobData* bd0 = blobData[size];
+
+	if (count <= 0) return;
+
+	do {
+		const int posX = v->xs;
+		const int posY = v->ys + bd0->rowsOffY;
+
+		if (!(posX <= 0 || posX >= FB_WIDTH || posY <= 0 || posY >= FB_HEIGHT))
+		{
+			BlobData* bd = &bd0[posX & (BLOB_SIZEX_PAD - 1)];
+			const int sizeX = bd->sizeX;
+			const int sizeY = bd->sizeY;
+
+			const int posX32 = (posX & ~(BLOB_SIZEX_PAD - 1)) + bd->wordsOffX;
+			const int wordsX = sizeX / 4;
+
+			unsigned int* dst = (unsigned int*)(blobBuffer + (posY - sizeY / 2) * FB_WIDTH + (posX32 - sizeX / 2));
+			unsigned int* src = (unsigned int*)bd->data;
+
+			int y;
+			for (y = 0; y < sizeY; ++y) {
+				int x;
+				for (x = 0; x < wordsX; ++x) {
+					*(dst + x) += *(src + x);
+				}
+
+				src += wordsX;
+				dst += FB_WIDTH / 4;
+			}
+		}
+		++v;
+	} while (--count != 0);
+}
+
+
 void drawBlobs(Vertex3D *v, int count, unsigned char *blobBuffer, unsigned int size)
 {
 	if (count <=0) return;
@@ -588,14 +694,14 @@ void drawBlobs(Vertex3D *v, int count, unsigned char *blobBuffer, unsigned int s
 	do {
 		if (size < BLOB_SIZES_NUM_MAX) {
 			const int posX = v->xs;
-			const int posY = v->ys;
-			BlobData *bd = &blobData[size][posX & (BLOB_SIZEX_PAD-1)];
+			BlobData* bd = &blobData[size][posX & (BLOB_SIZEX_PAD - 1)];
+			const int posY = v->ys + bd->rowsOffY;
 			const int sizeX = bd->sizeX;
 			const int sizeY = bd->sizeY;
 
 			if (!(posX <= sizeX / 2 || posX >= FB_WIDTH - sizeX / 2 || posY <= sizeY / 2 || posY >= FB_HEIGHT - sizeY / 2))
 			{
-				const int posX32 = posX & ~(BLOB_SIZEX_PAD-1);
+				const int posX32 = (posX & ~(BLOB_SIZEX_PAD-1)) + bd->wordsOffX;
 				const int wordsX = sizeX / 4;
 
 				unsigned int *dst = (unsigned int*)(blobBuffer + (posY - sizeY / 2) * FB_WIDTH + (posX32 - sizeX / 2));
@@ -619,25 +725,26 @@ void drawBlobs(Vertex3D *v, int count, unsigned char *blobBuffer, unsigned int s
 
 void drawBlob(int posX, int posY, int size, int shift, unsigned char *blobBuffer)
 {
-	if (size < BLOB_SIZES_NUM_MAX) {
-		int x,y;
-		const int posX32 = posX & ~(BLOB_SIZEX_PAD-1);
+	int x,y;
 		
-		BlobData *bd = &blobData[size][posX & (BLOB_SIZEX_PAD-1)];
-		const int sizeX = bd->sizeX;
-		const int sizeY = bd->sizeY;
+	BlobData *bd = &blobData[size][posX & (BLOB_SIZEX_PAD-1)];
+	const int sizeX = bd->sizeX;
+	const int sizeY = bd->sizeY;
+	int posYfinal = posY + bd->rowsOffY;
 
-		unsigned int *dst = (unsigned int*)(blobBuffer + (posY - sizeY / 2) * FB_WIDTH + (posX32 - sizeX / 2));
+	if (posX <= sizeX / 2 || posX >= FB_WIDTH - sizeX / 2 || posYfinal <= sizeY / 2 || posYfinal >= FB_HEIGHT - sizeY / 2) return;
+
+	{
+		const int posX32 = (posX & ~(BLOB_SIZEX_PAD - 1)) + bd->wordsOffX;
+		unsigned int* dst = (unsigned int*)(blobBuffer + (posYfinal - sizeY / 2) * FB_WIDTH + (posX32 - sizeX / 2));
 
 		const int wordsX = sizeX / 4;
-		unsigned int *src = (unsigned int*)bd->data;
+		unsigned int* src = (unsigned int*)bd->data;
 
-		if (posX <= sizeX / 2 || posX >= FB_WIDTH - sizeX / 2 || posY <= sizeY / 2 || posY >= FB_HEIGHT - sizeY / 2) return;
-
-		for (y=0; y<sizeY; ++y) {
-			for (x=0; x<wordsX; ++x) {
-				const unsigned int c = *(src+x) << shift;
-				*(dst+x) += c;
+		for (y = 0; y < sizeY; ++y) {
+			for (x = 0; x < wordsX; ++x) {
+				const unsigned int c = *(src + x) << shift;
+				*(dst + x) += c;
 			}
 			src += wordsX;
 			dst += FB_WIDTH / 4;

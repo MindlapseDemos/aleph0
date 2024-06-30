@@ -19,6 +19,7 @@ enum {
 typedef struct BlobData
 {
 	int sizeX, sizeY;
+	int wordsOffX, rowsOffY;
 	unsigned char *data;
 } BlobData;
 
@@ -34,6 +35,7 @@ void initBlobGfx();
 void freeBlobGfx();
 void drawBlob(int posX, int posY, int size, int shift, unsigned char *blobBuffer);
 void drawBlobs(Vertex3D* v, int count, unsigned char* blobBuffer, unsigned int size);
+void drawBlobsPointsPolka(Vertex3D* v, int count, unsigned char* blobBuffer, int size);
 void drawAntialiasedLine8bpp(Vertex3D *v1, Vertex3D *v2, int shadeShift, unsigned char *buffer);
 void drawAntialiasedLine16bpp(Vertex3D* v1, Vertex3D* v2, int shadeShift, unsigned short* vram);
 

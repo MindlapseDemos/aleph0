@@ -23,6 +23,7 @@ static unsigned char* finalBuffer8;
 #define THUNDER_RECT_SIZE 2
 #define THUNDER_RANDOMNESS 16
 #define THUNDER_SECONDS 0.075f
+#define BLUR_SECONDS 0.02f
 
 #define VERTEX_COUNT 12
 #define PERSPECTIVE_NEUTRAL_DEPTH 0.5f
@@ -132,6 +133,7 @@ static void start(long trans_time)
 
 
 static float remainingThunderDuration = THUNDER_SECONDS;
+static float remainingBlurDuration = BLUR_SECONDS;
 static int thunderPattern = 0;
 
 static void draw(void)
@@ -144,15 +146,19 @@ static void draw(void)
 		thunderPattern++;
 		remainingThunderDuration = THUNDER_SECONDS;
 	}
-	
-	animateMesh();
-	projectMesh();
-	renderMeshToPointSprites(thunderPattern);
-	sortPointSprites();
-	renderPointSprites();
-	
-	
-	applyBlur();
+
+	remainingBlurDuration -= lastFrameDuration;
+	if (remainingBlurDuration <= 0) {
+		animateMesh();
+		projectMesh();
+		renderMeshToPointSprites(thunderPattern);
+		sortPointSprites();
+		renderPointSprites();
+
+		applyBlur();
+
+		remainingBlurDuration = BLUR_SECONDS;
+	}
 	
 	blitEffectBackTo8bitBuffer();
 

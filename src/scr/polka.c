@@ -356,11 +356,11 @@ static void OptGrid3Drun(int objIndex, unsigned char* buffer, int ticks)
 
 	transformAndProjectAxesBoxDotsEffect(objIndex);
 
-	drawBoxLines(buffer, -1, objIndex);
+	/* drawBoxLines(buffer, -1, objIndex); */
 
-	drawBlobs(screenPointsGrid.v, screenPointsGrid.num, buffer, 2);
+	drawBlobsPointsPolka(screenPointsGrid.v, screenPointsGrid.num, buffer, 2 - objIndex);
 
-	drawBoxLines(buffer, 1, objIndex);
+	/* drawBoxLines(buffer, 1, objIndex); */
 }
 
 
@@ -488,7 +488,7 @@ static void draw(void)
 			updateDotsVolumeBufferRadialRays(t);
 			/* updateDotsVolumeBufferPlasma(t); */
 		}
-		setGridPos(&gridPos[i], sin((3550*i + (i+1)*t) / 2277.0f) * 64, sin((4950 * i + (2-i)*t) / 1567.0f) * 48, 1024);
+		setGridPos(&gridPos[i], sin((3550*i + (i+1)*t) / 2277.0f) * 56, sin((4950 * i + (2-i)*t) / 1567.0f) * 32, 1024);
 
 		OptGrid3Drun(i, polkaBuffer[i], t);
 	}

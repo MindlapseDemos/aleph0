@@ -185,7 +185,7 @@ static void drawConnections(BlobGridParams *params)
 						if (iii < 0) iii = 0; if (iii > blobSizesNum-1) iii = blobSizesNum-1;
 						px += dx;
 						py += dy;
-						drawBlob(px>>FP_PT, py>>FP_PT,blobSizesNum - 1 - iii, 0, blobBuffer);
+						drawBlob(px>>FP_PT, py>>FP_PT,blobSizesNum - 1 - iii, blobBuffer);
 					}
 				}
 			}
@@ -246,7 +246,7 @@ static void drawConnections3D(BlobGridParams *params)
 							px += dx;
 							py += dy;
 							ti += dl;
-							drawBlob(px>>FP_PT, py>>FP_PT, size, 0, blobBuffer);
+							drawBlob(px>>FP_PT, py>>FP_PT, size, blobBuffer);
 						}
 					}
 				}
@@ -273,8 +273,7 @@ static void drawStars(BlobGridParams *params)
 			int xp = (POLKA_BUFFER_WIDTH / 2) + (x << 6) / z;
 			int yp = (POLKA_BUFFER_HEIGHT / 2) + (y << 6) / z;
 
-			int size = ((blobSizesNum - 1) * (STARS_CUBE_DEPTH - z)) / STARS_CUBE_DEPTH;
-			int shifter = (4 * (STARS_CUBE_DEPTH - z)) / STARS_CUBE_DEPTH;
+			int size = ((2*blobSizesNum - 1) * (STARS_CUBE_DEPTH - z)) / STARS_CUBE_DEPTH;
 
 			if (xp < POLKA_BUFFER_PAD) xp = POLKA_BUFFER_PAD; if (xp > 2 * POLKA_BUFFER_PAD + FB_WIDTH-1) xp = 2 * POLKA_BUFFER_PAD + FB_WIDTH-1;
 			if (yp < POLKA_BUFFER_PAD) yp = POLKA_BUFFER_PAD; if (yp > 2 * POLKA_BUFFER_PAD + FB_HEIGHT-1) yp = 2 * POLKA_BUFFER_PAD + FB_HEIGHT-1;
@@ -282,7 +281,7 @@ static void drawStars(BlobGridParams *params)
 			dst->x = xp;
 			dst->y = yp;
 
-			drawBlob(xp,yp,size,shifter,blobBuffer);
+			drawBlob(xp,yp,size,blobBuffer);
 		}
 		++src;
 		++dst;

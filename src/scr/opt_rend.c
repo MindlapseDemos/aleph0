@@ -546,6 +546,29 @@ unsigned int *createColMap16to32(unsigned short *srcPal)
 	return dstPal;
 }
 
+static void printBlobGfxCode(int index)
+{
+	int n;
+	BlobData *bI = blobData[index];
+
+	printf("\tswitch (bIndex) {\n");
+	for (n = 0; n < 4; ++n) {
+		BlobData* b = &bI[n];
+		uint32_t* d = (uint32_t*)b->data;
+
+		int x, y;
+
+		printf("\t\tcase %d:\n", n);
+		for (y = 0; y < b->sizeY; ++y) {
+			for (x = 0; x < b->wordSizeX; ++x) {
+				printf("\t\t\t*(dst + %d) += 0x%x;\n", y*(POLKA_BUFFER_WIDTH / 4) + x, *d++);
+			}
+		}
+		printf("\t\tbreak;\n");
+	}
+	printf("\t}\n\n");
+}
+
 void initBlobGfx()
 {
 	static unsigned char tempData[(BLOB_SIZES_NUM_MAX + 3) * (BLOB_SIZES_NUM_MAX + 4 * BLOB_SIZEX_PAD)];
@@ -554,7 +577,7 @@ void initBlobGfx()
 		int i,j,x,y;
 
 		for (i=0; i<BLOB_SIZES_NUM_MAX; ++i) {
-			const int blobSizeY = i+3;  /* 3 to 15 */
+			const int blobSizeY = i+3;
 			const int blobSizeX = (((blobSizeY+3) >> 2) << 2) + 4 * BLOB_SIZEX_PAD;    /* We are padding this, as we generate four pixels offset(for dword rendering) (I also added extra dummy padding by mul by 4 because something happens and big blobs are cut on the right. But the later code will cut the zero pads anyway, so we don't render more than we should) */
 			const float blobSizeYhalf = blobSizeY / 2.0f;
 			const float blobSizeXhalf = blobSizeX / 2.0f;
@@ -568,7 +591,6 @@ void initBlobGfx()
 			for (j=0; j<BLOB_SIZEX_PAD; ++j) {
 				unsigned char *src,*dst;
 				uint32_t* src32;
-				/*printf("%d %d\n----------\n\n", j, i);*/
 				dst = tempData;
 				for (y=0; y<blobSizeY; ++y) {
 					const float yc = (float)y - blobSizeYhalf + 0.5f;
@@ -582,12 +604,9 @@ void initBlobGfx()
 						float r = 1.0f - (xci*xci + yci*yci);
 						CLAMP01(r);
 						c = (int)(pow(r, 2.0f) * MAX_BLOB_COLOR);
-						/*printf("%d ", c);*/
 						*dst++ = c;
 					}
-					/*printf("\n");*/
 				}
-				/*printf("\n\n=========\n\n");*/
 
 				minPadX = blobSizeX;
 				maxPadX = 0;
@@ -635,24 +654,20 @@ void initBlobGfx()
 
 				blobData[i][j].data = (unsigned char*)malloc(finalSizeX * finalSizeY);
 
-				/*printf("\nwordSizeX =   %d\n", blobData[i][j].wordSizeX);
-				printf("sizeY     =   %d\n", blobData[i][j].sizeY);
-				printf("wordsOffX =   %d\n", blobData[i][j].centerX);
-				printf("rowsOffY  =   %d\n\n", blobData[i][j].centerY);*/
-
 				src = &tempData[minPadY * blobSizeX];
 				dst = blobData[i][j].data;
 				for (y = minPadY; y <= maxPadY; ++y) {
 					for (x = minPadX; x <= maxPadX; ++x) {
 						*dst++ = *(src + x);
-						/*printf("%d ", *(src + x));*/
 					}
 					src += blobSizeX;
-					/*printf("\n");*/
 				}
-				/*printf("\n\n");*/
 			}
 		}
+		/*
+		printBlobGfxCode(1);
+		printBlobGfxCode(2);
+		*/
 
 		isBlobGfxInit = 1;
 	}
@@ -671,11 +686,8 @@ void freeBlobGfx()
 	}
 }
 
-void drawBlobsPointsPolka(Vertex3D* v, int count, unsigned char* blobBuffer, int size)
+void drawBlobPointsPolkaSize1(Vertex3D* v, int count, unsigned char* blobBuffer)
 {
-	BlobData* bd0 = blobData[size];
-	const int offY = bd0->centerY;
-
 	if (count <= 0) return;
 
 	do {
@@ -684,24 +696,91 @@ void drawBlobsPointsPolka(Vertex3D* v, int count, unsigned char* blobBuffer, int
 
 		if (!(posX <= POLKA_BUFFER_PAD || posX >= POLKA_BUFFER_PAD + FB_WIDTH || posY <= POLKA_BUFFER_PAD || posY >= POLKA_BUFFER_PAD + FB_HEIGHT))
 		{
-			BlobData* bd = &bd0[posX & (BLOB_SIZEX_PAD - 1)];
-			const int sizeX = bd->wordSizeX;
-			const int sizeY = bd->sizeY;
+			const int bIndex = posX & (BLOB_SIZEX_PAD - 1);
+			const int posX32 = posX & ~(BLOB_SIZEX_PAD - 1);
 
-			const int posX32 = (posX & ~(BLOB_SIZEX_PAD - 1)) - bd->centerX;
+			unsigned int* dst = (unsigned int*)(blobBuffer + posY * POLKA_BUFFER_WIDTH + posX32);
 
-			unsigned int* dst = (unsigned int*)(blobBuffer + (posY - offY) * POLKA_BUFFER_WIDTH + posX32);
-			unsigned int* src = (unsigned int*)bd->data;
+			switch (bIndex) {
+				case 0:
+					*dst += 0x20b0b02;
+					*(dst + 96) += 0x20b0b02;
+				break;
 
-			int y;
-			for (y = 0; y < sizeY; ++y) {
-				int x;
-				for (x = 0; x < sizeX; ++x) {
-					*(dst + x) += *(src + x);
-				}
+				case 1:
+					*(dst - 1) += 0xb0b0200;
+					*dst += 0x2;
+					*(dst + 95) += 0xb0b0200;
+					*(dst + 96) += 0x2;
+				break;
 
-				src += sizeX;
-				dst += POLKA_BUFFER_WIDTH / 4;
+				case 2:
+					*(dst - 1) += 0xb020000;
+					*dst += 0x20b;
+					*(dst + 95) += 0xb020000;
+					*(dst + 96) += 0x20b;
+				break;
+
+				case 3:
+					*(dst - 1) += 0x2000000;
+					*dst += 0x20b0b;
+					*(dst + 95) += 0x2000000;
+					*(dst + 96) += 0x20b0b;
+				break;
+			}
+		}
+		++v;
+	} while (--count != 0);
+}
+
+void drawBlobPointsPolkaSize2(Vertex3D* v, int count, unsigned char* blobBuffer)
+{
+	if (count <= 0) return;
+
+	do {
+		const int posX = v->xs;
+		const int posY = v->ys;
+
+		if (!(posX <= POLKA_BUFFER_PAD || posX >= POLKA_BUFFER_PAD + FB_WIDTH || posY <= POLKA_BUFFER_PAD || posY >= POLKA_BUFFER_PAD + FB_HEIGHT))
+		{
+			const int bIndex = posX & (BLOB_SIZEX_PAD - 1);
+			const int posX32 = posX & ~(BLOB_SIZEX_PAD - 1);
+
+			unsigned int* dst = (unsigned int*)(blobBuffer + posY * POLKA_BUFFER_WIDTH + posX32);
+
+			switch (bIndex) {
+				case 0:
+					*(dst - 1) += 0x8030000;
+					*dst += 0x308;
+					*(dst + 95) += 0xf080000;
+					*(dst + 96) += 0x80f;
+					*(dst + 191) += 0x8030000;
+					*(dst + 192) += 0x308;
+				break;
+
+				case 1:
+					*(dst - 1) += 0x3000000;
+					*dst += 0x30808;
+					*(dst + 95) += 0x8000000;
+					*(dst + 96) += 0x80f0f;
+					*(dst + 191) += 0x3000000;
+					*(dst + 192) += 0x30808;
+				break;
+
+				case 2:
+					*dst += 0x3080803;
+					*(dst + 96) += 0x80f0f08;
+					*(dst + 192) += 0x3080803;
+				break;
+
+				case 3:
+					*(dst - 1) += 0x8080300;
+					*dst += 0x3;
+					*(dst + 95) += 0xf0f0800;
+					*(dst + 96) += 0x8;
+					*(dst + 191) += 0x8080300;
+					*(dst + 192) += 0x3;
+				break;
 			}
 		}
 		++v;
@@ -709,7 +788,7 @@ void drawBlobsPointsPolka(Vertex3D* v, int count, unsigned char* blobBuffer, int
 }
 
 
-void drawBlob(int posX, int posY, int size, int shift, unsigned char *blobBuffer)
+void drawBlob(int posX, int posY, int size, unsigned char *blobBuffer)
 {
 	int x,y;
 
@@ -728,8 +807,7 @@ void drawBlob(int posX, int posY, int size, int shift, unsigned char *blobBuffer
 
 		for (y = 0; y < sizeY; ++y) {
 			for (x = 0; x < sizeX; ++x) {
-				const unsigned int c = *(src + x) << shift;
-				*(dst + x) += c;
+				*(dst + x) += *(src + x);
 			}
 			src += sizeX;
 			dst += POLKA_BUFFER_WIDTH / 4;
@@ -772,7 +850,7 @@ void drawAntialiasedLine8bpp(Vertex3D *v1, Vertex3D *v2, int shadeShift, unsigne
 		for (x=x1; x<x2; x++) {
 			const int yp = yy >> LN_BASE;
 
-			if (x >= 0 && x < FB_WIDTH && yp >=0 && yp < FB_HEIGHT - 1) {
+			if (x >= 0 && x < POLKA_BUFFER_WIDTH && yp >=0 && yp < POLKA_BUFFER_HEIGHT - 1) {
 				vramofs = yp* POLKA_BUFFER_WIDTH + x;
 				frac = yy & LN_AND;
 
@@ -799,7 +877,7 @@ void drawAntialiasedLine8bpp(Vertex3D *v1, Vertex3D *v2, int shadeShift, unsigne
 		for (y=y1; y<y2; y++) {
 			const int xp = xx >> LN_BASE;
 
-			if (y >= 0 && y < FB_HEIGHT && xp >=0 && xp < FB_WIDTH - 1) {
+			if (y >= 0 && y < POLKA_BUFFER_HEIGHT && xp >=0 && xp < POLKA_BUFFER_WIDTH - 1) {
 				vramofs = y* POLKA_BUFFER_WIDTH + xp;
 				frac = xx & LN_AND;
 

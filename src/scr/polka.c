@@ -358,7 +358,11 @@ static void OptGrid3Drun(int objIndex, unsigned char* buffer, int ticks)
 
 	/* drawBoxLines(buffer, -1, objIndex); */
 
-	drawBlobsPointsPolka(screenPointsGrid.v, screenPointsGrid.num, buffer, 2 - objIndex);
+	if (objIndex == 0) {
+		drawBlobPointsPolkaSize2(screenPointsGrid.v, screenPointsGrid.num, buffer);
+	} else {
+		drawBlobPointsPolkaSize1(screenPointsGrid.v, screenPointsGrid.num, buffer);
+	}
 
 	/* drawBoxLines(buffer, 1, objIndex); */
 }

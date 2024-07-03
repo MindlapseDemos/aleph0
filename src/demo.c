@@ -308,19 +308,13 @@ void demo_keyboard(int key, int press)
 			return;
 
 		case KB_F1:
-			if(curscr_name && (evid = dseq_lookup(curscr_name)) >= 0) {
-				long evstart = dseq_evstart(evid);
-				dseq_ffwd(evstart);
-				reset_timer(evstart);
-				ignore_scrchg_trig = 1;
+			if(curscr_name) {
+				demo_runpart(curscr_name);
 			}
-			dseq_start();
 			break;
 
 		case KB_F2:
-			ignore_scrchg_trig = 0;
-			reset_timer(0);
-			dseq_start();
+			demo_run(0);
 			break;
 
 		case '/':
@@ -347,6 +341,40 @@ void demo_keyboard(int key, int press)
 
 		scr_keypress(key);
 	}
+}
+
+void demo_run(long start_time)
+{
+	ignore_scrchg_trig = 0;
+	reset_timer(start_time);
+	dseq_start();
+	dseq_ffwd(start_time);
+}
+
+void demo_runpart(const char *name)
+{
+	int i, evid, nscr;
+	long evstart;
+
+	if((evid = dseq_lookup(name)) == -1) {
+		return;
+	}
+
+	if(strcmp(curscr_name, name) != 0) {
+		nscr = scr_num_screens();
+		for(i=0; i<nscr; i++) {
+			if(strcmp(scr_screen(i)->name, name) == 0) {
+				change_screen(i);
+				break;
+			}
+		}
+	}
+
+	ignore_scrchg_trig = 1;
+	evstart = dseq_evstart(evid);
+	dseq_ffwd(evstart);
+	reset_timer(evstart);
+	dseq_start();
 }
 
 

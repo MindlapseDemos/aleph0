@@ -476,6 +476,8 @@ void dseq_ffwd(long tm)
 {
 	int id;
 
+	if(tm <= 0) return;
+
 	while(next_event) {
 		id = next_event->id;
 		next_event->reltime -= tm;

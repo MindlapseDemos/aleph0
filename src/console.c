@@ -193,6 +193,19 @@ static int runcmd(void)
 		args = *endp ? endp + 1 : 0;
 		*endp = 0;
 
+		if(args) {
+			while(*args && isspace(*args)) args++;
+			if(!*args) {
+				args = 0;
+			} else {
+				endp = args + strlen(args) - 1;
+				while(endp > args && isspace(*endp)) {
+					*endp-- = 0;
+				}
+			}
+			if(!*args) args = 0;
+		}
+
 		for(i=0; cmd[i].name; i++) {
 			if(strcmp(inpbuf, cmd[i].name) == 0) {
 				cmd[i].func(args);
@@ -234,8 +247,15 @@ static int cmd_list(const char *args)
 
 static int cmd_start(const char *args)
 {
-	reset_timer(0);
-	dseq_start();
+	if(args) {
+		if(isdigit(args[0])) {
+			demo_run(atol(args));
+		} else {
+			demo_runpart(args);
+		}
+	} else {
+		demo_run(0);
+	}
 	return 0;
 }
 

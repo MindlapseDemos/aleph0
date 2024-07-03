@@ -13,6 +13,8 @@ struct screen {
 	void (*draw)(void);
 
 	void (*keypress)(int key);
+
+	int trans_in, trans_out;
 };
 
 extern const char *curscr_name;

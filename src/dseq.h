@@ -28,6 +28,7 @@ void dseq_update(void);
 int dseq_lookup(const char *evname);
 
 const char *dseq_name(int evid);
+int dseq_transtime(int evid, int *in, int *out);
 
 long dseq_evstart(int evid);
 

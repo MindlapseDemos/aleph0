@@ -118,9 +118,13 @@ int demo_init(void)
 
 		num_scr = scr_num_screens();
 		for(i=0; i<num_scr; i++) {
-			scr = scr_screen(i);
+			if(!(scr = scr_screen(i)) || !scr->name) {
+				continue;
+			}
 			if((evid = dseq_lookup(scr->name)) >= 0) {
 				dseq_trig_callback(evid, DSEQ_TRIG_ALL, screen_evtrig, (void*)i);
+
+				dseq_transtime(evid, &scr->trans_in, &scr->trans_out);
 			}
 		}
 	}
@@ -134,7 +138,7 @@ int demo_init(void)
 		scr = scr_screen(0);
 	}
 
-	if(!scr || scr_change(scr, 2000) == -1) {
+	if(!scr || scr_change(scr, scr->trans_in) == -1) {
 		fprintf(stderr, "screen %s not found\n", opt.start_scr ? opt.start_scr : "0");
 		return -1;
 	}
@@ -268,8 +272,9 @@ void cs_puts_font(cs_font_func csfont, int sz, void *fb, int x, int y, const cha
 
 void change_screen(int idx)
 {
+	struct screen *scr = scr_screen(idx);
 	printf("change screen %d\n", idx);
-	scr_change(scr_screen(idx), 2000);
+	scr_change(scr, scr->trans_in);
 }
 
 void demo_keyboard(int key, int press)

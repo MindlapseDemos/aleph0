@@ -25,7 +25,7 @@ struct track {
 	int cur_val;
 	struct key *keys;	/* dynarr */
 	enum dseq_interp interp;
-	int trans_time;		/* transition time, 0 (default) means whole interval */
+	int trans_time[2];	/* transition times (in/out), 0 (default) means whole interval */
 	int (*interp_func)(struct transition *trs, int t);
 
 	dseq_callback_func trigcb;
@@ -376,7 +376,15 @@ static int read_event(int parid, struct ts_node *tsn)
 
 		} else if(strcmp(attr->name, "trans") == 0) {
 			SKIP_NOTNUM("trans");
-			trk->trans_time = attr->val.inum;
+			trk->trans_time[0] = trk->trans_time[1] = attr->val.inum;
+
+		} else if(strcmp(attr->name, "trans_in") == 0) {
+			SKIP_NOTNUM("trans_in");
+			trk->trans_time[0] = attr->val.inum;
+
+		} else if(strcmp(attr->name, "trans_out") == 0) {
+			SKIP_NOTNUM("trans_out");
+			trk->trans_time[1] = attr->val.inum;
 
 		} else {
 			fprintf(stderr, "dseq_open: ignoring unknown attribute: \"%s\"\n", attr->name);
@@ -493,11 +501,15 @@ int setup_transition(int id, struct event *trigev)
 	 * transition duration to whatever was requested.  Also if there's no
 	 * other key after this, assume a transition time of 1sec
 	 */
-	if(trk->trans_time || next_event->key >= trk->keys + trk->num - 1) {
-		trans_time = trk->trans_time ? trk->trans_time : 1000;
-		trs->end = trs->start + trans_time;
+	if((trk->trans_time[0] | trk->trans_time[1]) || next_event->key >= trk->keys + trk->num - 1) {
 		trs->val[0] = trk->cur_val;
 		trs->val[1] = next_event->key->val;
+		if(trs->val[0] < trs->val[1]) {	/* trans-in */
+			trans_time = trk->trans_time[0] ? trk->trans_time[0] : 500;
+		} else {	/* trans-out */
+			trans_time = trk->trans_time[1] ? trk->trans_time[1] : 500;
+		}
+		trs->end = trs->start + trans_time;
 	} else {
 		trs->end = next_event->key[1].tm;
 		trs->val[0] = next_event->key->val;
@@ -581,6 +593,14 @@ const char *dseq_name(int evid)
 	return tracks[evid].name;
 }
 
+int dseq_transtime(int evid, int *in, int *out)
+{
+	struct track *trk = tracks + evid;
+	if(out) *out = trk->trans_time[1];
+	if(in) *in = trk->trans_time[0];
+	return trk->trans_time[0];
+}
+
 long dseq_evstart(int evid)
 {
 	return tracks[evid].num > 0 ? tracks[evid].keys[0].tm : -1;
@@ -643,7 +663,7 @@ static void dump_track(FILE *fp, struct track *trk)
 	int i;
 	static const char *interpstr[] = {"step", "linear", "smoothstep"};
 
-	fprintf(fp, "%s (%s/%d)\n", trk->name, interpstr[trk->interp], trk->trans_time);
+	fprintf(fp, "%s (%s/%d/%d)\n", trk->name, interpstr[trk->interp], trk->trans_time[0], trk->trans_time[1]);
 
 	for(i=0; i<trk->num; i++) {
 		fprintf(fp, "\t%ld: %d\n", trk->keys[i].tm, trk->keys[i].val);

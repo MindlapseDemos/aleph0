@@ -178,25 +178,21 @@ int scr_num_screens(void)
 	return num_screens;
 }
 
-int scr_change(struct screen *s, long trans_time)
+int scr_change(struct screen *s)
 {
 	if(!s) return -1;
 	if(s == cur) return 0;
 
-	if(trans_time) {
-		trans_dur = trans_time / 2; /* half for each part transition out then in */
-		trans_start = time_msec;
-	} else {
-		trans_dur = 0;
-	}
+	trans_start = time_msec;
 
 	if(cur && cur->stop) {
+		trans_dur = cur->trans_out;
 		cur->stop(trans_dur);
 		prev = cur;
 		next = s;
 	} else {
 		if(s->start) {
-			s->start(trans_dur);
+			s->start(s->trans_in);
 		}
 
 		cur = s;

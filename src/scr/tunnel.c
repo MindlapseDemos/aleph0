@@ -201,7 +201,7 @@ static void start(long trans_time)
 	if(trans_time) {
 		trans_start = time_msec;
 		trans_dur = trans_time;
-		/*trans_dir = 1;*/
+		trans_dir = 1;
 	}
 
 	tunpos = 0;
@@ -220,6 +220,7 @@ static void start(long trans_time)
 static void stop(long trans_time)
 {
 	if(trans_time) {
+		printf("tunnel stop(%ld)\n", trans_time);
 		trans_start = time_msec;
 		trans_dur = trans_time;
 		trans_dir = -1;
@@ -227,29 +228,32 @@ static void stop(long trans_time)
 }
 
 #define NUM_WORK_ITEMS	8
+#define NUM_LINES		(FB_HEIGHT / NUM_WORK_ITEMS)
 #define ACCEL_DUR	1000
-static int draw_lines, num_lines;
+static int draw_lines;
 static int xoffs, yoffs;
 static long toffs;
 
 static void update(float tsec)
 {
-	int i;
+	int i, progr;
+	long interval;
 	float t, curspeed, maxpan;
 
-	num_lines = FB_HEIGHT / NUM_WORK_ITEMS;
-	draw_lines = num_lines;
+	draw_lines = NUM_LINES;
 
 	if(trans_dir) {
-		long interval = time_msec - trans_start;
-		int progr = num_lines * interval / trans_dur;
-		if(trans_dir < 0) {
-			draw_lines = num_lines - progr - 1;
-		} else {
-			draw_lines = progr;
-		}
-		if(progr >= num_lines) {
+		interval = time_msec - trans_start;
+		progr = NUM_LINES * interval / trans_dur;
+		if(progr >= NUM_LINES) {
 			trans_dir = 0;
+			draw_lines = NUM_LINES;
+		} else {
+			if(trans_dir < 0) {
+				draw_lines = NUM_LINES - progr - 1;
+			} else {
+				draw_lines = progr;
+			}
 		}
 	}
 
@@ -329,9 +333,9 @@ static void draw(void)
 	}
 
 	for(i=0; i<NUM_WORK_ITEMS; i++) {
-		int starty = i * num_lines;
+		int starty = i * NUM_LINES;
 		int resty = starty + draw_lines;
-		int rest_lines = num_lines - draw_lines;
+		int rest_lines = NUM_LINES - draw_lines;
 		draw_tunnel_range(fb_pixels, xoffs, yoffs, starty, draw_lines);
 		if(rest_lines) {
 			memset(fb_pixels + resty * FB_WIDTH, 0, rest_lines * FB_WIDTH * 2);

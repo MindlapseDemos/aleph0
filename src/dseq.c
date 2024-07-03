@@ -474,7 +474,15 @@ void dseq_stop(void)
 
 void dseq_ffwd(long tm)
 {
-	/* XXX cont. */
+	int id;
+
+	while(next_event) {
+		id = next_event->id;
+		next_event->reltime -= tm;
+		if(next_event->reltime > 0) break;
+		tm = -next_event->reltime;
+		next_event = next_event->next;
+	}
 }
 
 int setup_transition(int id, struct event *trigev)

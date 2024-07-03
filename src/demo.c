@@ -53,7 +53,7 @@ static unsigned int bmask_diff, prev_bmask;
 
 static unsigned long nframes;
 static int con_active;
-static int demo_running;
+static int demo_running, ignore_scrchg_trig;
 
 extern uint16_t loading_pixels[];	/* data.asm */
 
@@ -138,7 +138,7 @@ int demo_init(void)
 		scr = scr_screen(0);
 	}
 
-	if(!scr || scr_change(scr, scr->trans_in) == -1) {
+	if(!scr || scr_change(scr) == -1) {
 		fprintf(stderr, "screen %s not found\n", opt.start_scr ? opt.start_scr : "0");
 		return -1;
 	}
@@ -274,7 +274,7 @@ void change_screen(int idx)
 {
 	struct screen *scr = scr_screen(idx);
 	printf("change screen %d\n", idx);
-	scr_change(scr, scr->trans_in);
+	scr_change(scr);
 }
 
 void demo_keyboard(int key, int press)
@@ -309,8 +309,17 @@ void demo_keyboard(int key, int press)
 
 		case KB_F1:
 			if(curscr_name && (evid = dseq_lookup(curscr_name)) >= 0) {
-				reset_timer(dseq_evstart(evid));
+				long evstart = dseq_evstart(evid);
+				dseq_ffwd(evstart);
+				reset_timer(evstart);
+				ignore_scrchg_trig = 1;
 			}
+			dseq_start();
+			break;
+
+		case KB_F2:
+			ignore_scrchg_trig = 0;
+			reset_timer(0);
 			dseq_start();
 			break;
 
@@ -369,7 +378,7 @@ void mouse_orbit_update(float *theta, float *phi, float *dist)
 /* process demo sequence triggers for screen changes */
 static void screen_evtrig(int evid, int val, void *cls)
 {
-	if(val <= 0) return;
+	if(val <= 0 || ignore_scrchg_trig) return;
 
 	change_screen((intptr_t)cls);
 }

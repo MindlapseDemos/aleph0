@@ -20,11 +20,19 @@
 #   - keyabs:<abstime>: same as key, but absolute time, not relative to parent
 #   - interp: one of <step|linear|smoothstep>
 #   - trans: transition duration, 0 (default) means until the next key
+#
+#
+# WARNING!!!!! WARNING!!!!! WARNING!!!!! WARNING!!!!! WARNING!!!!! WARNING!!!!!
+# prev screen transition out + new screen transition in both run during the new
+# screen's timeline. A 1sec screen after a screen with an 1sec trans-out won't
+# show up at all! Take care when re-ordering parts or tweaking transition times.
 
 demoseq {
 	tunnel {
 		start = 0
 		dur = 0
+		trans_in = 500
+		trans_out = 250
 
 		text {
 			key:1000 = 1024	# mindlapse & desire solid
@@ -46,17 +54,17 @@ demoseq {
 
 	blobgrid {
 		wait = 0
-		dur = 1000
+		dur = 2000
 	}
 
 	metaballs {
 		wait = 0
-		dur = 1000
+		dur = 2000
 
 		faces {
 			interp = "smoothstep"
 			trans = 800
-			key:2000 = 1024
+			key:1500 = 1024
 		}
 	}
 }

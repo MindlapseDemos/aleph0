@@ -162,19 +162,19 @@ static void calc_grad(struct msurf_volume *vol, int x, int y, int z, cgm_vec3 *g
 {
 	struct msurf_voxel *ptr = vol->voxels + msurf_addr(vol, x, y, z);
 	if(x < vol->xres - 1) {
-		grad->x = ptr[1].val - ptr->val;
+		grad->x = ptr->val - ptr[1].val;
 	} else {
-		grad->x = ptr->val - ptr[-1].val;
+		grad->x = ptr[-1].val - ptr->val;
 	}
 	if(y < vol->yres - 1) {
-		grad->y = ptr[vol->xstore].val - ptr->val;
+		grad->y = ptr->val - ptr[vol->xstore].val;
 	} else {
-		grad->y = ptr->val - ptr[-vol->xstore].val;
+		grad->y = ptr[-vol->xstore].val - ptr->val;
 	}
 	if(z < vol->zres - 1) {
-		grad->z = ptr[vol->xystore].val - ptr->val;
+		grad->z = ptr->val - ptr[vol->xystore].val;
 	} else {
-		grad->z = ptr->val - ptr[-vol->xystore].val;
+		grad->z = ptr[-vol->xystore].val - ptr->val;
 	}
 #ifdef NORMALIZE_GRAD
 	fast_normalize(&grad->x);
@@ -257,7 +257,7 @@ int msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell)
 	/* for each generated triangle, add its vertices to the vertex buffer */
 	for(i=0; mc_tri_table[code][i] != -1; i+=3) {
 		for(j=0; j<3; j++) {
-			int idx = mc_tri_table[code][i + j];
+			int idx = mc_tri_table[code][i + (2 - j)];
 			struct g3d_vertex *newv;
 
 			if(vol->num_verts >= vol->max_verts) {

@@ -16,56 +16,38 @@
  *     bit 2: texture
  *     bit 3-4: blend mode: 00-none 01-alpha 10-additive 11-reserved
  *     bit 5: zbuffering
+ *     bit 6: additive texturing
  */
 void (*fillfunc[])(struct pvertex*) = {
-	polyfill_wire,
-	polyfill_flat,
-	polyfill_gouraud,
-	0,
-	polyfill_tex_wire,
-	polyfill_tex_flat,
-	polyfill_tex_gouraud,
-	0,
-	polyfill_alpha_wire,
-	polyfill_alpha_flat,
-	polyfill_alpha_gouraud,
-	0,
-	polyfill_alpha_tex_wire,
-	polyfill_alpha_tex_flat,
-	polyfill_alpha_tex_gouraud,
-	0,
-	polyfill_add_wire,
-	polyfill_add_flat,
-	polyfill_add_gouraud,
-	0,
-	polyfill_add_tex_wire,
-	polyfill_add_tex_flat,
-	polyfill_add_tex_gouraud,
-	0, 0, 0, 0, 0, 0, 0, 0, 0,
-	polyfill_wire,
-	polyfill_flat_zbuf,
-	polyfill_gouraud_zbuf,
-	0,
-	polyfill_tex_wire,
-	polyfill_tex_flat_zbuf,
-	polyfill_tex_gouraud_zbuf,
-	0,
-	polyfill_alpha_wire,
-	polyfill_alpha_flat_zbuf,
-	polyfill_alpha_gouraud_zbuf,
-	0,
-	polyfill_alpha_tex_wire,
-	polyfill_alpha_tex_flat_zbuf,
-	polyfill_alpha_tex_gouraud_zbuf,
-	0,
-	polyfill_add_wire,
-	polyfill_add_flat_zbuf,
-	polyfill_add_gouraud_zbuf,
-	0,
-	polyfill_add_tex_wire,
-	polyfill_add_tex_flat_zbuf,
-	polyfill_add_tex_gouraud_zbuf,
-	0, 0, 0, 0, 0, 0, 0, 0, 0
+	polyfill_wire, polyfill_flat, polyfill_gouraud, 0,
+	polyfill_tex_wire, polyfill_tex_flat, polyfill_tex_gouraud, 0,
+	polyfill_alpha_wire, polyfill_alpha_flat, polyfill_alpha_gouraud, 0,
+	polyfill_alpha_tex_wire, polyfill_alpha_tex_flat, polyfill_alpha_tex_gouraud, 0,
+	polyfill_add_wire, polyfill_add_flat, polyfill_add_gouraud, 0,
+	polyfill_add_tex_wire, polyfill_add_tex_flat, polyfill_add_tex_gouraud, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	polyfill_wire, polyfill_flat_zbuf, polyfill_gouraud_zbuf, 0,
+	polyfill_tex_wire, polyfill_tex_flat_zbuf, polyfill_tex_gouraud_zbuf, 0,
+	polyfill_alpha_wire, polyfill_alpha_flat_zbuf, polyfill_alpha_gouraud_zbuf, 0,
+	polyfill_alpha_tex_wire, polyfill_alpha_tex_flat_zbuf, polyfill_alpha_tex_gouraud_zbuf, 0,
+	polyfill_add_wire, polyfill_add_flat_zbuf, polyfill_add_gouraud_zbuf, 0,
+	polyfill_add_tex_wire, polyfill_add_tex_flat_zbuf, polyfill_add_tex_gouraud_zbuf, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+
+	polyfill_wire, polyfill_flat, polyfill_gouraud, 0,
+	0, polyfill_addtex_flat, polyfill_addtex_gouraud, 0,
+	polyfill_alpha_wire, polyfill_alpha_flat, polyfill_alpha_gouraud, 0,
+	0, 0, 0, 0,
+	polyfill_add_wire, polyfill_add_flat, polyfill_add_gouraud, 0,
+	0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	polyfill_wire, polyfill_flat_zbuf, polyfill_gouraud_zbuf, 0,
+	0, polyfill_addtex_flat_zbuf, polyfill_addtex_gouraud_zbuf, 0,
+	polyfill_alpha_wire, polyfill_alpha_flat_zbuf, polyfill_alpha_gouraud_zbuf, 0,
+	0, 0, 0, 0,
+	polyfill_add_wire, polyfill_add_flat_zbuf, polyfill_add_gouraud_zbuf, 0,
+	0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
 };
 
 struct pimage pfill_fb, pfill_tex;
@@ -398,6 +380,46 @@ void polyfill_add_tex_wire(struct pvertex *verts)
 #undef BLEND_ALPHA
 #define BLEND_ADD
 #define ZBUF
+#include "polytmpl.h"
+#undef POLYFILL
+
+#define POLYFILL polyfill_addtex_flat
+#undef GOURAUD
+#define TEXMAP
+#undef BLEND_ALPHA
+#undef BLEND_ADD
+#undef ZBUF
+#define TEX_ADD
+#include "polytmpl.h"
+#undef POLYFILL
+
+#define POLYFILL polyfill_addtex_gouraud
+#define GOURAUD
+#define TEXMAP
+#undef BLEND_ALPHA
+#undef BLEND_ADD
+#undef ZBUF
+#define TEX_ADD
+#include "polytmpl.h"
+#undef POLYFILL
+
+#define POLYFILL polyfill_addtex_flat_zbuf
+#undef GOURAUD
+#define TEXMAP
+#undef BLEND_ALPHA
+#undef BLEND_ADD
+#define ZBUF
+#define TEX_ADD
+#include "polytmpl.h"
+#undef POLYFILL
+
+#define POLYFILL polyfill_addtex_gouraud_zbuf
+#define GOURAUD
+#define TEXMAP
+#undef BLEND_ALPHA
+#undef BLEND_ADD
+#define ZBUF
+#define TEX_ADD
 #include "polytmpl.h"
 #undef POLYFILL
 

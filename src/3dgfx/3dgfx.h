@@ -57,6 +57,7 @@ enum {
 	G3D_SPECULAR	= 0x020000,
 
 	G3D_ADD_BLEND	= 0x040000,
+	G3D_ADDTEX		= 0x080000,
 
 	G3D_ALL = 0x7fffffff
 };

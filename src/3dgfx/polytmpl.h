@@ -260,9 +260,16 @@ void POLYFILL(struct pvertex *varr)
 			/* This is not correct, should be /255, but it's much faster
 			 * to shift by 8 (/256), and won't make a huge difference
 			 */
+#ifdef TEX_ADD
+			cr = cr + G3D_UNPACK_R(texel);
+			cg = cg + G3D_UNPACK_G(texel);
+			cb = cb + G3D_UNPACK_B(texel);
+#else
 			cr = (cr * G3D_UNPACK_R(texel)) >> 8;
 			cg = (cg * G3D_UNPACK_G(texel)) >> 8;
 			cb = (cb * G3D_UNPACK_B(texel)) >> 8;
+#endif
+
 #endif	/* TEXMAP */
 
 #ifdef BLEND_ALPHA

@@ -649,6 +649,9 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 			fill_mode = st->polymode;
 			if(st->opt & G3D_TEXTURE_2D) {
 				fill_mode |= POLYFILL_TEX_BIT;
+				if(st->opt & G3D_ADDTEX) {
+					fill_mode |= POLYFILL_ADDTEX_BIT;
+				}
 			}
 			if(st->opt & G3D_ALPHA_BLEND) {
 				fill_mode |= POLYFILL_ALPHA_BIT;

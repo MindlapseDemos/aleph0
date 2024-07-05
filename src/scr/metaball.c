@@ -18,20 +18,24 @@ static int init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
+static void keyb(int key);
+static void shade_blobs(void);
 
 static struct screen scr = {
 	"metaballs",
 	init,
 	destroy,
 	start, 0,
-	draw
+	draw,
+	keyb
 };
 
-static float cam_theta, cam_phi = 25;
+static float cam_theta, cam_phi;
 static float cam_dist = 8;
-static struct g3d_mesh mmesh;
+static struct g3d_mesh mmesh, dbgmesh;
 static uint16_t *bgimage, *envmap;
 static int envmap_xsz, envmap_ysz;
+static int use_envmap = 1, opt_shade = 1;
 
 #define NUM_SPR		4
 static struct image spr[NUM_SPR];
@@ -77,9 +81,9 @@ static int init(void)
 			return -1;
 		}
 	}
-	/*if(!(envmap = img_load_pixels("data/foo.png", &envmap_xsz, &envmap_ysz, IMG_FMT_RGB565))) {
+	if(!(envmap = img_load_pixels("data/myenvmap.jpg", &envmap_xsz, &envmap_ysz, IMG_FMT_RGB565))) {
 		return -1;
-	}*/
+	}
 
 	if(msurf_init(&vol) == -1) {
 		fprintf(stderr, "failed to initialize metasurf\n");
@@ -108,6 +112,9 @@ static int init(void)
 	mmesh.vcount = mmesh.icount = 0;
 
 	evid_faces = dseq_lookup("metaballs.faces");
+
+	//gen_cube_mesh(&dbgmesh, 1, 1);
+	gen_sphere_mesh(&dbgmesh, 0.8, 20, 10);
 	return 0;
 }
 
@@ -126,7 +133,7 @@ static void start(long trans_time)
 
 	g3d_enable(G3D_DEPTH_TEST);
 	g3d_enable(G3D_CULL_FACE);
-	g3d_enable(G3D_LIGHTING);
+	g3d_disable(G3D_LIGHTING);
 	g3d_enable(G3D_LIGHT0);
 
 	g3d_polygon_mode(G3D_GOURAUD);
@@ -197,23 +204,71 @@ static void draw(void)
 	g3d_light_pos(0, -10, 10, 20);
 
 	/*zsort_mesh(&mmesh);*/
+	if(opt_shade) {
+		shade_blobs();
+	}
 
 	g3d_mtl_diffuse(0.6, 0.6, 0.6);
 
 	g3d_translate(-VOL_HALF_XSCALE, -VOL_HALF_YSCALE, -VOL_HALF_ZSCALE);
 
-	/*g3d_enable(G3D_TEXTURE_2D);*/
-	g3d_enable(G3D_TEXTURE_GEN);
-	g3d_set_texture(envmap_xsz, envmap_ysz, envmap);
-	draw_mesh(&mmesh);
-	g3d_disable(G3D_TEXTURE_GEN);
-	g3d_disable(G3D_TEXTURE_2D);
+	if(use_envmap) {
+		g3d_enable(G3D_TEXTURE_2D);
+		g3d_enable(G3D_TEXTURE_GEN);
+		g3d_enable(G3D_ADDTEX);
+		g3d_set_texture(envmap_xsz, envmap_ysz, envmap);
+		draw_mesh(&mmesh);
+		g3d_disable(G3D_ADDTEX);
+		g3d_disable(G3D_TEXTURE_GEN);
+		g3d_disable(G3D_TEXTURE_2D);
+	} else {
+		draw_mesh(&mmesh);
+	}
 
 	sprintf(buf, "%d tris", mmesh.vcount / 3);
 	cs_cputs(fb_pixels, 10, 10, buf);
 
-	sprintf(buf, "ev: %d", dseq_value(evid_faces));
-	cs_cputs(fb_pixels, 10, 20, buf);
-
 	swap_buffers(fb_pixels);
+}
+
+static void keyb(int key)
+{
+	switch(key) {
+	case 'e':
+		use_envmap ^= 1;
+		break;
+
+	case 's':
+		opt_shade ^= 1;
+		break;
+	}
+}
+
+static cgm_vec3 blobcol[2] = {
+	{0.05, 0.05, 0.25},
+	{1, 0.3, 0.05}
+};
+
+static void shade_blobs(void)
+{
+	int i;
+	struct g3d_vertex *varr;
+	cgm_vec3 *n, col;
+	float t, y, vgrad;
+
+	varr = mmesh.varr;
+	for(i=0; i<mmesh.vcount; i++) {
+		/*n = (cgm_vec3*)&varr->nx;*/
+		y = varr->y - VOL_HALF_YSCALE;
+		vgrad = fabs(4.0 * y / VOL_ZSCALE);
+		t = fabs(varr->ny) * vgrad;
+		cgm_vlerp(&col, blobcol, blobcol + 1, t);
+		varr->r = cround64(col.x * 255.0f);
+		varr->g = cround64(col.y * 255.0f);
+		varr->b = cround64(col.z * 255.0f);
+		if(varr->r > 255) varr->r = 255;
+		if(varr->g > 255) varr->g = 255;
+		if(varr->b > 255) varr->b = 255;
+		varr++;
+	}
 }

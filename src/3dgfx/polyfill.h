@@ -9,56 +9,12 @@
 #define POLYFILL_ALPHA_BIT	0x08
 #define POLYFILL_ADD_BIT	0x10
 #define POLYFILL_ZBUF_BIT	0x20
+#define POLYFILL_ADDTEX_BIT	0x40
 
 enum {
-	POLYFILL_WIRE			= 0,
+	POLYFILL_WIRE,
 	POLYFILL_FLAT,
-	POLYFILL_GOURAUD,
-
-	POLYFILL_TEX_WIRE		= 4,
-	POLYFILL_TEX_FLAT,
-	POLYFILL_TEX_GOURAUD,
-
-	POLYFILL_ALPHA_WIRE		= 8,
-	POLYFILL_ALPHA_FLAT,
-	POLYFILL_ALPHA_GOURAUD,
-
-	POLYFILL_ALPHA_TEX_WIRE	= 12,
-	POLYFILL_ALPHA_TEX_FLAT,
-	POLYFILL_ALPHA_TEX_GOURAUD,
-
-	POLYFILL_ADD_WIRE		= 16,
-	POLYFILL_ADD_FLAT,
-	POLYFILL_ADD_GOURAUD,
-
-	POLYFILL_ADD_TEX_WIRE	= 20,
-	POLYFILL_ADD_TEX_FLAT,
-	POLYFILL_ADD_TEX_GOURAUD,
-
-
-	POLYFILL_WIRE_ZBUF			= 32,
-	POLYFILL_FLAT_ZBUF,
-	POLYFILL_GOURAUD_ZBUF,
-
-	POLYFILL_TEX_WIRE_ZBUF		= 36,
-	POLYFILL_TEX_FLAT_ZBUF,
-	POLYFILL_TEX_GOURAUD_ZBUF,
-
-	POLYFILL_ALPHA_WIRE_ZBUF	= 40,
-	POLYFILL_ALPHA_FLAT_ZBUF,
-	POLYFILL_ALPHA_GOURAUD_ZBUF,
-
-	POLYFILL_ALPHA_TEX_WIRE_ZBUF = 44,
-	POLYFILL_ALPHA_TEX_FLAT_ZBUF,
-	POLYFILL_ALPHA_TEX_GOURAUD_ZBUF,
-
-	POLYFILL_ADD_WIRE_ZBUF		= 48,
-	POLYFILL_ADD_FLAT_ZBUF,
-	POLYFILL_ADD_GOURAUD_ZBUF,
-
-	POLYFILL_ADD_TEX_WIRE_ZBUF	= 52,
-	POLYFILL_ADD_TEX_FLAT_ZBUF,
-	POLYFILL_ADD_TEX_GOURAUD_ZBUF
+	POLYFILL_GOURAUD
 };
 
 /* projected vertices for the rasterizer */
@@ -122,5 +78,10 @@ void polyfill_add_flat_zbuf(struct pvertex *verts);
 void polyfill_add_gouraud_zbuf(struct pvertex *verts);
 void polyfill_add_tex_flat_zbuf(struct pvertex *verts);
 void polyfill_add_tex_gouraud_zbuf(struct pvertex *verts);
+
+void polyfill_addtex_flat(struct pvertex *verts);
+void polyfill_addtex_gouraud(struct pvertex *verts);
+void polyfill_addtex_flat_zbuf(struct pvertex *verts);
+void polyfill_addtex_gouraud_zbuf(struct pvertex *verts);
 
 #endif	/* POLYFILL_H_ */

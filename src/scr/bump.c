@@ -68,6 +68,10 @@ static int lightMaxX = LMAP_WIDTH-1;
 static int lightMinY = 0;
 static int lightMaxY = LMAP_HEIGHT-1;
 
+static int ev_electroids;
+static int ev_scrollUp;
+static int ev_lightsIn;
+static int ev_scalerIn;
 
 
 struct screen *bump_screen(void)
@@ -216,6 +220,11 @@ static int init(void)
 			particleLight[i++] = ((c >> 1) << 11) | (c << 5) | (c >> 1);
 		}
 	}
+
+	ev_electroids = dseq_lookup("bump.electroids");
+	ev_scrollUp = dseq_lookup("bump.scrollUp");
+	ev_lightsIn = dseq_lookup("bump.lightsIn");
+	ev_scalerIn = dseq_lookup("bump.scalerIn");
 
 	return 0;
 }
@@ -509,10 +518,39 @@ static void testBlitBumpTex(int t)
 	}
 }
 
+static void bumpScript()
+{
+	static int val0 = 0;
+	static int val1 = 0;
+	static int prevVal0 = -1;
+	static int prevVal1 = -1;
+
+	if (val0 = dseq_value(ev_electroids)) {
+		if (val0 != prevVal0) {
+			printf("electroids) %d\n", val0);
+			prevVal0 = val0;
+		}
+	}
+	if (dseq_triggered(ev_scrollUp)) {
+		printf("scrollUp) %d\n", dseq_value(ev_scrollUp));
+	}
+	if (val1 = dseq_value(ev_lightsIn)) {
+		if (val1 != prevVal1) {
+			printf("lightsIn) %d\n", val1);
+			prevVal1 = val1;
+		}
+	}
+	if (dseq_triggered(ev_scalerIn)) {
+		printf("scalerIn) %d\n", dseq_value(ev_scalerIn));
+	}
+}
+
 
 static void draw(void)
 {
 	const int t = time_msec - startingTime;
+
+	bumpScript();
 
 	eraseLightmapArea(lightMinX, lightMinY, lightMaxX, lightMaxY);
 

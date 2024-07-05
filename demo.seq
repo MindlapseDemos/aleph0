@@ -67,6 +67,31 @@ demoseq {
 			key:1500 = 1024
 		}
 	}
+
+	bump {
+		wait = 0
+		dur = 16384
+
+		electroids {
+			interp = "linear"
+			trans = 4096
+			key:1500 = 64
+		}
+
+		scrollUp {
+			wait = 4096
+		}
+
+		lightsIn {
+			interp = "smoothstep"
+			trans = 8192
+			key:2000 = 320
+		}
+
+		scalerIn {
+			wait = 8192
+		}
+	}
 }
 
 # vi:ts=4 sts=4 sw=4 ai:

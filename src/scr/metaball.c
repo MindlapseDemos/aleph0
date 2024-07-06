@@ -81,7 +81,7 @@ static int init(void)
 			return -1;
 		}
 	}
-	if(!(envmap = img_load_pixels("data/myenvmap.jpg", &envmap_xsz, &envmap_ysz, IMG_FMT_RGB565))) {
+	if(!(envmap = img_load_pixels("data/envuf2.jpg", &envmap_xsz, &envmap_ysz, IMG_FMT_RGB565))) {
 		return -1;
 	}
 
@@ -245,8 +245,8 @@ static void keyb(int key)
 }
 
 static cgm_vec3 blobcol[2] = {
-	{0.05, 0.05, 0.25},
-	{1, 0.3, 0.05}
+	{0.05, 0.05, 0.15},
+	{0.9, 0.3, 0.05}
 };
 
 static void shade_blobs(void)

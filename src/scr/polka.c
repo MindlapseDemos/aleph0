@@ -34,7 +34,7 @@ static void start(long trans_time);
 static void draw(void);
 
 static unsigned short *tempPal;
-static unsigned int *polkaPal32[VOLS_NUM];
+static unsigned int *polkaPal32[VOLS_NUM+1];
 static unsigned char *polkaBuffer[VOLS_NUM];
 
 static unsigned char *psin1, *psin2, *psin3;
@@ -346,7 +346,7 @@ static void drawBoxLines(unsigned char* buffer, int orderSign, int objIndex)
 	drawQuadLines(&v[4], &v[5], &v[1], &v[0], buffer, orderSign);
 }
 
-static void OptGrid3Drun(int objIndex, unsigned char* buffer, int ticks)
+static void OptGrid3Drun(int objIndex, int sizeIndex, unsigned char* buffer, int ticks)
 {
 	ticks >>= 1;
 
@@ -358,7 +358,7 @@ static void OptGrid3Drun(int objIndex, unsigned char* buffer, int ticks)
 
 	/* drawBoxLines(buffer, -1, objIndex); */
 
-	if (objIndex == 0) {
+	if (sizeIndex == 0) {
 		drawBlobPointsPolkaSize2(screenPointsGrid.v, screenPointsGrid.num, buffer);
 	} else {
 		drawBlobPointsPolkaSize1(screenPointsGrid.v, screenPointsGrid.num, buffer);
@@ -432,6 +432,7 @@ static int init(void)
 
 	for (i = 0; i < VOLS_NUM; ++i) {
 		polkaBuffer[i] = (unsigned char*)malloc(POLKA_BUFFER_WIDTH * POLKA_BUFFER_HEIGHT);
+		memset(polkaBuffer[i], 0, POLKA_BUFFER_WIDTH * POLKA_BUFFER_HEIGHT);
 
 		switch(i) {
 			case 0:
@@ -447,6 +448,11 @@ static int init(void)
 
 		polkaPal32[i] = createColMap16to32(tempPal);
 	}
+
+	/* a 3rd palette */
+	setPalGradient(0, 127, 0, 0, 0, 7, 47, 3, tempPal);
+	setPalGradient(128, 255, 7, 47, 3, 15, 56, 63, tempPal);
+	polkaPal32[2] = createColMap16to32(tempPal);
 
 	free(tempPal);
 
@@ -471,6 +477,7 @@ static void destroy(void)
 		free(polkaBuffer[i]);
 		free(polkaPal32[i]);
 	}
+	free(polkaPal32[2]);
 }
 
 static void start(long trans_time)
@@ -478,27 +485,63 @@ static void start(long trans_time)
 	startingTime = time_msec;
 }
 
+static void blurBuffer(unsigned char *buffer)
+{
+	int x, y;
+	unsigned int* b = (unsigned int*)buffer + ((POLKA_BUFFER_HEIGHT - FB_HEIGHT) / 2 - 8) * (POLKA_BUFFER_WIDTH / 4) + (POLKA_BUFFER_WIDTH - FB_WIDTH) / 8;
+
+	for (y = 0; y < FB_HEIGHT + 16; ++y) {
+		for (x = 0; x < FB_WIDTH / 4; ++x) {
+			*b = ((*(b - 8 * POLKA_BUFFER_WIDTH / 4) + *(b + 8 * POLKA_BUFFER_WIDTH / 4)) >> 1) & 0x7f7f7f7f;
+			b++;
+		}
+		b += POLKA_BUFFER_WIDTH / 4 - FB_WIDTH / 4;
+	}
+}
+
 static void draw(void)
 {
 	const int t = time_msec - startingTime;
 
-	int i;
+	int i, j, pi = 0;
 	for (i = 0; i < VOLS_NUM; ++i) {
+		int px, py;
+		int si = 0;
+
 		clearBlobBuffer(polkaBuffer[i]);
 
 		if (i == 0) {
 			updateDotsVolumeBufferRadial(t);
 		} else {
-			updateDotsVolumeBufferRadialRays(t);
-			/* updateDotsVolumeBufferPlasma(t); */
+			if (t < 10240) {
+				updateDotsVolumeBufferPlasma(t);
+			} else {
+				updateDotsVolumeBufferRadialRays(t);
+				pi = 1;
+				si = 1;
+			}
 		}
-		setGridPos(&gridPos[i], sin((3550*i + (i+1)*t) / 2277.0f) * 56, sin((4950 * i + (2-i)*t) / 1567.0f) * 32, 1024);
 
-		OptGrid3Drun(i, polkaBuffer[i], t);
+		px = sin((3550 * i + (i + 1) * t) / 2277.0f) * 56;
+		py = sin((4950 * i + (2 - i) * t) / 1567.0f) * 32;
+		setGridPos(&gridPos[i], px, py, 1024);
+
+		OptGrid3Drun(i, si, polkaBuffer[i], t);
+	}
+
+	j = sin(t / 700.0f) * 11 - 5;
+	if (j < 0) j = 0;
+	for (i = 0; i < j; ++i) {
+		blurBuffer(polkaBuffer[0]);
+	}
+	j = sin(t / 1100.0f) * 11 - 5;
+	if (j < 0) j = 0;
+	for (i = 0; i < j; ++i) {
+		blurBuffer(polkaBuffer[1]);
 	}
 
 	buffer8bppToVram(polkaBuffer[0], polkaPal32[0]);
-	buffer8bppORwithVram(polkaBuffer[1], polkaPal32[1]);
+	buffer8bppORwithVram(polkaBuffer[1], polkaPal32[1+pi]);
 
 	swap_buffers(0);
 }

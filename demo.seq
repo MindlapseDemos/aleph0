@@ -74,22 +74,24 @@ demoseq {
 
 		electroids {
 			interp = "linear"
-			trans = 4096
-			key:1500 = 64
+			key:0 = 0
+			key:4096 = 64
 		}
 
 		scrollUp {
-			wait = 4096
+			wait = 0
+			dur = 4096
 		}
 
 		lightsIn {
 			interp = "smoothstep"
-			trans = 8192
-			key:2000 = 320
+			key:8192 = 0
+			key:12288 = 1024
 		}
 
 		scalerIn {
-			wait = 8192
+			wait = 0
+			dur = 8192
 		}
 	}
 }

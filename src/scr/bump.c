@@ -469,18 +469,6 @@ static void eraseLightmapArea(int x0, int y0, int x1, int y1)
 	}
 }
 
-static void moveBumpOffset(int t)
-{
-	const int tt = t >> 5;
-	int y;
-	for (y = 0; y < FB_HEIGHT; ++y) {
-		const int yp = (y + tt) & (HMAP_HEIGHT - 1);
-
-		memcpy(&bumpOffsetScreen[y * FB_WIDTH], &bumpOffset[yp * HMAP_WIDTH], HMAP_WIDTH * sizeof(*bumpOffset));
-		memcpy(&bumpOffsetScreen[y * FB_WIDTH + HMAP_WIDTH], &bumpOffset[yp * HMAP_WIDTH], (FB_WIDTH - HMAP_WIDTH) * sizeof(*bumpOffset));
-	}
-}
-
 static void renderBitmapLineBump(int u, int du, int* src, int* dst)
 {
 	int length = FB_WIDTH;
@@ -560,7 +548,6 @@ static void draw(void)
 	/* animateParticles();
 	renderParticles(); */
 
-	//moveBumpOffset(t);
 	testBlitBumpTex(t);
 
 	renderBump((unsigned short*)fb_pixels);

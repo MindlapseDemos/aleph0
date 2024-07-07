@@ -81,7 +81,8 @@ static int init(void)
 			return -1;
 		}
 	}
-	if(!(envmap = img_load_pixels("data/envuf2.jpg", &envmap_xsz, &envmap_ysz, IMG_FMT_RGB565))) {
+	if(!(envmap = img_load_pixels("data/metaenv.jpg", &envmap_xsz, &envmap_ysz, IMG_FMT_RGB565))) {
+		fprintf(stderr, "failed to load metaballs envmap\n");
 		return -1;
 	}
 
@@ -206,6 +207,9 @@ static void draw(void)
 	/*zsort_mesh(&mmesh);*/
 	if(opt_shade) {
 		shade_blobs();
+		g3d_enable(G3D_ADDTEX);
+	} else {
+		g3d_disable(G3D_ADDTEX);
 	}
 
 	g3d_mtl_diffuse(0.6, 0.6, 0.6);
@@ -215,7 +219,6 @@ static void draw(void)
 	if(use_envmap) {
 		g3d_enable(G3D_TEXTURE_2D);
 		g3d_enable(G3D_TEXTURE_GEN);
-		g3d_enable(G3D_ADDTEX);
 		g3d_set_texture(envmap_xsz, envmap_ysz, envmap);
 		draw_mesh(&mmesh);
 		g3d_disable(G3D_ADDTEX);
@@ -225,8 +228,10 @@ static void draw(void)
 		draw_mesh(&mmesh);
 	}
 
-	sprintf(buf, "%d tris", mmesh.vcount / 3);
-	cs_cputs(fb_pixels, 10, 10, buf);
+	if(opt.dbgmode) {
+		sprintf(buf, "%d tris", mmesh.vcount / 3);
+		cs_cputs(fb_pixels, 10, 10, buf);
+	}
 
 	swap_buffers(fb_pixels);
 }

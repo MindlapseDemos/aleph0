@@ -12,6 +12,7 @@
 #include "gfxutil.h"
 #include "opt_rend.h"
 #include "opt_3d.h"
+#include "imago2.h"
 
 #include "dos/keyb.h"
 
@@ -45,14 +46,14 @@
 
 #define LOCK_PLAYER_TO_GROUND
 
-#define FLY_HEIGHT 128
+#define FLY_HEIGHT 64
 #define V_PLAYER_HEIGHT 32
 #define V_HEIGHT_SCALER_SHIFT 7
 #define V_HEIGHT_SCALER (1 << V_HEIGHT_SCALER_SHIFT)
 #define HORIZON (FB_HEIGHT * 0.7)
 
-#define HMAP_WIDTH 512
-#define HMAP_HEIGHT 512
+#define HMAP_WIDTH 1024
+#define HMAP_HEIGHT 1024
 #define HMAP_SIZE (HMAP_WIDTH * HMAP_HEIGHT)
 
 #define SKY_TEX_WIDTH 256
@@ -69,8 +70,8 @@
 #define SEA_LEVEL 1
 
 /* Probably should only enable on PC and save on file for preloading in DOS */
-/* #define CALCULATE_DIST_MAP */
-/* #define SAVE_DIST_MAP */
+/* #define CALCULATE_DIST_MAP
+#define SAVE_DIST_MAP */
 
 
 typedef struct Point2D
@@ -92,6 +93,7 @@ static int* yMaxHolder = NULL;
 
 static unsigned char *hmap = NULL;
 static unsigned char *cmap = NULL;
+static uint16_t *pmap = NULL;
 
 static int *shadeVoxOff;
 static char* petrubTab;
@@ -182,16 +184,22 @@ static void initPalShades()
 {
 	int i,j;
 
-	uint16_t *shadedPmap = (uint16_t*)&cmap[HMAP_SIZE + 512];
+	uint16_t *shadedPmap = pmap;
 
-	for (j=1; j<PAL_SHADES; ++j) {
-		uint16_t *origPmap = (uint16_t*)&cmap[HMAP_SIZE];
+	for (j=0; j<PAL_SHADES; ++j) {
+		uint16_t *origPmap = (uint16_t*)&cmap[HMAP_SIZE/4];
 		const int shade = PAL_SHADES - j;
 		for (i=0; i<256; ++i) {
-			const uint16_t c = origPmap[i];
-			const int r = (((c >> 11) & 31) * shade) / PAL_SHADES;
-			const int g = (((c >> 5) & 63) * shade) / PAL_SHADES;
-			const int b = ((c & 31) * shade) / PAL_SHADES;
+			//const uint16_t c = origPmap[i];
+			//const int r = (((c >> 11) & 31) * shade) / PAL_SHADES;
+			//const int g = (((c >> 5) & 63) * shade) / PAL_SHADES;
+			//const int b = ((c & 31) * shade) / PAL_SHADES;
+
+			const int ii = i >> 2;
+			const int r = ((ii>>1) * shade) / PAL_SHADES;
+			const int g = (ii * shade) / PAL_SHADES;
+			const int b = ((ii>>1) * shade) / PAL_SHADES;
+
 			*shadedPmap++ = (r << 11) | (g << 5) | b;
 		}
 	}
@@ -207,17 +215,96 @@ static void initPalShades()
 	}
 }
 
+static int testLoadImgColormap()
+{
+	static struct img_pixmap mapPic;
+
+	int i;
+	uint32_t* src;
+	int imgWidth, imgHeight;
+
+	img_init(&mapPic);
+	if (img_load(&mapPic, "data/vxcolor.png") == -1) {
+		fprintf(stderr, "failed to load voxel colormap image\n");
+		return -1;
+	}
+
+	src = (uint32_t*)mapPic.pixels;
+	imgWidth = mapPic.width;
+	imgHeight = mapPic.width;
+
+	for (i = 0; i < HMAP_SIZE; ++i) {
+		uint32_t c32 = src[i];
+		int a = (c32 >> 24) & 255;
+		int r = (c32 >> 16) & 255;
+		int g = (c32 >> 8) & 255;
+		int b = c32 & 255;
+		//int c = (a + r + g + b) / 4;
+		int c = (r + g + b) / 3;
+		CLAMP(c, 0, 255);
+		cmap[i] = c;
+	}
+
+	return 0;
+}
+
+static int testLoadImgHeightmap()
+{
+	static struct img_pixmap mapPic;
+
+	int i;
+	uint32_t* src;
+	int imgWidth, imgHeight;
+	int hMin = 100000;
+	int hMax = 0;
+
+	img_init(&mapPic);
+	if (img_load(&mapPic, "data/vxheight.png") == -1) {
+		fprintf(stderr, "failed to load voxel heightmap image\n");
+		return -1;
+	}
+
+	src = (uint32_t*)mapPic.pixels;
+	imgWidth = mapPic.width;
+	imgHeight = mapPic.width;
+
+	for (i = 0; i < HMAP_SIZE; ++i) {
+		uint32_t c32 = src[i];
+		int a = (c32 >> 24) & 255;
+		int r = (c32 >> 16) & 255;
+		int g = (c32 >> 8) & 255;
+		int b = c32 & 255;
+		int c = (a + r + g + b) / 4;
+
+		if (c < hMin) hMin = c;
+		if (c > hMax) hMax = c;
+		hmap[i] = c;
+	}
+
+	for (i = 0; i < HMAP_SIZE; ++i) {
+		int c = (((int)hmap[i] - hMin) * 256) / (hMax - hMin) - 18;
+		CLAMP(c, 0, 255);
+		hmap[i] = c;
+	}
+
+
+	return 0;
+}
+
 static int initHeightmapAndColormap()
 {
-	const int cmapSize = HMAP_SIZE + 512 * PAL_SHADES;
-
 	if (!hmap) hmap = malloc(HMAP_SIZE);
-	if (!cmap) cmap = malloc(cmapSize);
+	if (!cmap) cmap = malloc(HMAP_SIZE + 512);
+	if (!pmap) pmap = (uint16_t*)malloc(512 * PAL_SHADES);
 
-	if(readMapFile("data/hmap1.bin", HMAP_SIZE, hmap) == -1) return -1;
-	if(readMapFile("data/cmap1.bin", cmapSize, cmap) == -1) return -1;
+	//if(readMapFile("data/hmap1.bin", HMAP_SIZE, hmap) == -1) return -1;
+	if(readMapFile("data/cmap1.bin", HMAP_SIZE, cmap) == -1) return -1;
 
 	initPalShades();
+
+	if (testLoadImgHeightmap() == -1) return -1;
+	if (testLoadImgColormap() == -1) return -1;
+
 	return 0;
 }
 
@@ -337,13 +424,13 @@ static void initSkyAndCloudTextures()
 		skyPal[i] = (unsigned short*)malloc(256 * sizeof(unsigned short));
 		pal = skyPal[i];
 		for (n = 0; n < 255; ++n) {
-			int r = n - 64;
+			int r = n - 48;
 			int g = n - 32;
-			int b = n + 64;
+			int b = n + 32;
 
-			r = (r * (PAL_SHADES - i - 1)) / (PAL_SHADES / 2) + 48;
-			g = (g * (PAL_SHADES - i - 1)) / (PAL_SHADES / 2) + 16;
-			b = (b * (PAL_SHADES - i - 1)) / (PAL_SHADES / 2) + 32;
+			r = (r * (PAL_SHADES - i - 1)) / (PAL_SHADES / 2) - 16;
+			g = (g * (PAL_SHADES - i - 1)) / (PAL_SHADES / 2) - 32;
+			b = (b * (PAL_SHADES - i - 1)) / (PAL_SHADES / 2) - 48;
 
 			CLAMP(r, 0, 63);
 			CLAMP(g, 0, 160);
@@ -388,6 +475,7 @@ static void destroy(void)
 	free(yMaxHolder);
 	free(hmap);
 	free(cmap);
+	free(pmap);
 	free(shadeVoxOff);
 	free(cloudTex);
 	free(skyTex);
@@ -508,13 +596,13 @@ static void renderScape(int petrT)
 		const int dvx = pixStep * ((vxR - vxL) / VIS_HOR_STEPS);
 		const int dvy = pixStep * ((vyR - vyL) / VIS_HOR_STEPS);
 
-		uint16_t* pmapPtr = (uint16_t*)&cmap[HMAP_SIZE] +shadeVoxOff[i];
+		uint16_t* pmapPtr = pmap +shadeVoxOff[i];
 		uint16_t* pmapPtrShade;
 		const int heightScale = heightScaleTab[i];
 
 		int shadePalI = i + (int)((VIS_VER_STEPS - 1) * REFLECT_SHADE);
 		CLAMP(shadePalI, 0, VIS_VER_STEPS-1)
-		pmapPtrShade = (uint16_t*)&cmap[HMAP_SIZE] + shadeVoxOff[shadePalI];
+		pmapPtrShade = pmap + shadeVoxOff[shadePalI];
 
 		for (j = 0; j < VIS_HOR_STEPS; j+= pixStep) {
 			const int yMax = yMaxHolder[j];
@@ -726,7 +814,7 @@ static void renderSky()
 		dst += FB_WIDTH;
 	}
 
-	for (y = FB_HEIGHT / 2; y < FB_HEIGHT / 2 + FB_HEIGHT / 4; ++y) {
+	for (y = FB_HEIGHT / 2; y < FB_HEIGHT / 2 + FB_HEIGHT / 2; ++y) {
 		uint32_t* dst32;
 		uint32_t c;
 		unsigned short* farPal;

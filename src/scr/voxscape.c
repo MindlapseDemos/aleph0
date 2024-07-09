@@ -180,25 +180,18 @@ static int readMapFile(const char *path, int count, void *dst)
 	return 0;
 }
 
-static void initPalShades()
+static void initPalShades(struct img_colormap *colorMap)
 {
 	int i,j;
 
 	uint16_t *shadedPmap = pmap;
 
 	for (j=0; j<PAL_SHADES; ++j) {
-		uint16_t *origPmap = (uint16_t*)&cmap[HMAP_SIZE/4];
 		const int shade = PAL_SHADES - j;
 		for (i=0; i<256; ++i) {
-			//const uint16_t c = origPmap[i];
-			//const int r = (((c >> 11) & 31) * shade) / PAL_SHADES;
-			//const int g = (((c >> 5) & 63) * shade) / PAL_SHADES;
-			//const int b = ((c & 31) * shade) / PAL_SHADES;
-
-			const int ii = i >> 2;
-			const int r = ((ii>>1) * shade) / PAL_SHADES;
-			const int g = (ii * shade) / PAL_SHADES;
-			const int b = ((ii>>1) * shade) / PAL_SHADES;
+			const int r = ((colorMap->color[i].r * shade) / PAL_SHADES) >> 3;
+			const int g = ((colorMap->color[i].g * shade) / PAL_SHADES) >> 2;
+			const int b = ((colorMap->color[i].b * shade) / PAL_SHADES) >> 3;
 
 			*shadedPmap++ = (r << 11) | (g << 5) | b;
 		}
@@ -215,13 +208,9 @@ static void initPalShades()
 	}
 }
 
-static int testLoadImgColormap()
+static int loadAndConvertImgColormapPng()
 {
-	static struct img_pixmap mapPic;
-
-	int i;
-	uint32_t* src;
-	int imgWidth, imgHeight;
+	struct img_pixmap mapPic;
 
 	img_init(&mapPic);
 	if (img_load(&mapPic, "data/vxcolor.png") == -1) {
@@ -229,32 +218,20 @@ static int testLoadImgColormap()
 		return -1;
 	}
 
-	src = (uint32_t*)mapPic.pixels;
-	imgWidth = mapPic.width;
-	imgHeight = mapPic.width;
+	img_convert(&mapPic, IMG_FMT_IDX8);
+	memcpy(cmap, mapPic.pixels, HMAP_SIZE);
 
-	for (i = 0; i < HMAP_SIZE; ++i) {
-		uint32_t c32 = src[i];
-		int a = (c32 >> 24) & 255;
-		int r = (c32 >> 16) & 255;
-		int g = (c32 >> 8) & 255;
-		int b = c32 & 255;
-		//int c = (a + r + g + b) / 4;
-		int c = (r + g + b) / 3;
-		CLAMP(c, 0, 255);
-		cmap[i] = c;
-	}
+	initPalShades(img_colormap(&mapPic));
 
 	return 0;
 }
 
-static int testLoadImgHeightmap()
+static int loadAndConvertImgHeightmapPng()
 {
-	static struct img_pixmap mapPic;
+	struct img_pixmap mapPic;
 
 	int i;
 	uint32_t* src;
-	int imgWidth, imgHeight;
 	int hMin = 100000;
 	int hMax = 0;
 
@@ -265,8 +242,6 @@ static int testLoadImgHeightmap()
 	}
 
 	src = (uint32_t*)mapPic.pixels;
-	imgWidth = mapPic.width;
-	imgHeight = mapPic.width;
 
 	for (i = 0; i < HMAP_SIZE; ++i) {
 		uint32_t c32 = src[i];
@@ -282,11 +257,10 @@ static int testLoadImgHeightmap()
 	}
 
 	for (i = 0; i < HMAP_SIZE; ++i) {
-		int c = (((int)hmap[i] - hMin) * 256) / (hMax - hMin) - 18;
+		int c = (((int)hmap[i] - hMin) * 256) / (hMax - hMin) - 22;
 		CLAMP(c, 0, 255);
 		hmap[i] = c;
 	}
-
 
 	return 0;
 }
@@ -294,16 +268,11 @@ static int testLoadImgHeightmap()
 static int initHeightmapAndColormap()
 {
 	if (!hmap) hmap = malloc(HMAP_SIZE);
-	if (!cmap) cmap = malloc(HMAP_SIZE + 512);
+	if (!cmap) cmap = malloc(HMAP_SIZE);
 	if (!pmap) pmap = (uint16_t*)malloc(512 * PAL_SHADES);
 
-	//if(readMapFile("data/hmap1.bin", HMAP_SIZE, hmap) == -1) return -1;
-	if(readMapFile("data/cmap1.bin", HMAP_SIZE, cmap) == -1) return -1;
-
-	initPalShades();
-
-	if (testLoadImgHeightmap() == -1) return -1;
-	if (testLoadImgColormap() == -1) return -1;
+	if (loadAndConvertImgHeightmapPng() == -1) return -1;
+	if (loadAndConvertImgColormapPng() == -1) return -1;
 
 	return 0;
 }

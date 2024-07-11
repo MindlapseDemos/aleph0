@@ -474,12 +474,9 @@ void dseq_stop(void)
 
 void dseq_ffwd(long tm)
 {
-	int id;
-
 	if(tm <= 0) return;
 
 	while(next_event) {
-		id = next_event->id;
 		next_event->reltime -= tm;
 		if(next_event->reltime > 0) break;
 		tm = -next_event->reltime;
@@ -600,12 +597,14 @@ int dseq_lookup(const char *evname)
 
 const char *dseq_name(int evid)
 {
+	if(evid < 0) return "unknown";
 	return tracks[evid].name;
 }
 
 int dseq_transtime(int evid, int *in, int *out)
 {
 	struct track *trk = tracks + evid;
+	if(evid < 0) return 0;
 	if(out) *out = trk->trans_time[1];
 	if(in) *in = trk->trans_time[0];
 	return trk->trans_time[0];
@@ -613,17 +612,21 @@ int dseq_transtime(int evid, int *in, int *out)
 
 long dseq_evstart(int evid)
 {
+	if(evid < 0) return -1;
 	return tracks[evid].num > 0 ? tracks[evid].keys[0].tm : -1;
 }
 
 int dseq_value(int evid)
 {
+	if(evid < 0) return 0;
 	return tracks[evid].cur_val;
 }
 
 int dseq_triggered(int evid)
 {
-	int trig = ISTRIG(evid);
+	int trig;
+	if(evid < 0) return 0;
+	trig = ISTRIG(evid);
 	CLRTRIG(evid);
 	return trig;
 }
@@ -634,6 +637,8 @@ int dseq_triggered(int evid)
 void dseq_trig_callback(int evid, enum dseq_trig_type type, dseq_callback_func func, void *cls)
 {
 	struct event *ev;
+
+	if(evid < 0) return;
 
 	if(type == DSEQ_TRIG_ONCE) {
 		ev = events;

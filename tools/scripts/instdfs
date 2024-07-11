@@ -46,10 +46,12 @@ else
 	mkdir -p $destdir/data
 	find data -maxdepth 1 -type f -exec cp '{}' $destdir/data/ ';'
 	cp -r data/3dzoom $destdir/data/
+	cp -r data/bump $destdir/data/
 	mkdir -p $destdir/libs/midas
 	cp libs/midas/libmidas.a $destdir/libs/midas
 	cp data/bin/midas.lib $destdir/midas.lib
 	cp watcfg.mk $destdir/watcfg.mk
+	cp demo.seq $destdir/demo.seq
 fi
 
 findsrc()

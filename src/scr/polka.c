@@ -450,8 +450,8 @@ static int init(void)
 	}
 
 	/* a 3rd palette */
-	setPalGradient(0, 127, 0, 0, 0, 7, 47, 3, tempPal);
-	setPalGradient(128, 255, 7, 47, 3, 15, 56, 63, tempPal);
+	setPalGradient(0, 127, 0, 0, 0, 15, 47, 7, tempPal);
+	setPalGradient(128, 255, 15, 47, 7, 47, 56, 63, tempPal);
 	polkaPal32[2] = createColMap16to32(tempPal);
 
 	free(tempPal);
@@ -485,14 +485,20 @@ static void start(long trans_time)
 	startingTime = time_msec;
 }
 
+#define BLUR_OUTSIDE_OFFSET 8
+
 static void blurBuffer(unsigned char *buffer)
 {
 	int x, y;
-	unsigned int* b = (unsigned int*)buffer + ((POLKA_BUFFER_HEIGHT - FB_HEIGHT) / 2 - 8) * (POLKA_BUFFER_WIDTH / 4) + (POLKA_BUFFER_WIDTH - FB_WIDTH) / 8;
+	unsigned int* b = (unsigned int*)buffer + ((POLKA_BUFFER_HEIGHT - FB_HEIGHT) / 2 - BLUR_OUTSIDE_OFFSET) * (POLKA_BUFFER_WIDTH / 4) + (POLKA_BUFFER_WIDTH - FB_WIDTH) / 8;
 
-	for (y = 0; y < FB_HEIGHT + 16; ++y) {
+	for (y = 0; y < FB_HEIGHT + 2 * BLUR_OUTSIDE_OFFSET; ++y) {
+		int yc = (y - FB_HEIGHT / 2) >> 4;
 		for (x = 0; x < FB_WIDTH / 4; ++x) {
-			*b = ((*(b - 8 * POLKA_BUFFER_WIDTH / 4) + *(b + 8 * POLKA_BUFFER_WIDTH / 4)) >> 1) & 0x7f7f7f7f;
+			int xc = (x - FB_WIDTH / 8) >> 2;
+			unsigned int* b0 = (unsigned int*)((unsigned char*)(b - 2*yc * (POLKA_BUFFER_WIDTH / 4)) - 2*xc);
+			unsigned int* b1 = (unsigned int*)((unsigned char*)(b + yc * (POLKA_BUFFER_WIDTH / 4)) + xc);
+			*b = ((*b0 + *b1) >> 1) & 0x7f7f7f7f;
 			b++;
 		}
 		b += POLKA_BUFFER_WIDTH / 4 - FB_WIDTH / 4;
@@ -514,9 +520,9 @@ static void draw(void)
 			updateDotsVolumeBufferRadial(t);
 		} else {
 			if (t < 10240) {
-				updateDotsVolumeBufferPlasma(t);
-			} else {
 				updateDotsVolumeBufferRadialRays(t);
+			} else {
+				updateDotsVolumeBufferPlasma(t);
 				pi = 1;
 				si = 1;
 			}
@@ -529,13 +535,15 @@ static void draw(void)
 		OptGrid3Drun(i, si, polkaBuffer[i], t);
 	}
 
-	j = sin(t / 700.0f) * 11 - 5;
+	j = sin(t / 1100.0f) * 13 - 5;
 	if (j < 0) j = 0;
+	if (j > 3) j = 3;
 	for (i = 0; i < j; ++i) {
 		blurBuffer(polkaBuffer[0]);
 	}
-	j = sin(t / 1100.0f) * 11 - 5;
+	j = sin(t / 900.0f) * 11 - 5;
 	if (j < 0) j = 0;
+	if (j > 3) j = 3;
 	for (i = 0; i < j; ++i) {
 		blurBuffer(polkaBuffer[1]);
 	}

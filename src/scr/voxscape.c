@@ -28,8 +28,8 @@
 
 #define FOV 48
 #define VIS_NEAR 16
-#define VIS_CLOSE 32
-#define VIS_MID 96
+#define VIS_CLOSE 48
+#define VIS_MID 128
 #define VIS_FAR 256
 #define VIS_HAZE (VIS_FAR - 64)
 
@@ -634,8 +634,8 @@ static void renderScape(int petrT)
 						}
 						else {
 							for (n = 0; n < pixStep; ++n) {
-								/*if (pixStep == 2) cv |= 15;
-								if (pixStep == 4) cv |= 31;*/
+								/* if (pixStep == 2) cv |= 15;
+								if (pixStep == 4) cv |= 31; */
 								*(dst + n) = cv;
 							}
 						}
@@ -851,7 +851,7 @@ static void draw(void)
 
 	renderScape(petrT);
 
-/*	testRenderDistMap(); */
+	/* testRenderDistMap(); */
 
 	moveClouds(dt);
 

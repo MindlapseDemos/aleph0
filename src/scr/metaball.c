@@ -32,7 +32,7 @@ static struct screen scr = {
 
 static float cam_theta, cam_phi;
 static float cam_dist = 8;
-static struct g3d_mesh mmesh, dbgmesh;
+static struct g3d_mesh mmesh;
 static uint16_t *bgimage, *envmap;
 static int envmap_xsz, envmap_ysz;
 static int use_envmap = 1, opt_shade = 1;
@@ -113,9 +113,6 @@ static int init(void)
 	mmesh.vcount = mmesh.icount = 0;
 
 	evid_faces = dseq_lookup("metaballs.faces");
-
-	//gen_cube_mesh(&dbgmesh, 1, 1);
-	gen_sphere_mesh(&dbgmesh, 0.8, 20, 10);
 	return 0;
 }
 

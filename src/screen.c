@@ -34,6 +34,7 @@ struct screen *polka_screen(void);
 struct screen *dott_screen(void);
 struct screen *water_screen(void);
 struct screen *zoom3d_screen(void);
+struct screen *molten_screen(void);
 
 void start_loadscr(void);
 void end_loadscr(void);
@@ -73,6 +74,7 @@ void populate_screens(void)
 	scr[idx++] = dott_screen();
 	scr[idx++] = water_screen();
 	scr[idx++] = zoom3d_screen();
+	scr[idx++] = molten_screen();
 
 	num_screens = idx;
 	assert(num_screens <= NUM_SCR);

@@ -121,6 +121,7 @@
     <ClCompile Include="src\scr\hairball.c" />
     <ClCompile Include="src\scr\infcubes.c" />
     <ClCompile Include="src\scr\metaball.c" />
+    <ClCompile Include="src\scr\molten.c" />
     <ClCompile Include="src\scr\minifx.c" />
     <ClCompile Include="src\scr\plasma.c" />
     <ClCompile Include="src\scr\water.c" />

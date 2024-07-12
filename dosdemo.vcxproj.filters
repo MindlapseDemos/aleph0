@@ -135,6 +135,9 @@
     <ClCompile Include="src\scr\metaball.c">
       <Filter>src\screens</Filter>
     </ClCompile>
+    <ClCompile Include="src\scr\molten.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
     <ClCompile Include="src\scr\minifx.c">
       <Filter>src\screens</Filter>
     </ClCompile>

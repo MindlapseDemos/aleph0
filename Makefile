@@ -13,7 +13,8 @@ srcobj = src/bsptree.obj src/cfgopt.obj src/console.obj src/demo.obj &
 	src/cpuid_s.obj src/darray.obj src/data.obj src/rlebmap.obj src/dseq.obj
 scrobj = src/scr/bump.obj &
 	src/scr/grise.obj src/scr/hairball.obj src/scr/infcubes.obj &
-	src/scr/metaball.obj src/scr/plasma.obj src/scr/polytest.obj &
+	src/scr/metaball.obj src/scr/molten.obj src/scr/plasma.obj &
+	src/scr/polytest.obj &
 	src/scr/smoketxt.obj src/scr/thunder.obj src/scr/tilemaze.obj &
 	src/scr/tunnel.obj src/scr/cybersun.obj src/scr/raytrace.obj &
 	src/scr/minifx.obj src/scr/voxscape.obj src/scr/hexfloor.obj &
@@ -42,7 +43,8 @@ srcobj = src\bsptree.obj src\cfgopt.obj src\console.obj src\demo.obj &
 	src\cpuid_s.obj src\darray.obj src\data.obj src\rlebmap.obj src\dseq.obj
 scrobj = src\scr\bump.obj &
 	src\scr\grise.obj src\scr\hairball.obj src\scr\infcubes.obj &
-	src\scr\metaball.obj src\scr\plasma.obj src\scr\polytest.obj &
+	src\scr\metaball.obj src\scr\molten.obj src\scr\plasma.obj &
+	src\scr\polytest.obj &
 	src\scr\smoketxt.obj src\scr\thunder.obj src\scr\tilemaze.obj &
 	src\scr\tunnel.obj src\scr\cybersun.obj src\scr\raytrace.obj &
 	src\scr\minifx.obj src\scr\voxscape.obj src\scr\hexfloor.obj &

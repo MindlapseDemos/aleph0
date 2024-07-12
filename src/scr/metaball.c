@@ -268,9 +268,6 @@ static void shade_blobs(void)
 		varr->r = cround64(col.x * 255.0f);
 		varr->g = cround64(col.y * 255.0f);
 		varr->b = cround64(col.z * 255.0f);
-		if(varr->r > 255) varr->r = 255;
-		if(varr->g > 255) varr->g = 255;
-		if(varr->b > 255) varr->b = 255;
 		varr++;
 	}
 }

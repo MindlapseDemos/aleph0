@@ -52,6 +52,7 @@ static int envmap_xsz, envmap_ysz;
 
 static struct msurf_volume vol;
 static cgm_vec4 ballpos[NUM_MBALLS];
+static int show_voxdbg;
 
 
 struct screen *molten_screen(void)
@@ -95,7 +96,8 @@ static int init(void)
 
 	gen_sflake(ballpos, 0, 2, 0, 0, 0, 20);
 	vol.flags |= MSURF_FLOOR;
-	vol.floor_z = VOL_ZSCALE / 4.0f;
+	vol.floor_z = 0;
+	vol.floor_energy = 8.5;
 	return 0;
 }
 
@@ -164,7 +166,7 @@ static void draw(void)
 	g3d_rotate(cam_theta, 0, 1, 0);
 
 	g3d_push_matrix();
-	g3d_translate(0, -VOL_YSCALE * 0.89, 0);
+	g3d_translate(0, -VOL_HALF_YSCALE * 0.89, 0);
 	g3d_disable(G3D_LIGHTING);
 	g3d_enable(G3D_TEXTURE_2D);
 	g3d_set_texture(roomtex_xsz, roomtex_ysz, room_texmap);
@@ -174,11 +176,36 @@ static void draw(void)
 	g3d_pop_matrix();
 
 	g3d_translate(-VOL_HALF_XSCALE, -VOL_HALF_YSCALE, -VOL_HALF_ZSCALE);
+	g3d_enable(G3D_LIGHTING);
+	g3d_disable(G3D_TEXTURE_2D);
 
 	if(mmesh.vcount) {
-		g3d_enable(G3D_LIGHTING);
-		g3d_disable(G3D_TEXTURE_2D);
 		draw_mesh(&mmesh);
+	}
+
+	if(show_voxdbg) {
+		int x, y, z, r, g, b;
+		struct msurf_voxel *vox = vol.voxels;
+		unsigned int frmid = vol.cur & 0xffff;
+		g3d_disable(G3D_LIGHTING);
+		g3d_begin(G3D_POINTS);
+		for(z=0; z<vol.zres; z++) {
+			for(y=0; y<vol.yres; y++) {
+				for(x=0; x<vol.xres; x++) {
+					if(vox->val > 8 || (vox->flags & 0xffff) == frmid) {
+						r = vox->val > 8 ? 255 : 64;
+						g = 64;
+						b = (vox->flags & 0xffff) == frmid ? 255 : 64;
+						g3d_color3b(r, g, b);
+						g3d_vertex(vox->pos.x, vox->pos.y, vox->pos.z);
+					}
+					vox++;
+				}
+				vox += vol.xstore - vol.xres;
+			}
+			vox += (vol.ystore - vol.yres) << vol.xshift;
+		}
+		g3d_end();
 	}
 
 	if(opt.dbgmode) {
@@ -191,6 +218,11 @@ static void draw(void)
 
 static void keyb(int key)
 {
+	switch(key) {
+	case 'd':
+		show_voxdbg ^= 1;
+		break;
+	}
 }
 
 

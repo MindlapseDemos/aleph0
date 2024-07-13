@@ -223,6 +223,8 @@ static int loadAndConvertImgColormapPng()
 
 	initPalShades(img_colormap(&mapPic));
 
+	img_destroy(&mapPic);
+
 	return 0;
 }
 
@@ -261,6 +263,8 @@ static int loadAndConvertImgHeightmapPng()
 		CLAMP(c, 0, 255);
 		hmap[i] = c;
 	}
+
+	img_destroy(&mapPic);
 
 	return 0;
 }

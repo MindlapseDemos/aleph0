@@ -515,21 +515,21 @@ static void bumpScript()
 
 	if (val0 = dseq_value(ev_electroids)) {
 		if (val0 != prevVal0) {
-			printf("electroids) %d\n", val0);
+			/* printf("electroids) %d\n", val0); */
 			prevVal0 = val0;
 		}
 	}
 	if (dseq_triggered(ev_scrollUp)) {
-		printf("scrollUp) %d\n", dseq_value(ev_scrollUp));
+		/* printf("scrollUp) %d\n", dseq_value(ev_scrollUp)); */
 	}
 	if (val1 = dseq_value(ev_lightsIn)) {
 		if (val1 != prevVal1) {
-			printf("lightsIn) %d\n", val1);
+			/* printf("lightsIn) %d\n", val1); */
 			prevVal1 = val1;
 		}
 	}
 	if (dseq_triggered(ev_scalerIn)) {
-		printf("scalerIn) %d\n", dseq_value(ev_scalerIn));
+		/* printf("scalerIn) %d\n", dseq_value(ev_scalerIn)); */
 	}
 }
 

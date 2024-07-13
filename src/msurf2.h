@@ -8,7 +8,8 @@
 enum {
 	MSURF_VALID		= 0x100,
 	MSURF_POSVALID	= 0x200,
-	MSURF_GRADVALID	= 0x400
+	MSURF_GRADVALID	= 0x400,
+	MSURF_FLOOR		= 0x800
 };
 
 struct msurf_volume;
@@ -53,6 +54,8 @@ struct msurf_volume {
 
 	struct metaball *mballs;		/* metaballs */
 	unsigned int num_mballs;
+
+	float floor_z, floor_energy;
 
 	int cur;
 };

@@ -199,7 +199,11 @@ int msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell)
 	for(i=0; i<8; i++) {
 		vox = cell->vox[i];
 		if((vox->flags & 0xffff) != frmid) {
-			vox->val = 0;
+			if(vol->flags & MSURF_FLOOR) {
+				vox->val = vol->floor_energy / (vox->pos.z - vol->floor_z);
+			} else {
+				vox->val = 0;
+			}
 			for(j=0; j<vol->num_mballs; j++) {
 				dir = vol->mballs[j].pos;
 				cgm_vsub(&dir, &vox->pos);
@@ -292,13 +296,25 @@ int msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell)
  */
 void msurf_genmesh(struct msurf_volume *vol)
 {
-	int i, cx, cy, cz, foundsurf;
+	int i, cx, cy, cz, foundsurf, num_msurf;
 	unsigned int dirvalid = 0;
 	struct msurf_cell *cell, *cellptr, *openlist = 0;
 
-	for(i=0; i<vol->num_mballs; i++) {
-		msurf_pos_to_cell(vol, vol->mballs[i].pos, &cx, &cy, &cz);
-		cell = vol->cells + msurf_addr(vol, cx, cy, cz);
+	num_msurf = vol->num_mballs;
+	if(vol->flags & MSURF_FLOOR) {
+		num_msurf++;
+	}
+
+	for(i=0; i<num_msurf; i++) {
+		if(i >= vol->num_mballs) {
+			/* start from z=floor_z and go upwards until we meet the floor */
+			cz = cround64(vol->floor_z * vol->zres / vol->size.z);
+			cell = vol->cells + (cz << vol->xshift);
+		} else {
+			/* start from the center of the ball */
+			msurf_pos_to_cell(vol, vol->mballs[i].pos, &cx, &cy, &cz);
+			cell = vol->cells + msurf_addr(vol, cx, cy, cz);
+		}
 		ADDOPEN(0, cell);
 
 		foundsurf = 0;

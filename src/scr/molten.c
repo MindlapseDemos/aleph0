@@ -14,12 +14,25 @@
 
 #undef DBG_VISIT
 
+#define VOL_SIZE		24
+#define VOL_XSZ			(VOL_SIZE * VOL_XSCALE / VOL_ZSCALE)
+#define VOL_YSZ			(VOL_SIZE * VOL_YSCALE / VOL_ZSCALE)
+#define VOL_ZSZ			VOL_SIZE
+#define VOL_XSCALE		16.0f
+#define VOL_YSCALE		15.0f
+#define VOL_ZSCALE		10.0f
+#define VOL_HALF_XSCALE	(VOL_XSCALE * 0.5f)
+#define VOL_HALF_YSCALE	(VOL_YSCALE * 0.5f)
+#define VOL_HALF_ZSCALE	(VOL_ZSCALE * 0.5f)
+
+#define NUM_MBALLS	5
+
 static int init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
 static void keyb(int key);
-static void shade_blobs(void);
+static int gen_sflake(cgm_vec4 *sarr, int num, int depth, float x, float y, float z, float rad);
 
 static struct screen scr = {
 	"molten",
@@ -38,19 +51,7 @@ static int roomtex_xsz, roomtex_ysz;
 static int envmap_xsz, envmap_ysz;
 
 static struct msurf_volume vol;
-
-#define VOL_SIZE	24
-#define VOL_XSZ	VOL_SIZE
-#define VOL_YSZ	VOL_SIZE
-#define VOL_ZSZ	VOL_SIZE
-#define VOL_XSCALE	16.0f
-#define VOL_YSCALE	15.0f
-#define VOL_ZSCALE	10.0f
-#define VOL_HALF_XSCALE	(VOL_XSCALE * 0.5f)
-#define VOL_HALF_YSCALE	(VOL_YSCALE * 0.5f)
-#define VOL_HALF_ZSCALE	(VOL_ZSCALE * 0.5f)
-
-#define NUM_MBALLS	5
+static cgm_vec4 ballpos[NUM_MBALLS];
 
 
 struct screen *molten_screen(void)
@@ -68,11 +69,39 @@ static int init(void)
 		fprintf(stderr, "failed to load data/moltroom.png\n");
 		return -1;
 	}
+
+	if(msurf_init(&vol) == -1) {
+		fprintf(stderr, "failed to initialize metasurf\n");
+		return -1;
+	}
+	if(msurf_metaballs(&vol, NUM_MBALLS) == -1) {
+		msurf_destroy(&vol);
+		return -1;
+	}
+	msurf_resolution(&vol, VOL_XSZ, VOL_YSZ, VOL_ZSZ);
+	msurf_size(&vol, VOL_XSCALE, VOL_YSCALE, VOL_ZSCALE);
+	vol.isoval = 8;
+
+	if(msurf_begin(&vol) == -1)	{	/* force allocation now */
+		fprintf(stderr, "msurf_begin failed\n");
+		msurf_destroy(&vol);
+		return -1;
+	}
+
+	mmesh.prim = G3D_TRIANGLES;
+	mmesh.varr = 0;
+	mmesh.iarr = 0;
+	mmesh.vcount = mmesh.icount = 0;
+
+	gen_sflake(ballpos, 0, 2, 0, 0, 0, 20);
+	vol.flags |= MSURF_FLOOR;
+	vol.floor_z = VOL_ZSCALE / 4.0f;
 	return 0;
 }
 
 static void destroy(void)
 {
+	msurf_destroy(&vol);
 	destroy_mesh(&room_mesh);
 	img_free_pixels(room_texmap);
 }
@@ -93,7 +122,26 @@ static void start(long trans_time)
 
 static void update(void)
 {
+	int i;
+
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
+
+	for(i=0; i<NUM_MBALLS; i++) {
+		vol.mballs[i].pos.x = ballpos[i].x;
+		vol.mballs[i].pos.y = ballpos[i].y;
+		vol.mballs[i].pos.z = ballpos[i].z;
+		vol.mballs[i].energy = ballpos[i].w;
+
+		vol.mballs[i].pos.x += VOL_HALF_XSCALE;
+		vol.mballs[i].pos.y += VOL_HALF_YSCALE;
+		vol.mballs[i].pos.z += VOL_HALF_ZSCALE;
+	}
+
+	msurf_begin(&vol);
+	msurf_genmesh(&vol);
+
+	mmesh.vcount = vol.num_verts;
+	mmesh.varr = vol.varr;
 }
 
 static void draw(void)
@@ -107,7 +155,7 @@ static void draw(void)
 
 	update();
 
-	g3d_clear(G3D_DEPTH_BUFFER_BIT);
+	g3d_clear(G3D_DEPTH_BUFFER_BIT | G3D_COLOR_BUFFER_BIT);	/* XXX drop color */
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
@@ -125,6 +173,14 @@ static void draw(void)
 	g3d_polygon_mode(G3D_GOURAUD);
 	g3d_pop_matrix();
 
+	g3d_translate(-VOL_HALF_XSCALE, -VOL_HALF_YSCALE, -VOL_HALF_ZSCALE);
+
+	if(mmesh.vcount) {
+		g3d_enable(G3D_LIGHTING);
+		g3d_disable(G3D_TEXTURE_2D);
+		draw_mesh(&mmesh);
+	}
+
 	if(opt.dbgmode) {
 		sprintf(buf, "%d tris", mmesh.vcount / 3);
 		cs_cputs(fb_pixels, 10, 10, buf);
@@ -136,3 +192,29 @@ static void draw(void)
 static void keyb(int key)
 {
 }
+
+
+static int gen_sflake(cgm_vec4 *sarr, int num, int depth, float x, float y, float z, float rad)
+{
+	int subnum;
+	float subrad, offs;
+
+	if(!depth) return 0;
+
+	sarr[num].x = x;
+	sarr[num].y = y;
+	sarr[num].z = z;
+	sarr[num].w = rad;
+	num++;
+
+	subrad = rad * 0.4f;
+	offs = rad * 0.16f;
+
+	subnum = 0;
+	subnum += gen_sflake(sarr, num + subnum, depth - 1, x, y + offs, z, subrad);
+	subnum += gen_sflake(sarr, num + subnum, depth - 1, x + offs * 0.75, y - offs * 0.5, z - offs * 0.43, subrad);
+	subnum += gen_sflake(sarr, num + subnum, depth - 1, x - offs * 0.75, y - offs * 0.5, z - offs * 0.43, subrad);
+	subnum += gen_sflake(sarr, num + subnum, depth - 1, x, y - offs * 0.5, z + offs * 0.86, subrad);
+	return subnum + 1;
+}
+

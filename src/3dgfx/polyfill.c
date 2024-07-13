@@ -13,41 +13,50 @@
 /*void polyfill_tex_flat_new(struct pvertex *varr);*/
 
 /* mode bits: 00-wire 01-flat 10-gouraud 11-reserved
- *     bit 2: texture
- *     bit 3-4: blend mode: 00-none 01-alpha 10-additive 11-reserved
- *     bit 5: zbuffering
- *     bit 6: additive texturing
+ *     bit 2-3: texture mode: 00-none 01-modulate 10-add 11-replace
+ *     bit 4-5: blend mode: 00-none 01-alpha 10-additive 11-reserved
+ *     bit 6: zbuffering
  */
-void (*fillfunc[])(struct pvertex*) = {
-	polyfill_wire, polyfill_flat, polyfill_gouraud, 0,
-	polyfill_tex_wire, polyfill_tex_flat, polyfill_tex_gouraud, 0,
-	polyfill_alpha_wire, polyfill_alpha_flat, polyfill_alpha_gouraud, 0,
-	polyfill_alpha_tex_wire, polyfill_alpha_tex_flat, polyfill_alpha_tex_gouraud, 0,
-	polyfill_add_wire, polyfill_add_flat, polyfill_add_gouraud, 0,
-	polyfill_add_tex_wire, polyfill_add_tex_flat, polyfill_add_tex_gouraud, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	polyfill_wire, polyfill_flat_zbuf, polyfill_gouraud_zbuf, 0,
-	polyfill_tex_wire, polyfill_tex_flat_zbuf, polyfill_tex_gouraud_zbuf, 0,
-	polyfill_alpha_wire, polyfill_alpha_flat_zbuf, polyfill_alpha_gouraud_zbuf, 0,
-	polyfill_alpha_tex_wire, polyfill_alpha_tex_flat_zbuf, polyfill_alpha_tex_gouraud_zbuf, 0,
-	polyfill_add_wire, polyfill_add_flat_zbuf, polyfill_add_gouraud_zbuf, 0,
-	polyfill_add_tex_wire, polyfill_add_tex_flat_zbuf, polyfill_add_tex_gouraud_zbuf, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
+void (*fillfunc[])(struct pvertex*) = {											/* zbbttpp */
+	polyfill_wire, polyfill_flat, polyfill_gour, 0,								/* 00000xx */
+	polyfill_tex_wire, polyfill_tex_flat, polyfill_tex_gour, 0,					/* 00001xx */
+	0, polyfill_addtex_flat, polyfill_addtex_gour, 0,							/* 00010xx */
+	0, polyfill_repltex_flat, polyfill_repltex_flat, 0,							/* 00011xx */
 
-	polyfill_wire, polyfill_flat, polyfill_gouraud, 0,
-	0, polyfill_addtex_flat, polyfill_addtex_gouraud, 0,
-	polyfill_alpha_wire, polyfill_alpha_flat, polyfill_alpha_gouraud, 0,
-	0, 0, 0, 0,
-	polyfill_add_wire, polyfill_add_flat, polyfill_add_gouraud, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	polyfill_wire, polyfill_flat_zbuf, polyfill_gouraud_zbuf, 0,
-	0, polyfill_addtex_flat_zbuf, polyfill_addtex_gouraud_zbuf, 0,
-	polyfill_alpha_wire, polyfill_alpha_flat_zbuf, polyfill_alpha_gouraud_zbuf, 0,
-	0, 0, 0, 0,
-	polyfill_add_wire, polyfill_add_flat_zbuf, polyfill_add_gouraud_zbuf, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
+	polyfill_alpha_wire, polyfill_alpha_flat, polyfill_alpha_gour, 0,			/* 00100xx */
+	polyfill_alpha_tex_wire, polyfill_alpha_tex_flat, polyfill_alpha_tex_gour,0,/* 00101xx */
+	0, 0, 0, 0,																	/* 00110xx */
+	0, 0, 0, 0,																	/* 00111xx */
+
+	polyfill_add_wire, polyfill_add_flat, polyfill_add_gour, 0,					/* 01000xx */
+	polyfill_add_tex_wire, polyfill_add_tex_flat, polyfill_add_tex_gour, 0,		/* 01001xx */
+	0, 0, 0, 0,																	/* 01010xx */
+	0, 0, 0, 0,																	/* 01011xx */
+
+	0, 0, 0, 0,																	/* 01100xx */
+	0, 0, 0, 0,																	/* 01101xx */
+	0, 0, 0, 0,																	/* 01110xx */
+	0, 0, 0, 0,																	/* 01111xx */
+
+	polyfill_wire, polyfill_flat_zbuf, polyfill_gour_zbuf, 0,					/* 10000xx */
+	polyfill_tex_wire, polyfill_tex_flat_zbuf, polyfill_tex_gour_zbuf, 0,		/* 10001xx */
+	0, polyfill_addtex_flat_zbuf, polyfill_addtex_gour_zbuf, 0,					/* 10010xx */
+	0, polyfill_repltex_flat_zbuf, polyfill_repltex_flat_zbuf, 0,				/* 10011xx */
+
+	polyfill_alpha_wire, polyfill_alpha_flat_zbuf, polyfill_alpha_gour_zbuf, 0,	/* 10100xx */
+	polyfill_alpha_tex_wire,polyfill_alpha_tex_flat_zbuf,polyfill_alpha_tex_gour_zbuf,0,/* 10101xx */
+	0, 0, 0, 0,																	/* 10110xx */
+	0, 0, 0, 0,																	/* 10111xx */
+
+	polyfill_add_wire, polyfill_add_flat_zbuf, polyfill_add_gour_zbuf, 0,		/* 11000xx */
+	polyfill_add_tex_wire, polyfill_add_tex_flat_zbuf, polyfill_add_tex_gour_zbuf, 0,	/* 11001xx */
+	0, 0, 0, 0,																	/* 11010xx */
+	0, 0, 0, 0,																	/* 11011xx */
+
+	0, 0, 0, 0,																	/* 11100xx */
+	0, 0, 0, 0,																	/* 11101xx */
+	0, 0, 0, 0,																	/* 11110xx */
+	0, 0, 0, 0,																	/* 11111xx */
 };
 
 struct pimage pfill_fb, pfill_tex;
@@ -174,7 +183,7 @@ void polyfill_add_tex_wire(struct pvertex *verts)
 #include "polytmpl.h"
 #undef POLYFILL
 
-#define POLYFILL polyfill_gouraud
+#define POLYFILL polyfill_gour
 #define GOURAUD
 #undef TEXMAP
 #undef BLEND_ALPHA
@@ -192,7 +201,7 @@ void polyfill_add_tex_wire(struct pvertex *verts)
 #include "polytmpl.h"
 #undef POLYFILL
 
-#define POLYFILL polyfill_tex_gouraud
+#define POLYFILL polyfill_tex_gour
 #define GOURAUD
 #define TEXMAP
 #undef BLEND_ALPHA
@@ -210,7 +219,7 @@ void polyfill_add_tex_wire(struct pvertex *verts)
 #include "polytmpl.h"
 #undef POLYFILL
 
-#define POLYFILL polyfill_alpha_gouraud
+#define POLYFILL polyfill_alpha_gour
 #define GOURAUD
 #undef TEXMAP
 #define BLEND_ALPHA
@@ -228,7 +237,7 @@ void polyfill_add_tex_wire(struct pvertex *verts)
 #include "polytmpl.h"
 #undef POLYFILL
 
-#define POLYFILL polyfill_alpha_tex_gouraud
+#define POLYFILL polyfill_alpha_tex_gour
 #define GOURAUD
 #define TEXMAP
 #define BLEND_ALPHA
@@ -246,7 +255,7 @@ void polyfill_add_tex_wire(struct pvertex *verts)
 #include "polytmpl.h"
 #undef POLYFILL
 
-#define POLYFILL polyfill_add_gouraud
+#define POLYFILL polyfill_add_gour
 #define GOURAUD
 #undef TEXMAP
 #undef BLEND_ALPHA
@@ -264,7 +273,7 @@ void polyfill_add_tex_wire(struct pvertex *verts)
 #include "polytmpl.h"
 #undef POLYFILL
 
-#define POLYFILL polyfill_add_tex_gouraud
+#define POLYFILL polyfill_add_tex_gour
 #define GOURAUD
 #define TEXMAP
 #undef BLEND_ALPHA
@@ -284,7 +293,7 @@ void polyfill_add_tex_wire(struct pvertex *verts)
 #include "polytmpl.h"
 #undef POLYFILL
 
-#define POLYFILL polyfill_gouraud_zbuf
+#define POLYFILL polyfill_gour_zbuf
 #define GOURAUD
 #undef TEXMAP
 #undef BLEND_ALPHA
@@ -302,7 +311,7 @@ void polyfill_add_tex_wire(struct pvertex *verts)
 #include "polytmpl.h"
 #undef POLYFILL
 
-#define POLYFILL polyfill_tex_gouraud_zbuf
+#define POLYFILL polyfill_tex_gour_zbuf
 #define GOURAUD
 #define TEXMAP
 #undef BLEND_ALPHA
@@ -320,7 +329,7 @@ void polyfill_add_tex_wire(struct pvertex *verts)
 #include "polytmpl.h"
 #undef POLYFILL
 
-#define POLYFILL polyfill_alpha_gouraud_zbuf
+#define POLYFILL polyfill_alpha_gour_zbuf
 #define GOURAUD
 #undef TEXMAP
 #define BLEND_ALPHA
@@ -338,7 +347,7 @@ void polyfill_add_tex_wire(struct pvertex *verts)
 #include "polytmpl.h"
 #undef POLYFILL
 
-#define POLYFILL polyfill_alpha_tex_gouraud_zbuf
+#define POLYFILL polyfill_alpha_tex_gour_zbuf
 #define GOURAUD
 #define TEXMAP
 #define BLEND_ALPHA
@@ -356,7 +365,7 @@ void polyfill_add_tex_wire(struct pvertex *verts)
 #include "polytmpl.h"
 #undef POLYFILL
 
-#define POLYFILL polyfill_add_gouraud_zbuf
+#define POLYFILL polyfill_add_gour_zbuf
 #define GOURAUD
 #undef TEXMAP
 #undef BLEND_ALPHA
@@ -374,7 +383,7 @@ void polyfill_add_tex_wire(struct pvertex *verts)
 #include "polytmpl.h"
 #undef POLYFILL
 
-#define POLYFILL polyfill_add_tex_gouraud_zbuf
+#define POLYFILL polyfill_add_tex_gour_zbuf
 #define GOURAUD
 #define TEXMAP
 #undef BLEND_ALPHA
@@ -393,7 +402,7 @@ void polyfill_add_tex_wire(struct pvertex *verts)
 #include "polytmpl.h"
 #undef POLYFILL
 
-#define POLYFILL polyfill_addtex_gouraud
+#define POLYFILL polyfill_addtex_gour
 #define GOURAUD
 #define TEXMAP
 #undef BLEND_ALPHA
@@ -413,7 +422,7 @@ void polyfill_add_tex_wire(struct pvertex *verts)
 #include "polytmpl.h"
 #undef POLYFILL
 
-#define POLYFILL polyfill_addtex_gouraud_zbuf
+#define POLYFILL polyfill_addtex_gour_zbuf
 #define GOURAUD
 #define TEXMAP
 #undef BLEND_ALPHA
@@ -423,124 +432,24 @@ void polyfill_add_tex_wire(struct pvertex *verts)
 #include "polytmpl.h"
 #undef POLYFILL
 
-#if 0
-void polyfill_tex_flat_new(struct pvertex *varr)
-{
-	int i, line, top, bot;
-	struct pvertex *v, *vn, *tab;
-	int32_t x, y0, y1, dx, dy, slope, fx, fy;
-	int start, len;
-	g3d_pixel *fbptr, *pptr, color;
-	int32_t tu, tv, du, dv, uslope, vslope;
-	int tx, ty;
-	g3d_pixel texel;
+#define POLYFILL polyfill_repltex_flat
+#undef GOURAUD
+#define TEXMAP
+#undef BLEND_ALPHA
+#undef BLEND_ADD
+#undef ZBUF
+#undef TEX_ADD
+#define TEX_REPL
+#include "polytmpl.h"
+#undef POLYFILL
 
-	top = pfill_fb.height;
-	bot = 0;
-
-	for(i=0; i<3; i++) {
-		/* scan the edge between the current and next vertex */
-		v = varr + i;
-		vn = VNEXT(v);
-
-		if(vn->y == v->y) continue;	/* XXX ??? */
-
-		if(vn->y >= v->y) {
-			/* inrementing Y: left side */
-			tab = left;
-		} else {
-			/* decrementing Y: right side, flip vertices to trace bottom->up */
-			tab = right;
-			v = vn;
-			vn = varr + i;
-		}
-
-		/* calculate edge slope */
-		dx = vn->x - v->x;
-		dy = vn->y - v->y;
-		slope = (dx << 8) / dy;
-
-		tu = v->u;
-		tv = v->v;
-		du = vn->u - tu;
-		dv = vn->v - tv;
-		uslope = (du << 8) / dy;
-		vslope = (dv << 8) / dy;
-
-		y0 = (v->y + 0x100) & 0xffffff00;	/* start from the next scanline */
-		fy = y0 - v->y;						/* fractional part before the next scanline */
-		fx = (fy * slope) >> 8;				/* X adjust for the step to the next scanline */
-		x = v->x + fx;						/* adjust X */
-		y1 = vn->y & 0xffffff00;			/* last scanline of the edge <= vn->y */
-
-		/* also adjust other interpolated attributes */
-		tu += (fy * uslope) >> 8;
-		tv += (fy * vslope) >> 8;
-
-		line = y0 >> 8;
-		if(line < top) top = line;
-		if((y1 >> 8) > bot) bot = y1 >> 8;
-
-		if(line > 0) tab += line;
-
-		while(line <= (y1 >> 8) && line < pfill_fb.height) {
-			if(line >= 0) {
-				int val = x < 0 ? 0 : x >> 8;
-				tab->x = val < pfill_fb.width ? val : pfill_fb.width - 1;
-				tab->u = tu;
-				tab->v = tv;
-				tab++;
-			}
-			x += slope;
-			tu += uslope;
-			tv += vslope;
-			line++;
-		}
-	}
-
-	if(top < 0) top = 0;
-	if(bot >= pfill_fb.height) bot = pfill_fb.height - 1;
-
-	fbptr = pfill_fb.pixels + top * pfill_fb.width;
-	for(i=top; i<=bot; i++) {
-		start = left[i].x;
-		len = right[i].x - start;
-		/* XXX we probably need more precision in left/right.x */
-
-		dx = len == 0 ? 256 : (len << 8);
-
-		tu = left[i].u;
-		tv = left[i].v;
-
-		pptr = fbptr + start;
-		while(len-- > 0) {
-			int cr, cg, cb;
-
-			tx = (tu >> (16 - pfill_tex.xshift)) & pfill_tex.xmask;
-			ty = (tv >> (16 - pfill_tex.yshift)) & pfill_tex.ymask;
-			texel = pfill_tex.pixels[(ty << pfill_tex.xshift) + tx];
-
-			tu += pgrad.dudx;
-			tv += pgrad.dvdx;
-
-			cr = varr[0].r;
-			cg = varr[0].g;
-			cb = varr[0].b;
-
-			/* This is not correct, should be /255, but it's much faster
-			 * to shift by 8 (/256), and won't make a huge difference
-			 */
-			cr = (cr * G3D_UNPACK_R(texel)) >> 8;
-			cg = (cg * G3D_UNPACK_G(texel)) >> 8;
-			cb = (cb * G3D_UNPACK_B(texel)) >> 8;
-
-			if(cr >= 255) cr = 255;
-			if(cg >= 255) cg = 255;
-			if(cb >= 255) cb = 255;
-			color = G3D_PACK_RGB(cr, cg, cb);
-			*pptr++ = color;
-		}
-		fbptr += pfill_fb.width;
-	}
-}
-#endif
+#define POLYFILL polyfill_repltex_flat_zbuf
+#undef GOURAUD
+#define TEXMAP
+#undef BLEND_ALPHA
+#undef BLEND_ADD
+#define ZBUF
+#undef TEX_ADD
+#define TEX_REPL
+#include "polytmpl.h"
+#undef POLYFILL

@@ -54,7 +54,7 @@ struct material {
 struct g3d_state {
 	unsigned int opt;
 	int frontface;
-	int polymode;
+	int polymode, texmode;
 
 	g3d_matrix mat[G3D_NUM_MATRICES][STACK_SIZE];
 	int mtop[G3D_NUM_MATRICES];
@@ -126,6 +126,7 @@ void g3d_reset(void)
 
 	st->opt = G3D_CLIP_FRUSTUM;
 	st->polymode = POLYFILL_FLAT;
+	st->texmode = POLYFILL_TEXMOD;
 
 	for(i=0; i<G3D_NUM_MATRICES; i++) {
 		g3d_matrix_mode(i);
@@ -243,6 +244,16 @@ void g3d_polygon_mode(int pmode)
 int g3d_get_polygon_mode(void)
 {
 	return st->polymode;
+}
+
+void g3d_texture_mode(int tmode)
+{
+	st->texmode = tmode;
+}
+
+int g3d_get_texture_mode(void)
+{
+	return st->texmode;
 }
 
 void g3d_matrix_mode(int mmode)
@@ -648,10 +659,7 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 		default:
 			fill_mode = st->polymode;
 			if(st->opt & G3D_TEXTURE_2D) {
-				fill_mode |= POLYFILL_TEX_BIT;
-				if(st->opt & G3D_ADDTEX) {
-					fill_mode |= POLYFILL_ADDTEX_BIT;
-				}
+				fill_mode |= st->texmode << POLYFILL_TEXMODE_SHIFT;
 			}
 			if(st->opt & G3D_ALPHA_BLEND) {
 				fill_mode |= POLYFILL_ALPHA_BIT;

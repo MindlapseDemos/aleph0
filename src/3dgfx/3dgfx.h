@@ -57,7 +57,6 @@ enum {
 	G3D_SPECULAR	= 0x020000,
 
 	G3D_ADD_BLEND	= 0x040000,
-	G3D_ADDTEX		= 0x080000,
 
 	G3D_ALL = 0x7fffffff
 };
@@ -70,6 +69,13 @@ enum {
 	G3D_WIRE,
 	G3D_FLAT,
 	G3D_GOURAUD
+};
+
+/* arg to g3d_texture_mode */
+enum {
+	G3D_TEX_MODULATE = 1,
+	G3D_TEX_ADD,
+	G3D_TEX_REPLACE
 };
 
 /* matrix stacks */
@@ -107,6 +113,8 @@ unsigned int g3d_getopt(unsigned int mask);
 void g3d_front_face(unsigned int order);
 void g3d_polygon_mode(int pmode);
 int g3d_get_polygon_mode(void);
+void g3d_texture_mode(int pmode);
+int g3d_get_texture_mode(void);
 
 void g3d_matrix_mode(int mmode);
 

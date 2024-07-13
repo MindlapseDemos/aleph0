@@ -204,9 +204,9 @@ static void draw(void)
 	/*zsort_mesh(&mmesh);*/
 	if(opt_shade) {
 		shade_blobs();
-		g3d_enable(G3D_ADDTEX);
+		g3d_texture_mode(G3D_TEX_ADD);
 	} else {
-		g3d_disable(G3D_ADDTEX);
+		g3d_texture_mode(G3D_TEX_MODULATE);
 	}
 
 	g3d_mtl_diffuse(0.6, 0.6, 0.6);
@@ -218,7 +218,7 @@ static void draw(void)
 		g3d_enable(G3D_TEXTURE_GEN);
 		g3d_set_texture(envmap_xsz, envmap_ysz, envmap);
 		draw_mesh(&mmesh);
-		g3d_disable(G3D_ADDTEX);
+		g3d_texture_mode(G3D_TEX_MODULATE);
 		g3d_disable(G3D_TEXTURE_GEN);
 		g3d_disable(G3D_TEXTURE_2D);
 	} else {

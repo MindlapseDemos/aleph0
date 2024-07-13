@@ -120,14 +120,14 @@ static void start(long trans_time)
 {
 	g3d_matrix_mode(G3D_PROJECTION);
 	g3d_load_identity();
-	g3d_perspective(50.0, 1.3333333, 0.5, 100.0);
+	g3d_perspective(60.0, 1.3333333, 0.5, 100.0);
 
 	g3d_enable(G3D_DEPTH_TEST);
 	g3d_enable(G3D_CULL_FACE);
-	g3d_enable(G3D_LIGHTING);
-	g3d_enable(G3D_LIGHT0);
-
-	g3d_polygon_mode(G3D_GOURAUD);
+	/*g3d_enable(G3D_LIGHTING);
+	g3d_enable(G3D_LIGHT0);*/
+	g3d_texture_mode(G3D_TEX_REPLACE);
+	g3d_polygon_mode(G3D_FLAT);
 
 	start_time = time_msec;
 }
@@ -190,23 +190,21 @@ static void draw(void)
 	g3d_disable(G3D_LIGHTING);
 	g3d_enable(G3D_TEXTURE_2D);
 	g3d_set_texture(roomtex_xsz, roomtex_ysz, room_texmap);
-	g3d_polygon_mode(G3D_FLAT);
 	draw_mesh(&room_mesh);
-	g3d_polygon_mode(G3D_GOURAUD);
 	g3d_pop_matrix();
 
 	g3d_rotate(-90, 1, 0, 0);
 	g3d_translate(-VOL_HALF_XSCALE, -VOL_HALF_YSCALE, -VOL_HALF_ZSCALE);
-	g3d_enable(G3D_LIGHTING);
 
 	if(mmesh.vcount) {
 		if(show_wire) {
 			g3d_disable(G3D_TEXTURE_2D);
 			g3d_polygon_mode(G3D_WIRE);
 			draw_mesh(&mmesh);
-			g3d_polygon_mode(G3D_GOURAUD);
+			g3d_polygon_mode(G3D_FLAT);
 		} else {
 			g3d_set_texture(envmap_xsz, envmap_ysz, envmap);
+			g3d_enable(G3D_TEXTURE_2D);
 			g3d_enable(G3D_TEXTURE_GEN);
 			draw_mesh(&mmesh);
 			g3d_disable(G3D_TEXTURE_GEN);

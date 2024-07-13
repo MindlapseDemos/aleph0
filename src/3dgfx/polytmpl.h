@@ -264,6 +264,8 @@ void POLYFILL(struct pvertex *varr)
 			cr = cr + G3D_UNPACK_R(texel);
 			cg = cg + G3D_UNPACK_G(texel);
 			cb = cb + G3D_UNPACK_B(texel);
+#elif defined(TEX_REPL)
+			color = texel;
 #else
 			cr = (cr * G3D_UNPACK_R(texel)) >> 8;
 			cg = (cg * G3D_UNPACK_G(texel)) >> 8;
@@ -296,7 +298,7 @@ void POLYFILL(struct pvertex *varr)
 #ifdef DEBUG_OVERDRAW
 			*pptr++ += DEBUG_OVERDRAW;
 #else
-#if defined(GOURAUD) || defined(TEXMAP) || defined(BLEND_ALPHA) || defined(BLEND_ADD)
+#if defined(GOURAUD) || (defined(TEXMAP) && !defined(TEX_REPL)) || defined(BLEND_ALPHA) || defined(BLEND_ADD)
 			if(cr >= 255) cr = 255;
 			if(cg >= 255) cg = 255;
 			if(cb >= 255) cb = 255;

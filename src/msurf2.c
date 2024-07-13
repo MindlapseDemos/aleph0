@@ -312,7 +312,7 @@ void msurf_genmesh(struct msurf_volume *vol)
 		if(i >= vol->num_mballs) {
 			/* start from z=floor_z and go upwards until we meet the floor */
 			cz = cround64(vol->floor_z * vol->zres / vol->size.z) - 1;
-			if(cz >= vol->zres - 2) continue;
+			if(cz >= (int)vol->zres - 2) continue;
 			if(cz <= 0) {
 				cell = vol->cells;
 			} else {
@@ -321,6 +321,9 @@ void msurf_genmesh(struct msurf_volume *vol)
 		} else {
 			/* start from the center of the ball */
 			msurf_pos_to_cell(vol, vol->mballs[i].pos, &cx, &cy, &cz);
+			if(cx < 0) cx = 0; else if(cx >= vol->xres - 2) cx = vol->xres - 3;
+			if(cy < 0) cy = 0; else if(cy >= vol->yres - 2) cy = vol->yres - 3;
+			if(cz < 0) cz = 0; else if(cz >= vol->zres - 2) cz = vol->zres - 3;
 			cell = vol->cells + msurf_addr(vol, cx, cy, cz);
 		}
 		ADDOPEN(0, cell);

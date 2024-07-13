@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
+#include "cgmath/cgmath.h"
 #include "screen.h"
 #include "demo.h"
 #include "3dgfx.h"
@@ -14,13 +15,13 @@
 
 #undef DBG_VISIT
 
-#define VOL_SIZE		24
-#define VOL_XSZ			(VOL_SIZE * VOL_XSCALE / VOL_ZSCALE)
-#define VOL_YSZ			(VOL_SIZE * VOL_YSCALE / VOL_ZSCALE)
-#define VOL_ZSZ			VOL_SIZE
+#define VOL_SIZE		14
+#define VOL_XSZ			(VOL_SIZE * VOL_XSCALE / VOL_YSCALE)
+#define VOL_YSZ			VOL_SIZE
+#define VOL_ZSZ			(VOL_SIZE * VOL_ZSCALE / VOL_YSCALE)
 #define VOL_XSCALE		16.0f
-#define VOL_YSCALE		15.0f
-#define VOL_ZSCALE		10.0f
+#define VOL_YSCALE		10.0f
+#define VOL_ZSCALE		15.0f
 #define VOL_HALF_XSCALE	(VOL_XSCALE * 0.5f)
 #define VOL_HALF_YSCALE	(VOL_YSCALE * 0.5f)
 #define VOL_HALF_ZSCALE	(VOL_ZSCALE * 0.5f)
@@ -52,7 +53,9 @@ static int envmap_xsz, envmap_ysz;
 
 static struct msurf_volume vol;
 static cgm_vec4 ballpos[NUM_MBALLS];
-static int show_voxdbg;
+static int show_voxdbg, show_wire;
+
+static unsigned long start_time;
 
 
 struct screen *molten_screen(void)
@@ -68,6 +71,11 @@ static int init(void)
 	}
 	if(!(room_texmap = img_load_pixels("data/moltroom.png", &roomtex_xsz, &roomtex_ysz, IMG_FMT_RGB565))) {
 		fprintf(stderr, "failed to load data/moltroom.png\n");
+		return -1;
+	}
+
+	if(!(envmap = img_load_pixels("data/myenvmap.jpg", &envmap_xsz, &envmap_ysz, IMG_FMT_RGB565))) {
+		fprintf(stderr, "failed to load data/myenvmap.jpg\n");
 		return -1;
 	}
 
@@ -94,7 +102,7 @@ static int init(void)
 	mmesh.iarr = 0;
 	mmesh.vcount = mmesh.icount = 0;
 
-	gen_sflake(ballpos, 0, 2, 0, 0, 0, 20);
+	gen_sflake(ballpos, 0, 2, 0, 0, 0, 18);
 	vol.flags |= MSURF_FLOOR;
 	vol.floor_z = 0;
 	vol.floor_energy = 8.5;
@@ -120,23 +128,35 @@ static void start(long trans_time)
 	g3d_enable(G3D_LIGHT0);
 
 	g3d_polygon_mode(G3D_GOURAUD);
+
+	start_time = time_msec;
 }
 
 static void update(void)
 {
 	int i;
+	float tsec = (float)(time_msec - start_time) / 1000.0f;
+	float xform[16], dist;
 
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
 
+	cgm_midentity(xform);
+	cgm_mrotate(xform, tsec, 1, 0, 0);
+	cgm_mrotate(xform, tsec, 0, 1, 0);
+
+	dist = cos(tsec * 1.8f) * 0.25f + 1.1f;
+
 	for(i=0; i<NUM_MBALLS; i++) {
-		vol.mballs[i].pos.x = ballpos[i].x;
-		vol.mballs[i].pos.y = ballpos[i].y;
-		vol.mballs[i].pos.z = ballpos[i].z;
+		vol.mballs[i].pos.x = ballpos[i].x * dist;
+		vol.mballs[i].pos.y = ballpos[i].y * dist;
+		vol.mballs[i].pos.z = ballpos[i].z * dist;
+		cgm_vmul_m3v3(&vol.mballs[i].pos, xform);
+
 		vol.mballs[i].energy = ballpos[i].w;
 
 		vol.mballs[i].pos.x += VOL_HALF_XSCALE;
 		vol.mballs[i].pos.y += VOL_HALF_YSCALE;
-		vol.mballs[i].pos.z += VOL_HALF_ZSCALE;
+		vol.mballs[i].pos.z += (VOL_HALF_ZSCALE * 0.6f) + cos(tsec * 0.7f) * 4.0f;
 	}
 
 	msurf_begin(&vol);
@@ -166,7 +186,7 @@ static void draw(void)
 	g3d_rotate(cam_theta, 0, 1, 0);
 
 	g3d_push_matrix();
-	g3d_translate(0, -VOL_HALF_YSCALE * 0.89, 0);
+	g3d_translate(0, -VOL_HALF_ZSCALE * 0.89, 0);
 	g3d_disable(G3D_LIGHTING);
 	g3d_enable(G3D_TEXTURE_2D);
 	g3d_set_texture(roomtex_xsz, roomtex_ysz, room_texmap);
@@ -175,13 +195,25 @@ static void draw(void)
 	g3d_polygon_mode(G3D_GOURAUD);
 	g3d_pop_matrix();
 
+	g3d_rotate(-90, 1, 0, 0);
 	g3d_translate(-VOL_HALF_XSCALE, -VOL_HALF_YSCALE, -VOL_HALF_ZSCALE);
 	g3d_enable(G3D_LIGHTING);
-	g3d_disable(G3D_TEXTURE_2D);
 
 	if(mmesh.vcount) {
-		draw_mesh(&mmesh);
+		if(show_wire) {
+			g3d_disable(G3D_TEXTURE_2D);
+			g3d_polygon_mode(G3D_WIRE);
+			draw_mesh(&mmesh);
+			g3d_polygon_mode(G3D_GOURAUD);
+		} else {
+			g3d_set_texture(envmap_xsz, envmap_ysz, envmap);
+			g3d_enable(G3D_TEXTURE_GEN);
+			draw_mesh(&mmesh);
+			g3d_disable(G3D_TEXTURE_GEN);
+		}
 	}
+
+	g3d_disable(G3D_TEXTURE_2D);
 
 	if(show_voxdbg) {
 		int x, y, z, r, g, b;
@@ -192,13 +224,13 @@ static void draw(void)
 		for(z=0; z<vol.zres; z++) {
 			for(y=0; y<vol.yres; y++) {
 				for(x=0; x<vol.xres; x++) {
-					if(vox->val > 8 || (vox->flags & 0xffff) == frmid) {
+					//if(vox->val > 8 || (vox->flags & 0xffff) == frmid) {
 						r = vox->val > 8 ? 255 : 64;
 						g = 64;
 						b = (vox->flags & 0xffff) == frmid ? 255 : 64;
 						g3d_color3b(r, g, b);
 						g3d_vertex(vox->pos.x, vox->pos.y, vox->pos.z);
-					}
+					//}
 					vox++;
 				}
 				vox += vol.xstore - vol.xres;
@@ -221,6 +253,10 @@ static void keyb(int key)
 	switch(key) {
 	case 'd':
 		show_voxdbg ^= 1;
+		break;
+
+	case 'w':
+		show_wire ^= 1;
 		break;
 	}
 }

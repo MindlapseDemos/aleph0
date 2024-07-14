@@ -903,11 +903,11 @@ static unsigned short unpackBlend(unsigned short c, unsigned char shade)
 	g += shade;
 	b += shade;
 
-	CLAMP(r, 0, 31)
-		CLAMP(g, 0, 63)
-		CLAMP(b, 0, 31)
+	if (r > 31) r = 31;
+	if (g > 63) g = 63;
+	if (b > 31) b = 31;
 
-		return (r << 11) | (g << 6) | b;
+	return (r << 11) | (g << 6) | b;
 }
 
 void drawAntialiasedLine16bpp(Vertex3D* v1, Vertex3D* v2, int shadeShift, unsigned short* vram)

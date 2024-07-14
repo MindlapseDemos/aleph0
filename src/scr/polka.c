@@ -27,6 +27,8 @@
 #define DOT_COLOR 0xFFFF
 #define VOLS_NUM 2
 
+#define NUM_BG_POINTS 64
+
 
 static int init(void);
 static void destroy(void);
@@ -63,6 +65,9 @@ PolarData *polarData;
 
 
 static Vector3D gridPos[2];
+
+static Vertex3D *bgPoints;
+static Vector3D *vel;
 
 
 static struct screen scr = {
@@ -367,15 +372,39 @@ static void OptGrid3Drun(int objIndex, int sizeIndex, unsigned char* buffer, int
 	/* drawBoxLines(buffer, 1, objIndex); */
 }
 
+static void moveBgPoints(int t)
+{
+	static int prevT = 0;
+	const int dt = t - prevT;
+
+	if (dt < 0 || dt > 20) {
+		int i;
+
+		for (i = 0; i < NUM_BG_POINTS; ++i) {
+			bgPoints[i].x = (bgPoints[i].x + vel[i].x) % FB_WIDTH;
+			bgPoints[i].y = (bgPoints[i].y + vel[i].y) % FB_HEIGHT;
+
+			if (bgPoints[i].x < 0) bgPoints[i].x = FB_WIDTH - 1;
+			if (bgPoints[i].y < 0) bgPoints[i].y = FB_HEIGHT - 1;
+
+			bgPoints[i].xs = bgPoints[i].x;
+			bgPoints[i].ys = bgPoints[i].y;
+		}
+		prevT = t;
+	}
+}
+
 static void backgroundLinesTest(int t)
 {
 	int i;
-	static Vertex3D v[64];
+	Vertex3D v1;
 
-	for (i = 0; i < 63; ++i) {
-		v[i].ys = 0; v[i].xs = 0;
-		v[i+1].ys = 239; v[i+1].xs = i << 2;
-		drawAntialiasedLine16bpp(&v[i], &v[i + 1], 4 + (i & 3), fb_pixels);
+	moveBgPoints(t);
+
+	for (i = 0; i < NUM_BG_POINTS; ++i) {
+		v1.xs = bgPoints[i].xs + 4;
+		v1.ys = bgPoints[i].ys + 4;
+		drawAntialiasedLine16bpp(&bgPoints[i], &v1, 4 + (i & 3), fb_pixels);
 	}
 }
 
@@ -424,6 +453,23 @@ static void initRadialEffects()
 	}
 }
 
+static void initBgPoints()
+{
+	int i;
+
+	bgPoints = (Vertex3D*)malloc(NUM_BG_POINTS * sizeof(Vertex3D));
+	vel = (Vector3D*)malloc(NUM_BG_POINTS * sizeof(Vector3D));
+
+	for (i = 0; i < NUM_BG_POINTS; ++i) {
+		bgPoints[i].x = rand() % FB_WIDTH;
+		bgPoints[i].y = rand() % FB_HEIGHT;
+		vel[i].x = (rand() & 3) - 2;
+		vel[i].y = (rand() & 3) - 2;
+		if (vel[i].x >= 0) vel[i].x++;
+		if (vel[i].y >= 0) vel[i].y++;
+	}
+}
+
 static void setGridPos(Vector3D* pos, int x, int y, int z)
 {
 	pos->x = x;
@@ -438,6 +484,7 @@ static int init(void)
 	OptGrid3Dinit();
 	initBlobGfx();
 
+	initBgPoints();
 
 	tempPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
 
@@ -469,7 +516,7 @@ static int init(void)
 
 	initPlasma3D();
 	initRadialEffects();
-	
+
 	return 0;
 }
 
@@ -483,6 +530,8 @@ static void destroy(void)
 	free(psin1);
 	free(psin2);
 	free(psin3);
+
+	free(bgPoints);
 
 	for (i = 0; i < VOLS_NUM; ++i) {
 		free(polkaBuffer[i]);
@@ -520,7 +569,7 @@ static void draw(void)
 {
 	const int t = time_msec - startingTime;
 
-	/*int i, j, pi = 0;
+	int i, j, pi = 0;
 	for (i = 0; i < VOLS_NUM; ++i) {
 		int px, py;
 		int si = 0;
@@ -560,9 +609,9 @@ static void draw(void)
 	}
 
 	buffer8bppToVram(polkaBuffer[0], polkaPal32[0]);
-	buffer8bppORwithVram(polkaBuffer[1], polkaPal32[1+pi]);*/
+	buffer8bppORwithVram(polkaBuffer[1], polkaPal32[1+pi]);
 
-	memset(fb_pixels, 0, 320 * 240 * 2);
+	/* memset(fb_pixels, 0, 320 * 240 * 2); */
 	backgroundLinesTest(t);
 
 	swap_buffers(0);

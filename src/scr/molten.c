@@ -16,9 +16,9 @@
 #undef DBG_VISIT
 
 #define VOL_SIZE		14
-#define VOL_XSZ			(VOL_SIZE * VOL_XSCALE / VOL_YSCALE)
-#define VOL_YSZ			VOL_SIZE
-#define VOL_ZSZ			(VOL_SIZE * VOL_ZSCALE / VOL_YSCALE)
+#define VOL_XSZ			((int)(VOL_SIZE * VOL_XSCALE / VOL_YSCALE))
+#define VOL_YSZ			10
+#define VOL_ZSZ			((int)(VOL_SIZE * VOL_ZSCALE / VOL_YSCALE))
 #define VOL_XSCALE		16.0f
 #define VOL_YSCALE		10.0f
 #define VOL_ZSCALE		15.0f
@@ -79,6 +79,7 @@ static int init(void)
 		return -1;
 	}
 
+	printf("molten: init msurf volume %dx%dx%d\n", VOL_XSZ, VOL_YSZ, VOL_ZSZ);
 	if(msurf_init(&vol) == -1) {
 		fprintf(stderr, "failed to initialize metasurf\n");
 		return -1;

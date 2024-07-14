@@ -44,10 +44,10 @@
 #define VIS_VER_STEPS ((VIS_FAR - VIS_NEAR) / VIS_VER_SKIP)
 #define VIS_HOR_STEPS (FB_WIDTH / PIXEL_SIZE)
 
-#define LOCK_PLAYER_TO_GROUND
+/* #define LOCK_PLAYER_TO_GROUND */
 
-#define FLY_HEIGHT 64
-#define V_PLAYER_HEIGHT 32
+#define FLY_HEIGHT 96
+#define V_PLAYER_HEIGHT 48
 #define V_HEIGHT_SCALER_SHIFT 7
 #define V_HEIGHT_SCALER (1 << V_HEIGHT_SCALER_SHIFT)
 #define HORIZON (FB_HEIGHT * 0.7)
@@ -386,7 +386,7 @@ static void initSkyAndCloudTextures()
 			/* float f = pfbm2((float)x * scale, (float)y * scale, perX, perY, 8) + 0.25f; */
 			float f = pturbulence2((float)x * scale, (float)y * scale, perX, perY, 4);
 			CLAMP(f, 0.0f, 0.99f)
-			cloudTex[i++] = (int)(f * 255.0f);
+			cloudTex[i++] = (int)(f * 127.0f);
 		}
 	}
 
@@ -579,12 +579,12 @@ static void renderScape(int petrT)
 
 		for (j = 0; j < VIS_HOR_STEPS; j+= pixStep) {
 			const int yMax = yMaxHolder[j];
-			if (yMax < FB_HEIGHT - 1) {
+			if (yMax <= FB_HEIGHT) {
 				const int sampleOffset = (vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE);
 				const int mapOffset = sampleOffset & (HMAP_SIZE - 1);
 				const int hm = hmap[mapOffset];
 				int h = (((-playerHeight + hm) * heightScale) >> (FP_REC - V_HEIGHT_SCALER_SHIFT)) + HORIZON;
-				if (h > FB_HEIGHT - 1) h = FB_HEIGHT - 1;
+				if (h > FB_HEIGHT + 1) h = FB_HEIGHT + 1;
 
 				if (yMax < h) {
 					int n, yH;
@@ -824,24 +824,34 @@ static void testRenderDistMap()
 
 static void moveClouds(int dt)
 {
-	static int skyMove = 0;
+	static int skyMove1 = 0;
+	static int skyMove2 = 0;
 
 	unsigned int* dst = (unsigned int*)skyTex;
 
-	const int skyMoveOff = skyMove >> FP_VIEWER;
+	const int skyMoveOff1 = skyMove1 >> FP_VIEWER;
+	const int skyMoveOff2 = skyMove2 >> FP_VIEWER;
 
-	int y;
+	int x,y;
 	for (y = 0; y < SKY_TEX_HEIGHT; ++y) {
-		const int yi = (y + skyMoveOff) & (SKY_TEX_HEIGHT - 1);
-		unsigned int* src = (unsigned int*)&cloudTex[yi * SKY_TEX_WIDTH];
+		const int y1 = (y + skyMoveOff1) & (SKY_TEX_HEIGHT - 1);
+		const int y2 = (y + skyMoveOff2) & (SKY_TEX_HEIGHT - 1);
+		unsigned int* src1 = (unsigned int*)&cloudTex[y1 * SKY_TEX_WIDTH];
+		unsigned int* src2 = (unsigned int*)&cloudTex[y2 * SKY_TEX_WIDTH];
 
-		memcpy(dst, src, SKY_TEX_WIDTH);
-
-		src += SKY_TEX_WIDTH / 4;
-		dst += SKY_TEX_WIDTH / 4;
+		for (x = 0; x < SKY_TEX_WIDTH / (4*4); ++x) {
+			*dst = *src1 + *src2;
+			*(dst + 1) = *(src1 + 1) + *(src2 + 1);
+			*(dst + 2) = *(src1 + 2) + *(src2 + 2);
+			*(dst + 3) = *(src1 + 3) + *(src2 + 3);
+			dst += 4;
+			src1 += 4;
+			src2 += 4;
+		}
 	}
 
-	skyMove += 8*dt;
+	skyMove1 += 4*dt;
+	skyMove2 += 8*dt;
 }
 
 static void draw(void)

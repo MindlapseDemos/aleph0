@@ -492,11 +492,12 @@ void renderPolygons(Object3D* obj, Vertex3D* screenVertices)
 
 void clearBlobBuffer(unsigned char* buffer)
 {
+	const int extends = POLKA_BUFFER_PAD / 2;
 	int y;
-	unsigned char* dst = buffer + ((POLKA_BUFFER_HEIGHT - FB_HEIGHT) / 2) * POLKA_BUFFER_WIDTH + (POLKA_BUFFER_WIDTH - FB_WIDTH) / 2;
+	unsigned char* dst = buffer + ((POLKA_BUFFER_HEIGHT - FB_HEIGHT) / 2 - extends) * POLKA_BUFFER_WIDTH + (POLKA_BUFFER_WIDTH - FB_WIDTH) / 2 - extends;
 
-	for (y = 0; y < FB_HEIGHT; ++y) {
-		memset(dst, 0, FB_WIDTH);
+	for (y = 0; y < FB_HEIGHT + 2 * extends; ++y) {
+		memset(dst, 0, FB_WIDTH + 2 * extends);
 		dst += POLKA_BUFFER_WIDTH;
 	}
 }

@@ -367,6 +367,17 @@ static void OptGrid3Drun(int objIndex, int sizeIndex, unsigned char* buffer, int
 	/* drawBoxLines(buffer, 1, objIndex); */
 }
 
+static void backgroundLinesTest(int t)
+{
+	int i;
+	static Vertex3D v[64];
+
+	for (i = 0; i < 63; ++i) {
+		v[i].ys = 0; v[i].xs = 0;
+		v[i+1].ys = 239; v[i+1].xs = i << 2;
+		drawAntialiasedLine16bpp(&v[i], &v[i + 1], 4 + (i & 3), fb_pixels);
+	}
+}
 
 static void initPlasma3D()
 {
@@ -509,7 +520,7 @@ static void draw(void)
 {
 	const int t = time_msec - startingTime;
 
-	int i, j, pi = 0;
+	/*int i, j, pi = 0;
 	for (i = 0; i < VOLS_NUM; ++i) {
 		int px, py;
 		int si = 0;
@@ -549,7 +560,10 @@ static void draw(void)
 	}
 
 	buffer8bppToVram(polkaBuffer[0], polkaPal32[0]);
-	buffer8bppORwithVram(polkaBuffer[1], polkaPal32[1+pi]);
+	buffer8bppORwithVram(polkaBuffer[1], polkaPal32[1+pi]);*/
+
+	memset(fb_pixels, 0, 320 * 240 * 2);
+	backgroundLinesTest(t);
 
 	swap_buffers(0);
 }

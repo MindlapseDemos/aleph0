@@ -529,7 +529,6 @@ static void set_fullscreen(int fs)
 #ifdef __unix__
 static void set_vsync(int vsync)
 {
-	vsync = vsync ? 1 : 0;
 	if(glx_swap_interval_ext) {
 		glx_swap_interval_ext(xdpy, xwin, vsync);
 	} else if(glx_swap_interval_sgi) {
@@ -541,7 +540,7 @@ static void set_vsync(int vsync)
 static void set_vsync(int vsync)
 {
 	if(wgl_swap_interval_ext) {
-		wgl_swap_interval_ext(vsync ? 1 : 0);
+		wgl_swap_interval_ext(vsync);
 	}
 }
 #endif

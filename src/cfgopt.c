@@ -34,7 +34,7 @@ static void print_screen_list(void);
 
 int parse_args(int argc, char **argv)
 {
-	int i;
+	int i, n;
 	char *scrname = 0;
 
 	for(i=1; i<argc; i++) {
@@ -57,7 +57,12 @@ int parse_args(int argc, char **argv)
 			} else if(strcmp(argv[i], "-sball") == 0) {
 				opt.sball = !opt.sball;
 			} else if(strcmp(argv[i], "-vsync") == 0) {
-				opt.vsync = 1;
+				if(argv[i + 1] && (n = atoi(argv[i + 1])) >= 0 && n <= 9) {
+					opt.vsync = n;
+					i++;
+				} else {
+					opt.vsync = 1;
+				}
 			} else if(strcmp(argv[i], "-novsync") == 0) {
 				opt.vsync = 0;
 			} else if(strcmp(argv[i], "-dbg") == 0) {

@@ -166,7 +166,7 @@ static char *strip_space(char *s)
 	}
 
 	while(end > s && isspace(*end)) *end-- = 0;
-	return end > s ? s : 0;
+	return *s ? s : 0;
 }
 
 static int bool_value(char *s)
@@ -220,7 +220,10 @@ int load_config(const char *fname)
 		} else if(strcmp(line, "sball") == 0) {
 			opt.sball = bool_value(value);
 		} else if(strcmp(line, "vsync") == 0) {
-			opt.vsync = bool_value(value);
+			if((opt.vsync = atoi(value)) < 0 || opt.vsync > 9) {
+				fprintf(stderr, "%s:%d invalid vsync value: %s\n", fname, nline, line);
+				return -1;
+			}
 		} else if(strcmp(line, "debug") == 0) {
 			opt.dbgmode = bool_value(value);
 #ifndef MSDOS

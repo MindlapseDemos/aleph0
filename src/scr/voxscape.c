@@ -44,10 +44,10 @@
 #define VIS_VER_STEPS ((VIS_FAR - VIS_NEAR) / VIS_VER_SKIP)
 #define VIS_HOR_STEPS (FB_WIDTH / PIXEL_SIZE)
 
-/* #define LOCK_PLAYER_TO_GROUND */
+#define LOCK_PLAYER_TO_GROUND
 
 #define FLY_HEIGHT 96
-#define V_PLAYER_HEIGHT 48
+#define V_PLAYER_HEIGHT 32
 #define V_HEIGHT_SCALER_SHIFT 7
 #define V_HEIGHT_SCALER (1 << V_HEIGHT_SCALER_SHIFT)
 #define HORIZON (FB_HEIGHT * 0.7)
@@ -213,7 +213,7 @@ static int loadAndConvertImgColormapPng()
 	struct img_pixmap mapPic;
 
 	img_init(&mapPic);
-	if (img_load(&mapPic, "data/vxcolor.png") == -1) {
+	if (img_load(&mapPic, "data/vxc1.png") == -1) {
 		fprintf(stderr, "failed to load voxel colormap image\n");
 		return -1;
 	}
@@ -238,7 +238,7 @@ static int loadAndConvertImgHeightmapPng()
 	int hMax = 0;
 
 	img_init(&mapPic);
-	if (img_load(&mapPic, "data/vxheight.png") == -1) {
+	if (img_load(&mapPic, "data/vxh1.png") == -1) {
 		fprintf(stderr, "failed to load voxel heightmap image\n");
 		return -1;
 	}
@@ -257,9 +257,10 @@ static int loadAndConvertImgHeightmapPng()
 		if (c > hMax) hMax = c;
 		hmap[i] = c;
 	}
+	/* printf("%d %d\n", hMin, hMax); */
 
 	for (i = 0; i < HMAP_SIZE; ++i) {
-		int c = (((int)hmap[i] - hMin) * 256) / (hMax - hMin) - 22;
+		int c = (((int)hmap[i] - hMin) * 256) / (hMax - hMin) - 8;
 		CLAMP(c, 0, 255);
 		hmap[i] = c;
 	}
@@ -670,9 +671,8 @@ static void setViewAngle(int rx, int ry, int rz)
 
 static void start(long trans_time)
 {
-	/* some view with water */
-	setViewPos(2 * HMAP_WIDTH / 4+64, FLY_HEIGHT, HMAP_HEIGHT / 6-48);
-	setViewAngle(0,1<<(SIN_SHIFT-3),0);
+	setViewPos(780,V_PLAYER_HEIGHT,675);
+	setViewAngle(0,4*SIN_LENGTH/5,0);
 
 	prevTime = time_msec;
 }
@@ -695,6 +695,8 @@ static void move(int dt)
 
 	const int velX = (speedX * isin[(viewAngle.y + SIN_TO_COS) & (SIN_LENGTH-1)]) >> FP_BASE;
 	const int velZ = (speedZ * isin[viewAngle.y & (SIN_LENGTH-1)]) >> FP_BASE;
+
+	/* printf("%d %d %d\n", viewPos.x >> FP_VIEWER, viewPos.z >> FP_VIEWER, viewAngle.y); */
 
 	if (kb_isdown('w')) {
 		viewPos.x += velX;

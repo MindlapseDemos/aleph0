@@ -94,6 +94,17 @@ demoseq {
 			dur = 8192
 		}
 	}
+
+	molten {
+		wait = 0
+		dur = 0
+
+		rise {
+			interp = "smoothstep"
+			key:0 = 0
+			key:2000 = 1024
+		}
+	}
 }
 
 # vi:ts=4 sts=4 sw=4 ai:

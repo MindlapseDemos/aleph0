@@ -19,8 +19,8 @@
 #define VOL_XSZ			((int)(VOL_SIZE * VOL_XSCALE / VOL_YSCALE))
 #define VOL_YSZ			10
 #define VOL_ZSZ			((int)(VOL_SIZE * VOL_ZSCALE / VOL_YSCALE))
-#define VOL_XSCALE		16.0f
-#define VOL_YSCALE		10.0f
+#define VOL_XSCALE		16.5f
+#define VOL_YSCALE		11.5f
 #define VOL_ZSCALE		15.0f
 #define VOL_HALF_XSCALE	(VOL_XSCALE * 0.5f)
 #define VOL_HALF_YSCALE	(VOL_YSCALE * 0.5f)
@@ -57,6 +57,9 @@ static cgm_vec4 ballpos[NUM_MBALLS];
 static int show_voxdbg, show_wire;
 
 static unsigned long start_time;
+static float prev_upd;
+
+static int ev_rise;
 
 
 struct screen *molten_screen(void)
@@ -108,6 +111,8 @@ static int molten_init(void)
 	vol.flags |= MSURF_FLOOR;
 	vol.floor_z = 0;
 	vol.floor_energy = 8.5;
+
+	ev_rise = dseq_lookup("molten.rise");
 	return 0;
 }
 
@@ -132,13 +137,23 @@ static void molten_start(long trans_time)
 	g3d_polygon_mode(G3D_FLAT);
 
 	start_time = time_msec;
+	prev_upd = time_msec;
+	cgm_vcons(&viewtgt, 0, 0, 0);
 }
+
+static int valdbg;
 
 static void molten_update(void)
 {
+	float dt;
 	int i;
 	float tsec = (float)(time_msec - start_time) / 1000.0f;
-	float xform[16], dist;
+	float xform[16], dist, rise_val;
+	cgm_vec3 pos, newpos;
+
+	dt = tsec - prev_upd;
+	/*assert(dt >= 0 && dt < 0.5);*/
+	prev_upd = tsec;
 
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
 
@@ -146,19 +161,29 @@ static void molten_update(void)
 	cgm_mrotate(xform, tsec, 1, 0, 0);
 	cgm_mrotate(xform, tsec, 0, 1, 0);
 
+	rise_val = (float)dseq_value(ev_rise) / 1024.0f;
+
 	dist = cos(tsec * 1.8f) * 0.25f + 1.1f;
 
 	for(i=0; i<NUM_MBALLS; i++) {
-		vol.mballs[i].pos.x = ballpos[i].x * dist;
-		vol.mballs[i].pos.y = ballpos[i].y * dist;
-		vol.mballs[i].pos.z = ballpos[i].z * dist;
-		cgm_vmul_m3v3(&vol.mballs[i].pos, xform);
+		pos.x = ballpos[i].x * dist;
+		pos.y = ballpos[i].y * dist;
+		pos.z = ballpos[i].z * dist - 4.0f;
+		cgm_vmul_m3v3(&pos, xform);
+		pos.y *= 0.5f;
+		pos.z -= 1.0f;
 
 		vol.mballs[i].energy = ballpos[i].w;
 
-		vol.mballs[i].pos.x += VOL_HALF_XSCALE;
-		vol.mballs[i].pos.y += VOL_HALF_YSCALE;
-		vol.mballs[i].pos.z += (VOL_HALF_ZSCALE * 0.6f) + cos(tsec * 0.7f) * 4.0f;
+		pos.z += cos(tsec * 0.7f) * 4.0f;
+		pos.z = cgm_lerp(-VOL_HALF_ZSCALE-1.0f, pos.z, rise_val);
+		if(i == 0) {
+			cgm_vcons(&newpos, pos.x, pos.z, pos.y);
+		}
+
+		vol.mballs[i].pos.x = pos.x + VOL_HALF_XSCALE;
+		vol.mballs[i].pos.y = pos.y + VOL_HALF_YSCALE;
+		vol.mballs[i].pos.z = pos.z + VOL_HALF_ZSCALE;
 	}
 
 	msurf_begin(&vol);
@@ -167,11 +192,10 @@ static void molten_update(void)
 	mmesh.vcount = vol.num_verts;
 	mmesh.varr = vol.varr;
 
-	viewpos.x = sin(tsec * 0.4f) * 3.0;
+	/*viewpos.x = sin(tsec * 0.4f) * 3.0;*/
 
-	viewtgt.x = vol.mballs[0].pos.x - VOL_HALF_XSCALE;
-	viewtgt.y = vol.mballs[0].pos.z - VOL_HALF_ZSCALE + 2;
-	viewtgt.z = vol.mballs[0].pos.y - VOL_HALF_YSCALE;
+	/*cgm_vlerp(&viewtgt, &viewtgt, &newpos, 0.75f * dt);*/
+	viewtgt = newpos;
 }
 
 static void molten_draw(void)
@@ -187,6 +211,10 @@ static void molten_draw(void)
 
 	molten_update();
 
+	/*
+	g3d_clear_color(255, 0, 0);
+	g3d_clear(G3D_DEPTH_BUFFER_BIT | G3D_COLOR_BUFFER_BIT);
+	*/
 	g3d_clear(G3D_DEPTH_BUFFER_BIT);
 
 	g3d_matrix_mode(G3D_MODELVIEW);
@@ -200,7 +228,7 @@ static void molten_draw(void)
 	g3d_load_matrix(viewmat);
 
 	g3d_push_matrix();
-	g3d_translate(0, -VOL_HALF_ZSCALE * 0.89, 0);
+	g3d_translate(0, -VOL_HALF_ZSCALE * 0.85, 0);
 	g3d_disable(G3D_LIGHTING);
 	g3d_enable(G3D_TEXTURE_2D);
 	g3d_set_texture(roomtex_xsz, roomtex_ysz, room_texmap);
@@ -208,7 +236,7 @@ static void molten_draw(void)
 	g3d_pop_matrix();
 
 	g3d_rotate(-90, 1, 0, 0);
-	g3d_translate(-VOL_HALF_XSCALE, -VOL_HALF_YSCALE, -VOL_HALF_ZSCALE);
+	g3d_translate(-VOL_HALF_XSCALE + 0.4, -VOL_HALF_YSCALE, -VOL_HALF_ZSCALE);
 
 	if(mmesh.vcount) {
 		if(show_wire) {
@@ -236,13 +264,13 @@ static void molten_draw(void)
 		for(z=0; z<vol.zres; z++) {
 			for(y=0; y<vol.yres; y++) {
 				for(x=0; x<vol.xres; x++) {
-					//if(vox->val > 8 || (vox->flags & 0xffff) == frmid) {
+					/*if(vox->val > 8 || (vox->flags & 0xffff) == frmid) {*/
 						r = vox->val > 8 ? 255 : 64;
 						g = 64;
 						b = (vox->flags & 0xffff) == frmid ? 255 : 64;
 						g3d_color3b(r, g, b);
 						g3d_vertex(vox->pos.x, vox->pos.y, vox->pos.z);
-					//}
+					/*}*/
 					vox++;
 				}
 				vox += vol.xstore - vol.xres;

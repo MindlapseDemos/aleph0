@@ -367,16 +367,16 @@ void demo_runpart(const char *name)
 		return;
 	}
 
+	ignore_scrchg_trig = 1;
+	evstart = dseq_evstart(evid);
+	reset_timer(evstart);
+
 	if(curscr) {
 		if(curscr->stop) {
 			curscr->stop(0);
 		}
 		curscr = 0;
 	}
-
-	ignore_scrchg_trig = 1;
-	evstart = dseq_evstart(evid);
-	reset_timer(evstart);
 
 	nscr = scr_num_screens();
 	for(i=0; i<nscr; i++) {

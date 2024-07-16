@@ -28,24 +28,25 @@
 
 #define NUM_MBALLS	5
 
-static int init(void);
-static void destroy(void);
-static void start(long trans_time);
-static void draw(void);
-static void keyb(int key);
+static int molten_init(void);
+static void molten_destroy(void);
+static void molten_start(long trans_time);
+static void molten_draw(void);
+static void molten_keyb(int key);
 static int gen_sflake(cgm_vec4 *sarr, int num, int depth, float x, float y, float z, float rad);
 
 static struct screen scr = {
 	"molten",
-	init,
-	destroy,
-	start, 0,
-	draw,
-	keyb
+	molten_init,
+	molten_destroy,
+	molten_start, 0,
+	molten_draw,
+	molten_keyb
 };
 
 static float cam_theta, cam_phi;
 static float cam_dist = 14;
+static cgm_vec3 viewpos = {0, 1, 14}, viewtgt;
 static struct g3d_mesh mmesh, room_mesh;
 static uint16_t *room_texmap, *envmap;
 static int roomtex_xsz, roomtex_ysz;
@@ -63,7 +64,7 @@ struct screen *molten_screen(void)
 	return &scr;
 }
 
-static int init(void)
+static int molten_init(void)
 {
 	if(load_mesh(&room_mesh, "data/moltroom.obj", 0) == -1) {
 		fprintf(stderr, "failed to load data/moltroom.obj\n");
@@ -110,14 +111,14 @@ static int init(void)
 	return 0;
 }
 
-static void destroy(void)
+static void molten_destroy(void)
 {
 	msurf_destroy(&vol);
 	destroy_mesh(&room_mesh);
 	img_free_pixels(room_texmap);
 }
 
-static void start(long trans_time)
+static void molten_start(long trans_time)
 {
 	g3d_matrix_mode(G3D_PROJECTION);
 	g3d_load_identity();
@@ -133,7 +134,7 @@ static void start(long trans_time)
 	start_time = time_msec;
 }
 
-static void update(void)
+static void molten_update(void)
 {
 	int i;
 	float tsec = (float)(time_msec - start_time) / 1000.0f;
@@ -165,9 +166,15 @@ static void update(void)
 
 	mmesh.vcount = vol.num_verts;
 	mmesh.varr = vol.varr;
+
+	viewpos.x = sin(tsec * 0.4f) * 3.0;
+
+	viewtgt.x = vol.mballs[0].pos.x - VOL_HALF_XSCALE;
+	viewtgt.y = vol.mballs[0].pos.z - VOL_HALF_ZSCALE + 2;
+	viewtgt.z = vol.mballs[0].pos.y - VOL_HALF_YSCALE;
 }
 
-static void draw(void)
+static void molten_draw(void)
 {
 	int i, j;
 	char buf[128];
@@ -175,16 +182,22 @@ static void draw(void)
 	struct msurf_voxel *vox;
 	struct msurf_cell *cell;
 	int faces;
+	float viewmat[16];
+	static const cgm_vec3 upvec = {0, 1, 0};
 
-	update();
+	molten_update();
 
-	g3d_clear(G3D_DEPTH_BUFFER_BIT | G3D_COLOR_BUFFER_BIT);	/* XXX drop color */
+	g3d_clear(G3D_DEPTH_BUFFER_BIT);
 
 	g3d_matrix_mode(G3D_MODELVIEW);
+	/*
 	g3d_load_identity();
 	g3d_translate(0, 1, -cam_dist);
 	g3d_rotate(cam_phi, 1, 0, 0);
 	g3d_rotate(cam_theta, 0, 1, 0);
+	*/
+	cgm_minv_lookat(viewmat, &viewpos, &viewtgt, &upvec);
+	g3d_load_matrix(viewmat);
 
 	g3d_push_matrix();
 	g3d_translate(0, -VOL_HALF_ZSCALE * 0.89, 0);
@@ -247,7 +260,7 @@ static void draw(void)
 	swap_buffers(fb_pixels);
 }
 
-static void keyb(int key)
+static void molten_keyb(int key)
 {
 	switch(key) {
 	case 'd':

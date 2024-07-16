@@ -522,7 +522,15 @@ int setup_transition(int id, struct event *trigev)
 		trs->val[0] = next_event->key->val;
 		trs->val[1] = next_event->key[1].val;
 	}
+
+	if(trs->val[0] == trs->val[1]) {
+		trs->id = -1;
+		return 0;
+	}
 	trs->dur = trs->end - trs->start;
+
+	printf("DBG: setup transition for %s: %d->%d at %ld in %ld msec\n", tracks[id].name,
+			trs->val[0], trs->val[1], trs->start, trs->dur);
 
 	return 0;
 }
@@ -669,7 +677,7 @@ static int interp_linear(struct transition *trs, int t)
 
 static int interp_smoothstep(struct transition *trs, int t)
 {
-	float tt = cgm_smoothstep(0, trs->dur, t);
+	float tt = cgm_smoothstep(0, 1024, t);
 	return cround64(trs->val[0] + (trs->val[1] - trs->val[0]) * tt);	/* TODO: fixed point */
 }
 

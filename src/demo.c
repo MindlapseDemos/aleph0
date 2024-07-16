@@ -346,7 +346,9 @@ void demo_keyboard(int key, int press)
 void demo_run(long start_time)
 {
 	if(curscr) {
-		curscr->stop(0);
+		if(curscr->stop) {
+			curscr->stop(0);
+		}
 		curscr = 0;
 	}
 
@@ -366,7 +368,9 @@ void demo_runpart(const char *name)
 	}
 
 	if(curscr) {
-		scr->stop(0);
+		if(curscr->stop) {
+			curscr->stop(0);
+		}
 		curscr = 0;
 	}
 

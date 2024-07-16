@@ -17,6 +17,7 @@ struct screen {
 	int trans_in, trans_out;
 };
 
+extern struct screen *curscr;
 extern const char *curscr_name;
 extern int curscr_name_len, curscr_name_pos;
 

@@ -345,6 +345,11 @@ void demo_keyboard(int key, int press)
 
 void demo_run(long start_time)
 {
+	if(curscr) {
+		curscr->stop(0);
+		curscr = 0;
+	}
+
 	ignore_scrchg_trig = 0;
 	reset_timer(start_time);
 	dseq_start();
@@ -360,18 +365,23 @@ void demo_runpart(const char *name)
 		return;
 	}
 
-	if(strcmp(curscr_name, name) != 0) {
-		nscr = scr_num_screens();
-		for(i=0; i<nscr; i++) {
-			if(strcmp(scr_screen(i)->name, name) == 0) {
-				change_screen(i);
-				break;
-			}
-		}
+	if(curscr) {
+		scr->stop(0);
+		curscr = 0;
 	}
 
 	ignore_scrchg_trig = 1;
 	evstart = dseq_evstart(evid);
+	reset_timer(evstart);
+
+	nscr = scr_num_screens();
+	for(i=0; i<nscr; i++) {
+		if(strcmp(scr_screen(i)->name, name) == 0) {
+			change_screen(i);
+			break;
+		}
+	}
+
 	dseq_ffwd(evstart);
 	reset_timer(evstart);
 	dseq_start();

@@ -27,13 +27,13 @@
 #define SINGLE_BLUR
 
 
-static int init(void);
-static void destroy(void);
-static void start(long trans_time);
-static void stop(long trans_time);
-static void update(float tsec);
-static void draw(void);
-static void keypress(int key);
+static int tun_init(void);
+static void tun_destroy(void);
+static void tun_start(long trans_time);
+static void tun_stop(long trans_time);
+static void tun_update(float tsec, float dt);
+static void tun_draw(void);
+static void tun_keypress(int key);
 
 static void draw_tunnel_range(unsigned short *pixels, int xoffs, int yoffs, int starty, int num_lines);
 static int gen_tables(void);
@@ -43,12 +43,12 @@ static int count_zeros(unsigned int x);
 
 static struct screen scr = {
 	"tunnel",
-	init,
-	destroy,
-	start,
-	stop,
-	draw,
-	keypress
+	tun_init,
+	tun_destroy,
+	tun_start,
+	tun_stop,
+	tun_draw,
+	tun_keypress
 };
 
 #define NUM_TUNPAL		16
@@ -67,6 +67,8 @@ static unsigned int tex_xmask, tex_ymask;
 
 static long trans_start, trans_dur;
 static int trans_dir;
+
+static unsigned long prev_upd;
 
 static int blurlevel, nextblur;
 static float tunpos, tunspeed, nextspeed;
@@ -90,7 +92,7 @@ struct screen *tunnel_screen(void)
 	return &scr;
 }
 
-static int init(void)
+static int tun_init(void)
 {
 	int i, j, n;
 	struct img_pixmap pixmap;
@@ -188,7 +190,7 @@ static int init(void)
 	return 0;
 }
 
-static void destroy(void)
+static void tun_destroy(void)
 {
 	free(tunnel_map);
 	free(tunnel_fog);
@@ -196,7 +198,7 @@ static void destroy(void)
 	free(smokebuf);
 }
 
-static void start(long trans_time)
+static void tun_start(long trans_time)
 {
 	if(trans_time) {
 		trans_start = time_msec;
@@ -213,14 +215,14 @@ static void start(long trans_time)
 
 	memset(smokebuf, 0, SMOKEBUF_SIZE * 2);
 	start_time = time_msec;
+	prev_upd = 0;
 
-	update(0);
+	tun_update(0, 0);
 }
 
-static void stop(long trans_time)
+static void tun_stop(long trans_time)
 {
 	if(trans_time) {
-		printf("tunnel stop(%ld)\n", trans_time);
 		trans_start = time_msec;
 		trans_dur = trans_time;
 		trans_dir = -1;
@@ -234,7 +236,7 @@ static int draw_lines;
 static int xoffs, yoffs;
 static long toffs;
 
-static void update(float tsec)
+static void tun_update(float tsec, float dt)
 {
 	int i, progr;
 	long interval;
@@ -278,7 +280,7 @@ samespeed:
 	xoffs = (int)(cos(tsec * 3) * maxpan * pan_width / 2) + pan_width / 2;
 	yoffs = (int)(sin(tsec * 4) * maxpan * pan_height / 2) + pan_height / 2;
 
-	tunpos += curspeed;
+	tunpos += curspeed * 60.0f * dt;
 	toffs = cround64(tunpos);
 
 	if(dseq_triggered(ev_text)) {
@@ -316,9 +318,8 @@ samespeed:
 	}
 }
 
-static void draw(void)
+static void tun_draw(void)
 {
-	static unsigned long prev_upd;
 	unsigned long tm, upd_interv;
 	int i, x, y;
 	struct ivec2 *vptr;
@@ -328,8 +329,9 @@ static void draw(void)
 
 	upd_interv = tm - prev_upd;
 	if(upd_interv >= UPD_RATE) {
+		float dt = (float)upd_interv / 1000.0f;
 		prev_upd = tm;
-		update((float)tm / 1000.0f);
+		tun_update((float)tm / 1000.0f, dt);
 	}
 
 	for(i=0; i<NUM_WORK_ITEMS; i++) {
@@ -381,7 +383,7 @@ static void draw(void)
 	swap_buffers(0);
 }
 
-static void keypress(int key)
+static void tun_keypress(int key)
 {
 	switch(key) {
 	case ' ':

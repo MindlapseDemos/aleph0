@@ -9,7 +9,7 @@
 
 #define SCRCHG \
 	do { \
-		curscr_name = cur->name ? cur->name : "<unknown>"; \
+		curscr_name = curscr->name ? curscr->name : "<unknown>"; \
 		curscr_name_len = strlen(curscr_name); \
 		curscr_name_pos = 320 - curscr_name_len * 9; \
 	} while(0)
@@ -44,9 +44,10 @@ void loadscr(int n, int count);
 static struct screen *scr[NUM_SCR];
 static int num_screens;
 
-static struct screen *cur, *prev, *next;
+static struct screen *prev, *next;
 static long trans_start, trans_dur;
 
+struct screen *curscr;
 const char *curscr_name;
 int curscr_name_len, curscr_name_pos;
 
@@ -136,7 +137,7 @@ void scr_update(void)
 				next->start(trans_dur);
 			}
 			prev = 0;
-			cur = next;
+			curscr = next;
 			next = 0;
 
 			SCRCHG;
@@ -147,15 +148,15 @@ void scr_update(void)
 
 void scr_draw(void)
 {
-	if(cur) {
-		cur->draw();
+	if(curscr) {
+		curscr->draw();
 	}
 }
 
 void scr_keypress(int key)
 {
-	if(cur && cur->keypress) {
-		cur->keypress(key);
+	if(curscr && curscr->keypress) {
+		curscr->keypress(key);
 	}
 }
 
@@ -183,21 +184,21 @@ int scr_num_screens(void)
 int scr_change(struct screen *s)
 {
 	if(!s) return -1;
-	if(s == cur) return 0;
+	if(s == curscr) return 0;
 
 	trans_start = time_msec;
 
-	if(cur && cur->stop) {
-		trans_dur = cur->trans_out;
-		cur->stop(trans_dur);
-		prev = cur;
+	if(curscr && curscr->stop) {
+		trans_dur = curscr->trans_out;
+		curscr->stop(trans_dur);
+		prev = curscr;
 		next = s;
 	} else {
 		if(s->start) {
 			s->start(s->trans_in);
 		}
 
-		cur = s;
+		curscr = s;
 		prev = 0;
 
 		SCRCHG;

@@ -69,10 +69,13 @@
 
 #define SEA_LEVEL 1
 
-/* Probably should only enable on PC and save on file for preloading in DOS */
-/* #define CALCULATE_DIST_MAP
-#define SAVE_DIST_MAP */
-
+/* When getting different PNG maps, comment out the below and run on PC. Then comment in and use the produced BIN files (and probably will remove the PNGs at the end from data)
+/*
+#define CALCULATE_DIST_MAP
+#define SAVE_DIST_MAP
+#define SAVE_COLOR_MAP
+#define SAVE_HEIGHT_MAP
+*/
 
 typedef struct Point2D
 {
@@ -180,18 +183,19 @@ static int readMapFile(const char *path, int count, void *dst)
 	return 0;
 }
 
-static void initPalShades(struct img_colormap *colorMap)
+static void initPalShades()
 {
 	int i,j;
 
 	uint16_t *shadedPmap = pmap;
 
 	for (j=0; j<PAL_SHADES; ++j) {
+		unsigned char* cmapSrc = &cmap[HMAP_SIZE];
 		const int shade = PAL_SHADES - j;
 		for (i=0; i<256; ++i) {
-			const int r = ((colorMap->color[i].r * shade) / PAL_SHADES) >> 3;
-			const int g = ((colorMap->color[i].g * shade) / PAL_SHADES) >> 2;
-			const int b = ((colorMap->color[i].b * shade) / PAL_SHADES) >> 3;
+			const int r = ((*cmapSrc++ * shade) / PAL_SHADES) >> 3;
+			const int g = ((*cmapSrc++ * shade) / PAL_SHADES) >> 2;
+			const int b = ((*cmapSrc++ * shade) / PAL_SHADES) >> 3;
 
 			*shadedPmap++ = (r << 11) | (g << 5) | b;
 		}
@@ -210,62 +214,94 @@ static void initPalShades(struct img_colormap *colorMap)
 
 static int loadAndConvertImgColormapPng()
 {
-	struct img_pixmap mapPic;
+	#ifdef SAVE_COLOR_MAP
+		int i;
+		struct img_pixmap mapPic;
+		unsigned char* tempCmap = malloc(HMAP_SIZE + 256 * 3);
+		struct img_colormap* cmapSrc;
+		unsigned char* cmapDst;
 
-	img_init(&mapPic);
-	if (img_load(&mapPic, "data/vxc1.png") == -1) {
-		fprintf(stderr, "failed to load voxel colormap image\n");
-		return -1;
-	}
+		img_init(&mapPic);
+		if (img_load(&mapPic, "data/vxc1.png") == -1) {
+			fprintf(stderr, "failed to load voxel colormap image\n");
+			return -1;
+		}
 
-	img_convert(&mapPic, IMG_FMT_IDX8);
-	memcpy(cmap, mapPic.pixels, HMAP_SIZE);
+		img_convert(&mapPic, IMG_FMT_IDX8);
+		memcpy(tempCmap, mapPic.pixels, HMAP_SIZE);
 
-	initPalShades(img_colormap(&mapPic));
+		cmapSrc = img_colormap(&mapPic);
+		cmapDst = &tempCmap[HMAP_SIZE];
 
-	img_destroy(&mapPic);
+		for (i = 0; i < 256; ++i) {
+			*cmapDst++ = cmapSrc->color[i].r;
+			*cmapDst++ = cmapSrc->color[i].g;
+			*cmapDst++ = cmapSrc->color[i].b;
+		}
+
+		writeMapFile("data/cmap1.bin", HMAP_SIZE + 256 * 3, tempCmap);
+
+		free(tempCmap);
+		img_destroy(&mapPic);
+	#else
+		if (readMapFile("data/cmap1.bin", HMAP_SIZE + 256 * 3, cmap) == -1) {
+			fprintf(stderr, "failed to load voxel colormap data\n");
+			return -1;
+		}
+
+		initPalShades();
+	#endif
 
 	return 0;
 }
 
 static int loadAndConvertImgHeightmapPng()
 {
-	struct img_pixmap mapPic;
+	#ifdef SAVE_HEIGHT_MAP
+		struct img_pixmap mapPic;
 
-	int i;
-	uint32_t* src;
-	int hMin = 100000;
-	int hMax = 0;
+		int i;
+		uint32_t* src;
+		int hMin = 100000;
+		int hMax = 0;
 
-	img_init(&mapPic);
-	if (img_load(&mapPic, "data/vxh1.png") == -1) {
-		fprintf(stderr, "failed to load voxel heightmap image\n");
-		return -1;
-	}
+		img_init(&mapPic);
+		if (img_load(&mapPic, "data/vxh1.png") == -1) {
+			fprintf(stderr, "failed to load voxel heightmap image\n");
+			return -1;
+		}
 
-	src = (uint32_t*)mapPic.pixels;
+		src = (uint32_t*)mapPic.pixels;
 
-	for (i = 0; i < HMAP_SIZE; ++i) {
-		uint32_t c32 = src[i];
-		int a = (c32 >> 24) & 255;
-		int r = (c32 >> 16) & 255;
-		int g = (c32 >> 8) & 255;
-		int b = c32 & 255;
-		int c = (a + r + g + b) / 4;
+		for (i = 0; i < HMAP_SIZE; ++i) {
+			uint32_t c32 = src[i];
+			int a = (c32 >> 24) & 255;
+			int r = (c32 >> 16) & 255;
+			int g = (c32 >> 8) & 255;
+			int b = c32 & 255;
+			int c = (a + r + g + b) / 4;
 
-		if (c < hMin) hMin = c;
-		if (c > hMax) hMax = c;
-		hmap[i] = c;
-	}
-	/* printf("%d %d\n", hMin, hMax); */
+			if (c < hMin) hMin = c;
+			if (c > hMax) hMax = c;
+			hmap[i] = c;
+		}
+		/* printf("%d %d\n", hMin, hMax); */
 
-	for (i = 0; i < HMAP_SIZE; ++i) {
-		int c = (((int)hmap[i] - hMin) * 256) / (hMax - hMin) - 8;
-		CLAMP(c, 0, 255);
-		hmap[i] = c;
-	}
+		for (i = 0; i < HMAP_SIZE; ++i) {
+			int c = (((int)hmap[i] - hMin) * 256) / (hMax - hMin) - 8;
+			CLAMP(c, 0, 255);
+			hmap[i] = c;
+		}
 
-	img_destroy(&mapPic);
+		writeMapFile("data/hmap1.bin", HMAP_SIZE, hmap);
+
+		img_destroy(&mapPic);
+	#else
+		if (readMapFile("data/hmap1.bin", HMAP_SIZE, hmap) == -1) {
+			fprintf(stderr, "failed to load voxel heightmap data\n");
+			return -1;
+		}
+	#endif
 
 	return 0;
 }
@@ -273,7 +309,7 @@ static int loadAndConvertImgHeightmapPng()
 static int initHeightmapAndColormap()
 {
 	if (!hmap) hmap = malloc(HMAP_SIZE);
-	if (!cmap) cmap = malloc(HMAP_SIZE);
+	if (!cmap) cmap = malloc(HMAP_SIZE + 256 * 3);
 	if (!pmap) pmap = (uint16_t*)malloc(512 * PAL_SHADES);
 
 	if (loadAndConvertImgHeightmapPng() == -1) return -1;

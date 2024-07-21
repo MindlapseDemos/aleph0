@@ -697,16 +697,16 @@ void drawBlobPointsPolkaSize1(Vertex3D* v, int count, unsigned char* blobBuffer)
 
 		if (!(posX <= POLKA_BUFFER_PAD || posX >= POLKA_BUFFER_PAD + FB_WIDTH || posY <= POLKA_BUFFER_PAD || posY >= POLKA_BUFFER_PAD + FB_HEIGHT))
 		{
-			const int bIndex = posX & (BLOB_SIZEX_PAD - 1);
-			const int posX32 = posX & ~(BLOB_SIZEX_PAD - 1);
+			//const int bIndex = posX & (BLOB_SIZEX_PAD - 1);
+			//const int posX32 = posX & ~(BLOB_SIZEX_PAD - 1);
 
-			unsigned int* dst = (unsigned int*)(blobBuffer + posY * POLKA_BUFFER_WIDTH + posX32);
+			unsigned int* dst = (unsigned int*)(blobBuffer + posY * POLKA_BUFFER_WIDTH + posX);
 
-			switch (bIndex) {
-				case 0:
+			//switch (bIndex) {
+//				case 0:
 					*dst += 0x20b0b02;
 					*(dst + 96) += 0x20b0b02;
-				break;
+				/*break;
 
 				case 1:
 					*(dst - 1) += 0xb0b0200;
@@ -728,7 +728,7 @@ void drawBlobPointsPolkaSize1(Vertex3D* v, int count, unsigned char* blobBuffer)
 					*(dst + 95) += 0x2000000;
 					*(dst + 96) += 0x20b0b;
 				break;
-			}
+			}*/
 		}
 		++v;
 	} while (--count != 0);
@@ -744,13 +744,13 @@ void drawBlobPointsPolkaSize2(Vertex3D* v, int count, unsigned char* blobBuffer)
 
 		if (!(posX <= POLKA_BUFFER_PAD || posX >= POLKA_BUFFER_PAD + FB_WIDTH || posY <= POLKA_BUFFER_PAD || posY >= POLKA_BUFFER_PAD + FB_HEIGHT))
 		{
-			const int bIndex = posX & (BLOB_SIZEX_PAD - 1);
-			const int posX32 = posX & ~(BLOB_SIZEX_PAD - 1);
+			//const int bIndex = posX & (BLOB_SIZEX_PAD - 1);
+			//const int posX32 = posX & ~(BLOB_SIZEX_PAD - 1);
 
-			unsigned int* dst = (unsigned int*)(blobBuffer + posY * POLKA_BUFFER_WIDTH + posX32);
+			unsigned int* dst = (unsigned int*)(blobBuffer + posY * POLKA_BUFFER_WIDTH + posX);
 
-			switch (bIndex) {
-				case 0:
+			//switch (bIndex) {
+				/*case 0:
 					*(dst - 1) += 0x8030000;
 					*dst += 0x308;
 					*(dst + 95) += 0xf080000;
@@ -768,11 +768,11 @@ void drawBlobPointsPolkaSize2(Vertex3D* v, int count, unsigned char* blobBuffer)
 					*(dst + 192) += 0x30808;
 				break;
 
-				case 2:
+				case 2:*/
 					*dst += 0x3080803;
 					*(dst + 96) += 0x80f0f08;
 					*(dst + 192) += 0x3080803;
-				break;
+				/*break;
 
 				case 3:
 					*(dst - 1) += 0x8080300;
@@ -782,7 +782,7 @@ void drawBlobPointsPolkaSize2(Vertex3D* v, int count, unsigned char* blobBuffer)
 					*(dst + 191) += 0x8080300;
 					*(dst + 192) += 0x3;
 				break;
-			}
+			}*/
 		}
 		++v;
 	} while (--count != 0);

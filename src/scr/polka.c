@@ -27,7 +27,8 @@
 #define DOT_COLOR 0xFFFF
 #define VOLS_NUM 2
 
-#define NUM_BG_POINTS 64
+#define NUM_BG_POINTS 48
+#define BG_LINE_DIST 64
 
 
 static int init(void);
@@ -377,7 +378,7 @@ static void moveBgPoints(int t)
 	static int prevT = 0;
 	const int dt = t - prevT;
 
-	if (dt < 0 || dt > 20) {
+	if (dt < 0 || dt > 40) {
 		int i;
 
 		for (i = 0; i < NUM_BG_POINTS; ++i) {
@@ -394,17 +395,34 @@ static void moveBgPoints(int t)
 	}
 }
 
+
+
 static void backgroundLinesTest(int t)
 {
-	int i;
-	Vertex3D v1;
+	int i,j;
+	Vertex3D v1, v2;
 
 	moveBgPoints(t);
 
-	for (i = 0; i < NUM_BG_POINTS; ++i) {
-		v1.xs = bgPoints[i].xs + 4;
-		v1.ys = bgPoints[i].ys + 4;
-		drawAntialiasedLine16bpp(&bgPoints[i], &v1, 4 + (i & 3), fb_pixels);
+	for (i = 0; i < NUM_BG_POINTS-1; ++i) {
+		const int ix = bgPoints[i].xs;
+		const int iy = bgPoints[i].ys;
+		for (j = i+1; j < NUM_BG_POINTS; ++j) {
+			const int jx = bgPoints[j].xs;
+			const int jy = bgPoints[j].ys;
+			const int dx = jx - ix;
+			const int dy = jy - iy;
+			const int d = dx * dx + dy * dy;
+
+			if (d > 0 && d < BG_LINE_DIST * BG_LINE_DIST) {
+				const int colorShift = 5 + (3 * d) / (BG_LINE_DIST * BG_LINE_DIST);
+				v1.xs = ix;
+				v1.ys = iy;
+				v2.xs = jx;
+				v2.ys = jy;
+				drawAntialiasedLine16bpp(&v1, &v2, colorShift, fb_pixels);
+			}
+		}
 	}
 }
 

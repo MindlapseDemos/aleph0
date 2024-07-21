@@ -27,8 +27,9 @@
 #define DOT_COLOR 0xFFFF
 #define VOLS_NUM 2
 
-#define NUM_BG_POINTS 48
-#define BG_LINE_DIST 64
+#define NUM_BG_POINTS 64
+#define BG_LINE_DIST 48
+#define SMAP_RANGE 256
 
 
 static int init(void);
@@ -52,6 +53,7 @@ static ScreenPoints screenPointsGrid;
 static Vertex3D* axisVerticesX, * axisVerticesY, * axisVerticesZ;
 
 static unsigned char* volumeData;
+static unsigned char* sphereMap;
 
 static int* recDivZ;
 
@@ -377,19 +379,22 @@ static void moveBgPoints(int t)
 {
 	static int prevT = 0;
 	const int dt = t - prevT;
+	unsigned char d;
 
 	if (dt < 0 || dt > 40) {
 		int i;
 
 		for (i = 0; i < NUM_BG_POINTS; ++i) {
-			bgPoints[i].x = (bgPoints[i].x + vel[i].x) % FB_WIDTH;
-			bgPoints[i].y = (bgPoints[i].y + vel[i].y) % FB_HEIGHT;
+			bgPoints[i].x = (bgPoints[i].x + vel[i].x) & (SMAP_RANGE - 1);
+			bgPoints[i].y = (bgPoints[i].y + vel[i].y) & (SMAP_RANGE - 1);
 
-			if (bgPoints[i].x < 0) bgPoints[i].x = FB_WIDTH - 1;
-			if (bgPoints[i].y < 0) bgPoints[i].y = FB_HEIGHT - 1;
+			d = sphereMap[bgPoints[i].y * SMAP_RANGE + bgPoints[i].x];
 
-			bgPoints[i].xs = bgPoints[i].x;
-			bgPoints[i].ys = bgPoints[i].y;
+			bgPoints[i].xs = ((((bgPoints[i].x - SMAP_RANGE / 2) * d) >> 6) + FB_WIDTH / 2) % FB_WIDTH;
+			bgPoints[i].ys = ((((bgPoints[i].y - SMAP_RANGE / 2) * d) >> 6) + FB_HEIGHT / 2) % FB_HEIGHT;
+
+			if (bgPoints[i].xs < 0) bgPoints[i].xs = FB_WIDTH - 1;
+			if (bgPoints[i].ys < 0) bgPoints[i].ys = FB_HEIGHT - 1;
 		}
 		prevT = t;
 	}
@@ -481,10 +486,27 @@ static void initBgPoints()
 	for (i = 0; i < NUM_BG_POINTS; ++i) {
 		bgPoints[i].x = rand() % FB_WIDTH;
 		bgPoints[i].y = rand() % FB_HEIGHT;
-		vel[i].x = (rand() & 3) - 2;
-		vel[i].y = (rand() & 3) - 2;
+		vel[i].x = (rand() & 1) - 1;
+		vel[i].y = (rand() & 1) - 1;
 		if (vel[i].x >= 0) vel[i].x++;
 		if (vel[i].y >= 0) vel[i].y++;
+	}
+}
+
+static void initSphereMap()
+{
+	int x, y, i=0;
+
+	sphereMap = (unsigned char*)malloc(SMAP_RANGE * SMAP_RANGE);
+
+	for (y = 0; y < SMAP_RANGE; ++y) {
+		const int yc = y - SMAP_RANGE / 2;
+		for (x = 0; x < SMAP_RANGE; ++x) {
+			const int xc = x - SMAP_RANGE / 2;
+			int d = isqrt(xc * xc + yc * yc);
+			CLAMP(d, 1, 255);
+			sphereMap[i++] = 256 - d;
+		}
 	}
 }
 
@@ -503,6 +525,7 @@ static int init(void)
 	initBlobGfx();
 
 	initBgPoints();
+	initSphereMap();
 
 	tempPal = (unsigned short*)malloc(sizeof(unsigned short) * 256);
 
@@ -550,6 +573,7 @@ static void destroy(void)
 	free(psin3);
 
 	free(bgPoints);
+	free(sphereMap);
 
 	for (i = 0; i < VOLS_NUM; ++i) {
 		free(polkaBuffer[i]);

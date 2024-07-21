@@ -152,20 +152,19 @@ static void print_screen_list(void)
 
 static char *strip_space(char *s)
 {
-	int len;
 	char *end;
 
 	while(*s && isspace(*s)) ++s;
-	if(!*s) return 0;
 
-	if((end = strrchr(s, '#'))) {
-		--end;
+	if((end = strchr(s, '#'))) {
+		*end-- = 0;
 	} else {
-		len = strlen(s);
-		end = s + len - 1;
+		end = s + strlen(s) - 1;
 	}
 
-	while(end > s && isspace(*end)) *end-- = 0;
+	while(end >= s && isspace(*end)) {
+		*end-- = 0;
+	}
 	return *s ? s : 0;
 }
 
@@ -220,9 +219,13 @@ int load_config(const char *fname)
 		} else if(strcmp(line, "sball") == 0) {
 			opt.sball = bool_value(value);
 		} else if(strcmp(line, "vsync") == 0) {
-			if((opt.vsync = atoi(value)) < 0 || opt.vsync > 9) {
-				fprintf(stderr, "%s:%d invalid vsync value: %s\n", fname, nline, line);
-				return -1;
+			if(isdigit(value[0])) {
+				if((opt.vsync = atoi(value)) < 0 || opt.vsync > 9) {
+					fprintf(stderr, "%s:%d invalid vsync value: %s\n", fname, nline, line);
+					return -1;
+				}
+			} else {
+				opt.vsync = bool_value(value);
 			}
 		} else if(strcmp(line, "debug") == 0) {
 			opt.dbgmode = bool_value(value);

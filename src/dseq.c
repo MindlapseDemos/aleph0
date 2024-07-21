@@ -472,6 +472,11 @@ void dseq_stop(void)
 	started = 0;
 }
 
+int dseq_started(void)
+{
+	return started;
+}
+
 void dseq_ffwd(long tm)
 {
 	if(tm <= 0) return;

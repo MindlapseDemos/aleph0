@@ -161,7 +161,11 @@ static void molten_update(void)
 	cgm_mrotate(xform, tsec, 1, 0, 0);
 	cgm_mrotate(xform, tsec, 0, 1, 0);
 
-	rise_val = (float)dseq_value(ev_rise) / 1024.0f;
+	if(dseq_started()) {
+		rise_val = (float)dseq_value(ev_rise) / 1024.0f;
+	} else {
+		rise_val = 1.0f;
+	}
 
 	dist = cos(tsec * 1.8f) * 0.25f + 1.1f;
 
@@ -194,8 +198,7 @@ static void molten_update(void)
 
 	/*viewpos.x = sin(tsec * 0.4f) * 3.0;*/
 
-	/*cgm_vlerp(&viewtgt, &viewtgt, &newpos, 0.75f * dt);*/
-	viewtgt = newpos;
+	cgm_vlerp(&viewtgt, &viewtgt, &newpos, 0.75f * dt);
 }
 
 static void molten_draw(void)

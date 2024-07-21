@@ -20,6 +20,7 @@ int dseq_isopen(void);
 
 void dseq_start(void);
 void dseq_stop(void);
+int dseq_started(void);
 void dseq_ffwd(long tm);
 
 void dseq_update(void);

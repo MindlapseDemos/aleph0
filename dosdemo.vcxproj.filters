@@ -120,9 +120,6 @@
     <ClCompile Include="src\scr\bump.c">
       <Filter>src\screens</Filter>
     </ClCompile>
-    <ClCompile Include="src\scr\cybersun.c">
-      <Filter>src\screens</Filter>
-    </ClCompile>
     <ClCompile Include="src\scr\grise.c">
       <Filter>src\screens</Filter>
     </ClCompile>
@@ -138,19 +135,16 @@
     <ClCompile Include="src\scr\molten.c">
       <Filter>src\screens</Filter>
     </ClCompile>
-    <ClCompile Include="src\scr\minifx.c">
+    <ClCompile Include="src\scr\credits.c">
       <Filter>src\screens</Filter>
     </ClCompile>
-    <ClCompile Include="src\scr\plasma.c">
+    <ClCompile Include="src\scr\minifx.c">
       <Filter>src\screens</Filter>
     </ClCompile>
     <ClCompile Include="src\scr\water.c">
       <Filter>src\screens</Filter>
     </ClCompile>
     <ClCompile Include="src\scr\3dzoom.c">
-      <Filter>src\screens</Filter>
-    </ClCompile>
-    <ClCompile Include="src\scr\polytest.c">
       <Filter>src\screens</Filter>
     </ClCompile>
     <ClCompile Include="src\scr\raytrace.c">
@@ -160,9 +154,6 @@
       <Filter>src\screens</Filter>
     </ClCompile>
     <ClCompile Include="src\scr\thunder.c">
-      <Filter>src\screens</Filter>
-    </ClCompile>
-    <ClCompile Include="src\scr\tilemaze.c">
       <Filter>src\screens</Filter>
     </ClCompile>
     <ClCompile Include="src\scr\tunnel.c">
@@ -179,9 +170,6 @@
     </ClCompile>
     <ClCompile Include="src\scr\blobgrid.c">
       <Filter>src\screens</Filter>
-    </ClCompile>
-    <ClCompile Include="src\scr\dott.c">
-      <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\scr\opt_3d.c">
       <Filter>src</Filter>
@@ -294,9 +282,6 @@
       <Filter>src\rt</Filter>
     </ClInclude>
     <ClInclude Include="src\scr\smoketxt.h">
-      <Filter>src\screens</Filter>
-    </ClInclude>
-    <ClInclude Include="src\scr\tilemaze.h">
       <Filter>src\screens</Filter>
     </ClInclude>
     <ClInclude Include="libs\cgmath\cgmath.h">

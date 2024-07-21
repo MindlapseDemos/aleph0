@@ -112,8 +112,6 @@
     <ClCompile Include="src\screen.c" />
     <ClCompile Include="src\dseq.c" />
     <ClCompile Include="src\scr\bump.c" />
-    <ClCompile Include="src\scr\cybersun.c" />
-    <ClCompile Include="src\scr\dott.c" />
     <ClCompile Include="src\scr\polka.c" />
     <ClCompile Include="src\scr\opt_3d.c" />
     <ClCompile Include="src\scr\opt_rend.c" />
@@ -122,15 +120,13 @@
     <ClCompile Include="src\scr\infcubes.c" />
     <ClCompile Include="src\scr\metaball.c" />
     <ClCompile Include="src\scr\molten.c" />
+    <ClCompile Include="src\scr\credits.c" />
     <ClCompile Include="src\scr\minifx.c" />
-    <ClCompile Include="src\scr\plasma.c" />
     <ClCompile Include="src\scr\water.c" />
     <ClCompile Include="src\scr\3dzoom.c" />
-    <ClCompile Include="src\scr\polytest.c" />
     <ClCompile Include="src\scr\raytrace.c" />
     <ClCompile Include="src\scr\smoketxt.c" />
     <ClCompile Include="src\scr\thunder.c" />
-    <ClCompile Include="src\scr\tilemaze.c" />
     <ClCompile Include="src\scr\tunnel.c" />
     <ClCompile Include="src\scr\voxscape.c" />
     <ClCompile Include="src\scr\hexfloor.c" />
@@ -173,7 +169,6 @@
     <ClInclude Include="src\dseq.h" />
     <ClInclude Include="src\scr\smoketxt.h" />
     <ClInclude Include="src\scr\thunder.h" />
-    <ClInclude Include="src\scr\tilemaze.h" />
     <ClInclude Include="src\timer.h" />
     <ClInclude Include="src\tinyfps.h" />
     <ClInclude Include="src\treestor.h" />

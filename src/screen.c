@@ -16,14 +16,11 @@
 
 struct screen *tunnel_screen(void);
 struct screen *grise_screen(void);
-struct screen *polytest_screen(void);
-struct screen *plasma_screen(void);
 struct screen *bump_screen(void);
 struct screen *thunder_screen(void);
 struct screen *metaballs_screen(void);
 struct screen *infcubes_screen(void);
 struct screen *hairball_screen(void);
-struct screen *cybersun_screen(void);
 struct screen *raytrace_screen(void);
 struct screen *minifx_screen(void);
 struct screen *voxscape_screen(void);
@@ -31,10 +28,10 @@ struct screen *hexfloor_screen(void);
 struct screen *juliatunnel_screen(void);
 struct screen *blobgrid_screen(void);
 struct screen *polka_screen(void);
-struct screen *dott_screen(void);
 struct screen *water_screen(void);
 struct screen *zoom3d_screen(void);
 struct screen *molten_screen(void);
+struct screen *credits_screen(void);
 
 void start_loadscr(void);
 void end_loadscr(void);
@@ -57,14 +54,11 @@ void populate_screens(void)
 
 	scr[idx++] = tunnel_screen();
 	scr[idx++] = grise_screen();
-	scr[idx++] = polytest_screen();
-	scr[idx++] = plasma_screen();
 	scr[idx++] = bump_screen();
 	scr[idx++] = thunder_screen();
 	scr[idx++] = metaballs_screen();
 	scr[idx++] = infcubes_screen();
 	scr[idx++] = hairball_screen();
-	scr[idx++] = cybersun_screen();
 	scr[idx++] = raytrace_screen();
 	scr[idx++] = minifx_screen();
 	scr[idx++] = voxscape_screen();
@@ -72,10 +66,10 @@ void populate_screens(void)
 	scr[idx++] = juliatunnel_screen();
     scr[idx++] = blobgrid_screen();
 	scr[idx++] = polka_screen();
-	scr[idx++] = dott_screen();
 	scr[idx++] = water_screen();
 	scr[idx++] = zoom3d_screen();
 	scr[idx++] = molten_screen();
+	scr[idx++] = credits_screen();
 
 	num_screens = idx;
 	assert(num_screens <= NUM_SCR);

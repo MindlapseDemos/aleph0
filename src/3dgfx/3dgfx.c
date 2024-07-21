@@ -687,6 +687,17 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 					if(!(sign ^ st->frontface)) {
 						goto skip_triangle;	/* back-facing */
 					}
+
+					if(st->frontface != G3D_CCW) {
+						struct pvertex revtri[3];
+						revtri[0] = pvtri[0];
+						revtri[1] = pvtri[2];
+						revtri[2] = pvtri[1];
+
+						calc_grad(vtri);
+						polyfill(fill_mode, revtri);
+						goto skip_triangle;
+					}
 				}
 
 				calc_grad(vtri);

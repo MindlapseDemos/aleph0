@@ -89,6 +89,7 @@ struct screen *polka_screen(void)
 	return &scr;
 }
 
+static int testB = 0;
 
 
 static void transformAndProjectAxesBoxDotsEffect(int objIndex)
@@ -367,9 +368,17 @@ static void OptGrid3Drun(int objIndex, int sizeIndex, unsigned char* buffer, int
 	/* drawBoxLines(buffer, -1, objIndex); */
 
 	if (sizeIndex == 0) {
-		drawBlobPointsPolkaSize2(screenPointsGrid.v, screenPointsGrid.num, buffer);
+		if (testB==0) {
+			drawBlobPointsPolkaSize2(screenPointsGrid.v, screenPointsGrid.num, buffer);
+		} else {
+			drawBlobPointsPolkaSize2b(screenPointsGrid.v, screenPointsGrid.num, buffer);
+		}
 	} else {
-		drawBlobPointsPolkaSize1(screenPointsGrid.v, screenPointsGrid.num, buffer);
+		if (testB==0) {
+			drawBlobPointsPolkaSize1(screenPointsGrid.v, screenPointsGrid.num, buffer);
+		} else {
+			drawBlobPointsPolkaSize1b(screenPointsGrid.v, screenPointsGrid.num, buffer);
+		}
 	}
 
 	/* drawBoxLines(buffer, 1, objIndex); */
@@ -609,9 +618,13 @@ static void blurBuffer(unsigned char *buffer)
 
 static void draw(void)
 {
-	const int t = time_msec - startingTime;
+	const int t = 3000;// time_msec - startingTime;
 
 	int i, j, pi = 0;
+
+
+	testB = ((time_msec - startingTime) / 8192) & 1;
+
 	for (i = 0; i < VOLS_NUM; ++i) {
 		int px, py;
 		int si = 0;
@@ -641,20 +654,20 @@ static void draw(void)
 	if (j < 0) j = 0;
 	if (j > 3) j = 3;
 	for (i = 0; i < j; ++i) {
-		blurBuffer(polkaBuffer[0]);
+		//blurBuffer(polkaBuffer[0]);
 	}
 	j = sin(t / 900.0f) * 11 - 5;
 	if (j < 0) j = 0;
 	if (j > 3) j = 3;
 	for (i = 0; i < j; ++i) {
-		blurBuffer(polkaBuffer[1]);
+		//blurBuffer(polkaBuffer[1]);
 	}
 
 	buffer8bppToVram(polkaBuffer[0], polkaPal32[0]);
 	buffer8bppORwithVram(polkaBuffer[1], polkaPal32[1+pi]);
 
 	/* memset(fb_pixels, 0, 320 * 240 * 2); */
-	backgroundLinesTest(t);
+	//backgroundLinesTest(t);
 
 	swap_buffers(0);
 }

@@ -1,0 +1,16 @@
+obj = src/anim.o src/track.o
+alib = libanim.a
+
+CFLAGS = -O3 -I.. -I../../src
+
+$(alib): $(obj)
+	$(AR) rcs $@ $(obj)
+
+.c.o:
+	$(CC) -o $@ $(CFLAGS) -c $<
+
+.PHONY: clean
+clean:
+	rm -f $(obj) $(alib)
+
+# vi:ft=make:

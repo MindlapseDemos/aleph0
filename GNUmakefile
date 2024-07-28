@@ -16,7 +16,7 @@ warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function -Wno-address
 #opt = -O3 -ffast-math
 dbg = -g
 
-CFLAGS = $(arch) $(warn) -MMD $(opt) -fno-pie -fno-strict-aliasing $(dbg) $(inc)
+CFLAGS = $(arch) $(warn) -MMD $(opt) $(def) -fno-pie -fno-strict-aliasing $(dbg) $(inc)
 LDFLAGS = $(arch) -no-pie -Llibs/imago -Llibs/anim -Llibs/mikmod -Llibs/goat3d \
 		  -limago -lanim -lmikmod -lgoat3d $(sndlib_$(sys)) -lm
 

@@ -50,7 +50,7 @@ void con_stop(void)
 
 void con_draw(uint16_t *fb)
 {
-#ifndef __EMSCRIPTEN__
+#ifndef NO_ASM
 	int x, y, sidx, cidx;
 
 	/* print output buffer */

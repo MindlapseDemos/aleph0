@@ -306,7 +306,9 @@ int load_mesh(struct g3d_mesh *mesh, const char *fname, int idx)
 	}
 	dynarr_free(meshes);
 
-	printf("loaded mesh %s (%d) with %d faces\n", fname, idx, mesh->icount / mesh->prim);
+	if(mesh->prim) {
+		printf("loaded mesh %s (%d) with %d faces\n", fname, idx, mesh->icount / mesh->prim);
+	}
 	return res;
 }
 

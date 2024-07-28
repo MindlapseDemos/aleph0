@@ -1,5 +1,5 @@
 src = $(wildcard src/*.c) $(wildcard src/3dgfx/*.c) $(wildcard src/rt/*.c) \
-	  $(wildcard src/scr/*.c) $(wildcard src/sdl/*.c) src/glut/audio.c
+	  $(wildcard src/scr/*.c) $(wildcard src/sdl/*.c)
 obj = $(src:.c=.emo)
 bin = demo.html
 

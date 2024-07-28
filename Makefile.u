@@ -1,0 +1,77 @@
+obj = src/3dgfx/3dgfx.o src/3dgfx/mesh.o src/3dgfx/meshload.o \
+	  src/3dgfx/polyclip.o src/3dgfx/polyfill.o src/3dgfx/scene.o src/bsptree.o \
+	  src/cfgopt.o src/console.o src/cpuid.o src/darray.o src/demo.o src/dseq.o \
+	  src/dynarr.o src/gfxutil.o src/image.o src/msurf2.o src/noise.o \
+	  src/rbtree.o src/rlebmap.o src/rt/rt.o src/rt/rtgeom.o src/scr/3dzoom.o \
+	  src/scr/blobgrid.o src/scr/bump.o src/scr/credits.o src/screen.o \
+	  src/scr/grise.o src/scr/hairball.o src/scr/hexfloor.o src/scr/infcubes.o \
+	  src/scr/juliatun.o src/scr/metaball.o src/scr/minifx.o src/scr/molten.o \
+	  src/scr/opt_3d.o src/scr/opt_rend.o src/scr/polka.o src/scr/raytrace.o \
+	  src/scr/smoketxt.o src/scr/thunder.o src/scr/tunnel.o src/scr/voxscape.o \
+	  src/scr/water.o src/sdl/main.o src/sdl/sball.o src/sdl/timer.o src/sdl/audio.o \
+	  src/tinyfps.o src/treestor.o src/ts_text.o src/util.o
+
+bin = sdldemo
+
+inc = -I/usr/local/include -Isrc -Isrc/3dgfx -Isrc/rt -Isrc/scr -Isrc/utils \
+	  -Isrc/glut -Ilibs -Ilibs/imago/src -Ilibs/anim/src -Ilibs/mikmod/include \
+	  -Ilibs/goat3d/include
+def = -DMIKMOD_STATIC -DNO_ASM
+opt = -O3 -ffast-math
+#dbg = -g
+
+CFLAGS = $(CFLAGS_sys) $(CFLAGS_extra) $(opt) $(dbg) $(def) $(inc)
+LDFLAGS = $(LDFLAGS_sys) $(LDFLAGS_extra) -Llibs/imago -Llibs/anim -Llibs/mikmod \
+		  -Llibs/goat3d
+LIBS = -limago -lanim -lmikmod -lgoat3d -lSDL $(LIBS_sys) -lm
+
+.PHONY: all
+all: data $(bin)
+
+$(bin): $(obj) imago anim mikmod goat3d
+	$(CC) -o $@ $(obj) $(LDFLAGS) $(LIBS)
+
+.c.o:
+	$(CC) -o $@ $(CFLAGS) -c $<
+
+-include $(dep)
+
+.PHONY: libs
+libs: imago anim mikmod goat3d
+
+.PHONY: imago
+imago:
+	cd libs/imago; $(MAKE) -f Makefile.u
+
+.PHONY: anim
+anim:
+	cd libs/anim; $(MAKE) -f Makefile.u
+
+.PHONY: mikmod
+mikmod:
+	cd libs/mikmod; $(MAKE) -f Makefile.u
+
+.PHONY: goat3d
+goat3d:
+	cd libs/goat3d; $(MAKE) -f Makefile.u
+
+.PHONY: cleanlibs
+cleanlibs:
+	cd libs/imago; $(MAKE) -f Makefile.u clean
+	cd libs/anim; $(MAKE) -f Makefile.u clean
+	cd libs/mikmod; $(MAKE) -f Makefile.u clean
+	cd libs/goat3d; $(MAKE) -f Makefile.u clean
+
+.PHONY: clean
+clean:
+	rm -f $(obj) $(bin)
+
+.PHONY: cleandep
+cleandep:
+	rm -f $(dep)
+
+.PHONY: data
+data:
+	@tools/procdata
+
+# vi:ft=make:

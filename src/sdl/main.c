@@ -77,7 +77,7 @@ int main(int argc, char **argv)
 	}
 #endif
 
-	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_NOPARACHUTE);
+	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_NOPARACHUTE);
 	if(!(fbsurf = SDL_SetVideoMode(xsz, ysz, 32, sdl_flags))) {
 		fprintf(stderr, "failed to set video mode %dx%d %dbpp\n", FB_WIDTH, FB_HEIGHT, FB_BPP);
 		/*free(fb_pixels);*/
@@ -87,7 +87,7 @@ int main(int argc, char **argv)
 	SDL_WM_SetCaption("dosdemo/SDL", 0);
 	SDL_ShowCursor(0);
 
-#ifndef __EMSCRIPTEN__
+#ifndef NO_ASM
 	if(read_cpuid(&cpuid) == 0) {
 		print_cpuid(&cpuid);
 	}

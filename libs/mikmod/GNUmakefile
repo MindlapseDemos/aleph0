@@ -9,8 +9,7 @@ alib = libmikmod.a
 
 def = -DHAVE_CONFIG_H -DMIKMOD_BUILD
 inc = -I. -Iinclude
-warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function
-CFLAGS = -m32 $(warn) -g $(def) $(inc)
+CFLAGS = -m32 -g $(def) $(inc)
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

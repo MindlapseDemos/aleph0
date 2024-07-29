@@ -78,6 +78,7 @@ void populate_screens(void)
 int scr_init(void)
 {
 	int i, idx;
+	unsigned long t0;
 
 	start_loadscr();
 
@@ -85,6 +86,8 @@ int scr_init(void)
 
 	for(i=0; i<num_screens; i++) {
 		loadscr(i, num_screens);
+		printf("initializing %s ...\n", scr[i]->name);
+		t0 = get_msec();
 		if(scr[i]->init() == -1) {
 			if(opt.dbgmode) {
 				fprintf(stderr, "screen \"%s\" failed to initialize, removing.\n", scr[i]->name);
@@ -93,6 +96,7 @@ int scr_init(void)
 				return -1;
 			}
 		}
+		printf("%s init took %lu ms\n", scr[i]->name, get_msec() - t0);
 	}
 
 	/* remove any null pointers (failed init screens) from the array */

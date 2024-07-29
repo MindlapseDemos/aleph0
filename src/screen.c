@@ -95,8 +95,9 @@ int scr_init(void)
 			} else {
 				return -1;
 			}
+		} else {
+			printf("%s init took %lu ms\n", scr[i]->name, get_msec() - t0);
 		}
-		printf("%s init took %lu ms\n", scr[i]->name, get_msec() - t0);
 	}
 
 	/* remove any null pointers (failed init screens) from the array */

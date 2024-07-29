@@ -97,7 +97,7 @@ int img_convert(struct img_pixmap *img, enum img_fmt tofmt)
 	}
 
 	if(tofmt == IMG_FMT_IDX8) {
-		return img_quantize(img, 256, 0);
+		return img_quantize(img, 256, IMG_DITHER_NONE);
 	}
 
 	img_init(&nimg);

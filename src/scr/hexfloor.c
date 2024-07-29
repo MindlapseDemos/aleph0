@@ -133,8 +133,6 @@ static void start(long trans_time)
 
 static void update(void)
 {
-	int i;
-
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
 }
 

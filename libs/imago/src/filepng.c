@@ -95,7 +95,7 @@ static int read_file(struct img_pixmap *img, struct img_io *io)
 		return -1;
 	}
 
-	if(img_set_pixels(img, xsz, ysz, fmt, 0) == -1) {
+	if(img_set_pixels(img, xsz, ysz, (enum img_fmt)fmt, 0) == -1) {
 		png_destroy_read_struct(&png, &info, 0);
 		return -1;
 	}

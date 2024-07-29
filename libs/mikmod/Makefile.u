@@ -1,4 +1,4 @@
--include ../../ucfg.mk
+include ../../ucfg.mk
 
 obj = depackers/mmcmp.o depackers/pp20.o depackers/s404.o depackers/xpk.o \
 	  drivers/drv_alsa.o drivers/drv_ds.o drivers/drv_nos.o drivers/drv_oss.o \

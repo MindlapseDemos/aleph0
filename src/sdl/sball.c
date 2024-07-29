@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/select.h>
+#include <sys/time.h>
 
 #define SPNAV_SOCK_PATH "/var/run/spnav.sock"
 #define IS_OPEN		(sock != -1)

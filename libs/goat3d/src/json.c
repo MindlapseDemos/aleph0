@@ -305,7 +305,7 @@ struct json_arr *json_lookup_arr(struct json_obj *obj, const char *path, struct 
 #define MAX_TOKEN_SIZE	512
 struct parser {
 	char *text;
-	char nextc;
+	signed char nextc;
 	char *token;
 };
 

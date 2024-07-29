@@ -271,8 +271,7 @@ static void blitEffectBackTo8bitBuffer() {
 }
 
 static void thunder(int x0, int y0, int x1, int y1, unsigned char c0, unsigned char c1, int seed, int randomness, int depth) {
-	int mx, my, i, j;
-	unsigned char *dst;
+	int mx, my;
 	unsigned char mc;
 
 	if (randomness <= 0) randomness = 1;
@@ -377,10 +376,8 @@ static void projectMesh() {
 }
 
 static void renderMeshToPointSprites(int seed) {
-	int vertex, j;
+	int vertex;
 	int sx, sy;
-	unsigned char color;
-	unsigned char *dst;
 	unsigned char fogAtOrigin;
 
 	fogAtOrigin = fog(CAMERA_DISTANCE);

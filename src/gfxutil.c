@@ -475,7 +475,6 @@ static void overlay_alpha_c(struct image *dest, int x, int y, const struct image
 	unsigned int sr, sg, sb, dr, dg, db;
 	unsigned int alpha, invalpha;
 	uint16_t *dptr, *sptr, pix;
-	uint32_t pixpair;
 	unsigned char *aptr;
 
 	assert(dest->width == 320);

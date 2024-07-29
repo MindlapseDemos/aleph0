@@ -1,4 +1,4 @@
--include ../../ucfg.mk
+include ../../ucfg.mk
 
 obj = src/aabox.o src/chunk.o src/dynarr.o src/extmesh.o src/g3danm.o \
 	  src/g3dscn.o src/goat3d.o src/json.o src/log.o src/read.o src/readgltf.o \

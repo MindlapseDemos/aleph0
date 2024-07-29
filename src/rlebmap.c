@@ -368,7 +368,6 @@ RleBitmap *rleFromFile(char *filename)
     unsigned char *alpha;
     int i;
     RleBitmap *result = 0;
-    int pixel_count = 0;
 
     if (!(data =
 		  img_load_pixels(filename, &w, &h, IMG_FMT_RGBA32))) {

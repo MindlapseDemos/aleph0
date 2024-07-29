@@ -1,4 +1,4 @@
--include ../../ucfg.mk
+include ../../ucfg.mk
 
 obj = src/anim.o src/track.o
 alib = libanim.a

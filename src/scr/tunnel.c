@@ -84,7 +84,6 @@ static unsigned int smoke_cmap[256 * 4], fadepal[256 * 4];
 static struct img_pixmap textimg[2];
 
 static int ev_text, ev_accel, text_state;
-static int evdur;
 
 
 struct screen *tunnel_screen(void)
@@ -94,7 +93,7 @@ struct screen *tunnel_screen(void)
 
 static int tun_init(void)
 {
-	int i, j, n;
+	int i, n;
 	struct img_pixmap pixmap;
 	unsigned char *pal;
 
@@ -399,9 +398,7 @@ static void tun_keypress(int key)
 
 static uint16_t tunnel_color(long toffs, long roffs, unsigned int tpacked, int fog)
 {
-	int r, g, b;
 	unsigned char texel;
-	uint16_t color;
 	unsigned int tx = (((tpacked >> 16) & 0xffff) << tex_xshift) >> 16;
 	unsigned int ty = ((tpacked & 0xffff) << tex_yshift) >> 16;
 #ifdef ROTATE
@@ -427,7 +424,7 @@ static void draw_tunnel_range(unsigned short *pix, int xoffs, int yoffs, int sta
 	for(i=0; i<num_lines; i++) {
 		for(j=0; j<(FB_WIDTH>>1); j++) {
 			unsigned int col;
-			int r, g, b, idx = j << 1;
+			int idx = j << 1;
 
 			col = tunnel_color(toffs, 0, tmap[idx], fog[idx]);
 			col |= (unsigned int)tunnel_color(toffs, 0, tmap[idx + 1], fog[idx + 1]) << 16;

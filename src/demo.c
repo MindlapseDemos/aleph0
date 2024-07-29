@@ -53,7 +53,7 @@ static unsigned int bmask_diff, prev_bmask;
 
 static unsigned long nframes;
 static int con_active;
-static int demo_running, ignore_scrchg_trig;
+static int ignore_scrchg_trig;
 
 extern uint16_t loading_pixels[];	/* data.asm */
 
@@ -279,8 +279,6 @@ void change_screen(int idx)
 
 void demo_keyboard(int key, int press)
 {
-	int evid;
-
 	if(press) {
 		switch(key) {
 		case 27:
@@ -292,7 +290,7 @@ void demo_keyboard(int key, int press)
 			}
 			return;
 
-#ifndef __EMSCRIPTEN__
+#ifndef NO_ASM
 		case 127:
 			debug_break();
 			return;

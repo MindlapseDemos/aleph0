@@ -141,8 +141,6 @@ static void molten_start(long trans_time)
 	cgm_vcons(&viewtgt, 0, 0, 0);
 }
 
-static int valdbg;
-
 static void molten_update(void)
 {
 	float dt;
@@ -203,12 +201,9 @@ static void molten_update(void)
 
 static void molten_draw(void)
 {
-	int i, j;
 	char buf[128];
 	int x, y, z;
 	struct msurf_voxel *vox;
-	struct msurf_cell *cell;
-	int faces;
 	float viewmat[16];
 	static const cgm_vec3 upvec = {0, 1, 0};
 
@@ -259,9 +254,9 @@ static void molten_draw(void)
 	g3d_disable(G3D_TEXTURE_2D);
 
 	if(show_voxdbg) {
-		int x, y, z, r, g, b;
-		struct msurf_voxel *vox = vol.voxels;
+		int r, g, b;
 		unsigned int frmid = vol.cur & 0xffff;
+		vox = vol.voxels;
 		g3d_disable(G3D_LIGHTING);
 		g3d_begin(G3D_POINTS);
 		for(z=0; z<vol.zres; z++) {

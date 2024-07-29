@@ -547,7 +547,6 @@ void dseq_update(void)
 	int32_t t;
 	struct transition *trs;
 	struct track *trk;
-	struct event *ev;
 
 	if(!started) return;
 

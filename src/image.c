@@ -413,7 +413,7 @@ err:
 void blitfb_rle(uint16_t *fb, int x, int y, struct image *img)
 {
 	int endx, endy, xpos, len;
-	uint16_t *fbptr, *rleptr, *pixptr;
+	uint16_t *rleptr, *pixptr;
 	unsigned int rle, count;
 
 	endy = y + img->height;

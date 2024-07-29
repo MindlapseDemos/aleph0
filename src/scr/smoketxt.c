@@ -247,6 +247,10 @@ static int load_vfield(struct vfield *vf, const char *fname)
 		fclose(fp);
 		return -1;
 	}
+#ifdef BUILD_BIGENDIAN
+	vf->width = BSWAP32(vf->width);
+	vf->height = BSWAP32(vf->height);
+#endif
 
 	/* assume xsz is pow2 otherwise fuck you */
 	tmp = vf->width - 1;
@@ -278,6 +282,14 @@ static int load_vfield(struct vfield *vf, const char *fname)
 	vdst = vf->v;
 	for(i=0; i<vf->height; i++) {
 		for(j=0; j<vf->width; j++) {
+#ifdef BUILD_BIGENDIAN
+			uint32_t intval = *(uint32_t*)&vsrc->x;
+			intval = BSWAP32(intval);
+			vsrc->x = *(float*)&intval;
+			intval = *(uint32_t*)&vsrc->y;
+			intval = BSWAP32(intval);
+			vsrc->y = *(float*)&intval;
+#endif
 			vdst->x = (int32_t)(vsrc->x * 65536.0f);
 			vdst->y = (int32_t)(vsrc->y * 65536.0f);
 			vsrc++;

@@ -715,7 +715,7 @@ static struct goat3d_track *read_track(struct goat3d *g, struct ts_node *tstrk)
 		return 0;
 	}
 	goat3d_set_track_node(trk, node);
-	goat3d_set_track_type(trk, type);
+	goat3d_set_track_type(trk, (enum goat3d_track_type)type);
 
 	if((str = ts_get_attr_str(tstrk, "name", 0))) {
 		goat3d_set_track_name(trk, str);
@@ -725,14 +725,14 @@ static struct goat3d_track *read_track(struct goat3d *g, struct ts_node *tstrk)
 		if((in = parseinterp(str)) == -1) {
 			goat3d_logmsg(LOG_WARNING, "read_track: ignoring invalid interpolation mode: %s\n", str);
 		} else {
-			goat3d_set_track_interp(trk, in);
+			goat3d_set_track_interp(trk, (enum goat3d_interp)in);
 		}
 	}
 	if((str = ts_get_attr_str(tstrk, "extrap", 0))) {
 		if((ex = parseextrap(str)) == -1) {
 			goat3d_logmsg(LOG_WARNING, "read_track: ignoring invalid extrapolation mode: %s\n", str);
 		} else {
-			goat3d_set_track_extrap(trk, ex);
+			goat3d_set_track_extrap(trk, (enum goat3d_extrap)ex);
 		}
 	}
 

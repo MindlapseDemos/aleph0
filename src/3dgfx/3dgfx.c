@@ -724,10 +724,8 @@ skip_triangle:
 
 static void calc_grad(struct g3d_vertex *v)
 {
-	float dx01 = v[0].x - v[1].x;
 	float dx02 = v[0].x - v[2].x;
 	float dx12 = v[1].x - v[2].x;
-	float dy01 = v[0].y - v[1].y;
 	float dy02 = v[0].y - v[2].y;
 	float dy12 = v[1].y - v[2].y;
 

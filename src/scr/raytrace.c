@@ -54,7 +54,6 @@ static float cam_xform[16];
 static struct rtsphere *subsph;
 static struct rtbox *box;
 static struct rtcylinder *pillar[4];
-static union rtobject *obj;
 
 struct screen *raytrace_screen(void)
 {
@@ -63,7 +62,7 @@ struct screen *raytrace_screen(void)
 
 static int init(void)
 {
-	int i, j, k;
+	int i, j;
 	float z = 1.0f / tan(cgm_deg_to_rad(25.0f));
 	struct tile *tptr = tiles;
 	char namebuf[64];
@@ -100,7 +99,6 @@ static int init(void)
 
 	subsph = (struct rtsphere*)rt_find_object(&scn, "subsph");
 	box = (struct rtbox*)rt_find_object(&scn, "box");
-	obj = rt_find_object(&scn, "rootdiff");
 
 	for(i=0; i<4; i++) {
 		sprintf(namebuf, "pillar%d", i);
@@ -155,8 +153,7 @@ static void update(void)
 
 static void draw(void)
 {
-	int i, j, xbound, ybound;
-	uint16_t *fbptr;
+	int i;
 	struct tile *tile;
 
 	update();
@@ -170,7 +167,7 @@ static void draw(void)
 	if(opt.dbgmode) {
 		/* clear the spot where we'll be drawing the fps counter */
 		/*
-		fbptr = fb_pixels + (240 - 16) * 320;
+		uint16_t *fbptr = fb_pixels + (240 - 16) * 320;
 		for(i=0; i<4; i++) {
 			memset16(fbptr, 0, 24);
 			memset16(fbptr + 320, 0, 24);

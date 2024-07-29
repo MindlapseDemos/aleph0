@@ -202,7 +202,7 @@ static int read_tga(struct img_pixmap *img, struct img_io *io)
 		fmt = alpha ? IMG_FMT_RGBA32 : IMG_FMT_RGB24;
 	}
 
-	if(img_set_pixels(img, x, y, fmt, 0) == -1) {
+	if(img_set_pixels(img, x, y, (enum img_fmt)fmt, 0) == -1) {
 		return -1;
 	}
 

@@ -1,4 +1,4 @@
--include ucfg.mk
+include ucfg.mk
 
 obj = src/3dgfx/3dgfx.o src/3dgfx/mesh.o src/3dgfx/meshload.o \
 	  src/3dgfx/polyclip.o src/3dgfx/polyfill.o src/3dgfx/scene.o src/bsptree.o \
@@ -22,9 +22,9 @@ def = -DMIKMOD_STATIC -DNO_ASM
 opt = -O3
 #dbg = -g
 
-CFLAGS = $(CFLAGS_sys) $(CFLAGS_extra) $(opt) $(dbg) $(def) $(inc)
-LDFLAGS = $(LDFLAGS_sys) $(LDFLAGS_extra) -Llibs/imago -Llibs/anim \
-		  -Llibs/mikmod -Llibs/goat3d
+CFLAGS = $(inc) $(CFLAGS_sys) $(CFLAGS_extra) $(opt) $(dbg) $(def)
+LDFLAGS = -Llibs/imago -Llibs/anim -Llibs/mikmod -Llibs/goat3d $(LDFLAGS_sys) \
+		  $(LDFLAGS_extra)
 LIBS = -limago -lanim -lmikmod -lgoat3d -lSDL $(LIBS_sys) -lm
 
 $(bin): $(obj) imago anim mikmod goat3d

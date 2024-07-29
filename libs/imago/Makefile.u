@@ -1,4 +1,4 @@
--include ../../ucfg.mk
+include ../../ucfg.mk
 
 obj = src/byteord.o src/conv.o src/filejpeg.o src/filelbm.o src/filepng.o \
 	  src/fileppm.o src/filergbe.o src/filetga.o src/ftmodule.o src/imago2.o \

@@ -188,7 +188,7 @@ int msurf_proc_cell(struct msurf_volume *vol, struct msurf_cell *cell)
 	unsigned int code;
 	struct g3d_vertex vert[12];
 	struct msurf_voxel *vox, *vox0, *vox1;
-	cgm_vec3 dir, norm;
+	cgm_vec3 dir;
 
 	static const int pidx[12][2] = {
 		{0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6},

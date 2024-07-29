@@ -2,16 +2,7 @@
 #define VMATH_H_
 
 #include <math.h>
-
-#ifdef __GNUC__
-#define INLINE __inline
-
-#elif defined(__WATCOMC__)
-#define INLINE __inline
-
-#else
-#define INLINE
-#endif
+#include "util.h"
 
 typedef struct { float x, y; } vec2_t;
 typedef struct { float x, y, z; } vec3_t;

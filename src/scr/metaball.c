@@ -67,7 +67,7 @@ struct screen *metaballs_screen(void)
 
 static int init(void)
 {
-	int i, j, x, y, z, xsz, ysz;
+	int i, xsz, ysz;
 
 	if(!(bgimage = img_load_pixels("data/blob_bg.png", &xsz, &ysz, IMG_FMT_RGB565))) {
 		return -1;
@@ -172,11 +172,7 @@ extern int dbg_visited;
 
 static void draw(void)
 {
-	int i, j;
 	char buf[128];
-	int x, y, z;
-	struct msurf_voxel *vox;
-	struct msurf_cell *cell;
 	int faces;
 
 	update();
@@ -255,7 +251,7 @@ static void shade_blobs(void)
 {
 	int i;
 	struct g3d_vertex *varr;
-	cgm_vec3 *n, col;
+	cgm_vec3 col;
 	float t, y, vgrad;
 
 	varr = mmesh.varr;

@@ -208,17 +208,17 @@ int load_config(const char *fname)
 			return -1;
 		}
 
-		if(strcmp(line, "music") == 0) {
+		if(strcmp(key, "music") == 0) {
 			opt.music = bool_value(value);
-		} else if(strcmp(line, "screen") == 0) {
+		} else if(strcmp(key, "screen") == 0) {
 			opt.start_scr = strdup(value);
-		} else if(strcmp(line, "logfile") == 0) {
+		} else if(strcmp(key, "logfile") == 0) {
 			opt.logfile = strdup(value);
-		} else if(strcmp(line, "mouse") == 0) {
+		} else if(strcmp(key, "mouse") == 0) {
 			opt.mouse = bool_value(value);
-		} else if(strcmp(line, "sball") == 0) {
+		} else if(strcmp(key, "sball") == 0) {
 			opt.sball = bool_value(value);
-		} else if(strcmp(line, "vsync") == 0) {
+		} else if(strcmp(key, "vsync") == 0) {
 			if(isdigit(value[0])) {
 				if((opt.vsync = atoi(value)) < 0 || opt.vsync > 9) {
 					fprintf(stderr, "%s:%d invalid vsync value: %s\n", fname, nline, line);
@@ -227,12 +227,12 @@ int load_config(const char *fname)
 			} else {
 				opt.vsync = bool_value(value);
 			}
-		} else if(strcmp(line, "debug") == 0) {
+		} else if(strcmp(key, "debug") == 0) {
 			opt.dbgmode = bool_value(value);
 #ifndef MSDOS
-		} else if(strcmp(line, "fullscreen") == 0) {
+		} else if(strcmp(key, "fullscreen") == 0) {
 			opt.fullscreen = bool_value(value);
-		} else if(strcmp(line, "scaler") == 0) {
+		} else if(strcmp(key, "scaler") == 0) {
 			if(strcmp(value, "linear") == 0) {
 				opt.scaler = SCALER_LINEAR;
 			} else {

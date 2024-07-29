@@ -100,9 +100,6 @@ struct screen *hairball_screen(void)
 
 static int init(void)
 {
-	int i, j, numpt = 0;
-	struct anm_animation *anim;
-
 	if(load_image(&envmap, "data/myenvmap.jpg") == -1) {
 		fprintf(stderr, "hairball: failed to load envmap\n");
 		return -1;
@@ -360,12 +357,13 @@ static void update_thing(float dt)
 
 static void draw_thing(void)
 {
-	int i, j, col;
+	int i;
+	/*int i, j, col;
 	vec3_t prevpos;
 	cgm_vec3 *p, *pp;
-	struct tentacle *tent;
+	struct tentacle *tent;*/
 
-	//g3d_enable(G3D_LIGHTING);
+	/*g3d_enable(G3D_LIGHTING);*/
 
 	g3d_push_matrix();
 	g3d_mult_matrix(thing.xform);
@@ -378,7 +376,7 @@ static void draw_thing(void)
 		draw_mesh(tentmesh + i);
 	}
 
-	//g3d_disable(G3D_LIGHTING);
+	/*g3d_disable(G3D_LIGHTING);*/
 
 	/*
 	for(i=0; i<NUM_TENT; i++) {
@@ -485,7 +483,7 @@ static void clear_anim(struct anm_animation *anm)
 static int load_anim(struct anm_animation *anm, const char *fname)
 {
 	FILE *fp;
-	int i, nposkeys, nrotkeys;
+	int nposkeys, nrotkeys;
 	float x, y, z, w;
 	unsigned int tm;
 	char buf[256];

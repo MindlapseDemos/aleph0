@@ -594,7 +594,7 @@ static struct ts_node *create_tracktree(struct goat3d *g, const struct goat3d_tr
 	if(ts_set_value_str(&tsa->val, g3dimpl_trktypestr(trk->type)) == -1) {
 		goto err;
 	}
-	basetype = trk->type & 0xff;
+	basetype = (enum goat3d_track_type)(trk->type & 0xff);
 
 	create_tsattr(tsa, tstrk, "interp", TS_STRING);
 	if(ts_set_value_str(&tsa->val, instr[trk->trk[0].interp]) == -1) {

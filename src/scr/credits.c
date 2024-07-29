@@ -50,7 +50,6 @@ static uint16_t mountcol, mountcol_mir;
 #define TORUS_YPOS	3.2f
 struct g3d_mesh tori[NUM_TORI];
 static float tormat[NUM_TORI][16];
-static float torphase[NUM_TORI];
 
 
 struct screen *credits_screen(void)
@@ -183,9 +182,7 @@ static void credits_keyb(int key)
 
 static void backdrop(void)
 {
-	static const int colzen[] = {98, 64, 192};
-	static const int colhor[] = {128, 80, 64};
-	int i, j, hory, start[3], end[3], col[3];
+	int i, j, hory;
 	uint16_t *fbptr, pcol;
 	int cidx, offs = -10;
 	int startidx;

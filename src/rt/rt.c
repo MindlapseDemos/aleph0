@@ -33,7 +33,7 @@ static char *cur_name;
 static char *dirname;
 
 static union rtobject *load_object(struct rtscene *scn, struct ts_node *node);
-static union rtobject *load_csg(struct rtscene *scn, struct ts_node *node, int op);
+static union rtobject *load_csg(struct rtscene *scn, struct ts_node *node, enum rt_csg_op op);
 static int load_material(struct ts_node *node);
 static struct image *get_texture(const char *fname);
 static void print_tree_rec(union rtobject *tree, int lvl, const char *prefix);
@@ -452,7 +452,6 @@ static union rtobject *load_object(struct rtscene *scn, struct ts_node *node)
 	int i, num;
 	float *kd, *ks, *uvs;
 	union rtobject *obj = 0;
-	struct ts_node *c;
 	const char *mtlname, *texfile = 0;
 	struct rtmaterial *mtl = &defmtl;
 
@@ -538,7 +537,7 @@ static union rtobject *load_object(struct rtscene *scn, struct ts_node *node)
 	return obj;
 }
 
-static union rtobject *load_csg(struct rtscene *scn, struct ts_node *node, int op)
+static union rtobject *load_csg(struct rtscene *scn, struct ts_node *node, enum rt_csg_op op)
 {
 	union rtobject *root = 0, *obj[2], *otmp;
 	int num_obj = 0;

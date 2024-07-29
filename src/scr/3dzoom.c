@@ -30,8 +30,6 @@ static struct screen scr = {
 static float cam_theta, cam_phi;
 static float cam_dist = 200;
 
-static long part_start;
-
 static struct g3d_scene *scn;
 
 
@@ -43,7 +41,6 @@ struct screen *zoom3d_screen(void)
 
 static int init(void)
 {
-	int i, j;
 	struct goat3d *g;
 
 	if(!(g = goat3d_create()) || goat3d_load(g, "data/3dzoom/techroom.g3d") == -1) {
@@ -76,8 +73,6 @@ static void start(long trans_time)
 	g3d_polygon_mode(G3D_GOURAUD);
 
 	g3d_clear_color(0, 0, 0);
-
-	part_start = time_msec;
 }
 
 
@@ -88,8 +83,6 @@ static void update(void)
 
 static void draw(void)
 {
-	int i;
-
 	update();
 
 	g3d_matrix_mode(G3D_MODELVIEW);

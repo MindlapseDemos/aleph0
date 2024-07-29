@@ -190,8 +190,7 @@ GOAT3DAPI int goat3d_load(struct goat3d *g, const char *fname)
 	}
 
 	if((res = goat3d_load_file(g, fp)) == 0) {
-		const char *name;
-		if((name = goat3d_get_name(g)) == def_scn_name) {
+		if(goat3d_get_name(g) == def_scn_name) {
 			goat3d_set_name(g, slash ? slash + 1 : fname);
 		}
 	}
@@ -1414,7 +1413,7 @@ GOAT3DAPI void goat3d_get_node_bounds(const struct goat3d_node *node, float *bmi
 
 
 /* tracks */
-#define BASETYPE(type)	((int)(type) & 0xff)
+#define BASETYPE(type)	((enum goat3d_track_type)((int)(type) & 0xff))
 static const int key_val_sz[] = {1, 3, 4, 4};
 
 GOAT3DAPI struct goat3d_track *goat3d_create_track(void)

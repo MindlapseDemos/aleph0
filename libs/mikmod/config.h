@@ -13,7 +13,7 @@
 #define HAVE_STRING_H 1
 #define HAVE_STRSTR 1
 
-#if !defined(_MSC_VER) || _MSC_VER >= 1800
+#if (!defined(_MSC_VER) || _MSC_VER >= 1800) && !defined(__sgi)
 #define HAVE_STDINT_H 1
 #define HAVE_SNPRINTF 1
 #endif

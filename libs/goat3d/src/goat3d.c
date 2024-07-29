@@ -397,7 +397,7 @@ use_mesh_bounds:
 	return 0;
 }
 
-// ---- materials ----
+/* ---- materials ---- */
 GOAT3DAPI int goat3d_add_mtl(struct goat3d *g, struct goat3d_material *mtl)
 {
 	struct goat3d_material **newarr;
@@ -529,7 +529,7 @@ GOAT3DAPI int goat3d_get_mtl_attrib_count(struct goat3d_material *mtl)
 	return dynarr_size(mtl->attrib);
 }
 
-// ---- meshes ----
+/* ---- meshes ---- */
 GOAT3DAPI int goat3d_add_mesh(struct goat3d *g, struct goat3d_mesh *mesh)
 {
 	struct goat3d_mesh **arr;
@@ -845,7 +845,7 @@ GOAT3DAPI int *goat3d_get_mesh_face(struct goat3d_mesh *mesh, int idx)
 	return dynarr_empty(mesh->faces) ? 0 : mesh->faces[idx].v;
 }
 
-// immedate mode state
+/* immedate mode state */
 static enum goat3d_im_primitive im_prim;
 static struct goat3d_mesh *im_mesh;
 static cgm_vec3 im_norm, im_tang;

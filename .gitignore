@@ -67,3 +67,4 @@ core
 *.dll*
 tools/3dview/3dview
 sdldemo
+ucfg.mk

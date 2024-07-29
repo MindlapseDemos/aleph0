@@ -1,3 +1,5 @@
+-include ucfg.mk
+
 obj = src/3dgfx/3dgfx.o src/3dgfx/mesh.o src/3dgfx/meshload.o \
 	  src/3dgfx/polyclip.o src/3dgfx/polyfill.o src/3dgfx/scene.o src/bsptree.o \
 	  src/cfgopt.o src/console.o src/cpuid.o src/darray.o src/demo.o src/dseq.o \
@@ -17,24 +19,19 @@ inc = -I/usr/local/include -Isrc -Isrc/3dgfx -Isrc/rt -Isrc/scr -Isrc/utils \
 	  -Isrc/glut -Ilibs -Ilibs/imago/src -Ilibs/anim/src -Ilibs/mikmod/include \
 	  -Ilibs/goat3d/include
 def = -DMIKMOD_STATIC -DNO_ASM
-opt = -O3 -ffast-math
+opt = -O3
 #dbg = -g
 
 CFLAGS = $(CFLAGS_sys) $(CFLAGS_extra) $(opt) $(dbg) $(def) $(inc)
-LDFLAGS = $(LDFLAGS_sys) $(LDFLAGS_extra) -Llibs/imago -Llibs/anim -Llibs/mikmod \
-		  -Llibs/goat3d
+LDFLAGS = $(LDFLAGS_sys) $(LDFLAGS_extra) -Llibs/imago -Llibs/anim \
+		  -Llibs/mikmod -Llibs/goat3d
 LIBS = -limago -lanim -lmikmod -lgoat3d -lSDL $(LIBS_sys) -lm
-
-.PHONY: all
-all: data $(bin)
 
 $(bin): $(obj) imago anim mikmod goat3d
 	$(CC) -o $@ $(obj) $(LDFLAGS) $(LIBS)
 
 .c.o:
 	$(CC) -o $@ $(CFLAGS) -c $<
-
--include $(dep)
 
 .PHONY: libs
 libs: imago anim mikmod goat3d
@@ -70,8 +67,7 @@ clean:
 cleandep:
 	rm -f $(dep)
 
-.PHONY: data
-data:
-	@tools/procdata
+ucfg.mk: tools/unixconf.sh
+	tools/unixconf.sh
 
 # vi:ft=make:

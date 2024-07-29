@@ -1,10 +1,12 @@
+-include ../../ucfg.mk
+
 obj = src/aabox.o src/chunk.o src/dynarr.o src/extmesh.o src/g3danm.o \
 	  src/g3dscn.o src/goat3d.o src/json.o src/log.o src/read.o src/readgltf.o \
 	  src/track.o src/util.o src/write.o
 
 alib = libgoat3d.a
 
-CFLAGS = -O3 -Iinclude -I.. -I../../src
+CFLAGS = $(CFLAGS_sys) $(CFLAGS_extra) -O3 -Iinclude -I.. -I../../src
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

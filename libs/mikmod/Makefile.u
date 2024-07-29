@@ -1,3 +1,5 @@
+-include ../../ucfg.mk
+
 obj = depackers/mmcmp.o depackers/pp20.o depackers/s404.o depackers/xpk.o \
 	  drivers/drv_alsa.o drivers/drv_ds.o drivers/drv_nos.o drivers/drv_oss.o \
 	  drivers/drv_sdl.o drivers/drv_sgi.o loaders/load_it.o loaders/load_mod.o \
@@ -13,7 +15,7 @@ alib = libmikmod.a
 
 def = -DHAVE_CONFIG_H -DMIKMOD_BUILD
 inc = -I. -Iinclude
-CFLAGS = -O2 $(def) $(inc)
+CFLAGS = $(CFLAGS_sys) $(CFLAGS_extra) -O2 $(def) $(inc)
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

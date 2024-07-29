@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
 #include <errno.h>
 #ifdef WIN32
 #include <malloc.h>
@@ -28,7 +27,7 @@ int proc_image(const char *fname)
 {
 	int i, xsz, ysz, npixels, len;
 	unsigned char *pixels24, *sptr;
-	uint16_t *pixels16, *dptr;
+	unsigned short *pixels16, *dptr;
 	char *outfname, *suffix;
 	FILE *out;
 

@@ -1,3 +1,5 @@
+-include ../../ucfg.mk
+
 obj = src/byteord.o src/conv.o src/filejpeg.o src/filelbm.o src/filepng.o \
 	  src/fileppm.o src/filergbe.o src/filetga.o src/ftmodule.o src/imago2.o \
 	  src/imago_gl.o src/modules.o src/quant.o jpeglib/jcapimin.o \
@@ -22,7 +24,8 @@ obj = src/byteord.o src/conv.o src/filejpeg.o src/filelbm.o src/filepng.o \
 	  zlib/inftrees.o zlib/trees.o zlib/uncompr.o zlib/zutil.o
 alib = libimago.a
 
-CFLAGS = $(arch) -O3 -Izlib -Ilibpng -Ijpeglib
+def = -DPNG_NO_SNPRINTF
+CFLAGS = $(CFLAGS_sys) $(CFLAGS_extra) -O3 -Izlib -Ilibpng -Ijpeglib $(def)
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

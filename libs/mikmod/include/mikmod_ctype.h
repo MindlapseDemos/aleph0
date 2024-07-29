@@ -20,39 +20,39 @@
 #ifndef MIKMOD_CTYPE_H
 #define MIKMOD_CTYPE_H
 
-static inline int mik_isascii(int c) {
+static __inline int mik_isascii(int c) {
     return ((c & ~0x7f) == 0);
 }
 
-static inline int mik_islower(int c) {
+static __inline int mik_islower(int c) {
     return (c >= 'a' && c <= 'z');
 }
 
-static inline int mik_isupper(int c) {
+static __inline int mik_isupper(int c) {
     return (c >= 'A' && c <= 'Z');
 }
 
-static inline int mik_isalpha(int c) {
+static __inline int mik_isalpha(int c) {
     return (mik_islower(c) || mik_isupper(c));
 }
 
-static inline int mik_isdigit(int c) {
+static __inline int mik_isdigit(int c) {
     return (c >= '0' && c <= '9');
 }
 
-static inline int mik_isxdigit(int c) {
+static __inline int mik_isxdigit(int c) {
     return (mik_isdigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
 }
 
-static inline int mik_isalnum(int c) {
+static __inline int mik_isalnum(int c) {
     return (mik_isalpha(c) || mik_isdigit(c));
 }
 
-static inline int mik_isblank(int c) {
+static __inline int mik_isblank(int c) {
     return (c == ' ' || c == '\t');
 }
 
-static inline int mik_isspace(int c) {
+static __inline int mik_isspace(int c) {
     switch (c) {
     case ' ':  case '\t':
     case '\n': case '\r':
@@ -61,23 +61,23 @@ static inline int mik_isspace(int c) {
     return 0;
 }
 
-static inline int mik_isgraph(int c) {
+static __inline int mik_isgraph(int c) {
     return (c > 0x20 && c <= 0x7e);
 }
 
-static inline int mik_isprint(int c) {
+static __inline int mik_isprint(int c) {
     return (c >= 0x20 && c <= 0x7e);
 }
 
-static inline int mik_toascii(int c) {
+static __inline int mik_toascii(int c) {
     return (c & 0x7f);
 }
 
-static inline int mik_tolower(int c) {
+static __inline int mik_tolower(int c) {
     return ((mik_isupper(c)) ? (c | ('a' - 'A')) : c);
 }
 
-static inline int mik_toupper(int c) {
+static __inline int mik_toupper(int c) {
     return ((mik_islower(c)) ? (c & ~('a' - 'A')) : c);
 }
 

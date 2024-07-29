@@ -10,16 +10,15 @@
 #include <alloca.h>
 #endif
 
-#ifdef __GNUC__
 #define INLINE __inline
+
+#ifdef __GNUC__
 #define PACKED __attribute__((packed))
 
 #elif defined(__WATCOMC__)
-#define INLINE __inline
 #define PACKED
 
 #else
-#define INLINE
 #define PACKED
 #endif
 
@@ -115,7 +114,7 @@ void halt(void);
 #endif
 
 #ifdef __GNUC__
-#if defined(__i386__) || defined(__x86_64__)
+#ifndef NO_ASM
 #define memset16(dest, val, count) \
 	do { \
 		uint32_t dummy1, dummy2; \
@@ -136,13 +135,7 @@ void halt(void);
 			: "0"(dest), "a"((uint16_t)(val)), "1"(count) \
 			: "flags", "memory"); \
 	} while(0)
-#else
-static void INLINE memset16(void *dest, uint16_t val, int count)
-{
-	uint16_t *ptr = dest;
-	while(count--) *ptr++ = val;
-}
-#endif
+#endif	/* !NO_ASM */
 
 #ifndef NO_PENTIUM
 #define perf_start()  asm volatile ( \
@@ -230,6 +223,14 @@ static unsigned int __inline get_cs(void)
 		mov [res], eax
 	}
 	return res;
+}
+#endif
+
+#ifdef NO_ASM
+static void INLINE memset16(void *dest, uint16_t val, int count)
+{
+	uint16_t *ptr = dest;
+	while(count--) *ptr++ = val;
 }
 #endif
 

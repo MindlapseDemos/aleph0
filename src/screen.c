@@ -75,10 +75,21 @@ void populate_screens(void)
 	assert(num_screens <= NUM_SCR);
 }
 
+struct scrtime {
+	const char *name;
+	long time;
+};
+
+static int scrtime_cmp(const void *a, const void *b)
+{
+	return ((struct scrtime*)b)->time - ((struct scrtime*)a)->time;
+}
+
 int scr_init(void)
 {
-	int i, idx;
+	int i, idx = 0;
 	unsigned long t0;
+	struct scrtime itime[NUM_SCR];
 
 	start_loadscr();
 
@@ -96,9 +107,17 @@ int scr_init(void)
 				return -1;
 			}
 		} else {
-			printf("%s init took %lu ms\n", scr[i]->name, get_msec() - t0);
+			itime[idx].name = scr[i]->name;
+			itime[idx++].time = get_msec() - t0;
 		}
 	}
+
+	qsort(itime, idx, sizeof *itime, scrtime_cmp);
+	printf("\ninit times (msec):\n");
+	for(i=0; i<idx; i++) {
+		printf("  %s: %ld\n", itime[i].name, itime[i].time);
+	}
+	putchar('\n');
 
 	/* remove any null pointers (failed init screens) from the array */
 	idx = 0;

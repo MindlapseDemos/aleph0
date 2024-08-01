@@ -46,7 +46,7 @@ static int endmesh(struct g3d_mesh **marr, struct g3d_mesh *m, int prim)
 {
 	void *tmp;
 
-	if(dynarr_size(m->varr) && dynarr_size(&m->iarr)) {
+	if(dynarr_size(m->varr) && dynarr_size(m->iarr)) {
 		m->vcount = dynarr_size(m->varr);
 		m->icount = dynarr_size(m->iarr);
 		m->varr = dynarr_finalize(m->varr);
@@ -60,7 +60,7 @@ static int endmesh(struct g3d_mesh **marr, struct g3d_mesh *m, int prim)
 		*marr = tmp;
 
 		printf("  - %s mesh: %s: %d vertices, %d faces\n", prim == 4 ? "quad" : "triangle",
-				m->name, m->vcount, m->icount / m->prim);
+				m->name ? m->name : "?", m->vcount, m->icount / m->prim);
 	} else {
 		dynarr_free(m->varr);
 		m->varr = 0;

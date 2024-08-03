@@ -33,7 +33,7 @@ static int quit;
 static SDL_Surface *fbsurf;
 
 static int fbscale = 3;
-static int xsz, ysz;
+static int xsz, ysz, sdlbpp;
 static unsigned int sdl_flags = SDL_SWSURFACE;
 
 #define MODE(w, h)	\
@@ -66,23 +66,18 @@ int main(int argc, char **argv)
 	xsz = FB_WIDTH * fbscale;
 	ysz = FB_HEIGHT * fbscale;
 
-	/* now start_loadscr sets up fb_pixels to the space used by the loading image,
-	 * so no need to allocate another framebuffer
-	 */
-#if 0
-	/* allocate 1 extra row as a guard band, until we fucking fix the rasterizer */
-	if(!(fb_pixels = malloc(FB_WIDTH * (FB_HEIGHT + 1) * FB_BPP / CHAR_BIT))) {
-		fprintf(stderr, "failed to allocate virtual framebuffer\n");
-		return 1;
-	}
-#endif
-
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_NOPARACHUTE);
-	if(!(fbsurf = SDL_SetVideoMode(xsz, ysz, 32, sdl_flags))) {
-		fprintf(stderr, "failed to set video mode %dx%d %dbpp\n", FB_WIDTH, FB_HEIGHT, FB_BPP);
-		/*free(fb_pixels);*/
-		SDL_Quit();
-		return 1;
+	if(!(fbsurf = SDL_SetVideoMode(xsz, ysz, 16, sdl_flags))) {
+		if(!(fbsurf = SDL_SetVideoMode(xsz, ysz, 32, sdl_flags))) {
+			fprintf(stderr, "failed to set video mode %dx%d %dbpp\n", FB_WIDTH, FB_HEIGHT, FB_BPP);
+			SDL_Quit();
+			return 1;
+		}
+		printf("SDL 32bpp video mode\n");
+		sdlbpp = 32;
+	} else {
+		printf("SDL 16bpp video mode\n");
+		sdlbpp = 16;
 	}
 	SDL_WM_SetCaption("dosdemo/SDL", 0);
 	SDL_ShowCursor(0);
@@ -99,7 +94,6 @@ int main(int argc, char **argv)
 
 	time_msec = 0;
 	if(demo_init_cfgopt(argc, argv) == -1 || demo_init() == -1) {
-		/*free(fb_pixels);*/
 		SDL_Quit();
 		return 1;
 	}
@@ -217,8 +211,8 @@ void wait_vsync(void)
 void blit_frame(void *pixels, int vsync)
 {
 	int i, j;
-	unsigned short *sptr;
-	uint32_t *dptr;
+	uint16_t *sptr, *dptr16;
+	uint32_t *dptr32;
 
 	demo_post_draw(pixels);
 
@@ -231,29 +225,103 @@ void blit_frame(void *pixels, int vsync)
 	}
 
 	sptr = fb_pixels;
-	dptr = (uint32_t*)fbsurf->pixels + (fbsurf->w - xsz) / 2;
-	for(i=0; i<FB_HEIGHT; i++) {
-		for(j=0; j<FB_WIDTH; j++) {
-			int x, y;
-			unsigned short pixel = *sptr++;
+	switch(sdlbpp) {
+	case 16:
+		if(fbscale == 1) {
+			memcpy(fbsurf->pixels, sptr, FB_WIDTH * FB_HEIGHT * 2);
+			break;
+		}
+		dptr16 = (uint16_t*)fbsurf->pixels + (fbsurf->w - xsz) / 2;
+		dptr32 = (uint32_t*)dptr16;
 
-			int r = UNPACK_R16(pixel);
-			int g = UNPACK_G16(pixel);
-			int b = UNPACK_B16(pixel);
+		switch(fbscale) {
+		case 2:
+			for(i=0; i<FB_HEIGHT; i++) {
+				for(j=0; j<FB_WIDTH; j++) {
+					uint32_t pixel = *sptr++;
+					pixel |= pixel << 16;
+					dptr32[0] = pixel;
+					dptr32[320] = pixel;
+					dptr32++;
+				}
+				dptr32 += fbsurf->w - FB_WIDTH;
+			}
+			break;
+
+		case 3:
+			for(i=0; i<FB_HEIGHT; i++) {
+				for(j=0; j<FB_WIDTH; j++) {
+					uint16_t pixel = *sptr++;
+					dptr16[0] = dptr16[1] = dptr16[2] = pixel;
+					dptr16[960] = dptr16[961] = dptr16[962] = pixel;
+					dptr16[1920] = dptr16[1921] = dptr16[1922] = pixel;
+					dptr16 += 3;
+				}
+				dptr16 += (fbsurf->w - FB_WIDTH) * 3;
+			}
+			break;
+
+		case 4:
+			for(i=0; i<FB_HEIGHT; i++) {
+				for(j=0; j<FB_WIDTH; j++) {
+					uint32_t pixel = *sptr++;
+					pixel |= pixel << 16;
+					dptr32[0] = dptr32[1] = pixel;
+					dptr32[640] = dptr32[641] = pixel;
+					dptr32[1280] = dptr32[1281] = pixel;
+					dptr32[1920] = dptr32[1921] = pixel;
+					dptr32 += 2;
+				}
+				dptr32 += (fbsurf->w - FB_WIDTH) << 1;
+			}
+			break;
+
+		default:
+			for(i=0; i<FB_HEIGHT; i++) {
+				for(j=0; j<FB_WIDTH; j++) {
+					int x, y;
+					uint16_t pixel = *sptr++;
+					for(y=0; y<fbscale; y++) {
+						for(x=0; x<fbscale; x++) {
+							dptr16[y * fbsurf->w + x] = pixel;
+						}
+					}
+					dptr16 += fbscale;
+				}
+				dptr16 += (fbsurf->w - FB_WIDTH) * fbscale;
+			}
+		}
+		break;
+
+	case 32:
+		dptr32 = (uint32_t*)fbsurf->pixels + (fbsurf->w - xsz) / 2;
+		for(i=0; i<FB_HEIGHT; i++) {
+			for(j=0; j<FB_WIDTH; j++) {
+				int x, y;
+				uint16_t pixel = *sptr++;
+
+				int r = UNPACK_R16(pixel);
+				int g = UNPACK_G16(pixel);
+				int b = UNPACK_B16(pixel);
 #ifdef __EMSCRIPTEN__
-			uint32_t pix32 = PACK_RGB32(b, g, r);
+				uint32_t pix32 = PACK_RGB32(b, g, r);
 #else
-			uint32_t pix32 = PACK_RGB32(r, g, b);
+				uint32_t pix32 = PACK_RGB32(r, g, b);
 #endif
 
-			for(y=0; y<fbscale; y++) {
-				for(x=0; x<fbscale; x++) {
-					dptr[y * fbsurf->w + x] = pix32;
+				for(y=0; y<fbscale; y++) {
+					for(x=0; x<fbscale; x++) {
+						dptr32[y * fbsurf->w + x] = pix32;
+					}
 				}
+				dptr32 += fbscale;
 			}
-			dptr += fbscale;
+			dptr32 += (fbsurf->w - FB_WIDTH) * fbscale;
 		}
-		dptr += (fbsurf->w - FB_WIDTH) * fbscale;
+		break;
+
+	default:
+		break;
 	}
 
 	if(SDL_MUSTLOCK(fbsurf)) {

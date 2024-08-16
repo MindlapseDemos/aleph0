@@ -169,12 +169,12 @@ static void calc_grad(struct msurf_volume *vol, int x, int y, int z, cgm_vec3 *g
 	if(y < vol->yres - 1) {
 		grad->y = ptr->val - ptr[vol->xstore].val;
 	} else {
-		grad->y = ptr[-vol->xstore].val - ptr->val;
+		grad->y = ptr[-(int)vol->xstore].val - ptr->val;
 	}
 	if(z < vol->zres - 1) {
 		grad->z = ptr->val - ptr[vol->xystore].val;
 	} else {
-		grad->z = ptr[-vol->xystore].val - ptr->val;
+		grad->z = ptr[-(int)vol->xystore].val - ptr->val;
 	}
 #ifdef NORMALIZE_GRAD
 	fast_normalize(&grad->x);

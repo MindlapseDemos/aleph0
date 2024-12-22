@@ -613,8 +613,7 @@ static void blurBuffer(unsigned char *buffer)
 
 static void draw(void)
 {
-	static int test = 0;
-	const int t = 0;// time_msec - startingTime;
+	const int t = time_msec - startingTime;
 
 	int i, j, pi = 0;
 
@@ -624,31 +623,28 @@ static void draw(void)
 
 		clearBlobBuffer(polkaBuffer[i]);
 
-		if (test == 0) {
-			if (i == 0) {
-				updateDotsVolumeBufferRadial(t);
+		if (i == 0) {
+			updateDotsVolumeBufferRadial(t);
+		}
+		else {
+			if (t < 10240) {
+				updateDotsVolumeBufferRadialRays(t);
 			}
 			else {
-				if (t < 10240) {
-					updateDotsVolumeBufferRadialRays(t);
-				}
-				else {
-					updateDotsVolumeBufferPlasma(t);
-					pi = 1;
-					si = 1;
-				}
+				updateDotsVolumeBufferPlasma(t);
+				pi = 1;
+				si = 1;
 			}
-			test = 1;
 		}
 
-		px = sin((3550 * i + (i + 1) * t) / 2277.0f) * 56;
-		py = sin((4950 * i + (2 - i) * t) / 1567.0f) * 32;
+		px = sin((3550 * i + (i + 1) * t) / 2277.0f) * 6 * 56;
+		py = sin((4950 * i + (2 - i) * t) / 1567.0f) * 6 * 32;
 		setGridPos(&gridPos[i], px, py, 1024);
 
 		OptGrid3Drun(i, si, polkaBuffer[i], t);
 	}
 
-	/*j = sin(t / 1100.0f) * 13 - 5;
+	j = sin(t / 1100.0f) * 13 - 5;
 	if (j < 0) j = 0;
 	if (j > 3) j = 3;
 	for (i = 0; i < j; ++i) {
@@ -659,13 +655,13 @@ static void draw(void)
 	if (j > 3) j = 3;
 	for (i = 0; i < j; ++i) {
 		blurBuffer(polkaBuffer[1]);
-	}*/
+	}
 
 	//42-41
 	buffer8bppToVram(polkaBuffer[0], polkaPal32[0]);
-	//buffer8bppORwithVram(polkaBuffer[1], polkaPal32[1+pi]);
+	buffer8bppORwithVram(polkaBuffer[1], polkaPal32[1+pi]);
 
-	//backgroundLinesTest(t);
+	backgroundLinesTest(t);
 
 	swap_buffers(0);
 }

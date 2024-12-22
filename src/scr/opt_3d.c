@@ -46,12 +46,12 @@ static void createRotationMatrixValues(int rotX, int rotY, int rotZ, int *mat)
 	const float aY = (float)(DEG_TO_RAD_256((float)rotY / 64.0f));
 	const float aZ = (float)(DEG_TO_RAD_256((float)rotZ / 64.0f));
 
-	const int cosxr = (int)(FLOAT_TO_INT(cos(aX), FP_BASE));
-	const int cosyr = (int)(FLOAT_TO_INT(cos(aY), FP_BASE));
-	const int coszr = (int)(FLOAT_TO_INT(cos(aZ), FP_BASE));
-	const int sinxr = (int)(FLOAT_TO_INT(sin(aX), FP_BASE));
-	const int sinyr = (int)(FLOAT_TO_INT(sin(aY), FP_BASE));
-	const int sinzr = (int)(FLOAT_TO_INT(sin(aZ), FP_BASE));
+	const int cosxr = (int)(FLOAT_TO_FIXED(cos(aX), FP_BASE));
+	const int cosyr = (int)(FLOAT_TO_FIXED(cos(aY), FP_BASE));
+	const int coszr = (int)(FLOAT_TO_FIXED(cos(aZ), FP_BASE));
+	const int sinxr = (int)(FLOAT_TO_FIXED(sin(aX), FP_BASE));
+	const int sinyr = (int)(FLOAT_TO_FIXED(sin(aY), FP_BASE));
+	const int sinzr = (int)(FLOAT_TO_FIXED(sin(aZ), FP_BASE));
 
 	*rotVecs++ = (FIXED_MUL(cosyr, coszr, FP_BASE)) << FP_BASE_TO_CORE;
 	*rotVecs++ = (FIXED_MUL(FIXED_MUL(sinxr, sinyr, FP_BASE), coszr, FP_BASE) - FIXED_MUL(cosxr, sinzr, FP_BASE)) << FP_BASE_TO_CORE;

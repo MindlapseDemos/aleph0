@@ -10,7 +10,6 @@
 #define FIXED_DIV(x,y,b) (((x) << (b)) / (y))
 #define FIXED_SQRT(x,b) (isqrt((x) << (b)))
 
-#define FLOAT_TO_INT(x,b)		FLOAT_TO_FIXED(x,b)
 #define AFTER_MUL_ADDS(x,b)		FIXED_TO_INT(x,b)
 #define AFTER_RECZ_MUL(x,b)		FIXED_TO_INT(x,b)
 

@@ -98,9 +98,10 @@ static void transformAndProjectAxesBoxDotsEffect(int objIndex)
 	Vertex3D* axisZ = axisVerticesZ;
 	int countZ = VERTICES_DEPTH;
 
-	const int objPosX = gridPos[objIndex].x;
-	const int objPosY = gridPos[objIndex].y;
-	const int objPosZ = gridPos[objIndex].z;
+//  Commented out. We preadd the transforms in the gridaxes now.
+//	const int objPosX = gridPos[objIndex].x;
+//	const int objPosY = gridPos[objIndex].y;
+//	const int objPosZ = gridPos[objIndex].z;
 
 	do {
 		Vertex3D* axisY = axisVerticesY;
@@ -112,11 +113,11 @@ static void transformAndProjectAxesBoxDotsEffect(int objIndex)
 			do {
 				const unsigned char c = *src++;
 				if (c != 0) {
-					const int sz = FIXED_TO_INT(axisX->z + axisY->z + axisZ->z, FP_CORE) + objPosZ;
+					const int sz = FIXED_TO_INT(axisX->z + axisY->z + axisZ->z, FP_CORE);// +objPosZ;
 					if (sz > 0 && sz < REC_DIV_Z_MAX) {
 						const int recZ = recDivZ[(int)sz];
-						const int sx = POLKA_BUFFER_WIDTH / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE) + objPosX;
-						const int sy = POLKA_BUFFER_HEIGHT / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE) + objPosY;
+						const int sx = POLKA_BUFFER_WIDTH / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);// +objPosX;
+						const int sy = POLKA_BUFFER_HEIGHT / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);// +objPosY;
 
 						dst->xs = sx;
 						dst->ys = sy;
@@ -133,19 +134,24 @@ static void transformAndProjectAxesBoxDotsEffect(int objIndex)
 	} while (--countZ != 0);
 }
 
-static void generateAxisVertices(Vertex3D* rotatedAxis, Vertex3D* dstAxis, int count)
+static void generateAxisVertices(Vertex3D* rotatedAxis, Vertex3D* dstAxis, int objIndex, int count)
 {
+	// It seems weird I divide by 3. I preadd the object translation inside the grid axes, later three components are added that's why it would be like 3*trans later
+	const float objPosX = (float)gridPos[objIndex].x / 3;
+	const float objPosY = (float)gridPos[objIndex].y / 3;
+	const float objPosZ = (float)gridPos[objIndex].z / 3;
+
 	const float dx = (float)rotatedAxis->x / (VERTICES_WIDTH - 1);
 	const float dy = (float)rotatedAxis->y / (VERTICES_HEIGHT - 1);
 	const float dz = (float)rotatedAxis->z / (VERTICES_DEPTH - 1);
 	const float halfSteps = (float)count / 2;
-	float px = -halfSteps * dx;
-	float py = -halfSteps * dy;
-	float pz = -halfSteps * dz;
+	float px = -halfSteps * dx + objPosX;
+	float py = -halfSteps * dy + objPosY;
+	float pz = -halfSteps * dz + objPosZ;
 	do {
-		const int x = FLOAT_TO_INT(px, FP_CORE);
-		const int y = FLOAT_TO_INT(py, FP_CORE);
-		const int z = FLOAT_TO_INT(pz, FP_CORE);
+		const int x = FLOAT_TO_FIXED(px, FP_CORE);
+		const int y = FLOAT_TO_FIXED(py, FP_CORE);
+		const int z = FLOAT_TO_FIXED(pz, FP_CORE);
 		SET_OPT_VERTEX(x, y, z, dstAxis);
 		px += dx;
 		py += dy;
@@ -154,11 +160,11 @@ static void generateAxisVertices(Vertex3D* rotatedAxis, Vertex3D* dstAxis, int c
 	} while (--count != 0);
 }
 
-static void generateAxesVertices(Vertex3D* axesEnds)
+static void generateAxesVertices(Vertex3D* axesEnds, int objIndex)
 {
-	generateAxisVertices(&axesEnds[0], axisVerticesX, VERTICES_WIDTH);
-	generateAxisVertices(&axesEnds[1], axisVerticesY, VERTICES_HEIGHT);
-	generateAxisVertices(&axesEnds[2], axisVerticesZ, VERTICES_DEPTH);
+	generateAxisVertices(&axesEnds[0], axisVerticesX, objIndex, VERTICES_WIDTH);
+	generateAxisVertices(&axesEnds[1], axisVerticesY, objIndex, VERTICES_HEIGHT);
+	generateAxisVertices(&axesEnds[2], axisVerticesZ, objIndex, VERTICES_DEPTH);
 }
 
 static void initGrid3D()
@@ -202,7 +208,7 @@ void OptGrid3Dinit()
 
 	recDivZ = (int*)malloc(REC_DIV_Z_MAX * sizeof(int));
 	for (z = 1; z < REC_DIV_Z_MAX; ++z) {
-		recDivZ[z] = FLOAT_TO_INT(1 / (float)z, FP_CORE);
+		recDivZ[z] = FLOAT_TO_FIXED(1 / (float)z, FP_CORE);
 	}
 }
 
@@ -359,8 +365,7 @@ static void OptGrid3Drun(int objIndex, int sizeIndex, unsigned char* buffer, int
 
 	initScreenPointsGrid(transformedGridVertices);
 	rotateVertices(objectAxesVertices, transformedAxesVertices, 3, (2-objIndex) * ticks, (2+objIndex) * ticks, (3-objIndex) * ticks);
-	generateAxesVertices(transformedAxesVertices);
-
+	generateAxesVertices(transformedAxesVertices, objIndex);
 	transformAndProjectAxesBoxDotsEffect(objIndex);
 
 	/* drawBoxLines(buffer, -1, objIndex); */
@@ -608,7 +613,8 @@ static void blurBuffer(unsigned char *buffer)
 
 static void draw(void)
 {
-	const int t = time_msec - startingTime;
+	static int test = 0;
+	const int t = 0;// time_msec - startingTime;
 
 	int i, j, pi = 0;
 
@@ -618,16 +624,21 @@ static void draw(void)
 
 		clearBlobBuffer(polkaBuffer[i]);
 
-		if (i == 0) {
-			updateDotsVolumeBufferRadial(t);
-		} else {
-			if (t < 10240) {
-				updateDotsVolumeBufferRadialRays(t);
-			} else {
-				updateDotsVolumeBufferPlasma(t);
-				pi = 1;
-				si = 1;
+		if (test == 0) {
+			if (i == 0) {
+				updateDotsVolumeBufferRadial(t);
 			}
+			else {
+				if (t < 10240) {
+					updateDotsVolumeBufferRadialRays(t);
+				}
+				else {
+					updateDotsVolumeBufferPlasma(t);
+					pi = 1;
+					si = 1;
+				}
+			}
+			test = 1;
 		}
 
 		px = sin((3550 * i + (i + 1) * t) / 2277.0f) * 56;
@@ -637,7 +648,7 @@ static void draw(void)
 		OptGrid3Drun(i, si, polkaBuffer[i], t);
 	}
 
-	j = sin(t / 1100.0f) * 13 - 5;
+	/*j = sin(t / 1100.0f) * 13 - 5;
 	if (j < 0) j = 0;
 	if (j > 3) j = 3;
 	for (i = 0; i < j; ++i) {
@@ -648,12 +659,13 @@ static void draw(void)
 	if (j > 3) j = 3;
 	for (i = 0; i < j; ++i) {
 		blurBuffer(polkaBuffer[1]);
-	}
+	}*/
 
+	//42-41
 	buffer8bppToVram(polkaBuffer[0], polkaPal32[0]);
-	buffer8bppORwithVram(polkaBuffer[1], polkaPal32[1+pi]);
+	//buffer8bppORwithVram(polkaBuffer[1], polkaPal32[1+pi]);
 
-	backgroundLinesTest(t);
+	//backgroundLinesTest(t);
 
 	swap_buffers(0);
 }

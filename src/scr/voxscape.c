@@ -613,6 +613,22 @@ static void renderScape(int petrT)
 		CLAMP(shadePalI, 0, VIS_VER_STEPS-1)
 		pmapPtrShade = pmap + shadeVoxOff[shadePalI];
 
+		// In transitions from close to mid to far, clone the yMaxHolder for nearby columns 
+		if (i == VIS_CLOSE) {
+			for (j = 0; j < VIS_HOR_STEPS; j+= 4) {
+				const int yMax = yMaxHolder[j];
+				yMaxHolder[j+1] = yMax;
+				yMaxHolder[j+2] = yMax;
+				yMaxHolder[j+3] = yMax;
+			}
+		} else if (i == VIS_MID) {
+			for (j = 0; j < VIS_HOR_STEPS; j+= 2) {
+				const int yMax = yMaxHolder[j];
+				yMaxHolder[j+1] = yMax;
+			}
+		}
+
+
 		for (j = 0; j < VIS_HOR_STEPS; j+= pixStep) {
 			const int yMax = yMaxHolder[j];
 			if (yMax <= FB_HEIGHT) {
@@ -640,11 +656,10 @@ static void renderScape(int petrT)
 
 					yH = yMaxHolder[j];
 					hCount = h - yH;
+					yMaxHolder[j] = h;
 					dst = dstBase - (yH -1) * FB_WIDTH + j;
 
 					if (pixStep == 1) {
-						yMaxHolder[j] = h;
-
 						if (i < VIS_HAZE) {
 							do {
 								*dst = cv;
@@ -670,29 +685,22 @@ static void renderScape(int petrT)
 								dst -= FB_WIDTH;
 							} while (--hCount > 0);
 						}
-					} else {
-						if (pixStep==2) {
-							yMaxHolder[j] = h;
-							yMaxHolder[j+1] = h;
-						} else {	// it's 4
-							yMaxHolder[j] = h;
-							yMaxHolder[j+1] = h;
-							yMaxHolder[j+2] = h;
-							yMaxHolder[j+3] = h;
-						}
+					} else {	// it's 2 or 4
+						const uint32_t cv32 = (cv << 16) | cv;
+						uint32_t* dst32 = (uint32_t*)dst;
 
-						do {
-							if (pixStep==2) {
-								*dst = cv;
-								*(dst + 1) = cv;
-							} else {	// it's 4
-								*dst = cv;
-								*(dst + 1) = cv;
-								*(dst + 2) = cv;
-								*(dst + 3) = cv;
-							}
-							dst -= FB_WIDTH;
-						} while (--hCount > 0);
+						if (pixStep==2) {
+							do {
+								*dst32 = cv32;
+								dst32 -= FB_WIDTH/2;
+							} while (--hCount > 0);
+						} else {	// it's 4
+							do {
+								*dst32 = cv32;
+								*(dst32 + 1) = cv32;
+								dst32 -= FB_WIDTH/2;
+							} while (--hCount > 0);
+						}
 					}
 				}
 			}

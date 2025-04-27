@@ -639,27 +639,24 @@ static void renderScape(int petrT)
 					}
 
 					yH = yMaxHolder[j];
+					hCount = h - yH;
+					dst = dstBase - (yH -1) * FB_WIDTH + j;
+
 					if (pixStep == 1) {
-						if (i >= VIS_HAZE) {
+						yMaxHolder[j] = h;
+
+						if (i < VIS_HAZE) {
+							do {
+								*dst = cv;
+								dst -= FB_WIDTH;
+							} while (--hCount > 0);
+						} else {
+							const int hi = (3*(i - VIS_HAZE)) / 2;
+
 							cvR = (cv >> 11) & 31;
 							cvG = (cv >> 5) & 63;
 							cvB = cv & 31;
-						}
-						yMaxHolder[j] = h;
-					} else {
-						for (n = 0; n < pixStep; ++n) {
-							yMaxHolder[j + n] = h;
-						}
-					}
-
-					hCount = h - yH;
-					dst = dstBase - (yH -1) * FB_WIDTH + j;
-					do {
-						if (pixStep == 1) {
-							if (i < VIS_HAZE) {
-								*dst = cv;
-							} else {
-								const int hi = (3*(i - VIS_HAZE)) / 2;
+							do {
 								if (hi < VIS_FAR - VIS_HAZE) {
 									const uint16_t bg = *dst;
 									const int bgR = (bg >> 11) & 31;
@@ -670,17 +667,33 @@ static void renderScape(int petrT)
 									const int b = (bgB * hi + cvB * ((VIS_FAR - VIS_HAZE) - hi)) / (VIS_FAR - VIS_HAZE);
 									*dst = (r << 11) | (g << 5) | b;
 								}
-							}
+								dst -= FB_WIDTH;
+							} while (--hCount > 0);
 						}
-						else {
-							for (n = 0; n < pixStep; ++n) {
-								/* if (pixStep == 2) cv |= 15;
-								if (pixStep == 4) cv |= 31; */
-								*(dst + n) = cv;
-							}
+					} else {
+						if (pixStep==2) {
+							yMaxHolder[j] = h;
+							yMaxHolder[j+1] = h;
+						} else {	// it's 4
+							yMaxHolder[j] = h;
+							yMaxHolder[j+1] = h;
+							yMaxHolder[j+2] = h;
+							yMaxHolder[j+3] = h;
 						}
-						dst -= FB_WIDTH;
-					} while (--hCount > 0);
+
+						do {
+							if (pixStep==2) {
+								*dst = cv;
+								*(dst + 1) = cv;
+							} else {	// it's 4
+								*dst = cv;
+								*(dst + 1) = cv;
+								*(dst + 2) = cv;
+								*(dst + 3) = cv;
+							}
+							dst -= FB_WIDTH;
+						} while (--hCount > 0);
+					}
 				}
 			}
 			vx += dvx; vy += dvy;

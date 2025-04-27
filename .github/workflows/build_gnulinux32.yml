@@ -17,7 +17,7 @@ jobs:
       run: |
         sudo dpkg --add-architecture i386
         sudo apt-get update
-        sudo apt-get install gcc-multilib libgl-dev:i386 libpng-dev libjpeg-dev libasound2-dev:i386 nasm
+        sudo apt-get install gcc-multilib libgl-dev:i386 libpng-dev libjpeg-dev libasound2-dev:i386 nasm subversion
 
     - name: prepare datafiles
       run: |

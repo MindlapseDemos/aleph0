@@ -9,7 +9,6 @@
 
 #include "opt_rend.h"
 
-
 static int init(void);
 static void destroy(void);
 static void start(long trans_time);
@@ -46,8 +45,8 @@ typedef struct PathPointTrack {
 #define BIG_LIGHT_HEIGHT BIG_LIGHT_WIDTH
 
 #define NUM_PARTICLES 64
-#define PARTICLE_LIGHT_WIDTH 16
-#define PARTICLE_LIGHT_HEIGHT 16
+#define PARTICLE_LIGHT_WIDTH 8
+#define PARTICLE_LIGHT_HEIGHT 8
 
 #define HMAP_WIDTH 256
 #define HMAP_HEIGHT 256
@@ -56,7 +55,6 @@ typedef struct PathPointTrack {
 #define LMAP_HEIGHT 512
 #define LMAP_OFFSET_X ((LMAP_WIDTH - FB_WIDTH) / 2)
 #define LMAP_OFFSET_Y ((LMAP_HEIGHT - FB_HEIGHT) / 2)
-
 
 static unsigned char electroPathData[] = {81,
         6, 117,5,4,3, 114,5,3,4, 110,1,2,6, 110,251,1,3, 113,248,0,7, 120,248,255,7,
@@ -250,7 +248,7 @@ static int init(void)
 	heightmap = malloc(sizeof(*heightmap) * hm_size);
 	lightmap = malloc(sizeof(*lightmap) * lm_size);
 	bumpOffset = malloc(sizeof(*bumpOffset) * hm_size);
-	bumpOffsetScreen = malloc(sizeof(*bumpOffset) * FB_WIDTH * FB_HEIGHT);
+	bumpOffsetScreen = malloc(sizeof(*bumpOffsetScreen) * FB_WIDTH * FB_HEIGHT);
 
 	bigLightEdges = (Edge*)malloc(BIG_LIGHT_HEIGHT * sizeof(*bigLightEdges));
 
@@ -276,7 +274,7 @@ static int init(void)
 			const int ii = yp0 + x;
 			const int iRight = yp0 + ((x + 1) & (HMAP_WIDTH - 1));
 			const int iDown = yp1 +x;
-			const float offsetPower = 0.75f;
+			const float offsetPower = 0.5f;
 			int dx, dy, di;
 
 			dx = (int)((heightmap[ii] - heightmap[iRight]) * offsetPower);
@@ -331,7 +329,8 @@ static int init(void)
 			float invDist = ((float)particleRadius - (float)sqrt(xc * xc + yc * yc)) / (float)particleRadius;
 			if (invDist < 0.0f) invDist = 0.0f;
 
-			c = (int)(pow(invDist, 0.75f) * 31);
+			c = (int)(pow(invDist, 1.5f) * 31);
+			CLAMP(c,0,31)
 			particleLight[i++] = ((c >> 1) << 11) | (c << 5) | (c >> 1);
 		}
 	}
@@ -414,11 +413,40 @@ static void renderParticles()
 	}
 }
 
-static void renderBigLights()
+static void renderFirstBigLight()
+{
+	int y, yLine;
+	unsigned short* src;
+	unsigned short* dst;
+
+	Point2D* p = &bigLightPoint[0];
+
+	int x0 = p->x;
+	int y0 = p->y;
+	int x1 = p->x + BIG_LIGHT_WIDTH;
+	int y1 = p->y + BIG_LIGHT_HEIGHT;
+
+	dst = lightmap + (y0 + LMAP_OFFSET_Y) * LMAP_WIDTH + x0 + LMAP_OFFSET_X;
+	src = bigLight[0];
+
+	yLine = 0;
+	for (y = y0; y < y1; y++) {
+		const short xIn = bigLightEdges[yLine].xIn;
+		if (xIn != -1) {
+			const short xOut = bigLightEdges[yLine].xOut;
+			memcpy(dst + xIn, src + xIn, 2 * (xOut - xIn));
+		}
+		dst += LMAP_WIDTH;
+		src += BIG_LIGHT_WIDTH;
+		yLine++;
+	}
+}
+
+static void renderOtherBigLights()
 {
 	int i;
-	for (i = 0; i < NUM_BIG_LIGHTS; i++) {
-		int y;
+	for (i = 1; i < NUM_BIG_LIGHTS; i++) {
+		int y, yLine;
 		unsigned short* src;
 		unsigned short* dst;
 
@@ -429,69 +457,45 @@ static void renderBigLights()
 		int x1 = p->x + BIG_LIGHT_WIDTH;
 		int y1 = p->y + BIG_LIGHT_HEIGHT;
 
-		//int xl = 0;
-		//int yl = 0;
-
-		/*if (y0 < 0) {
-			yl = -y0;
-			y0 = 0;
-		}
-
-		if (y1 > FB_HEIGHT) y1 = FB_HEIGHT;*/
-
 		dst = lightmap + (y0 + LMAP_OFFSET_Y) * LMAP_WIDTH + x0 + LMAP_OFFSET_X;
-		src = bigLight[i];// +yl * BIG_LIGHT_WIDTH + xl;
+		src = bigLight[i];
 
-		if (i==0) {
-			int yLine = 0;// yl;
-			for (y = y0; y < y1; y++) {
-				const short xIn = bigLightEdges[yLine].xIn;
-				if (xIn != -1) {
-					const short xOut = bigLightEdges[yLine].xOut;
-					memcpy(dst + xIn, src + xIn, 2 * (xOut - xIn));
+		yLine = 0;
+		for (y = y0; y < y1; y++) {
+			const short xIn = bigLightEdges[yLine].xIn;
+			if (xIn != -1) {
+				const short xOut = bigLightEdges[yLine].xOut;
+
+				uint16_t* srcIn = src + xIn;
+				uint16_t* dstIn = dst + xIn;
+
+				uint32_t* src32, * dst32;
+				int count;
+
+				int xp0 = x0 + xIn;
+				int xp1 = x0 + xOut - 1;
+
+				if (xp0 & 1) {
+					*dstIn++ |= *srcIn++;
+					++xp0;
 				}
-				dst += LMAP_WIDTH;
-				src += BIG_LIGHT_WIDTH;
-				yLine++;
-			}
-		} else {
-			int yLine = 0;// yl;
-			for (y = y0; y < y1; y++) {
-				const short xIn = bigLightEdges[yLine].xIn;
-				if (xIn != -1) {
-					const short xOut = bigLightEdges[yLine].xOut;
 
-					uint16_t* srcIn = src + xIn;
-					uint16_t* dstIn = dst + xIn;
+				src32 = (uint32_t*)srcIn;
+				dst32 = (uint32_t*)dstIn;
+				count = (xp1 - xp0) >> 1;
+				while (count-- != 0) {
+					*dst32++ |= *src32++;
+				};
 
-					uint32_t* src32, * dst32;
-					int count;
-
-					int xp0 = x0 + xIn;
-					int xp1 = x0 + xOut - 1;
-
-					if (xp0 & 1) {
-						*dstIn++ |= *srcIn++;
-						++xp0;
-					}
-
-					src32 = (uint32_t*)srcIn;
-					dst32 = (uint32_t*)dstIn;
-					count = (xp1 - xp0) >> 1;
-					while (count-- != 0) {
-						*dst32++ |= *src32++;
-					};
-
-					srcIn = (uint16_t*)src32;
-					dstIn = (uint16_t*)dst32;
-					if (xp1 & 1) {
-						*dstIn++ |= *srcIn++;
-					}
+				srcIn = (uint16_t*)src32;
+				dstIn = (uint16_t*)dst32;
+				if (xp1 & 1) {
+					*dstIn++ |= *srcIn++;
 				}
-				dst += LMAP_WIDTH;
-				src += BIG_LIGHT_WIDTH;
-				yLine++;
 			}
+			dst += LMAP_WIDTH;
+			src += BIG_LIGHT_WIDTH;
+			yLine++;
 		}
 	}
 }
@@ -518,10 +522,10 @@ static void animateBigLights()
 
 
 
-	lightMinX = LMAP_WIDTH-1;
+	/*lightMinX = LMAP_WIDTH-1;
 	lightMaxX = 0;
 	lightMinY = LMAP_HEIGHT-1;
-	lightMaxY = 0;
+	lightMaxY = 0;*/
 
 	for (i = 0; i < NUM_BIG_LIGHTS; ++i) {
 		Point2D* p = &bigLightPoint[i];
@@ -559,16 +563,30 @@ static void renderBump(unsigned short *vram)
 static void animateParticles()
 {
 	int i;
-	Point2D center;
+	Point2D center, p;
 	float dt = (float)(time_msec - startingTime) / 2000.0f;
 	float tt = 0.25f * sin(dt) + 0.75f;
+	int x0,y0,x1,y1;
 
 	center.x = (FB_WIDTH >> 1) - (PARTICLE_LIGHT_WIDTH / 2);
 	center.y = (FB_HEIGHT >> 1) - (PARTICLE_LIGHT_HEIGHT / 2);
 
 	for (i = 0; i < NUM_PARTICLES; i++) {
-		particlePoint[i].x = center.x + (sin(1.2f * (i*i*i + dt)) * 74.0f + sin(0.6f * (i + dt)) * 144.0f) * tt;
-		particlePoint[i].y = center.y + (sin(1.8f * (i + dt)) * 68.0f + sin(0.5f * (i*i + dt)) * 132.0f) * tt;
+		p.x = center.x + (sin(1.2f * (i*i*i + dt)) * 74.0f + sin(0.6f * (i + dt)) * 144.0f) * tt;
+		p.y = center.y + (sin(1.8f * (i + dt)) * 68.0f + sin(0.5f * (i*i + dt)) * 132.0f) * tt;
+
+		x0 = p.x + LMAP_OFFSET_X;
+		x1 = p.x + LMAP_OFFSET_X + PARTICLE_LIGHT_WIDTH;
+		y0 = p.y + LMAP_OFFSET_Y;
+		y1 = p.y + LMAP_OFFSET_Y + PARTICLE_LIGHT_HEIGHT;
+
+		if (x0 < lightMinX) lightMinX = x0;
+		if (x1 > lightMaxX) lightMaxX = x1;
+		if (y0 < lightMinY) lightMinY = y0;
+		if (y1 > lightMaxY) lightMaxY = y1;
+
+		particlePoint[i].x = p.x;
+		particlePoint[i].y = p.y;
 	}
 }
 
@@ -582,6 +600,11 @@ static void eraseLightmapArea(int x0, int y0, int x1, int y1)
 			memset(&lightmap[y * LMAP_WIDTH + x0], 0, size);
 		}
 	}
+
+	lightMinX = LMAP_WIDTH-1;
+	lightMaxX = 0;
+	lightMinY = LMAP_HEIGHT-1;
+	lightMaxY = 0;
 }
 
 static void renderBitmapLineBump(int u, int du, int* src, int* dst)
@@ -594,7 +617,23 @@ static void renderBitmapLineBump(int u, int du, int* src, int* dst)
 	};
 }
 
-static void testBlitBumpTex(int t)
+static void blitBumpTexDefault(int t)
+{
+	const int tt = t >> 5;
+
+	int* dst = bumpOffsetScreen;
+	int x,y;
+	for (y = 0; y < FB_HEIGHT; ++y) {
+		const int yi = (y + tt) & (HMAP_HEIGHT - 1);
+		int *src = &bumpOffset[yi * HMAP_WIDTH];
+
+		for (x = 0; x < FB_WIDTH; ++x) {
+			*dst++ = src[x & (HMAP_WIDTH-1)];
+		}
+	}
+}
+
+static void blitBumpTexWave(int t)
 {
 	const int tt = t >> 5;
 
@@ -619,6 +658,12 @@ static void testBlitBumpTex(int t)
 
 		dst += FB_WIDTH;
 	}
+}
+
+static void blitBumpTextScript(int t)
+{
+	blitBumpTexDefault(t);
+	//blitBumpTexWave(t);
 }
 
 static void bumpScript()
@@ -656,14 +701,14 @@ static void draw(void)
 	bumpScript();
 
 	eraseLightmapArea(lightMinX, lightMinY, lightMaxX, lightMaxY);
-
 	animateBigLights();
-	renderBigLights();
+	renderFirstBigLight();
+	renderOtherBigLights();
 
-	/* animateParticles();
-	renderParticles(); */
+	animateParticles();
+	renderParticles();
 
-	testBlitBumpTex(t);
+	blitBumpTextScript(t);
 
 	renderBump((unsigned short*)fb_pixels);
 

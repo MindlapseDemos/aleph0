@@ -159,6 +159,7 @@ static Point2D bigLightPoint[NUM_BIG_LIGHTS];
 static Edge *bigLightEdges;
 
 static unsigned short *biggerLight;
+static Point2D biggerLightPoint;
 static Edge *biggerLightEdges;
 
 static unsigned short *particleLight;
@@ -232,9 +233,9 @@ static int loadHeightMapTest()
 
 static void generateBigLight(unsigned short *lightBitmap, Edge *lightEdges, unsigned int lightWidth, unsigned int lightHeight, int rgbIndex)
 {
-	const int lightRadius = BIG_LIGHT_WIDTH / 2;
+	const int lightRadius = lightWidth / 2;
 
-	const float rgbMul[12] = { 	0.5, 0.5, 0.5,
+	const float rgbMul[12] = { 	0.325, 0.35, 0.375,
 								0.75, 0,    0,
 								0,    0.75, 0,
 								0,    0,    0.75 };
@@ -439,38 +440,36 @@ static void renderParticles()
 	}
 }
 
-static void renderBigLight(int i, int justBlit)
+static void renderLight(unsigned short *lightBitmap, Edge *lightEdges, unsigned int lightWidth, unsigned int lightHeight, Point2D *lightPos, int justBlit)
 {
 	int y, yLine;
 	unsigned short* src;
 	unsigned short* dst;
 
-	Point2D* p = &bigLightPoint[i];
-
-	const int x0 = p->x;
-	const int y0 = p->y;
-	const int y1 = p->y + BIG_LIGHT_HEIGHT;
+	const int x0 = lightPos->x;
+	const int y0 = lightPos->y;
+	const int y1 = lightPos->y + lightHeight;
 
 	dst = lightmap + (y0 + LMAP_OFFSET_Y) * LMAP_WIDTH + x0 + LMAP_OFFSET_X;
-	src = bigLight[i];
+	src = lightBitmap;
 
 	yLine = 0;
 	if (justBlit==1) {
 		for (y = y0; y < y1; y++) {
-			const short xIn = bigLightEdges[yLine].xIn;
+			const short xIn = lightEdges[yLine].xIn;
 			if (xIn != -1) {
-				const short xOut = bigLightEdges[yLine].xOut;
+				const short xOut = lightEdges[yLine].xOut;
 				memcpy(dst + xIn, src + xIn, 2 * (xOut - xIn));
 			}
 			dst += LMAP_WIDTH;
-			src += BIG_LIGHT_WIDTH;
+			src += lightWidth;
 			yLine++;
 		}
 	} else {
 		for (y = y0; y < y1; y++) {
-			const short xIn = bigLightEdges[yLine].xIn;
+			const short xIn = lightEdges[yLine].xIn;
 			if (xIn != -1) {
-				const short xOut = bigLightEdges[yLine].xOut;
+				const short xOut = lightEdges[yLine].xOut;
 
 				uint16_t* srcIn = src + xIn;
 				uint16_t* dstIn = dst + xIn;
@@ -500,10 +499,37 @@ static void renderBigLight(int i, int justBlit)
 				}
 			}
 			dst += LMAP_WIDTH;
-			src += BIG_LIGHT_WIDTH;
+			src += lightWidth;
 			yLine++;
 		}
 	}
+}
+
+static void animateBiggerLight()
+{
+	int i;
+	int x0, x1, y0, y1;
+
+	Point2D center;
+	float dt = (float)(time_msec - startingTime) / 1000.0f;
+	float tt = 1.0f - sin(dt);
+	float disperse = tt * 16.0f;
+
+	center.x = (FB_WIDTH >> 1) - (BIGGER_LIGHT_WIDTH / 2);
+	center.y = (FB_HEIGHT >> 1) - (BIGGER_LIGHT_HEIGHT / 2);
+
+	biggerLightPoint.x = center.x + sin(0.6f * dt) * (12.0f + disperse);
+	biggerLightPoint.y = center.y + sin(0.8f * dt) * (8.0f + disperse);
+		
+	x0 = biggerLightPoint.x + LMAP_OFFSET_X;
+	x1 = biggerLightPoint.x + LMAP_OFFSET_X + BIGGER_LIGHT_WIDTH;
+	y0 = biggerLightPoint.y + LMAP_OFFSET_Y;
+	y1 = biggerLightPoint.y + LMAP_OFFSET_Y + BIGGER_LIGHT_HEIGHT;
+
+	if (x0 < lightMinX) lightMinX = x0;
+	if (x1 > lightMaxX) lightMaxX = x1;
+	if (y0 < lightMinY) lightMinY = y0;
+	if (y1 > lightMaxY) lightMaxY = y1;
 }
 
 static void animateBigLights()
@@ -525,8 +551,6 @@ static void animateBigLights()
 
 	bigLightPoint[2].x = center.x + sin(2.0f * dt) * (72.0f + disperse);
 	bigLightPoint[2].y = center.y + sin(1.3f * dt) * (56.0f + disperse);
-
-
 
 	/*lightMinX = LMAP_WIDTH-1;
 	lightMaxX = 0;
@@ -702,16 +726,21 @@ static void bumpScript()
 
 static void draw(void)
 {
+	int i;
 	const int t = time_msec - startingTime;
 
 	bumpScript();
 
 	eraseLightmapArea(lightMinX, lightMinY, lightMaxX, lightMaxY);
 
-	animateBigLights();
-	renderBigLight(0, 1);
-	renderBigLight(1, 0);
-	renderBigLight(2, 0);
+	animateBiggerLight();
+	renderLight(biggerLight, biggerLightEdges, BIGGER_LIGHT_WIDTH, BIGGER_LIGHT_HEIGHT, &biggerLightPoint, 1);
+
+	/*animateBigLights();
+	for (i=0; i<NUM_BIG_LIGHTS; ++i) {
+		const int shouldBlit = (i==0) ? 1 : 0;
+		renderLight(bigLight[i], bigLightEdges, BIG_LIGHT_WIDTH, BIG_LIGHT_HEIGHT, &bigLightPoint[i], shouldBlit);
+	}*/
 
 	animateParticles();
 	renderParticles();

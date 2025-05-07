@@ -44,6 +44,9 @@ typedef struct PathPointTrack {
 #define BIG_LIGHT_WIDTH 256
 #define BIG_LIGHT_HEIGHT BIG_LIGHT_WIDTH
 
+#define BIGGER_LIGHT_WIDTH 384
+#define BIGGER_LIGHT_HEIGHT BIGGER_LIGHT_WIDTH
+
 #define NUM_PARTICLES 64
 #define PARTICLE_LIGHT_WIDTH 8
 #define PARTICLE_LIGHT_HEIGHT 8
@@ -155,6 +158,9 @@ static unsigned short *bigLight[NUM_BIG_LIGHTS];
 static Point2D bigLightPoint[NUM_BIG_LIGHTS];
 static Edge *bigLightEdges;
 
+static unsigned short *biggerLight;
+static Edge *biggerLightEdges;
+
 static unsigned short *particleLight;
 static Point2D particlePoint[NUM_PARTICLES];
 
@@ -195,7 +201,7 @@ static int loadHeightMapTest()
 {
 	static struct img_pixmap bumpPic;
 
-	int x, y, i;
+	unsigned int x, y, i = 0;
 	uint32_t* src;
 	int imgWidth, imgHeight;
 
@@ -209,7 +215,6 @@ static int loadHeightMapTest()
 	imgWidth = bumpPic.width;
 	imgHeight = bumpPic.width;
 
-	i = 0;
 	for (y = 0; y < HMAP_HEIGHT; ++y) {
 		for (x = 0; x < HMAP_WIDTH; ++x) {
 			uint32_t c32 = src[((y & (imgHeight - 1)) * imgWidth) + (x & (imgWidth - 1))];
@@ -225,75 +230,26 @@ static int loadHeightMapTest()
 	return 0;
 }
 
-static int init(void)
+static void generateBigLight(unsigned short *lightBitmap, Edge *lightEdges, unsigned int lightWidth, unsigned int lightHeight, int rgbIndex)
 {
-	int i, j, x, y, c, r, g, b;
-
-	const int hm_size = HMAP_WIDTH * HMAP_HEIGHT;
-	const int lm_size = LMAP_WIDTH * LMAP_HEIGHT;
-
 	const int lightRadius = BIG_LIGHT_WIDTH / 2;
-	const int particleRadius = PARTICLE_LIGHT_WIDTH / 2;
 
-	const int bigLightSize = BIG_LIGHT_WIDTH * BIG_LIGHT_HEIGHT;
-	const int particleLightSize = PARTICLE_LIGHT_WIDTH * PARTICLE_LIGHT_HEIGHT;
+	const float rgbMul[12] = { 	0.5, 0.5, 0.5,
+								0.75, 0,    0,
+								0,    0.75, 0,
+								0,    0,    0.75 };
 
-	/* Just some parameters to temporary test the colors of 3 lights
-	 * if every light uses it's own channel bits, it's better
-	 */
-	const float rgbMul[9] = { 0.75, 0,    0,
-				  0,    0.75, 0,
-				  0,    0,    0.75 };
+	const float *rgb = &rgbMul[3 * rgbIndex];
 
-	heightmap = malloc(sizeof(*heightmap) * hm_size);
-	lightmap = malloc(sizeof(*lightmap) * lm_size);
-	bumpOffset = malloc(sizeof(*bumpOffset) * hm_size);
-	bumpOffsetScreen = malloc(sizeof(*bumpOffsetScreen) * FB_WIDTH * FB_HEIGHT);
-
-	bigLightEdges = (Edge*)malloc(BIG_LIGHT_HEIGHT * sizeof(*bigLightEdges));
-
-	for (i = 0; i < NUM_BIG_LIGHTS; i++) {
-		bigLight[i] = malloc(sizeof(*bigLight[i]) * bigLightSize);
-	}
-	particleLight = malloc(sizeof(*particleLight) * particleLightSize);
-
-	memset(lightmap, 0, sizeof(*lightmap) * lm_size);
-	memset(bumpOffset, 0, sizeof(*bumpOffset) * hm_size);
-	memset(particlePoint, 0, sizeof(*particlePoint) * NUM_PARTICLES);
-
-	if (loadHeightMapTest() == -1) return - 1;
-
-	initPathPoints();
-
-	/* Inclination precalculation */
-	i = 0;
-	for (y = 0; y < HMAP_HEIGHT; y++) {
-		const int yp0 = y * HMAP_WIDTH;
-		const int yp1 = ((y+1) & (HMAP_HEIGHT-1)) * HMAP_WIDTH;
-		for (x = 0; x < HMAP_WIDTH; x++) {
-			const int ii = yp0 + x;
-			const int iRight = yp0 + ((x + 1) & (HMAP_WIDTH - 1));
-			const int iDown = yp1 +x;
-			const float offsetPower = 0.5f;
-			int dx, dy, di;
-
-			dx = (int)((heightmap[ii] - heightmap[iRight]) * offsetPower);
-			dy = (int)((heightmap[ii] - heightmap[iDown]) * offsetPower);
-			di = dy * LMAP_WIDTH + dx;
-
-			bumpOffset[i++] = di;
-		}
-	}
-
-	/* Generate three lights */
-	i = 0;
-	for (y = 0; y < BIG_LIGHT_HEIGHT; y++) {
-		int yc = y - (BIG_LIGHT_HEIGHT / 2);
+	unsigned int x, y;
+	int c,r,g,b;
+	for (y = 0; y < lightHeight; y++) {
+		int yc = y - (lightHeight / 2);
 		int xIn = -1;
 		int xOut = -1;
 		int lastC = 0;
-		for (x = 0; x < BIG_LIGHT_WIDTH; x++) {
-			int xc = x - (BIG_LIGHT_WIDTH / 2);
+		for (x = 0; x < lightWidth; x++) {
+			int xc = x - (lightWidth / 2);
 			float d = (float)sqrt(xc * xc + yc * yc);
 			float invDist = ((float)lightRadius - (float)sqrt(xc * xc + yc * yc)) / (float)lightRadius;
 			if (invDist < 0.0f) invDist = 0.0f;
@@ -311,16 +267,21 @@ static int init(void)
 			}
 			lastC = c;
 
-			for (j = 0; j < NUM_BIG_LIGHTS; j++) {
-				bigLight[j][i] = ((int)(r * rgbMul[j * 3]) << 11) | ((int)(g * rgbMul[j * 3 + 1]) << 5) | (int)(b * rgbMul[j * 3 + 2]);
-			}
-			i++;
+			*lightBitmap++ = ((int)(r * rgb[0]) << 11) | ((int)(g * rgb[1]) << 5) | (int)(b * rgb[2]);
 		}
-		bigLightEdges[y].xIn = xIn;
-		bigLightEdges[y].xOut = xOut;
+		lightEdges->xIn = xIn;
+		lightEdges->xOut = xOut;
+		++lightEdges;
 	}
+}
 
-	i = 0;
+static void generateParticleLight()
+{
+	const int particleRadius = PARTICLE_LIGHT_WIDTH / 2;
+
+	unsigned int x, y;
+	int c;
+	unsigned int i = 0;
 	for (y = 0; y < PARTICLE_LIGHT_HEIGHT; y++) {
 		int yc = y - (PARTICLE_LIGHT_HEIGHT / 2);
 		for (x = 0; x < PARTICLE_LIGHT_WIDTH; x++) {
@@ -334,6 +295,69 @@ static int init(void)
 			particleLight[i++] = ((c >> 1) << 11) | (c << 5) | (c >> 1);
 		}
 	}
+}
+
+static void precalculateBumpInclination()
+{
+	unsigned int x, y, i = 0;
+
+	for (y = 0; y < HMAP_HEIGHT; y++) {
+		const int yp0 = y * HMAP_WIDTH;
+		const int yp1 = ((y+1) & (HMAP_HEIGHT-1)) * HMAP_WIDTH;
+		for (x = 0; x < HMAP_WIDTH; x++) {
+			const int ii = yp0 + x;
+			const int iRight = yp0 + ((x + 1) & (HMAP_WIDTH - 1));
+			const int iDown = yp1 +x;
+			const float offsetPower = 0.5f;
+
+			const int dx = (int)((heightmap[ii] - heightmap[iRight]) * offsetPower);
+			const int dy = (int)((heightmap[ii] - heightmap[iDown]) * offsetPower);
+			const int di = dy * LMAP_WIDTH + dx;
+
+			bumpOffset[i++] = di;
+		}
+	}
+}
+
+static int init(void)
+{
+	int i;
+
+	const int hm_size = HMAP_WIDTH * HMAP_HEIGHT;
+	const int lm_size = LMAP_WIDTH * LMAP_HEIGHT;
+
+
+	heightmap = malloc(sizeof(*heightmap) * hm_size);
+	lightmap = malloc(sizeof(*lightmap) * lm_size);
+	bumpOffset = malloc(sizeof(*bumpOffset) * hm_size);
+	bumpOffsetScreen = malloc(sizeof(*bumpOffsetScreen) * FB_WIDTH * FB_HEIGHT);
+
+	for (i = 0; i < NUM_BIG_LIGHTS; i++) {
+		bigLight[i] = malloc(sizeof(*bigLight[i]) * BIG_LIGHT_WIDTH * BIG_LIGHT_HEIGHT);
+	}
+	bigLightEdges = (Edge*)malloc(BIG_LIGHT_HEIGHT * sizeof(*bigLightEdges));
+
+	biggerLight = malloc(sizeof(*biggerLight) * BIGGER_LIGHT_WIDTH * BIGGER_LIGHT_HEIGHT);
+	biggerLightEdges = (Edge*)malloc(BIGGER_LIGHT_HEIGHT * sizeof(*biggerLightEdges));
+
+	particleLight = malloc(sizeof(*particleLight) * PARTICLE_LIGHT_WIDTH * PARTICLE_LIGHT_HEIGHT);
+
+	memset(lightmap, 0, sizeof(*lightmap) * lm_size);
+	memset(bumpOffset, 0, sizeof(*bumpOffset) * hm_size);
+	memset(particlePoint, 0, sizeof(*particlePoint) * NUM_PARTICLES);
+
+	if (loadHeightMapTest() == -1) return - 1;
+
+	initPathPoints();
+
+	precalculateBumpInclination();
+
+	for (i=0; i<NUM_BIG_LIGHTS; ++i) {
+		generateBigLight(bigLight[i], bigLightEdges, BIG_LIGHT_WIDTH, BIG_LIGHT_HEIGHT, i+1);
+	}
+	generateBigLight(biggerLight, biggerLightEdges, BIGGER_LIGHT_WIDTH, BIGGER_LIGHT_HEIGHT, 0);
+
+	generateParticleLight();
 
 	ev_electroids = dseq_lookup("bump.electroids");
 	ev_scrollUp = dseq_lookup("bump.scrollUp");
@@ -353,10 +377,12 @@ static void destroy(void)
 	free(bumpOffsetScreen);
 	free(particleLight);
 	free(bigLightEdges);
+	free(biggerLightEdges);
 
 	for (i=0; i<NUM_BIG_LIGHTS; ++i) {
 		free(bigLight[i]);
 	}
+	free(biggerLight);
 }
 
 static void start(long trans_time)
@@ -413,54 +439,34 @@ static void renderParticles()
 	}
 }
 
-static void renderFirstBigLight()
+static void renderBigLight(int i, int justBlit)
 {
 	int y, yLine;
 	unsigned short* src;
 	unsigned short* dst;
 
-	Point2D* p = &bigLightPoint[0];
+	Point2D* p = &bigLightPoint[i];
 
-	int x0 = p->x;
-	int y0 = p->y;
-	int x1 = p->x + BIG_LIGHT_WIDTH;
-	int y1 = p->y + BIG_LIGHT_HEIGHT;
+	const int x0 = p->x;
+	const int y0 = p->y;
+	const int y1 = p->y + BIG_LIGHT_HEIGHT;
 
 	dst = lightmap + (y0 + LMAP_OFFSET_Y) * LMAP_WIDTH + x0 + LMAP_OFFSET_X;
-	src = bigLight[0];
+	src = bigLight[i];
 
 	yLine = 0;
-	for (y = y0; y < y1; y++) {
-		const short xIn = bigLightEdges[yLine].xIn;
-		if (xIn != -1) {
-			const short xOut = bigLightEdges[yLine].xOut;
-			memcpy(dst + xIn, src + xIn, 2 * (xOut - xIn));
+	if (justBlit==1) {
+		for (y = y0; y < y1; y++) {
+			const short xIn = bigLightEdges[yLine].xIn;
+			if (xIn != -1) {
+				const short xOut = bigLightEdges[yLine].xOut;
+				memcpy(dst + xIn, src + xIn, 2 * (xOut - xIn));
+			}
+			dst += LMAP_WIDTH;
+			src += BIG_LIGHT_WIDTH;
+			yLine++;
 		}
-		dst += LMAP_WIDTH;
-		src += BIG_LIGHT_WIDTH;
-		yLine++;
-	}
-}
-
-static void renderOtherBigLights()
-{
-	int i;
-	for (i = 1; i < NUM_BIG_LIGHTS; i++) {
-		int y, yLine;
-		unsigned short* src;
-		unsigned short* dst;
-
-		Point2D* p = &bigLightPoint[i];
-
-		int x0 = p->x;
-		int y0 = p->y;
-		int x1 = p->x + BIG_LIGHT_WIDTH;
-		int y1 = p->y + BIG_LIGHT_HEIGHT;
-
-		dst = lightmap + (y0 + LMAP_OFFSET_Y) * LMAP_WIDTH + x0 + LMAP_OFFSET_X;
-		src = bigLight[i];
-
-		yLine = 0;
+	} else {
 		for (y = y0; y < y1; y++) {
 			const short xIn = bigLightEdges[yLine].xIn;
 			if (xIn != -1) {
@@ -701,9 +707,11 @@ static void draw(void)
 	bumpScript();
 
 	eraseLightmapArea(lightMinX, lightMinY, lightMaxX, lightMaxY);
+
 	animateBigLights();
-	renderFirstBigLight();
-	renderOtherBigLights();
+	renderBigLight(0, 1);
+	renderBigLight(1, 0);
+	renderBigLight(2, 0);
 
 	animateParticles();
 	renderParticles();

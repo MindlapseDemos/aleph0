@@ -117,7 +117,9 @@ static int init(void)
 	}
 	anm_set_extrapolator(&thing.node, ANM_EXTRAP_REPEAT);
 	thing.anim = anm_get_animation(&thing.node, 0);
-	load_anim(thing.anim, "data/thing.anm");
+	if(load_anim(thing.anim, "data/thing.anm") != -1) {
+		playanim = 1;
+	}
 
 	return 0;
 }

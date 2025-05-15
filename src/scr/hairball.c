@@ -60,8 +60,10 @@ static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
 static void keypress(int key);
-static void update_thing(float dt);
 static void draw_thing(void);
+static void draw_backdrop(void);
+
+static void update_thing(void);
 static void update_tentacle(struct g3d_mesh *mesh, int tidx);
 
 static void clear_anim(struct anm_animation *anm);
@@ -87,7 +89,14 @@ static struct thing thing;
 static struct g3d_mesh sphmesh;
 static struct g3d_mesh tentmesh[NUM_TENT];
 static struct g3d_material thingmtl;
-static struct image envmap;
+static struct image envmap, bgimg;
+static int bgscroll_x, bgscroll_y;
+/*
+#define MAX_BGSCROLL_X	(bgimg.width - 320)
+#define MAX_BGSCROLL_Y	(bgimg.height - 240)
+*/
+#define MAX_BGSCROLL_X	(512 - 320)
+#define MAX_BGSCROLL_Y	(300 - 240)
 
 static int playanim, record;
 static long anim_start_time;
@@ -102,6 +111,10 @@ static int init(void)
 {
 	if(load_image(&envmap, "data/myenvmap.jpg") == -1) {
 		fprintf(stderr, "hairball: failed to load envmap\n");
+		return -1;
+	}
+	if(load_image(&bgimg, "data/space06.jpg") == -1) {
+		fprintf(stderr, "hairball: failed to load backdrop\n");
 		return -1;
 	}
 
@@ -225,11 +238,10 @@ static void start(long trans_time)
 static void update(void)
 {
 	static float prev_mx, prev_my;
-	static long prev_msec;
+	static long prev_thing_upd;
 	int mouse_dx, mouse_dy;
 	long msec = time_msec - start_time;
-	float dt = (msec - prev_msec) / 1000.0f;
-	prev_msec = msec;
+	long thing_dt;
 
 	mouse_dx = mouse_x - prev_mx;
 	mouse_dy = mouse_y - prev_my;
@@ -262,7 +274,17 @@ static void update(void)
 		thing.xform[14] = thing.pos.z;
 	}
 
-	update_thing(dt);
+	bgscroll_x = (int)(thing.pos.x * (MAX_BGSCROLL_X * 0.1f)) + MAX_BGSCROLL_X / 2;
+	bgscroll_y = (int)(-thing.pos.y * (MAX_BGSCROLL_Y * 0.3f)) + MAX_BGSCROLL_Y / 2;
+
+	thing_dt = msec - prev_thing_upd;
+	if(thing_dt >= 33) {
+		while(thing_dt >= 33) {
+			thing_dt -= 33;
+			update_thing();
+		}
+		prev_thing_upd = msec;
+	}
 
 	if(record) {
 		static long last_sample_t;
@@ -285,7 +307,8 @@ static void draw(void)
 
 	update();
 
-	g3d_clear(G3D_COLOR_BUFFER_BIT | G3D_DEPTH_BUFFER_BIT);
+	g3d_clear(/*G3D_COLOR_BUFFER_BIT | */G3D_DEPTH_BUFFER_BIT);
+	draw_backdrop();
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
@@ -333,24 +356,6 @@ static void keypress(int key)
 			save_anim(thing.anim, "thing.anm");
 		}
 		break;
-	}
-}
-
-static void update_thing(float dt)
-{
-	int i, j;
-	struct tentacle *tent;
-
-	thing.cur_frm = (thing.cur_frm + 1) & (NUM_FRAMES - 1);
-
-	for(i=0; i<NUM_TENT; i++) {
-		tent = thing.tent[thing.cur_frm] + i;
-		*tent = thing.orig_tent[i];
-		for(j=0; j<TENT_NODES; j++) {
-			cgm_vmul_m4v3(tent->node + j, thing.xform);
-		}
-
-		update_tentacle(tentmesh + i, i);
 	}
 }
 
@@ -406,6 +411,44 @@ static void draw_thing(void)
 	}
 	g3d_end();
 	*/
+}
+
+static void draw_backdrop(void)
+{
+	int i, j;
+	uint16_t *dptr, *sptr;
+
+	bgscroll_x &= bgimg.xmask;
+	if(bgscroll_y < 0) bgscroll_y = 0;
+	if(bgscroll_y >= bgimg.height - 240) bgscroll_y = bgimg.height - 240 - 1;
+
+	dptr = fb_pixels;
+	sptr = bgimg.pixels + (bgscroll_y << bgimg.xshift) + bgscroll_x;
+	for(i=0; i<240; i++) {
+		for(j=0; j<320; j++) {
+			dptr[j] = sptr[j];
+		}
+		dptr += 320;
+		sptr += bgimg.width;
+	}
+}
+
+static void update_thing(void)
+{
+	int i, j;
+	struct tentacle *tent;
+
+	thing.cur_frm = (thing.cur_frm + 1) & (NUM_FRAMES - 1);
+
+	for(i=0; i<NUM_TENT; i++) {
+		tent = thing.tent[thing.cur_frm] + i;
+		*tent = thing.orig_tent[i];
+		for(j=0; j<TENT_NODES; j++) {
+			cgm_vmul_m4v3(tent->node + j, thing.xform);
+		}
+
+		update_tentacle(tentmesh + i, i);
+	}
 }
 
 static void update_tentacle(struct g3d_mesh *mesh, int tidx)

@@ -61,8 +61,12 @@ static unsigned int tex;
 static Display *xdpy;
 static Window xwin;
 
-static void (*glx_swap_interval_ext)();
-static void (*glx_swap_interval_sgi)();
+typedef void (*swapint_ext_t)(Display*, Window, int);
+typedef void (*swapint_mesa_t)(int);
+
+static swapint_ext_t glx_swap_interval_ext;
+static swapint_mesa_t glx_swap_interval_mesa;
+
 #endif
 #ifdef _WIN32
 #include <windows.h>
@@ -122,9 +126,8 @@ int main(int argc, char **argv)
 	xdpy = glXGetCurrentDisplay();
 	xwin = glXGetCurrentDrawable();
 
-	if(!(glx_swap_interval_ext = glXGetProcAddress((unsigned char*)"glXSwapIntervalEXT"))) {
-		glx_swap_interval_sgi = glXGetProcAddress((unsigned char*)"glXSwapIntervalSGI");
-	}
+	glx_swap_interval_ext = (swapint_ext_t)glXGetProcAddress((unsigned char*)"glXSwapIntervalEXT");
+	glx_swap_interval_mesa = (swapint_mesa_t)glXGetProcAddress((unsigned char*)"glXSwapIntervalMESA");
 #endif
 #ifdef _WIN32
 	wgl_swap_interval_ext = wglGetProcAddress("wglSwapIntervalEXT");
@@ -538,8 +541,8 @@ static void set_vsync(int vsync)
 {
 	if(glx_swap_interval_ext) {
 		glx_swap_interval_ext(xdpy, xwin, vsync);
-	} else if(glx_swap_interval_sgi) {
-		glx_swap_interval_sgi(vsync);
+	} else if(glx_swap_interval_mesa) {
+		glx_swap_interval_mesa(vsync);
 	}
 }
 #endif

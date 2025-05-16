@@ -91,12 +91,11 @@ static struct g3d_mesh tentmesh[NUM_TENT];
 static struct g3d_material thingmtl;
 static struct image envmap, bgimg;
 static int bgscroll_x, bgscroll_y;
-/*
-#define MAX_BGSCROLL_X	(bgimg.width - 320)
-#define MAX_BGSCROLL_Y	(bgimg.height - 240)
-*/
-#define MAX_BGSCROLL_X	(512 - 320)
-#define MAX_BGSCROLL_Y	(300 - 240)
+
+#define BGIMG_WIDTH		512
+#define BGIMG_HEIGHT	300
+#define MAX_BGSCROLL_X	(BGIMG_WIDTH - 320)
+#define MAX_BGSCROLL_Y	(BGIMG_HEIGHT - 240)
 
 static int playanim, record;
 static long anim_start_time;
@@ -117,6 +116,8 @@ static int init(void)
 		fprintf(stderr, "hairball: failed to load backdrop\n");
 		return -1;
 	}
+	assert(bgimg.width == BGIMG_WIDTH);
+	assert(bgimg.height == BGIMG_HEIGHT);
 
 	gen_sphere_mesh(&sphmesh, THING_RAD * 1.3, 6, 3);
 	sphmesh.mtl = &thingmtl;
@@ -434,16 +435,14 @@ static void draw_backdrop(void)
 
 	bgscroll_x &= bgimg.xmask;
 	if(bgscroll_y < 0) bgscroll_y = 0;
-	if(bgscroll_y >= bgimg.height - 240) bgscroll_y = bgimg.height - 240 - 1;
+	if(bgscroll_y >= BGIMG_HEIGHT - 240) bgscroll_y = BGIMG_HEIGHT - 240 - 1;
 
 	dptr = fb_pixels;
 	sptr = bgimg.pixels + (bgscroll_y << bgimg.xshift) + bgscroll_x;
 	for(i=0; i<240; i++) {
-		for(j=0; j<320; j++) {
-			dptr[j] = sptr[j];
-		}
+		memcpy64(dptr, sptr, 320 * 2);
 		dptr += 320;
-		sptr += bgimg.width;
+		sptr += BGIMG_WIDTH;
 	}
 }
 
@@ -488,10 +487,10 @@ static void update_tentacle(struct g3d_mesh *mesh, int tidx)
 		vk = next;
 		cgm_vsub(&vk, &prev);
 		fast_vnormalize(&vk);
-		if(vk.y > 0.9995) {
-			cgm_vcons(&vj, 0, 0, -1);
-		} else {
+		if(fabs(vk.z) > 0.999) {
 			cgm_vcons(&vj, 0, 1, 0);
+		} else {
+			cgm_vcons(&vj, 0, 0, 1);
 		}
 		cgm_vcross(&vi, &vj, &vk);
 		fast_vnormalize(&vi);

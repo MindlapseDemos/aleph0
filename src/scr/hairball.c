@@ -488,7 +488,7 @@ static void update_tentacle(struct g3d_mesh *mesh, int tidx)
 		vk = next;
 		cgm_vsub(&vk, &prev);
 		fast_vnormalize(&vk);
-		if(fabs(vk.y) > fabs(vk.x) && fabs(vk.y) > fabs(vk.z)) {
+		if(vk.y > 0.9995) {
 			cgm_vcons(&vj, 0, 0, -1);
 		} else {
 			cgm_vcons(&vj, 0, 1, 0);

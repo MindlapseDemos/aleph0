@@ -82,7 +82,7 @@ static struct screen scr = {
 
 static long start_time;
 
-static float cam_theta, cam_phi = 15;
+static float cam_theta, cam_phi;
 static float cam_dist = 8;
 
 static struct thing thing;

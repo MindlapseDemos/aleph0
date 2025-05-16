@@ -118,7 +118,7 @@ static int init(void)
 		return -1;
 	}
 
-	gen_sphere_mesh(&sphmesh, THING_RAD * 1.2, 6, 3);
+	gen_sphere_mesh(&sphmesh, THING_RAD * 1.3, 6, 3);
 	sphmesh.mtl = &thingmtl;
 
 	init_g3dmtl(&thingmtl);
@@ -227,7 +227,21 @@ static void start(long trans_time)
 			idxptr += 3;
 		}
 
-		update_tentacle(tentmesh + i, i);
+		if(!playanim) update_tentacle(tentmesh + i, i);
+	}
+
+	if(playanim) {
+		anm_get_position(&thing.node, &thing.pos.x, 0);
+		anm_get_rotation(&thing.node, &thing.rot.x, 0);
+
+		cgm_mrotation_quat(thing.xform, &thing.rot);
+		thing.xform[12] = thing.pos.x;
+		thing.xform[13] = thing.pos.y;
+		thing.xform[14] = thing.pos.z;
+
+		for(i=0; i<NUM_FRAMES; i++) {
+			update_thing();
+		}
 	}
 
 	printf("thing triangles: %d\n", TENT_NTRIS * NUM_TENT + sphmesh.icount / 4);

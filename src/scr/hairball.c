@@ -93,7 +93,7 @@ static struct image envmap, bgimg;
 static int bgscroll_x, bgscroll_y;
 
 #define BGIMG_WIDTH		512
-#define BGIMG_HEIGHT	300
+#define BGIMG_HEIGHT	350
 #define MAX_BGSCROLL_X	(BGIMG_WIDTH - 320)
 #define MAX_BGSCROLL_Y	(BGIMG_HEIGHT - 240)
 
@@ -112,12 +112,14 @@ static int init(void)
 		fprintf(stderr, "hairball: failed to load envmap\n");
 		return -1;
 	}
-	if(load_image(&bgimg, "data/space06.jpg") == -1) {
+	if(load_image(&bgimg, "data/space.jpg") == -1) {
 		fprintf(stderr, "hairball: failed to load backdrop\n");
 		return -1;
 	}
-	assert(bgimg.width == BGIMG_WIDTH);
-	assert(bgimg.height == BGIMG_HEIGHT);
+	if(bgimg.width != BGIMG_WIDTH || bgimg.height != BGIMG_HEIGHT) {
+		fprintf(stderr, "hairball: unexpected bg image size (expected: %dx%d)\n", BGIMG_WIDTH, BGIMG_HEIGHT);
+		return -1;
+	}
 
 	gen_sphere_mesh(&sphmesh, THING_RAD * 1.3, 6, 3);
 	sphmesh.mtl = &thingmtl;
@@ -317,9 +319,6 @@ static void update(void)
 
 static void draw(void)
 {
-	unsigned long msec;
-	static unsigned long last_swap;
-
 	update();
 
 	g3d_clear(/*G3D_COLOR_BUFFER_BIT | */G3D_DEPTH_BUFFER_BIT);
@@ -333,15 +332,7 @@ static void draw(void)
 
 	draw_thing();
 
-	msec = get_msec();
-	if(msec - last_swap < 16) {
-		wait_vsync();
-	}
-	if(!opt.vsync) {
-		wait_vsync();
-	}
 	swap_buffers(fb_pixels);
-	last_swap = get_msec();
 }
 
 static void keypress(int key)
@@ -380,52 +371,15 @@ static void keypress(int key)
 static void draw_thing(void)
 {
 	int i;
-	/*int i, j, col;
-	vec3_t prevpos;
-	cgm_vec3 *p, *pp;
-	struct tentacle *tent;*/
-
-	/*g3d_enable(G3D_LIGHTING);*/
 
 	g3d_push_matrix();
 	g3d_mult_matrix(thing.xform);
-	/*zsort_mesh(&sphmesh);*/
 	draw_mesh(&sphmesh);
 	g3d_pop_matrix();
 
 	for(i=0; i<NUM_TENT; i++) {
-		/*zsort_mesh(tentmesh + i);*/
 		draw_mesh(tentmesh + i);
 	}
-
-	/*g3d_disable(G3D_LIGHTING);*/
-
-	/*
-	for(i=0; i<NUM_TENT; i++) {
-		g3d_begin(G3D_LINES);
-		p = thing.tent[thing.cur_frm][i].node;
-		for(j=1; j<TENT_NODES; j++) {
-			pp = p;
-			p = thing.tent[TENTFRM(j)][i].node + j;
-
-			g3d_color3b(0, 255, 0);
-			g3d_vertex(pp->x, pp->y, pp->z);
-			g3d_vertex(p->x, p->y, p->z);
-		}
-		g3d_end();
-	}
-
-	g3d_color3b(255, 0, 0);
-	g3d_begin(G3D_POINTS);
-	for(i=0; i<NUM_TENT; i++) {
-		for(j=0; j<TENT_NODES; j++) {
-			tent = thing.tent[TENTFRM(j)] + i;
-			p = tent->node + j;
-			g3d_vertex(p->x, p->y, p->z);
-		}
-	}
-	g3d_end();
-	*/
 }
 
 static void draw_backdrop(void)

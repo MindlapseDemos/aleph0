@@ -43,6 +43,8 @@ static unsigned char *polkaBuffer[VOLS_NUM];
 
 static unsigned char *psin1, *psin2, *psin3;
 
+static int didPolkaLinesMovedYetOnce = 0;
+
 static Vertex3D* objectGridVertices;
 static Vertex3D* transformedGridVertices;
 static Vertex3D* objectAxesVertices;
@@ -351,6 +353,8 @@ static void moveBgPoints(int t)
 			if (bgPoints[i].ys < 0) bgPoints[i].ys = FB_HEIGHT - 1;
 		}
 		prevT = t;
+
+		didPolkaLinesMovedYetOnce = 1;
 	}
 }
 
@@ -362,6 +366,9 @@ static void backgroundLinesTest(int t)
 	Vertex3D v1, v2;
 
 	moveBgPoints(t);
+
+	// Just to be sure we don't get junk values early on
+	if (didPolkaLinesMovedYetOnce==0) return;
 
 	for (i = 0; i < NUM_BG_POINTS-1; ++i) {
 		const int ix = bgPoints[i].xs;
@@ -440,6 +447,8 @@ static void initBgPoints()
 	for (i = 0; i < NUM_BG_POINTS; ++i) {
 		bgPoints[i].x = rand() % FB_WIDTH;
 		bgPoints[i].y = rand() % FB_HEIGHT;
+		bgPoints[i].xs = 0;
+		bgPoints[i].ys = 0;
 		vel[i].x = (rand() & 1) - 1;
 		vel[i].y = (rand() & 1) - 1;
 		if (vel[i].x >= 0) vel[i].x++;

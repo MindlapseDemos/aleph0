@@ -95,7 +95,7 @@ int demo_init(void)
 	g3d_framebuffer(FB_WIDTH, FB_HEIGHT, fb_pixels);
 
 	if(opt.music) {
-		if(!(mod = au_load_module("data/test.mod"))) {
+		if(!(mod = au_load_module("data/music.xm"))) {
 			return -1;
 		}
 	}

@@ -394,7 +394,7 @@ static void draw_backdrop(void)
 	dptr = fb_pixels;
 	sptr = bgimg.pixels + (bgscroll_y << bgimg.xshift) + bgscroll_x;
 	for(i=0; i<240; i++) {
-		memcpy64(dptr, sptr, 320 * 2);
+		memcpy64(dptr, sptr, 320 * 2 >> 3);
 		dptr += 320;
 		sptr += BGIMG_WIDTH;
 	}

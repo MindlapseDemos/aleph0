@@ -781,10 +781,18 @@ void drawAntialiasedLine8bpp(Vertex3D *v1, Vertex3D *v2, int shadeShift, unsigne
 		if (dx==0) return;
 		ddy = (dy << LN_BASE) / dx;
 		yy = y1 << LN_BASE;
+
+		if (x1 < 0) {
+			yy += -x1 * ddy;
+			x1 = 0;
+		}
+		if (x2 >= POLKA_BUFFER_WIDTH) {
+			x2 = POLKA_BUFFER_WIDTH - 1;
+		}
 		for (x=x1; x<x2; x++) {
 			const int yp = yy >> LN_BASE;
 
-			if (x >= 0 && x < POLKA_BUFFER_WIDTH && yp >=0 && yp < POLKA_BUFFER_HEIGHT - 1) {
+			if (yp >=0 && yp < POLKA_BUFFER_HEIGHT - 1) {
 				vramofs = yp* POLKA_BUFFER_WIDTH + x;
 				frac = yy & LN_AND;
 
@@ -808,10 +816,17 @@ void drawAntialiasedLine8bpp(Vertex3D *v1, Vertex3D *v2, int shadeShift, unsigne
 		ddx = (dx << LN_BASE) / dy;
 		xx = x1 << LN_BASE;
 
+		if (y1 < 0) {
+			xx += -y1 * ddx;
+			y1 = 0;
+		}
+		if (y2 >= POLKA_BUFFER_HEIGHT) {
+			y2 = POLKA_BUFFER_HEIGHT - 1;
+		}
 		for (y=y1; y<y2; y++) {
 			const int xp = xx >> LN_BASE;
 
-			if (y >= 0 && y < POLKA_BUFFER_HEIGHT && xp >=0 && xp < POLKA_BUFFER_WIDTH - 1) {
+			if (xp >=0 && xp < POLKA_BUFFER_WIDTH - 1) {
 				vramofs = y* POLKA_BUFFER_WIDTH + xp;
 				frac = xx & LN_AND;
 
@@ -877,10 +892,18 @@ void drawAntialiasedLine16bpp(Vertex3D* v1, Vertex3D* v2, int shadeShift, unsign
 		if (dx == 0) return;
 		ddy = (dy << LN_BASE) / dx;
 		yy = y1 << LN_BASE;
+
+		if (x1 < 0) {
+			yy += -x1 * ddy;
+			x1 = 0;
+		}
+		if (x2 >= FB_WIDTH) {
+			x2 = FB_WIDTH - 1;
+		}
 		for (x = x1; x < x2; x++) {
 			const int yp = yy >> LN_BASE;
 
-			if (x >= 0 && x < FB_WIDTH && yp >= 0 && yp < FB_HEIGHT - 1) {
+			if (yp >= 0 && yp < FB_HEIGHT - 1) {
 				vramofs = yp * FB_WIDTH + x;
 				frac = yy & LN_AND;
 
@@ -906,10 +929,17 @@ void drawAntialiasedLine16bpp(Vertex3D* v1, Vertex3D* v2, int shadeShift, unsign
 		ddx = (dx << LN_BASE) / dy;
 		xx = x1 << LN_BASE;
 
+		if (y1 < 0) {
+			xx += -y1 * ddx;
+			y1 = 0;
+		}
+		if (y2 >= FB_HEIGHT) {
+			y2 = FB_HEIGHT - 1;
+		}
 		for (y = y1; y < y2; y++) {
 			const int xp = xx >> LN_BASE;
 
-			if (y >= 0 && y < FB_HEIGHT && xp >= 0 && xp < FB_WIDTH - 1) {
+			if (xp >= 0 && xp < FB_WIDTH - 1) {
 				vramofs = y * FB_WIDTH + xp;
 				frac = xx & LN_AND;
 

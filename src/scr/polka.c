@@ -313,52 +313,6 @@ static void updateDotsVolumeBufferRadialRays(int t)
 	}
 }
 
-static void drawQuadLines(Vertex3D* v0, Vertex3D* v1, Vertex3D* v2, Vertex3D* v3, unsigned char* buffer, int orderSign)
-{
-	if (orderSign * ((v0->xs - v1->xs) * (v2->ys - v1->ys) - (v2->xs - v1->xs) * (v0->ys - v1->ys)) <= 0) {
-		const int shadeShift = 3 - orderSign;
-		drawAntialiasedLine8bpp(v0, v1, shadeShift, buffer);
-		drawAntialiasedLine8bpp(v1, v2, shadeShift, buffer);
-		drawAntialiasedLine8bpp(v2, v3, shadeShift, buffer);
-		drawAntialiasedLine8bpp(v3, v0, shadeShift, buffer);
-	}
-}
-
-static void drawBoxLines(unsigned char* buffer, int orderSign, int objIndex)
-{
-	Vertex3D v[8];
-	int x, y, z, i = 0;
-
-	const int objPosX = gridPos[objIndex].x;
-	const int objPosY = gridPos[objIndex].y;
-	const int objPosZ = gridPos[objIndex].z;
-
-	for (z = 0; z <= 1; ++z) {
-		Vertex3D* axisZ = &axisVerticesZ[z * (VERTICES_DEPTH - 1)];
-		for (y = 0; y <= 1; ++y) {
-			Vertex3D* axisY = &axisVerticesY[y * (VERTICES_HEIGHT - 1)];
-			for (x = 0; x <= 1; ++x) {
-				Vertex3D* axisX = &axisVerticesX[x * (VERTICES_WIDTH - 1)];
-				const int sz = AFTER_MUL_ADDS(axisX->z + axisY->z + axisZ->z, FP_CORE) + objPosZ;
-				if (sz > 0 && sz < REC_DIV_Z_MAX) {
-					const int recZ = recDivZ[(int)sz];
-					v[i].xs = POLKA_BUFFER_WIDTH / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE) + objPosX;
-					v[i].ys = POLKA_BUFFER_HEIGHT / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE) + objPosY;
-					v[i].z = sz;
-				}
-				++i;
-			}
-		}
-	}
-
-	drawQuadLines(&v[0], &v[1], &v[3], &v[2], buffer, orderSign);
-	drawQuadLines(&v[1], &v[5], &v[7], &v[3], buffer, orderSign);
-	drawQuadLines(&v[5], &v[4], &v[6], &v[7], buffer, orderSign);
-	drawQuadLines(&v[4], &v[0], &v[2], &v[6], buffer, orderSign);
-	drawQuadLines(&v[2], &v[3], &v[7], &v[6], buffer, orderSign);
-	drawQuadLines(&v[4], &v[5], &v[1], &v[0], buffer, orderSign);
-}
-
 static void OptGrid3Drun(int objIndex, int sizeIndex, unsigned char* buffer, int ticks)
 {
 	ticks >>= 1;
@@ -368,15 +322,11 @@ static void OptGrid3Drun(int objIndex, int sizeIndex, unsigned char* buffer, int
 	generateAxesVertices(transformedAxesVertices, objIndex);
 	transformAndProjectAxesBoxDotsEffect(objIndex);
 
-	/* drawBoxLines(buffer, -1, objIndex); */
-
 	if (sizeIndex == 0) {
 		drawBlobPointsPolkaSize2(screenPointsGrid.v, screenPointsGrid.num, buffer);
 	} else {
 		drawBlobPointsPolkaSize1(screenPointsGrid.v, screenPointsGrid.num, buffer);
 	}
-
-	/* drawBoxLines(buffer, 1, objIndex); */
 }
 
 static void moveBgPoints(int t)

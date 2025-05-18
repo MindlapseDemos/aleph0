@@ -260,7 +260,6 @@ static void updateWater32(unsigned char* buffer1, unsigned char* buffer2)
 
 	unsigned int* src1 = (unsigned int*)buffer1;
 	unsigned int* src2 = (unsigned int*)buffer2;
-	unsigned int* vram = (unsigned int*)((unsigned char*)wb1 + WATER_TEX_WIDTH + 4);
 
 	do {
 		const unsigned int c0 = *(unsigned int*)((unsigned char*)src1 - 1);
@@ -471,7 +470,7 @@ static void drawRain(int zRangeMin, int zRangeMax)
 			v2.xs = v1.xs + 1;
 			v2.ys = FB_HEIGHT / 2 - ((y + 2 * RAIN_SPEED_Y) * PROJ_MUL) / z;
 
-			drawAntialiasedLine16bpp(&v1, &v2, 4 + ((z - RAINDROPS_DIST) >> 9), fb_pixels);
+			drawAntialiasedLine16bpp(&v1, &v2, 4 + (((unsigned int)(z - RAINDROPS_DIST)) >> 9), fb_pixels);
 		}
 	}
 }
@@ -512,7 +511,7 @@ static void draw(void)
 
 	drawRain(frontRainZ, 16384);
 	sceneRunFlower(t);
-	drawRain(0, frontRainZ);
+	drawRain(RAINDROPS_DIST, frontRainZ);
 #endif
 
 	swap_buffers(0);

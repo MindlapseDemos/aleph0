@@ -216,7 +216,7 @@ static int loadAndConvertImgColormapPng()
 	#ifdef SAVE_COLOR_MAP
 		int i;
 		struct img_pixmap mapPic;
-		unsigned char* tempCmap = malloc(HMAP_SIZE + 256 * 3);
+		unsigned char* tempCmap;
 		struct img_colormap* cmapSrc;
 		unsigned char* cmapDst;
 
@@ -226,6 +226,7 @@ static int loadAndConvertImgColormapPng()
 			return -1;
 		}
 
+		tempCmap = malloc(HMAP_SIZE + 256 * 3);
 		img_convert(&mapPic, IMG_FMT_IDX8);
 		memcpy(tempCmap, mapPic.pixels, HMAP_SIZE);
 
@@ -260,7 +261,7 @@ static int loadAndConvertImgHeightmapPng()
 		struct img_pixmap mapPic;
 
 		int i;
-		uint32_t* src;
+		const uint32_t* src;
 		int hMin = 100000;
 		int hMax = 0;
 
@@ -578,10 +579,10 @@ static void renderScape(int petrT)
 
 	const int playerHeight = viewPos.y >> FP_VIEWER;
 
-	Point2D* posVecL = &viewNearPosVec[0];
-	Point2D* posVecR = &viewNearPosVec[VIS_HOR_STEPS - 1];
-	Point2D* stepVecL = &viewNearStepVec[0];
-	Point2D* stepVecR = &viewNearStepVec[VIS_HOR_STEPS - 1];
+	const Point2D* posVecL = &viewNearPosVec[0];
+	const Point2D* posVecR = &viewNearPosVec[VIS_HOR_STEPS - 1];
+	const Point2D* stepVecL = &viewNearStepVec[0];
+	const Point2D* stepVecR = &viewNearStepVec[VIS_HOR_STEPS - 1];
 	const int vPosX = viewPos.x << (FP_SCAPE - FP_VIEWER);
 	const int vPosY = viewPos.z << (FP_SCAPE - FP_VIEWER);
 	int vxL = posVecL->x + vPosX;
@@ -605,7 +606,7 @@ static void renderScape(int petrT)
 		const int dvx = pixStep * ((vxR - vxL) / VIS_HOR_STEPS);
 		const int dvy = pixStep * ((vyR - vyL) / VIS_HOR_STEPS);
 
-		uint16_t* pmapPtr = pmap +shadeVoxOff[i];
+		const uint16_t* pmapPtr = pmap +shadeVoxOff[i];
 		uint16_t* pmapPtrShade;
 		const int heightScale = heightScaleTab[i];
 
@@ -639,10 +640,8 @@ static void renderScape(int petrT)
 				if (h > FB_HEIGHT + 1) h = FB_HEIGHT + 1;
 
 				if (yMax < h) {
-					int n, yH;
-					int cvR, cvG, cvB;
 					uint16_t cv;
-					int hCount;
+					int yH, hCount;
 					uint16_t* dst;
 					if (hm > SEA_LEVEL) {
 						cv = pmapPtr[cmap[mapOffset]];
@@ -667,10 +666,10 @@ static void renderScape(int petrT)
 							} while (--hCount > 0);
 						} else {
 							const int hi = (3*(i - VIS_HAZE)) / 2;
-
-							cvR = (cv >> 11) & 31;
-							cvG = (cv >> 5) & 63;
-							cvB = cv & 31;
+//28-29
+							const int cvR = (cv >> 11) & 31;
+							const int cvG = (cv >> 5) & 63;
+							const int cvB = cv & 31;
 							do {
 								if (hi < VIS_FAR - VIS_HAZE) {
 									const uint16_t bg = *dst;
@@ -788,7 +787,7 @@ static void move(int dt)
 	updateRaySamplePosAndStep();
 }
 
-static void renderBitmapLineSky(int u, int du, int v, int dv, unsigned char* src, unsigned short* pal, unsigned short* dst)
+static void renderBitmapLineSky(int u, int du, int v, int dv, const unsigned char* src, const unsigned short* pal, unsigned short* dst)
 {
 	int length = FB_WIDTH;
 	while (length-- > 0) {
@@ -848,7 +847,7 @@ static void renderSky()
 	for (y = FB_HEIGHT / 2; y < FB_HEIGHT / 2 + FB_HEIGHT / 2; ++y) {
 		uint32_t* dst32;
 		uint32_t c;
-		unsigned short* farPal;
+		const unsigned short* farPal;
 		int x;
 
 		int palNum = (PAL_SHADES * (FB_HEIGHT - y)) / (FB_HEIGHT / 2);

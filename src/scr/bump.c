@@ -23,22 +23,6 @@ static struct screen scr = {
 	draw
 };
 
-typedef struct Point2D {
-	int x, y;
-} Point2D;
-
-typedef struct Edge {
-	short xIn, xOut;
-} Edge;
-
-typedef struct PathPoint {
-	unsigned char x,y,dir,length;
-} PathPoint;
-
-typedef struct PathPointTrack {
-	PathPoint *pathPoint;
-	int index;
-} PathPointTrack;
 
 #define NUM_BIG_LIGHTS 3
 #define BIG_LIGHT_WIDTH 256
@@ -47,9 +31,9 @@ typedef struct PathPointTrack {
 #define BIGGER_LIGHT_WIDTH 384
 #define BIGGER_LIGHT_HEIGHT BIGGER_LIGHT_WIDTH
 
-#define NUM_PARTICLES 32
-#define PARTICLE_LIGHT_WIDTH 32
-#define PARTICLE_LIGHT_HEIGHT 32
+#define NUM_PARTICLES 64
+#define PARTICLE_LIGHT_WIDTH 16
+#define PARTICLE_LIGHT_HEIGHT 16
 
 #define HMAP_WIDTH 256
 #define HMAP_HEIGHT 256
@@ -58,6 +42,7 @@ typedef struct PathPointTrack {
 #define LMAP_HEIGHT 512
 #define LMAP_OFFSET_X ((LMAP_WIDTH - FB_WIDTH) / 2)
 #define LMAP_OFFSET_Y ((LMAP_HEIGHT - FB_HEIGHT) / 2)
+
 
 static unsigned char electroPathData[] = {81,
         6, 117,5,4,3, 114,5,3,4, 110,1,2,6, 110,251,1,3, 113,248,0,7, 120,248,255,7,
@@ -143,9 +128,30 @@ static unsigned char electroPathData[] = {81,
 		6, 120,248,4,7, 113,248,5,3, 110,251,6,6, 110,1,7,4, 114,5,0,3, 117,5,255,3};
 
 
+typedef struct Point2D {
+	int x, y;
+} Point2D;
+
+typedef struct Edge {
+	short xIn, xOut;
+} Edge;
+
+typedef struct PathPoint {
+	unsigned char x,y,dir,pixelLength;
+} PathPoint;
+
+typedef struct PathPointTrack {
+	PathPoint *pathPoint;
+	int pixelWalk;
+	int index;
+	int numPoints;
+} PathPointTrack;
+
+
 static Point2D dir[8] = { {1,0}, {1,-1}, {0,-1}, {-1,-1}, {-1,0}, {-1,1}, {0,1}, {1,1} };
 
 static PathPointTrack *pathPointTracks;
+static Point2D moveLightmapOffset = {0,0};
 
 static unsigned long startingTime;
 
@@ -170,6 +176,8 @@ static int lightMaxX = LMAP_WIDTH-1;
 static int lightMinY = 0;
 static int lightMaxY = LMAP_HEIGHT-1;
 
+static int numParticlesVisible = 0;
+
 static int ev_electroids;
 static int ev_scrollUp;
 static int ev_lightsIn;
@@ -193,7 +201,9 @@ static void initPathPoints()
 	do {
 		int numPoints = *src++;
 		pathPointTracks[i].pathPoint = (PathPoint*)src;
+		pathPointTracks[i].pixelWalk = 0;
 		pathPointTracks[i].index = 0;
+		pathPointTracks[i].numPoints = numPoints;
 		src += numPoints * sizeof(PathPoint);
 	}while(++i < numPaths);
 }
@@ -291,8 +301,8 @@ static void generateParticleLight()
 			float invDist = ((float)particleRadius - (float)sqrt(xc * xc + yc * yc)) / (float)particleRadius;
 			if (invDist < 0.0f) invDist = 0.0f;
 
-			c = (int)(pow(invDist, 5.5f) * 31);
-			CLAMP(c,0,27)
+			c = (int)(pow(invDist, 4.5f) * 31);
+			CLAMP(c,0,29)
 			particleLight[i++] = ((c >> 1) << 11) | (c << 5) | (c >> 1);
 		}
 	}
@@ -435,7 +445,7 @@ static void renderParticleLight(Point2D *p, int width, int height, unsigned shor
 static void renderParticles()
 {
 	int i;
-	for (i = 0; i < NUM_PARTICLES; i++) {
+	for (i = 0; i < numParticlesVisible; i++) {
 		renderParticleLight(&particlePoint[i], PARTICLE_LIGHT_WIDTH, PARTICLE_LIGHT_HEIGHT, particleLight);
 	}
 }
@@ -585,33 +595,72 @@ static void renderBump(unsigned short *vram)
 	}
 }
 
+static void updateCurrentParticleLightmapEraseMinMax(Point2D *p)
+{
+	const int x0 = p->x + LMAP_OFFSET_X;
+	const int x1 = p->x + LMAP_OFFSET_X + PARTICLE_LIGHT_WIDTH;
+	const int y0 = p->y + LMAP_OFFSET_Y;
+	const int y1 = p->y + LMAP_OFFSET_Y + PARTICLE_LIGHT_HEIGHT;
+
+	if (x0 < lightMinX) lightMinX = x0;
+	if (x1 > lightMaxX) lightMaxX = x1;
+	if (y0 < lightMinY) lightMinY = y0;
+	if (y1 > lightMaxY) lightMaxY = y1;
+}
+
 static void animateParticles()
 {
 	int i;
 	Point2D center, p;
 	float dt = (float)(time_msec - startingTime) / 2000.0f;
 	float tt = 0.25f * sin(dt) + 0.75f;
-	int x0,y0,x1,y1;
 
 	center.x = (FB_WIDTH >> 1) - (PARTICLE_LIGHT_WIDTH / 2);
 	center.y = (FB_HEIGHT >> 1) - (PARTICLE_LIGHT_HEIGHT / 2);
 
-	for (i = 0; i < NUM_PARTICLES; i++) {
+	for (i = 0; i < numParticlesVisible; i++) {
 		p.x = center.x + (sin(1.2f * (i*i*i + dt)) * 74.0f + sin(0.6f * (i + dt)) * 144.0f) * tt;
 		p.y = center.y + (sin(1.8f * (i + dt)) * 68.0f + sin(0.5f * (i*i + dt)) * 132.0f) * tt;
 
-		x0 = p.x + LMAP_OFFSET_X;
-		x1 = p.x + LMAP_OFFSET_X + PARTICLE_LIGHT_WIDTH;
-		y0 = p.y + LMAP_OFFSET_Y;
-		y1 = p.y + LMAP_OFFSET_Y + PARTICLE_LIGHT_HEIGHT;
-
-		if (x0 < lightMinX) lightMinX = x0;
-		if (x1 > lightMaxX) lightMaxX = x1;
-		if (y0 < lightMinY) lightMinY = y0;
-		if (y1 > lightMaxY) lightMaxY = y1;
+		updateCurrentParticleLightmapEraseMinMax(&p);
 
 		particlePoint[i].x = p.x;
 		particlePoint[i].y = p.y;
+	}
+}
+
+static void animateParticleElectroids()
+{
+	int i;
+
+	for (i=0; i<numParticlesVisible; ++i) {
+		const int pptI = i;
+		Point2D *p = &particlePoint[i];
+		PathPointTrack *ppTrack = &pathPointTracks[pptI];
+		PathPoint *pathPoint = &ppTrack->pathPoint[ppTrack->index];
+
+		if (ppTrack->pixelWalk==0) {
+			p->x = pathPoint->x - (PARTICLE_LIGHT_WIDTH / 2);
+			p->y = pathPoint->y - (PARTICLE_LIGHT_HEIGHT / 2);
+		} else {
+			const int pDirIndex = pathPoint->dir;
+			if (pDirIndex < 8) {
+				const Point2D* pDir = &dir[pDirIndex];
+				p->x += pDir->x;
+				p->y += pDir->y;
+			}
+		}
+
+		ppTrack->pixelWalk++;
+		if (ppTrack->pixelWalk == pathPoint->pixelLength) {
+			ppTrack->pixelWalk = 0;
+			ppTrack->index++;
+			if (ppTrack->pathPoint[ppTrack->index].dir==255 || ppTrack->index >= ppTrack->numPoints) {
+				ppTrack->index = 0;
+			}
+		}
+
+		updateCurrentParticleLightmapEraseMinMax(p);
 	}
 }
 
@@ -656,6 +705,9 @@ static void blitBumpTexDefault(int t)
 			*dst++ = src[x & (HMAP_WIDTH-1)] + x;
 		}
 	}
+
+	moveLightmapOffset.x = 0;
+	moveLightmapOffset.y = tt;
 }
 
 static void blitBumpTexWave(int t)
@@ -687,9 +739,9 @@ static void blitBumpTexWave(int t)
 
 static void blitBumpTextScript(int t)
 {
-	int tt = t & 16383;
+	int tt = 0;//t & 16383;
 	if (tt < 8192) {
-		blitBumpTexDefault(t);
+		blitBumpTexDefault(0);
 	} else {
 		blitBumpTexWave(t);
 	}
@@ -722,7 +774,6 @@ static void bumpScript()
 	}
 }
 
-
 static void draw(void)
 {
 	int i;
@@ -741,7 +792,9 @@ static void draw(void)
 		renderLight(bigLight[i], bigLightEdges, BIG_LIGHT_WIDTH, BIG_LIGHT_HEIGHT, &bigLightPoint[i], shouldBlit);
 	}
 
-	animateParticles();
+	numParticlesVisible = NUM_PARTICLES;
+
+	animateParticleElectroids();
 	renderParticles();
 
 	blitBumpTextScript(t);

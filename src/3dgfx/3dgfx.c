@@ -592,11 +592,12 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 
 		for(i=0; i<vnum; i++) {
 			if(v[i].w != 0.0f) {
-				v[i].x /= v[i].w;
-				v[i].y /= v[i].w;
+				float rcp_w = 1.0f / v[i].w;
+				v[i].x *= rcp_w;
+				v[i].y *= rcp_w;
 #ifdef ENABLE_ZBUFFER
 				if(st->opt & G3D_DEPTH_TEST) {
-					v[i].z /= v[i].w;
+					v[i].z *= rcp_w;
 				}
 #endif
 			}
@@ -854,6 +855,29 @@ void g3d_texcoord(float u, float v)
 {
 	st->imm_curv.u = u;
 	st->imm_curv.v = v;
+}
+
+int g3d_xform_point(float *vec)
+{
+	int mvtop = st->mtop[G3D_MODELVIEW];
+	int ptop = st->mtop[G3D_PROJECTION];
+	int inside;
+	float rcp_w;
+
+	xform4_vec3(st->mat[G3D_MODELVIEW][mvtop], vec);
+	xform4_vec3(st->mat[G3D_PROJECTION][ptop], vec);
+
+	inside = vec[0] > -vec[3] && vec[0] < vec[3] && vec[1] > -vec[3] && vec[1] < vec[3];
+
+	rcp_w = vec[3] == 0.0f ? 1.0f : 1.0f / vec[3];
+
+	vec[0] *= rcp_w;
+	vec[1] *= rcp_w;
+	vec[2] *= rcp_w;
+
+	vec[0] = (vec[0] * 0.5f + 0.5f) * (float)st->vport[2] + st->vport[0];
+	vec[1] = (0.5f - vec[1] * 0.5f) * (float)st->vport[3] + st->vport[1];
+	return inside;
 }
 
 static __inline void xform4_vec3(const float *mat, float *vec)

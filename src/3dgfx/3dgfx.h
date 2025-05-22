@@ -161,4 +161,6 @@ void g3d_color3f(float r, float g, float b);
 void g3d_color4f(float r, float g, float b, float a);
 void g3d_texcoord(float u, float v);
 
+int g3d_xform_point(float *xyzw);
+
 #endif	/* THREEDGFX_H_ */

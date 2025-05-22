@@ -63,6 +63,7 @@ static void keypress(int key);
 static void draw_thing(void);
 static void draw_backdrop(void);
 
+static void do_precalc(void);
 static void update_thing(void);
 static void update_tentacle(struct g3d_mesh *mesh, int tidx);
 
@@ -99,6 +100,8 @@ static int bgscroll_x, bgscroll_y;
 
 static int playanim, record;
 static long anim_start_time;
+
+static int xyzzy;
 
 
 struct screen *hairball_screen(void)
@@ -137,6 +140,7 @@ static int init(void)
 		playanim = 1;
 	}
 
+	do_precalc();
 	return 0;
 }
 
@@ -322,7 +326,6 @@ static void draw(void)
 	update();
 
 	g3d_clear(/*G3D_COLOR_BUFFER_BIT | */G3D_DEPTH_BUFFER_BIT);
-	draw_backdrop();
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
@@ -330,6 +333,7 @@ static void draw(void)
 	g3d_rotate(cam_phi, 1, 0, 0);
 	g3d_rotate(cam_theta, 0, 1, 0);
 
+	draw_backdrop();
 	draw_thing();
 
 	swap_buffers(fb_pixels);
@@ -362,6 +366,10 @@ static void keypress(int key)
 			save_anim(thing.anim, "thing.anm");
 		}
 		break;
+
+	case '\t':
+		xyzzy ^= 1;
+		break;
 	}
 }
 
@@ -382,10 +390,39 @@ static void draw_thing(void)
 	}
 }
 
-static void draw_backdrop(void)
+#define LUTSZ	512
+#define LUTMASK	(LUTSZ - 1)
+static int lut_dist[256][320];
+static int lut_rsin[LUTSZ];
+
+static void do_precalc(void)
 {
 	int i, j;
+	for(i=0; i<256; i++) {
+		for(j=0; j<320; j++) {
+			lut_dist[i][j] = sqrt(j * j + i * i) * 4.0f;
+		}
+	}
+
+	for(i=0; i<LUTSZ; i++) {
+		float x = (float)i * (CGM_PI * 2.0f) / (float)LUTSZ;
+		lut_rsin[i] = sin(x) * 1024.0f;
+	}
+}
+
+static void draw_backdrop(void)
+{
+	int i, j, x, y, dx, dy, xoffs, yoffs, dist;
 	uint16_t *dptr, *sptr;
+	float t = (float)time_msec / 256.0f;
+	unsigned int tt = time_msec >> 4;
+	float pos[4];
+
+	pos[0] = thing.pos.x;
+	pos[1] = thing.pos.y;
+	pos[2] = thing.pos.z;
+	pos[3] = 1.0f;
+	g3d_xform_point(pos);
 
 	bgscroll_x &= bgimg.xmask;
 	if(bgscroll_y < 0) bgscroll_y = 0;
@@ -394,7 +431,31 @@ static void draw_backdrop(void)
 	dptr = fb_pixels;
 	sptr = bgimg.pixels + (bgscroll_y << bgimg.xshift) + bgscroll_x;
 	for(i=0; i<240; i++) {
-		memcpy64(dptr, sptr, 320 * 2 >> 3);
+		/*memcpy64(dptr, sptr, 320 * 2 >> 3);*/
+		for(j=0; j<320; j++) {
+			dx = j - pos[0];
+			dy = i - pos[1];
+			//dist = lut_dist[abs(dy)][abs(dx)];//sqrt(dx * dx + dy * dy);
+			if(xyzzy) {
+				dist *= 0.25f;
+				xoffs = cround64(dx * cos(dist * 0.1 + t) * 0.15);
+				yoffs = 0;//dy * sin(dist * 0.1 + t) * 0.15;
+			} else {
+				xoffs = 0;//(dx * lut_rsin[(int)(dist + LUTSZ / 4 + tt) & LUTMASK]) >> 10;
+				yoffs = 0;
+			}
+
+			//xoffs += sin(j * 1.06 + t) * 8;
+			//yoffs += cos(j * 0.06 + t * 0.8) * 6 + sin(i * 0.04 + t * 0.5) * 8;
+
+			x = j + bgscroll_x + xoffs;
+			y = i + bgscroll_y + yoffs;
+
+			x &= bgimg.xmask;
+			if(y < 0) y += BGIMG_HEIGHT; else if(y >= BGIMG_HEIGHT) y -= BGIMG_HEIGHT;
+
+			dptr[j] = bgimg.pixels[(y << bgimg.xshift) + x];
+		}
 		dptr += 320;
 		sptr += BGIMG_WIDTH;
 	}

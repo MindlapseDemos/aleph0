@@ -99,7 +99,10 @@ static uint16_t *pmap = NULL;
 
 static int *shadeVoxOff;
 static char* petrubTab;
-static char* pixStepY;
+
+static void(*drawColumnFunc)(int, uint16_t, uint16_t*);
+
+static int haze;
 
 static Vector3D viewPos;
 static Vector3D viewAngle;
@@ -394,17 +397,6 @@ static int initDistMap()
 		petrubTab[i] = (int)(f * PETRUB_RANGE);
 	}
 
-	pixStepY = malloc(VIS_VER_STEPS);
-	for (i = 0; i < VIS_VER_STEPS; ++i) {
-		if (i < VIS_CLOSE) {
-			pixStepY[i] = 4;
-		} else if (i < VIS_MID) {
-			pixStepY[i] = 2;
-		} else {
-			pixStepY[i] = 1;
-		}
-	}
-
 	return 0;
 }
 
@@ -491,7 +483,6 @@ static void destroy(void)
 	free(skyTex);
 	free(distMap);
 	free(petrubTab);
-	free(pixStepY);
 
 	for (i = 0; i < PAL_SHADES; ++i) {
 		free(skyPal[i]);
@@ -573,6 +564,96 @@ static uint16_t reflectSample(int px, int py, int dvx, int dvy, int ph, int dh, 
 	return reflectSky(px, py, dvx, dvy, dh, petrubation>>1);
 }
 
+static void drawColumn(int hCount, uint16_t cv, uint16_t* dst)
+{
+	do {
+		*dst = cv;
+		dst -= FB_WIDTH;
+	} while (--hCount > 0);
+}
+
+static void drawColumnHaze(int hCount, uint16_t cv, uint16_t* dst)
+{
+	const int hi = haze;
+
+	const int cvR = (cv >> 11) & 31;
+	const int cvG = (cv >> 5) & 63;
+	const int cvB = cv & 31;
+	do {
+		const uint16_t bg = *dst;
+		const int bgR = (bg >> 11) & 31;
+		const int bgG = (bg >> 5) & 63;
+		const int bgB = bg & 31;
+		const int r = (bgR * hi + cvR * ((VIS_FAR - VIS_HAZE) - hi)) / (VIS_FAR - VIS_HAZE);
+		const int g = (bgG * hi + cvG * ((VIS_FAR - VIS_HAZE) - hi)) / (VIS_FAR - VIS_HAZE);
+		const int b = (bgB * hi + cvB * ((VIS_FAR - VIS_HAZE) - hi)) / (VIS_FAR - VIS_HAZE);
+		*dst = (r << 11) | (g << 5) | b;
+		dst -= FB_WIDTH;
+	} while (--hCount > 0);
+}
+
+static void drawColumn2X(int hCount, uint16_t cv, uint16_t* dst)
+{
+	const uint32_t cv32 = (cv << 16) | cv;
+	uint32_t* dst32 = (uint32_t*)dst;
+
+	do {
+		*dst32 = cv32;
+		dst32 -= FB_WIDTH / 2;
+	} while (--hCount > 0);
+}
+
+static void drawColumn4X(int hCount, uint16_t cv, uint16_t* dst)
+{
+	const uint32_t cv32 = (cv << 16) | cv;
+	uint32_t* dst32 = (uint32_t*)dst;
+
+	do {
+		*dst32 = cv32;
+		*(dst32 + 1) = cv32;
+		dst32 -= FB_WIDTH / 2;
+	} while (--hCount > 0);
+}
+
+static int setupPixStepColumn(int i)
+{
+	int j;
+
+	// In transitions from close to mid to far, clone the yMaxHolder for nearby columns 
+	if (i == VIS_CLOSE) {
+		for (j = 0; j < VIS_HOR_STEPS; j += 4) {
+			const int yMax = yMaxHolder[j];
+			yMaxHolder[j + 1] = yMax;
+			yMaxHolder[j + 2] = yMax;
+			yMaxHolder[j + 3] = yMax;
+		}
+	}
+	else if (i == VIS_MID) {
+		for (j = 0; j < VIS_HOR_STEPS; j += 2) {
+			const int yMax = yMaxHolder[j];
+			yMaxHolder[j + 1] = yMax;
+		}
+	}
+
+	if (i < VIS_CLOSE) {
+		drawColumnFunc = drawColumn4X;
+		return 4;
+	}
+	else if (i < VIS_MID) {
+		drawColumnFunc = drawColumn2X;
+		return 2;
+	}
+	else if (i < VIS_HAZE) {
+		drawColumnFunc = drawColumn;
+	}
+	else {
+		drawColumnFunc = drawColumnHaze;
+		haze = (3 * (i - VIS_HAZE)) / 2;
+		CLAMP(haze, 0, VIS_FAR - VIS_HAZE - 1)
+	}
+	return 1;
+}
+
 static void renderScape(int petrT)
 {
 	int i, j;
@@ -599,12 +680,11 @@ static void renderScape(int petrT)
 	memset(yMaxHolder, 0, VIS_HOR_STEPS * sizeof(int));
 
 	for (i = 0; i < VIS_VER_STEPS; ++i) {
-		const int pixStep = pixStepY[i];
-
-		int vx = vxL;
-		int vy = vyL;
+		const int pixStep = setupPixStepColumn(i);
 		const int dvx = pixStep * ((vxR - vxL) / VIS_HOR_STEPS);
 		const int dvy = pixStep * ((vyR - vyL) / VIS_HOR_STEPS);
+		int vx = vxL;
+		int vy = vyL;
 
 		const uint16_t* pmapPtr = pmap +shadeVoxOff[i];
 		uint16_t* pmapPtrShade;
@@ -613,22 +693,6 @@ static void renderScape(int petrT)
 		int shadePalI = i + (int)((VIS_VER_STEPS - 1) * REFLECT_SHADE);
 		CLAMP(shadePalI, 0, VIS_VER_STEPS-1)
 		pmapPtrShade = pmap + shadeVoxOff[shadePalI];
-
-		// In transitions from close to mid to far, clone the yMaxHolder for nearby columns 
-		if (i == VIS_CLOSE) {
-			for (j = 0; j < VIS_HOR_STEPS; j+= 4) {
-				const int yMax = yMaxHolder[j];
-				yMaxHolder[j+1] = yMax;
-				yMaxHolder[j+2] = yMax;
-				yMaxHolder[j+3] = yMax;
-			}
-		} else if (i == VIS_MID) {
-			for (j = 0; j < VIS_HOR_STEPS; j+= 2) {
-				const int yMax = yMaxHolder[j];
-				yMaxHolder[j+1] = yMax;
-			}
-		}
-
 
 		for (j = 0; j < VIS_HOR_STEPS; j+= pixStep) {
 			const int yMax = yMaxHolder[j];
@@ -658,49 +722,7 @@ static void renderScape(int petrT)
 					yMaxHolder[j] = h;
 					dst = dstBase - (yH -1) * FB_WIDTH + j;
 
-					if (pixStep == 1) {
-						if (i < VIS_HAZE) {
-							do {
-								*dst = cv;
-								dst -= FB_WIDTH;
-							} while (--hCount > 0);
-						} else {
-							const int hi = (3*(i - VIS_HAZE)) / 2;
-//28-29
-							const int cvR = (cv >> 11) & 31;
-							const int cvG = (cv >> 5) & 63;
-							const int cvB = cv & 31;
-							do {
-								if (hi < VIS_FAR - VIS_HAZE) {
-									const uint16_t bg = *dst;
-									const int bgR = (bg >> 11) & 31;
-									const int bgG = (bg >> 5) & 63;
-									const int bgB = bg & 31;
-									const int r = (bgR * hi + cvR * ((VIS_FAR - VIS_HAZE) - hi)) / (VIS_FAR - VIS_HAZE);
-									const int g = (bgG * hi + cvG * ((VIS_FAR - VIS_HAZE) - hi)) / (VIS_FAR - VIS_HAZE);
-									const int b = (bgB * hi + cvB * ((VIS_FAR - VIS_HAZE) - hi)) / (VIS_FAR - VIS_HAZE);
-									*dst = (r << 11) | (g << 5) | b;
-								}
-								dst -= FB_WIDTH;
-							} while (--hCount > 0);
-						}
-					} else {	// it's 2 or 4
-						const uint32_t cv32 = (cv << 16) | cv;
-						uint32_t* dst32 = (uint32_t*)dst;
-
-						if (pixStep==2) {
-							do {
-								*dst32 = cv32;
-								dst32 -= FB_WIDTH/2;
-							} while (--hCount > 0);
-						} else {	// it's 4
-							do {
-								*dst32 = cv32;
-								*(dst32 + 1) = cv32;
-								dst32 -= FB_WIDTH/2;
-							} while (--hCount > 0);
-						}
-					}
+					drawColumnFunc(hCount, cv, dst);
 				}
 			}
 			vx += dvx; vy += dvy;

@@ -75,7 +75,7 @@ demoseq {
 		electroids {
 			interp = "linear"
 			key:0 = 0
-			key:4096 = 64
+			key:8192 = 64
 		}
 
 		scrollUp {
@@ -85,8 +85,8 @@ demoseq {
 
 		lightsIn {
 			interp = "smoothstep"
-			key:8192 = 0
-			key:12288 = 1024
+			key:12288 = 0
+			key:16384 = 1024
 		}
 
 		scalerIn {

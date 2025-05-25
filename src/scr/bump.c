@@ -170,6 +170,7 @@ static Edge *biggerLightEdges;
 
 static unsigned short *particleLight;
 static Point2D particlePoint[NUM_PARTICLES];
+static Point2D electroidPoint[NUM_PARTICLES];
 
 static int lightMinX = 0;
 static int lightMaxX = LMAP_WIDTH-1;
@@ -177,6 +178,8 @@ static int lightMinY = 0;
 static int lightMaxY = LMAP_HEIGHT-1;
 
 static int numParticlesVisible = 0;
+static int didElectroidsMovedYetOnce = 0;
+static int startScrollingBump = 0;
 
 static int ev_electroids;
 static int ev_scrollUp;
@@ -356,6 +359,7 @@ static int init(void)
 	memset(lightmap, 0, sizeof(*lightmap) * lm_size);
 	memset(bumpOffset, 0, sizeof(*bumpOffset) * hm_size);
 	memset(particlePoint, 0, sizeof(*particlePoint) * NUM_PARTICLES);
+	memset(electroidPoint, 0, sizeof(*electroidPoint) * NUM_PARTICLES);
 
 	if (loadHeightMapTest() == -1) return - 1;
 
@@ -517,7 +521,6 @@ static void renderLight(unsigned short *lightBitmap, Edge *lightEdges, unsigned 
 
 static void animateBiggerLight()
 {
-	int i;
 	int x0, x1, y0, y1;
 
 	Point2D center;
@@ -629,43 +632,68 @@ static void animateParticles()
 	}
 }
 
-static void animateParticleElectroids()
+static void animateParticleElectroids(int t)
 {
+	static int prevT = 0;
+	const int dt = t - prevT;
+
 	int i;
+	static int lastNumParticlesUpdated = 0;
 
-	for (i=0; i<numParticlesVisible; ++i) {
-		const int pptI = i;
-		Point2D *p = &particlePoint[i];
-		PathPointTrack *ppTrack = &pathPointTracks[pptI];
-		PathPoint *pathPoint = &ppTrack->pathPoint[ppTrack->index];
+	if (dt < 0 || dt > 20) {
+		for (i = 0; i < numParticlesVisible; ++i) {
+			const int pptI = i;
+			Point2D* p = &electroidPoint[i];
+			PathPointTrack* ppTrack = &pathPointTracks[pptI];
+			PathPoint* pathPoint = &ppTrack->pathPoint[ppTrack->index];
 
-		if (ppTrack->pixelWalk==0) {
-			p->x = pathPoint->x - (PARTICLE_LIGHT_WIDTH / 2);
-			p->y = pathPoint->y - (PARTICLE_LIGHT_HEIGHT / 2);
-		} else {
-			const int pDirIndex = pathPoint->dir;
-			if (pDirIndex < 8) {
-				const Point2D* pDir = &dir[pDirIndex];
-				p->x += pDir->x;
-				p->y += pDir->y;
+			if (ppTrack->pixelWalk == 0) {
+				p->x = pathPoint->x - (PARTICLE_LIGHT_WIDTH / 2);
+				p->y = pathPoint->y - (PARTICLE_LIGHT_HEIGHT / 2);
+			}
+			else {
+				const int pDirIndex = pathPoint->dir;
+				if (pDirIndex < 8) {
+					const Point2D* pDir = &dir[pDirIndex];
+					p->x += pDir->x;
+					p->y += pDir->y;
+				}
+			}
+
+			ppTrack->pixelWalk++;
+			if (ppTrack->pixelWalk == pathPoint->pixelLength) {
+				ppTrack->pixelWalk = 0;
+				ppTrack->index++;
+				if (ppTrack->pathPoint[ppTrack->index].dir == 255 || ppTrack->index >= ppTrack->numPoints) {
+					ppTrack->index = 0;
+				}
 			}
 		}
+		lastNumParticlesUpdated = numParticlesVisible;
+		didElectroidsMovedYetOnce = 1;
+		prevT = t;
+	}
 
-		ppTrack->pixelWalk++;
-		if (ppTrack->pixelWalk == pathPoint->pixelLength) {
-			ppTrack->pixelWalk = 0;
-			ppTrack->index++;
-			if (ppTrack->pathPoint[ppTrack->index].dir==255 || ppTrack->index >= ppTrack->numPoints) {
-				ppTrack->index = 0;
-			}
+	if (didElectroidsMovedYetOnce != 0) {
+		Point2D* srcPoint = electroidPoint;
+		Point2D* dstPoint = particlePoint;
+		for (i = 0; i < lastNumParticlesUpdated; ++i) {
+			dstPoint->x = (srcPoint->x - moveLightmapOffset.x) & (HMAP_WIDTH - 1);
+			dstPoint->y = (srcPoint->y - moveLightmapOffset.y) & (HMAP_HEIGHT - 1);
+			updateCurrentParticleLightmapEraseMinMax(dstPoint);
+			++srcPoint;
+			++dstPoint;
 		}
-
-		updateCurrentParticleLightmapEraseMinMax(p);
 	}
 }
 
 static void eraseLightmapArea(int x0, int y0, int x1, int y1)
 {
+	CLAMP(x0, 0, LMAP_WIDTH - 1)
+	CLAMP(x1, 0, LMAP_WIDTH - 1)
+	CLAMP(y0, 0, LMAP_HEIGHT - 1)
+	CLAMP(y1, 0, LMAP_HEIGHT - 1)
+
 	if (x1 >= x0) {
 		const int size = (x1 - x0 + 1) * 2;
 
@@ -739,29 +767,20 @@ static void blitBumpTexWave(int t)
 
 static void blitBumpTextScript(int t)
 {
-	int tt = 0;//t & 16383;
-	if (tt < 8192) {
-		blitBumpTexDefault(0);
-	} else {
-		blitBumpTexWave(t);
-	}
+	blitBumpTexDefault(startScrollingBump * t);
+	/* blitBumpTexWave(t); */
 }
 
 static void bumpScript()
 {
-	static int val0 = 0;
 	static int val1 = 0;
-	static int prevVal0 = -1;
 	static int prevVal1 = -1;
 
-	if (val0 = dseq_value(ev_electroids)) {
-		if (val0 != prevVal0) {
-			/* printf("electroids) %d\n", val0); */
-			prevVal0 = val0;
-		}
-	}
+	numParticlesVisible = dseq_value(ev_electroids);
+	CLAMP(numParticlesVisible, 0, NUM_PARTICLES);
+
 	if (dseq_triggered(ev_scrollUp)) {
-		/* printf("scrollUp) %d\n", dseq_value(ev_scrollUp)); */
+		startScrollingBump = 1;
 	}
 	if (val1 = dseq_value(ev_lightsIn)) {
 		if (val1 != prevVal1) {
@@ -783,8 +802,10 @@ static void draw(void)
 
 	eraseLightmapArea(lightMinX, lightMinY, lightMaxX, lightMaxY);
 
-	//animateBiggerLight();
-	//renderLight(biggerLight, biggerLightEdges, BIGGER_LIGHT_WIDTH, BIGGER_LIGHT_HEIGHT, &biggerLightPoint, 1);
+	/*
+	animateBiggerLight();
+	renderLight(biggerLight, biggerLightEdges, BIGGER_LIGHT_WIDTH, BIGGER_LIGHT_HEIGHT, &biggerLightPoint, 1);
+	*/
 
 	animateBigLights();
 	for (i=0; i<NUM_BIG_LIGHTS; ++i) {
@@ -792,10 +813,13 @@ static void draw(void)
 		renderLight(bigLight[i], bigLightEdges, BIG_LIGHT_WIDTH, BIG_LIGHT_HEIGHT, &bigLightPoint[i], shouldBlit);
 	}
 
-	numParticlesVisible = NUM_PARTICLES;
 
-	animateParticleElectroids();
-	renderParticles();
+	if (numParticlesVisible > 0) {
+		animateParticleElectroids(t);
+		if (didElectroidsMovedYetOnce != 0) {
+			renderParticles();
+		}
+	}
 
 	blitBumpTextScript(t);
 

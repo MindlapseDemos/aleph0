@@ -81,6 +81,13 @@ typedef struct Point2D
 	int x,y;
 } Point2D;
 
+typedef struct ColumnRenderData
+{
+	uint16_t hCount;
+	uint16_t cv;
+	uint16_t* dst;
+}ColumnRenderData;
+
 static unsigned char* distMap;
 
 static unsigned char* cloudTex;
@@ -92,6 +99,7 @@ static int *isin = NULL;
 static Point2D *viewNearPosVec = NULL;
 static Point2D *viewNearStepVec = NULL;
 static int* yMaxHolder = NULL;
+static ColumnRenderData* columnRenderData = NULL;
 
 static unsigned char *hmap = NULL;
 static unsigned char *cmap = NULL;
@@ -457,6 +465,7 @@ static int init(void)
 	viewNearPosVec = malloc(VIS_HOR_STEPS * sizeof(Point2D));
 	viewNearStepVec = malloc(VIS_HOR_STEPS * sizeof(Point2D));
 	yMaxHolder = malloc(VIS_HOR_STEPS * sizeof(int));
+	columnRenderData = (ColumnRenderData*)malloc((VIS_HOR_STEPS + 1) * sizeof(ColumnRenderData));
 
 
 	if(initHeightmapAndColormap() == -1 || initDistMap() == -1) {
@@ -475,6 +484,7 @@ static void destroy(void)
 	free(viewNearPosVec);
 	free(viewNearStepVec);
 	free(yMaxHolder);
+	free(columnRenderData);
 	free(hmap);
 	free(cmap);
 	free(pmap);
@@ -619,7 +629,7 @@ static int setupPixStepColumn(int i)
 {
 	int j;
 
-	// In transitions from close to mid to far, clone the yMaxHolder for nearby columns 
+	/* In transitions from close to mid to far, clone the yMaxHolder for nearby columns */
 	if (i == VIS_CLOSE) {
 		for (j = 0; j < VIS_HOR_STEPS; j += 4) {
 			const int yMax = yMaxHolder[j];
@@ -685,10 +695,15 @@ static void renderScape(int petrT)
 		const int dvy = pixStep * ((vyR - vyL) / VIS_HOR_STEPS);
 		int vx = vxL;
 		int vy = vyL;
+		int flip = 0;
+		uint16_t cvPrev = 0;
 
 		const uint16_t* pmapPtr = pmap +shadeVoxOff[i];
 		uint16_t* pmapPtrShade;
 		const int heightScale = heightScaleTab[i];
+
+		ColumnRenderData* columnRenderDataPtr = columnRenderData;
+		ColumnRenderData* lastColumnRenderDataPtr = columnRenderData;
 
 		int shadePalI = i + (int)((VIS_VER_STEPS - 1) * REFLECT_SHADE);
 		CLAMP(shadePalI, 0, VIS_VER_STEPS-1)
@@ -705,28 +720,60 @@ static void renderScape(int petrT)
 
 				if (yMax < h) {
 					uint16_t cv;
-					int yH, hCount;
-					uint16_t* dst;
+					int yH;
 					if (hm > SEA_LEVEL) {
 						cv = pmapPtr[cmap[mapOffset]];
 					} else {
-						const int petrubation = petrubTab[(((petrubTab[j >> 1] + i) >> 1) + petrT) & (PETRUB_SIZE - 1)];
-						const int dh = ((playerHeight + petrubation - hm) << FP_SCALE) / (i + 1);
-						const int dvxH = viewNearStepVec[j].x;
-						const int dvyH = viewNearStepVec[j].y;
-						cv = reflectSample(vx, vy, dvxH, dvyH, hm << FP_SCALE, dh, VIS_VER_STEPS - i, pmapPtrShade, petrubation);
+						if (flip == 0 || j==VIS_HOR_STEPS - pixStep) {
+							const int petrubation = petrubTab[(((petrubTab[j >> 1] + i) >> 1) + petrT) & (PETRUB_SIZE - 1)];
+							const int dh = ((playerHeight + petrubation - hm) << FP_SCALE) / (i + 1);
+							const int dvxH = viewNearStepVec[j].x;
+							const int dvyH = viewNearStepVec[j].y;
+							cv = reflectSample(vx, vy, dvxH, dvyH, hm << FP_SCALE, dh, VIS_VER_STEPS - i, pmapPtrShade, petrubation);
+						} else {
+							cv = 0;
+						}
 					}
 
 					yH = yMaxHolder[j];
-					hCount = h - yH;
 					yMaxHolder[j] = h;
-					dst = dstBase - (yH -1) * FB_WIDTH + j;
 
-					drawColumnFunc(hCount, cv, dst);
+					columnRenderDataPtr->hCount = h - yH;
+					columnRenderDataPtr->cv = cv;
+					columnRenderDataPtr->dst = dstBase - (yH -1) * FB_WIDTH + j;
+					++columnRenderDataPtr;
 				}
 			}
 			vx += dvx; vy += dvy;
+			flip ^= 1;
 		}
+		columnRenderDataPtr->cv = 0;
+		lastColumnRenderDataPtr = columnRenderDataPtr;
+
+		columnRenderDataPtr = columnRenderData;
+		while (columnRenderDataPtr != lastColumnRenderDataPtr)
+		{
+			int hCount = (int)columnRenderDataPtr->hCount;
+			uint16_t cv = columnRenderDataPtr->cv;
+			uint16_t* dst = columnRenderDataPtr->dst;
+
+			if (cv != 0) {
+				drawColumnFunc(hCount, cv, dst);
+			} else {
+				uint16_t cvNext = (columnRenderDataPtr+1)->cv;
+				const int r0 = (cvPrev >> 11) & 31;
+				const int g0 = (cvPrev >> 5) & 63;
+				const int b0 = cvPrev & 31;
+				const int r1 = (cvNext >> 11) & 31;
+				const int g1 = (cvNext >> 5) & 63;
+				const int b1 = cvNext & 31;
+				const uint16_t cvMix = (((r0 + r1) >> 1) << 11) | (((g0 + g1) >> 1) << 5) | ((b0 + b1) >> 1);
+				drawColumnFunc(hCount, cvMix, dst);
+			}
+			cvPrev = cv;
+			++columnRenderDataPtr; 
+		};
+
 		vxL += dvxL; vyL += dvyL;
 		vxR += dvxR; vyR += dvyR;
 	}

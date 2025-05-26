@@ -70,11 +70,16 @@
 #define SEA_LEVEL 1
 
 /* When getting different PNG maps, comment out the below and run on PC. Then comment in and use the produced BIN files (and probably will remove the PNGs at the end from data) */
-/* #define CALCULATE_DIST_MAP
+/*#define CALCULATE_DIST_MAP
 #define SAVE_DIST_MAP
 #define SAVE_COLOR_MAP
-#define SAVE_HEIGHT_MAP */
+#define SAVE_HEIGHT_MAP*/
 
+/* Let's minify the distmap */
+#define DMAP_SHIFT 0 //2
+#define DMAP_WIDTH (HMAP_WIDTH >> DMAP_SHIFT)
+#define DMAP_HEIGHT (HMAP_HEIGHT >> DMAP_SHIFT)
+#define DMAP_SIZE (DMAP_WIDTH * DMAP_HEIGHT)
 
 typedef struct Point2D
 {
@@ -336,6 +341,7 @@ static int initDistMap()
 
 	#ifdef CALCULATE_DIST_MAP
 		int x, y, r, n;
+		int pixStep = 1 << DMAP_SHIFT;
 
 		int *rCount = malloc(DIST_RADIUS * sizeof(int));
 		Point2D* distOffsets = malloc(DIST_RADIUS * MAX_POINTS_PER_RADIUS * sizeof(Point2D));
@@ -356,43 +362,52 @@ static int initDistMap()
 		}
 	#endif
 
-	distMap = malloc(HMAP_SIZE);
+	distMap = malloc(DMAP_SIZE);
 
 	#ifdef CALCULATE_DIST_MAP
 		i = 0;
-		for (y = 0; y < HMAP_HEIGHT; ++y) {
-			for (x = 0; x < HMAP_WIDTH; ++x) {
-				const int h = hmap[i];
-				int safeR = 0;	/* 0 will mean safe to reflect sky instantly */
-				int hb = 16;
-				for (r = 0; r < DIST_RADIUS; ++r) {
-					const int count = rCount[r];
-					Point2D* p = &distOffsets[r * MAX_POINTS_PER_RADIUS];
-					for (n = 0; n < count; ++n) {
-						const int xp = (x + p[n].x) & (HMAP_WIDTH - 1);
-						const int yp = (y + p[n].y) & (HMAP_WIDTH - 1);
-						const int hCheck = hmap[yp * HMAP_WIDTH + xp] - (hb >> 1);
-						if (h < hCheck) {
-							safeR = r + 1;
-							r = DIST_RADIUS;	/* hack to break again outside */
-							break;
+		for (y = 0; y < HMAP_HEIGHT; y+=pixStep) {
+			printf("%d ", y);
+			for (x = 0; x < HMAP_WIDTH; x+=pixStep) {
+				int xi, yi;
+				int rMin = 255;
+				for (yi = 0; yi < pixStep; ++yi) {
+					for (xi = 0; xi < pixStep; ++xi) {
+						const int h = hmap[i];
+						int hb = 16;
+						int safeR = 0;
+						for (r = 0; r < DIST_RADIUS; ++r) {
+							const int count = rCount[r];
+							Point2D* p = &distOffsets[r * MAX_POINTS_PER_RADIUS];
+							for (n = 0; n < count; ++n) {
+								const int xp = (x + xi + p[n].x) & (HMAP_WIDTH - 1);
+								const int yp = (y + yi + p[n].y) & (HMAP_WIDTH - 1);
+								const int hCheck = hmap[yp * HMAP_WIDTH + xp] - (hb >> 1);
+								if (h < hCheck) {
+									safeR = r + 1;
+									r = DIST_RADIUS;	/* hack to break again outside */
+									break;
+								}
+							}
+							++hb;
 						}
+						if (safeR > 0 && safeR < rMin) rMin = safeR;
 					}
-					++hb;
 				}
-				distMap[i++] = safeR;
+				if (rMin == 255) rMin = 0;
+				distMap[i++] = rMin;
 			}
 		}
 
 		#ifdef SAVE_DIST_MAP
-			writeMapFile("data/dmap1.bin", HMAP_SIZE, distMap);
+			writeMapFile("data/dmap1.bin", DMAP_SIZE, distMap);
 		#endif
 
 		free(rCount);
 		free(distOffsets);
 	#else
-		if (readMapFile("data/dmap1.bin", HMAP_SIZE, distMap) == -1) {
-			/* memset(distMap, 0, HMAP_SIZE); */ /* 0 will still instantly reflect the clouds but not the mountains which need more thorough steps */ 
+		if (readMapFile("data/dmap1.bin", DMAP_SIZE, distMap) == -1) {
+			/* memset(distMap, 0, DMAP_SIZE); */ /* 0 will still instantly reflect the clouds but not the mountains which need more thorough steps */ 
 			return -1;
 		}
 	#endif
@@ -549,10 +564,12 @@ static uint16_t reflectSample(int px, int py, int dvx, int dvy, int ph, int dh, 
 	int vx = px;
 	int vy = py;
 
+	int distOffset = (vy >> (FP_SCAPE + DMAP_SHIFT)) * DMAP_WIDTH + (vx >> (FP_SCAPE + DMAP_SHIFT));
+	int distMapOffset = distOffset & (DMAP_SIZE - 1);
 	int sampleOffset = (vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE);
-	int mapOffset = sampleOffset & (HMAP_SIZE - 1);
+	int sampleMapOffset = sampleOffset & (HMAP_SIZE - 1);
 	for (i = 0; i < remainingSteps;) {
-		const int safeSteps = distMap[mapOffset];
+		const int safeSteps = distMap[distMapOffset];
 
 		if (safeSteps == 0) {
 			return reflectSky(px, py, dvx, dvy, dh, petrubation>>1);
@@ -561,11 +578,13 @@ static uint16_t reflectSample(int px, int py, int dvx, int dvy, int ph, int dh, 
 			vy += safeSteps * dvy;
 			ph += safeSteps * dh;
 
+			distOffset = (vy >> (FP_SCAPE + DMAP_SHIFT)) * DMAP_WIDTH + (vx >> (FP_SCAPE + DMAP_SHIFT));
+			distMapOffset = distOffset & (DMAP_SIZE - 1);
 			sampleOffset = (vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE);
-			mapOffset = sampleOffset & (HMAP_SIZE - 1);
+			sampleMapOffset = sampleOffset & (HMAP_SIZE - 1);
 
-			if ((ph >> FP_SCALE) < hmap[mapOffset]) {
-				return pal[cmap[mapOffset] + (petrubation >> 2) * 256];
+			if ((ph >> FP_SCALE) < hmap[sampleMapOffset]) {
+				return pal[cmap[sampleMapOffset] + (petrubation >> 2) * 256];
 			}
 			i += safeSteps;
 		}
@@ -940,7 +959,7 @@ static void testRenderDistMap()
 	uint16_t* dst = fb_pixels;
 	for (y=0; y<FB_HEIGHT; ++y) {
 		for (x=0; x<FB_WIDTH; ++x) {
-			int c = (distMap[(y & (HMAP_HEIGHT - 1)) * HMAP_WIDTH + (x & (HMAP_WIDTH - 1))] * 256) / DIST_RADIUS;
+			int c = (distMap[(y & (DMAP_HEIGHT - 1)) * DMAP_WIDTH + (x & (DMAP_WIDTH - 1))] * 256) / DIST_RADIUS;
 			CLAMP(c,0,255)
 			if (c == 0) c = 255;
 			*dst++ = PACK_RGB16(c, c, c);

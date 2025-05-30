@@ -107,6 +107,85 @@ static CGM_INLINE void cgm_vmul_v3m3(cgm_vec3 *v, const float *m)
 	v->y = y;
 }
 
+static CGM_INLINE void cgm_vcadd(cgm_vec3 *dest, const cgm_vec3 *a, const cgm_vec3 *b)
+{
+	dest->x = a->x + b->x;
+	dest->y = a->y + b->y;
+	dest->z = a->z + b->z;
+}
+
+static CGM_INLINE void cgm_vcadd_scaled(cgm_vec3 *dest, const cgm_vec3 *a, const cgm_vec3 *b, float s)
+{
+	dest->x = a->x + b->x * s;
+	dest->y = a->y + b->y * s;
+	dest->z = a->z + b->z * s;
+}
+
+static CGM_INLINE void cgm_vcsub(cgm_vec3 *dest, const cgm_vec3 *a, const cgm_vec3 *b)
+{
+	dest->x = a->x - b->x;
+	dest->y = a->y - b->y;
+	dest->z = a->z - b->z;
+}
+
+static CGM_INLINE void cgm_vcsub_scaled(cgm_vec3 *dest, const cgm_vec3 *a, const cgm_vec3 *b, float s)
+{
+	dest->x = a->x - b->x * s;
+	dest->y = a->y - b->y * s;
+	dest->z = a->z - b->z * s;
+}
+
+static CGM_INLINE void cgm_vcmul(cgm_vec3 *dest, const cgm_vec3 *a, const cgm_vec3 *b)
+{
+	dest->x = a->x * b->x;
+	dest->y = a->y * b->y;
+	dest->z = a->z * b->z;
+}
+
+static CGM_INLINE void cgm_vcscale(cgm_vec3 *dest, const cgm_vec3 *v, float s)
+{
+	dest->x = v->x * s;
+	dest->y = v->y * s;
+	dest->z = v->z * s;
+}
+
+static CGM_INLINE void cgm_vcmul_m4v3(cgm_vec3 *dest, const cgm_vec3 *v, const float *m)
+{
+	float x = v->x * m[0] + v->y * m[4] + v->z * m[8] + m[12];
+	float y = v->x * m[1] + v->y * m[5] + v->z * m[9] + m[13];
+	dest->z = v->x * m[2] + v->y * m[6] + v->z * m[10] + m[14];
+	dest->x = x;
+	dest->y = y;
+}
+
+static CGM_INLINE void cgm_vcmul_v3m4(cgm_vec3 *dest, const cgm_vec3 *v, const float *m)
+{
+	float x = v->x * m[0] + v->y * m[1] + v->z * m[2] + m[3];
+	float y = v->x * m[4] + v->y * m[5] + v->z * m[6] + m[7];
+	dest->z = v->x * m[8] + v->y * m[9] + v->z * m[10] + m[11];
+	dest->x = x;
+	dest->y = y;
+}
+
+static CGM_INLINE void cgm_vcmul_m3v3(cgm_vec3 *dest, const cgm_vec3 *v, const float *m)
+{
+	float x = v->x * m[0] + v->y * m[4] + v->z * m[8];
+	float y = v->x * m[1] + v->y * m[5] + v->z * m[9];
+	dest->z = v->x * m[2] + v->y * m[6] + v->z * m[10];
+	dest->x = x;
+	dest->y = y;
+}
+
+static CGM_INLINE void cgm_vcmul_v3m3(cgm_vec3 *dest, const cgm_vec3 *v, const float *m)
+{
+	float x = v->x * m[0] + v->y * m[1] + v->z * m[2];
+	float y = v->x * m[4] + v->y * m[5] + v->z * m[6];
+	dest->z = v->x * m[8] + v->y * m[9] + v->z * m[10];
+	dest->x = x;
+	dest->y = y;
+}
+
+
 static CGM_INLINE float cgm_vdot(const cgm_vec3 *a, const cgm_vec3 *b)
 {
 	return a->x * b->x + a->y * b->y + a->z * b->z;

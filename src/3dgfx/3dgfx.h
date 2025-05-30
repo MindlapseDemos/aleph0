@@ -126,6 +126,9 @@ void g3d_pop_matrix(void);
 
 void g3d_translate(float x, float y, float z);
 void g3d_rotate(float angle, float x, float y, float z);
+void g3d_rotate_x(float angle);
+void g3d_rotate_y(float angle);
+void g3d_rotate_z(float angle);
 void g3d_scale(float x, float y, float z);
 void g3d_ortho(float left, float right, float bottom, float top, float znear, float zfar);
 void g3d_frustum(float left, float right, float bottom, float top, float znear, float zfar);
@@ -160,6 +163,8 @@ void g3d_color4b(unsigned char r, unsigned char g, unsigned char b, unsigned cha
 void g3d_color3f(float r, float g, float b);
 void g3d_color4f(float r, float g, float b, float a);
 void g3d_texcoord(float u, float v);
+
+void g3d_clip_plane(int idx, const float *eqn);
 
 int g3d_xform_point(float *xyzw);
 

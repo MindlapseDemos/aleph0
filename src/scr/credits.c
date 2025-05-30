@@ -19,6 +19,8 @@ static int credits_init(void);
 static void credits_destroy(void);
 static void credits_start(long trans_time);
 static void credits_draw(void);
+static void left_side(float tint);
+static void right_side(float tint);
 static void credits_keyb(int key);
 static void backdrop(void);
 
@@ -43,13 +45,6 @@ static const int colzen[] = {98, 64, 192};
 static const int colhor[] = {128, 80, 64};
 static const int colmnt[] = {16, 9, 24};
 static uint16_t mountcol, mountcol_mir;
-
-#define NUM_TORI	4
-#define TORUS_SIZE	4.0f
-#define TORUS_XPOS	-3.0f
-#define TORUS_YPOS	3.2f
-struct g3d_mesh tori[NUM_TORI];
-static float tormat[NUM_TORI][16];
 
 
 struct screen *credits_screen(void)
@@ -81,28 +76,17 @@ static int credits_init(void)
 		bgoffs[i] = pfbm1(x, 8.0f, 5) * 32 + 16;
 	}
 
-	for(i=0; i<NUM_TORI; i++) {
-		float rad = TORUS_SIZE * (i + 1) * 0.65f / NUM_TORI;
-		gen_torus_mesh(tori + i, rad, rad * 0.15, 16, 6);
-
-		cgm_mrotation_x(xform, (float)rand() * CGM_PI / (float)RAND_MAX);
-		apply_mesh_xform(tori + i, xform);
-	}
-
 	return 0;
 }
 
 static void credits_destroy(void)
 {
-	int i;
-
-	for(i=0; i<NUM_TORI; i++) {
-		destroy_mesh(tori + i);
-	}
 }
 
 static void credits_start(long trans_time)
 {
+	float clip_plane[] = {0, 1, 0, 0};
+
 	g3d_matrix_mode(G3D_PROJECTION);
 	g3d_load_identity();
 	g3d_perspective(VFOV, 1.3333333, 0.5, 100.0);
@@ -111,6 +95,9 @@ static void credits_start(long trans_time)
 	g3d_enable(G3D_CULL_FACE);
 	g3d_enable(G3D_LIGHTING);
 	g3d_enable(G3D_LIGHT0);
+
+	g3d_enable(G3D_CLIP_PLANE0);
+	g3d_clip_plane(0, clip_plane);
 
 	g3d_polygon_mode(G3D_GOURAUD);
 	g3d_light_ambient(0, 0, 0);
@@ -122,13 +109,6 @@ static void credits_update(void)
 	float rot;
 
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
-
-	rot = (float)time_msec / 500.0f;
-	for(i=0; i<NUM_TORI; i++) {
-		cgm_mrotation_x(tormat[i], rot);
-		cgm_mrotate_y(tormat[i], rot);
-		rot *= 0.8f;
-	}
 }
 
 static void credits_draw(void)
@@ -147,33 +127,79 @@ static void credits_draw(void)
 	g3d_rotate(cam_phi, 1, 0, 0);
 	g3d_rotate(cam_theta, 0, 1, 0);
 
-	g3d_light_color(0, 0.3, 0.3, 0.3);
-	g3d_push_matrix();
-	g3d_translate(TORUS_XPOS, -TORUS_YPOS, 0);
+	left_side(1);
+	right_side(1);
+
 	g3d_scale(1, -1, 1);
 	g3d_front_face(G3D_CW);
-
-	g3d_light_dir(0, 0, -1, -1);
-
-	for(i=0; i<NUM_TORI; i++) {
-		g3d_push_matrix();
-		g3d_mult_matrix(tormat[i]);
-		draw_mesh(tori + i);
-		g3d_pop_matrix();
-	}
+	left_side(0.8);
+	right_side(0.8);
 	g3d_front_face(G3D_CCW);
-	g3d_pop_matrix();
-
-	g3d_translate(TORUS_XPOS, TORUS_YPOS, 0);
-	g3d_light_color(0, 1, 1, 1);
-	for(i=0; i<NUM_TORI; i++) {
-		g3d_push_matrix();
-		g3d_mult_matrix(tormat[i]);
-		draw_mesh(tori + i);
-		g3d_pop_matrix();
-	}
 
 	swap_buffers(fb_pixels);
+}
+
+#define TENT_NODES	12
+#define TENT_DIST	0.7
+
+static void left_side(float tint)
+{
+	int i, otherm, curm = 0;
+	float mat[2][16], t, f, a;
+	cgm_vec3 pos[TENT_NODES], norm[TENT_NODES], pprev, nprev;
+	cgm_vec3 tang;
+
+	g3d_push_matrix();
+	g3d_translate(-3, 0, 0);
+
+	t = (float)time_msec * 0.001;
+
+	cgm_midentity(mat[1]);
+
+	for(i=0; i<TENT_NODES; i++) {
+		otherm = (curm + 1) & 1;
+		f = 1.0 + (float)i * 0.05;
+		a = 0.25 + (float)(i + 1) * 0.05;
+		cgm_midentity(mat[curm]);
+		cgm_mtranslate(mat[curm], 0, TENT_DIST, 0);
+		cgm_mrotate_z(mat[curm], cos(t * f/* + noise1(i * 11.0f)*/) * a);
+		cgm_mmul(mat[curm], mat[otherm]);
+
+		cgm_vcons(pos + i, 0, 0, 0);
+		cgm_vmul_m4v3(pos + i, mat[curm]);
+		curm = otherm;
+	}
+
+	cgm_vcons(&pprev, 0, 0, 0);
+	for(i=0; i<TENT_NODES; i++) {
+		float s = (1.0 - (float)i / (float)TENT_NODES) * 0.5 + 0.05;
+		cgm_vcsub(&tang, pos + i, &pprev);
+		cgm_vcons(norm + i, -tang.y * s, tang.x * s, 0);
+		pprev = pos[i];
+	}
+
+
+	g3d_disable(G3D_LIGHTING);
+
+	cgm_vcons(&pprev, 0, 0, 0);
+	cgm_vcons(&nprev, -TENT_DIST * 0.5, 0, 0);
+	g3d_begin(G3D_QUADS);
+	g3d_color3f(0.15 * tint, 0.15 * tint, 0.15 * tint);
+	for(i=0; i<TENT_NODES; i++) {
+		g3d_vertex(pprev.x + nprev.x, pprev.y + nprev.y, 0);
+		g3d_vertex(pprev.x - nprev.x, pprev.y - nprev.y, 0);
+		g3d_vertex(pos[i].x - norm[i].x, pos[i].y - norm[i].y, 0);
+		g3d_vertex(pos[i].x + norm[i].x, pos[i].y + norm[i].y, 0);
+		pprev = pos[i];
+		nprev = norm[i];
+	}
+	g3d_end();
+
+	g3d_pop_matrix();
+}
+
+static void right_side(float tint)
+{
 }
 
 static void credits_keyb(int key)

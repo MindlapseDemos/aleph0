@@ -71,6 +71,8 @@ struct g3d_state {
 
 	int vport[4];
 
+	float clip[4][4];
+
 	uint16_t clear_color;
 	uint32_t clear_depth;
 
@@ -86,6 +88,7 @@ static void calc_grad(struct g3d_vertex *v);
 static void imm_flush(void);
 static __inline void xform4_vec3(const float *mat, float *vec);
 static __inline void xform3_vec3(const float *mat, float *vec);
+static __inline void xform4_vec4(const float *mat, float *vec);
 static void shade(struct g3d_vertex *v);
 
 static struct g3d_state *st;
@@ -344,6 +347,48 @@ void g3d_rotate(float deg, float x, float y, float z)
 	m[10] = nzsq + (1.0 - nzsq) * cosa;
 	m[15] = 1.0f;
 
+	g3d_mult_matrix(m);
+}
+
+void g3d_rotate_x(float angle)
+{
+	float m[16] = {0};
+	float sa = sin(angle);
+	float ca = cos(angle);
+
+	m[0] = m[15] = 1;
+	m[5] = ca;
+	m[6] = sa;
+	m[9] = -sa;
+	m[10] = ca;
+	g3d_mult_matrix(m);
+}
+
+void g3d_rotate_y(float angle)
+{
+	float m[16] = {0};
+	float sa = sin(angle);
+	float ca = cos(angle);
+
+	m[5] = m[15] = 1;
+	m[0] = ca;
+	m[2] = -sa;
+	m[8] = sa;
+	m[10] = ca;
+	g3d_mult_matrix(m);
+}
+
+void g3d_rotate_z(float angle)
+{
+	float m[16] = {0};
+	float sa = sin(angle);
+	float ca = cos(angle);
+
+	m[10] = m[15] = 1;
+	m[0] = ca;
+	m[1] = sa;
+	m[4] = -sa;
+	m[5] = ca;
 	g3d_mult_matrix(m);
 }
 
@@ -857,6 +902,16 @@ void g3d_texcoord(float u, float v)
 	st->imm_curv.v = v;
 }
 
+void g3d_clip_plane(int idx, const float *eqn)
+{
+	int mvtop = st->mtop[G3D_MODELVIEW];
+
+	if(idx < 0 || idx >= 4) return;
+
+	memcpy(st->clip[idx], eqn, 4 * sizeof(float));
+	xform4_vec4(st->mat[G3D_MODELVIEW][mvtop], st->clip[idx]);
+}
+
 int g3d_xform_point(float *vec)
 {
 	int mvtop = st->mtop[G3D_MODELVIEW];
@@ -899,6 +954,18 @@ static __inline void xform3_vec3(const float *mat, float *vec)
 	vec[1] = y;
 	vec[0] = x;
 }
+
+static __inline void xform4_vec4(const float *mat, float *vec)
+{
+	float x = mat[0] * vec[0] + mat[4] * vec[1] + mat[8] * vec[2] + mat[12] * vec[3];
+	float y = mat[1] * vec[0] + mat[5] * vec[1] + mat[9] * vec[2] + mat[13] * vec[3];
+	float z = mat[2] * vec[0] + mat[6] * vec[1] + mat[10] * vec[2] + mat[14] * vec[3];
+	vec[3] = mat[3] * vec[0] + mat[7] * vec[1] + mat[11] * vec[2] + mat[15] * vec[3];
+	vec[2] = z;
+	vec[1] = y;
+	vec[0] = x;
+}
+
 
 static void shade(struct g3d_vertex *v)
 {

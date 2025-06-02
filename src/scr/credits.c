@@ -46,6 +46,7 @@ static const int colhor[] = {128, 80, 64};
 static const int colmnt[] = {16, 9, 24};
 static uint16_t mountcol, mountcol_mir;
 
+static float dbg_num;
 
 struct screen *credits_screen(void)
 {
@@ -85,19 +86,17 @@ static void credits_destroy(void)
 
 static void credits_start(long trans_time)
 {
-	float clip_plane[] = {0, 1, 0, 0};
-
 	g3d_matrix_mode(G3D_PROJECTION);
 	g3d_load_identity();
 	g3d_perspective(VFOV, 1.3333333, 0.5, 100.0);
+
+	g3d_matrix_mode(G3D_MODELVIEW);
+	g3d_load_identity();
 
 	g3d_enable(G3D_DEPTH_TEST);
 	g3d_enable(G3D_CULL_FACE);
 	g3d_enable(G3D_LIGHTING);
 	g3d_enable(G3D_LIGHT0);
-
-	g3d_enable(G3D_CLIP_PLANE0);
-	g3d_clip_plane(0, clip_plane);
 
 	g3d_polygon_mode(G3D_GOURAUD);
 	g3d_light_ambient(0, 0, 0);
@@ -111,9 +110,16 @@ static void credits_update(void)
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
 }
 
+#define NUM_TENT	1
+#define TENT_NODES	12
+#define TENT_DIST	0.7
+
+static char dbgtext[TENT_NODES][64];
+
 static void credits_draw(void)
 {
 	int i;
+	float clip_plane[] = {0, 1, 0, 0};
 
 	credits_update();
 
@@ -127,75 +133,91 @@ static void credits_draw(void)
 	g3d_rotate(cam_phi, 1, 0, 0);
 	g3d_rotate(cam_theta, 0, 1, 0);
 
+	g3d_clip_plane(0, clip_plane);
+	g3d_enable(G3D_CLIP_PLANE0);
+	g3d_disable(G3D_LIGHTING);
+	g3d_polygon_mode(G3D_FLAT);
+
 	left_side(1);
 	right_side(1);
 
 	g3d_scale(1, -1, 1);
+	g3d_clip_plane(0, clip_plane);
+
 	g3d_front_face(G3D_CW);
 	left_side(0.8);
 	right_side(0.8);
 	g3d_front_face(G3D_CCW);
 
+	g3d_disable(G3D_CLIP_PLANE0);
+
+	for(i=0; i<TENT_NODES; i++) {
+		//cs_cputs(fb_pixels, 100, 10 + i * 10, dbgtext[i]);
+	}
+
 	swap_buffers(fb_pixels);
 }
 
-#define TENT_NODES	12
-#define TENT_DIST	0.7
-
 static void left_side(float tint)
 {
-	int i, otherm, curm = 0;
-	float mat[2][16], t, f, a;
+	int i, j, otherm, curm = 0;
+	float mat[2][16], angle, t, f, a;
 	cgm_vec3 pos[TENT_NODES], norm[TENT_NODES], pprev, nprev;
 	cgm_vec3 tang;
 
-	g3d_push_matrix();
-	g3d_translate(-3, 0, 0);
+	for(j=0; j<NUM_TENT; j++) {
+		g3d_push_matrix();
+		g3d_translate(-3, 0, 0);
 
-	t = (float)time_msec * 0.001;
+		t = (float)time_msec * 0.001 + j * (59.0 + dbg_num);
 
-	cgm_midentity(mat[1]);
+		cgm_midentity(mat[1]);
 
-	for(i=0; i<TENT_NODES; i++) {
-		otherm = (curm + 1) & 1;
-		f = 1.0 + (float)i * 0.05;
-		a = 0.25 + (float)(i + 1) * 0.05;
-		cgm_midentity(mat[curm]);
-		cgm_mtranslate(mat[curm], 0, TENT_DIST, 0);
-		cgm_mrotate_z(mat[curm], cos(t * f/* + noise1(i * 11.0f)*/) * a);
-		cgm_mmul(mat[curm], mat[otherm]);
+		for(i=0; i<TENT_NODES; i++) {
+			otherm = (curm + 1) & 1;
+			f = 1.0 + (float)i * 0.4;
+			a = 0.2 + (float)(i + 1) * 0.06;
+			cgm_midentity(mat[curm]);
+			cgm_mtranslate(mat[curm], 0, TENT_DIST, 0);
+			angle = sin(t + f) * a;
+			if(j == 0) {
+				sprintf(dbgtext[i], "%+.2f (t:%.2f|f:%.2f|a:%.2f)", angle, t, f, a);
+			}
+			cgm_mrotate_z(mat[curm], angle);
+			cgm_mmul(mat[curm], mat[otherm]);
 
-		cgm_vcons(pos + i, 0, 0, 0);
-		cgm_vmul_m4v3(pos + i, mat[curm]);
-		curm = otherm;
+			cgm_vcons(pos + i, 0, 0, 0);
+			cgm_vmul_m4v3(pos + i, mat[curm]);
+			curm = otherm;
+		}
+
+		cgm_vcons(&pprev, 0, 0, 0);
+		for(i=0; i<TENT_NODES; i++) {
+			float s = (1.0 - (float)i / (float)TENT_NODES) * 0.5 + 0.05;
+			cgm_vcsub(&tang, pos + i, &pprev);
+			cgm_vcons(norm + i, -tang.y * s, tang.x * s, 0);
+			pprev = pos[i];
+		}
+
+
+		g3d_disable(G3D_LIGHTING);
+
+		cgm_vcons(&pprev, 0, 0, 0);
+		cgm_vcons(&nprev, -TENT_DIST * 0.5, 0, 0);
+		g3d_begin(G3D_QUADS);
+		g3d_color3f(0.15 * tint, 0.85 * tint, 0.15 * tint);
+		for(i=0; i<TENT_NODES; i++) {
+			g3d_vertex(pprev.x + nprev.x, pprev.y + nprev.y, 0);
+			g3d_vertex(pprev.x - nprev.x, pprev.y - nprev.y, 0);
+			g3d_vertex(pos[i].x - norm[i].x, pos[i].y - norm[i].y, 0);
+			g3d_vertex(pos[i].x + norm[i].x, pos[i].y + norm[i].y, 0);
+			pprev = pos[i];
+			nprev = norm[i];
+		}
+		g3d_end();
+
+		g3d_pop_matrix();
 	}
-
-	cgm_vcons(&pprev, 0, 0, 0);
-	for(i=0; i<TENT_NODES; i++) {
-		float s = (1.0 - (float)i / (float)TENT_NODES) * 0.5 + 0.05;
-		cgm_vcsub(&tang, pos + i, &pprev);
-		cgm_vcons(norm + i, -tang.y * s, tang.x * s, 0);
-		pprev = pos[i];
-	}
-
-
-	g3d_disable(G3D_LIGHTING);
-
-	cgm_vcons(&pprev, 0, 0, 0);
-	cgm_vcons(&nprev, -TENT_DIST * 0.5, 0, 0);
-	g3d_begin(G3D_QUADS);
-	g3d_color3f(0.15 * tint, 0.15 * tint, 0.15 * tint);
-	for(i=0; i<TENT_NODES; i++) {
-		g3d_vertex(pprev.x + nprev.x, pprev.y + nprev.y, 0);
-		g3d_vertex(pprev.x - nprev.x, pprev.y - nprev.y, 0);
-		g3d_vertex(pos[i].x - norm[i].x, pos[i].y - norm[i].y, 0);
-		g3d_vertex(pos[i].x + norm[i].x, pos[i].y + norm[i].y, 0);
-		pprev = pos[i];
-		nprev = norm[i];
-	}
-	g3d_end();
-
-	g3d_pop_matrix();
 }
 
 static void right_side(float tint)
@@ -204,6 +226,16 @@ static void right_side(float tint)
 
 static void credits_keyb(int key)
 {
+	switch(key) {
+	case '=':
+		dbg_num += 0.5;
+		printf("dbg: %f\n", dbg_num);
+		break;
+	case '-':
+		dbg_num -= 0.5;
+		printf("dbg: %f\n", dbg_num);
+		break;
+	}
 }
 
 static void backdrop(void)

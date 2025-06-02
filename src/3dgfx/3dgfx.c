@@ -71,7 +71,7 @@ struct g3d_state {
 
 	int vport[4];
 
-	float clip[4][4];
+	struct cplane clip[4];
 
 	uint16_t clear_color;
 	uint32_t clear_depth;
@@ -596,9 +596,21 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 
 		for(i=0; i<vnum; i++) {
 			v[i] = iarr ? varr[*iarr++] : *varr++;
-
 			xform4_vec3(st->mat[G3D_MODELVIEW][mvtop], &v[i].x);
+		}
 
+		if(st->opt & G3D_CLIP_PLANE0) {
+			int cnum;
+			int res = clip_poly(tmpv, &cnum, v, vnum, st->clip);
+			if(res == -1) continue;	/* all outside */
+			if(res == 0) {
+				/* clipped, replace with the clipped polygon */
+				memcpy(v, tmpv, cnum * sizeof *v);
+				vnum = cnum;
+			}
+		}
+
+		for(i=0; i<vnum; i++) {
 			if(NEED_NORMALS) {
 				xform3_vec3(st->norm_mat, &v[i].nx);
 				if(st->opt & G3D_LIGHTING) {
@@ -614,8 +626,11 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 				float x = mat[0] * v[i].u + mat[4] * v[i].v + mat[12];
 				float y = mat[1] * v[i].u + mat[5] * v[i].v + mat[13];
 				float w = mat[3] * v[i].u + mat[7] * v[i].v + mat[15];
-				v[i].u = x / w;
-				v[i].v = y / w;
+				if(w != 0) {
+					float rcp_w = 1.0 / w;
+					v[i].u = x * rcp_w;
+					v[i].v = y * rcp_w;
+				}
 			}
 			xform4_vec3(st->mat[G3D_PROJECTION][ptop], &v[i].x);
 		}
@@ -905,11 +920,24 @@ void g3d_texcoord(float u, float v)
 void g3d_clip_plane(int idx, const float *eqn)
 {
 	int mvtop = st->mtop[G3D_MODELVIEW];
+	float mat[16];
+	struct cplane *cp;
+	cgm_vec4 veqn;
 
 	if(idx < 0 || idx >= 4) return;
 
-	memcpy(st->clip[idx], eqn, 4 * sizeof(float));
-	xform4_vec4(st->mat[G3D_MODELVIEW][mvtop], st->clip[idx]);
+	memcpy(mat, st->mat[G3D_MODELVIEW][mvtop], sizeof mat);
+	cgm_minverse(mat);
+	memcpy(&veqn, eqn, sizeof veqn);
+	cgm_wmul_v4m4(&veqn, mat);
+
+	cp = &st->clip[idx];
+	cp->nx = veqn.x;
+	cp->ny = veqn.y;
+	cp->nz = veqn.z;
+	cp->x = -veqn.x * veqn.w;
+	cp->y = -veqn.y * veqn.w;
+	cp->z = -veqn.z * veqn.w;
 }
 
 int g3d_xform_point(float *vec)

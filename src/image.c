@@ -463,3 +463,193 @@ void blitfb_rle(uint16_t *fb, int x, int y, struct image *img)
 		}
 	}
 }
+
+
+#define ARLE_OP_SKIP			0
+#define ARLE_OP_COPY			0x4000
+#define ARLE_OP_BLEND			0x8000
+#define ARLE_OP_BITS			0xc000
+#define ARLE_COUNT_BITS			0x3fff
+
+#define ADD_ARLE_SKIP(skip) \
+	do { \
+		void *tmp; \
+		uint16_t foo = ARLE_OP_SKIP | ((skip) & ARLE_COUNT_BITS); \
+		if(!(tmp = dynarr_push(rledata, &foo))) { \
+			fprintf(stderr, "failed to append RLE data\n"); \
+			goto err; \
+		} \
+		rledata = tmp; \
+		num_rle_ops++; \
+	} while(0)
+
+#define ADD_ARLE_SPAN(op, count, ptr) \
+	do { \
+		int i; \
+		void *tmp; \
+		uint16_t *p = ptr; \
+		uint16_t foo = (op) | ((count) & ARLE_COUNT_BITS); \
+		if(!(tmp = dynarr_push(rledata, &foo))) { \
+			fprintf(stderr, "failed to append to RLE data\n"); \
+			goto err; \
+		} \
+		rledata = tmp; \
+		for(i=0; i<count; i++) { \
+			if(!(tmp = dynarr_push(rledata, p++))) { \
+				fprintf(stderr, "failed to append to RLE data\n"); \
+				goto err; \
+			} \
+			rledata = tmp; \
+		} \
+		num_rle_ops++; \
+	} while(0)
+
+
+int conv_rle_alpha(struct image *img)
+{
+	int i, j, op = 0;
+	long count, skip;
+	uint16_t *rledata, *cptr;
+	unsigned char *aptr;
+	unsigned int num_rle_ops = 0;
+
+	if(!img->alpha) {
+		fprintf(stderr, "conv_rle_a called on an image without an alpha mask\n");
+		return -1;
+	}
+
+	if(!(rledata = dynarr_alloc(0, 2))) {
+		fprintf(stderr, "conv_rle_a: failed to allocate dynamic array\n");
+		return -1;
+	}
+
+	cptr = img->pixels;
+	aptr = img->alpha;
+	for(i=0; i<img->height; i++) {
+		count = skip = 0;
+		for(j=0; j<img->width; j++) {
+			if(*aptr < 4) {
+				/* transparent pixel */
+				if(op) {
+					/* we had non-transparent up to now, add a span */
+					ADD_ARLE_SPAN(op, count, cptr - count);
+					count = 0;
+					op = 0;
+				} else {
+					/* previous was transparent, increment skip */
+					skip++;
+				}
+			} else {
+				int newop = *aptr < 252 ? ARLE_OP_BLEND : ARLE_OP_COPY;
+				if(!op) {
+					/* we had transparent up to now, add a skip */
+					ADD_ARLE_SKIP(skip);
+					skip = 0;
+				} else if(op != newop) {
+					/* we had the other kind of non-skip up to now, add a span */
+					ADD_ARLE_SPAN(op, count, cptr - count);
+					count = 0;
+				} else {
+					/* previous was the same, increment count */
+					count++;
+				}
+				op = ARLE_OP_BLEND;
+			}
+			cptr++;
+			aptr++;
+		}
+
+		/* end of scanline, add any residuals */
+		if(op) {
+			ADD_ARLE_SPAN(op, count, cptr - count);
+			count = 0;
+			op = 0;
+		}
+		ADD_RLE_SKIP(0);	/* skip with 0 count means skip to next scanline */
+		skip = 0;
+	}
+
+	free(img->pixels);
+	img->pixels = dynarr_finalize(rledata);
+	return 0;
+
+err:
+	dynarr_free(rledata);
+	return -1;
+}
+
+void blitfb_rle_alpha(uint16_t *fb, int x, int y, struct image *img)
+{
+	int i, endx, endy, xpos, len, sx;
+	uint16_t *rleptr, *pixptr;
+	unsigned char *aline;
+	unsigned int rle, count, op;
+
+	endy = y + img->height;
+	if(endy > 240) endy = 240;
+
+	xpos = x;
+
+	aline = img->alpha;
+	sx = 0;
+
+	fb += (y << 8) + (y << 6);
+	rleptr = img->pixels;
+	while(y < endy) {
+		rle = (unsigned int)*rleptr++;
+		count = rle & ARLE_COUNT_BITS;
+		op = rle & ARLE_OP_BITS;
+
+		if(op) {
+			/* RLE OP BLEND or COPY */
+			pixptr = rleptr;
+			rleptr += count;
+			if(y < 0) continue;
+
+			endx = x + (int)count;
+			if(endx <= 0) {
+				x = endx;
+				sx += count;
+				continue;
+			}
+
+			if(x < 0) {
+				pixptr -= x;
+				sx -= x;
+				x = 0;
+			}
+			if(endx > 320) endx = 320;
+
+			if((len = endx - x) <= 0) {
+				x = endx;
+				sx += len;
+				continue;
+			}
+
+			if(op == ARLE_OP_COPY) {
+				memcpy(fb + x, pixptr, len * 2);
+			} else {
+				for(i=0; i<len; i++) {
+					unsigned int sa = aline[sx];
+					unsigned int da = 255 - sa;
+					fb[x] = ((pixptr[i] * sa) + (fb[x] * da)) >> 8;
+				}
+			}
+			sx += len;
+			x = endx;
+		} else {
+			/* RLE OP SKIP */
+			if(count) {
+				x += count;
+				sx += count;
+			} else {
+				/* skip with 0 count means next scanline */
+				fb += 320;
+				x = xpos;
+				y++;
+				sx = 0;
+				aline += img->scanlen;
+			}
+		}
+	}
+}

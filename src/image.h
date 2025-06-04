@@ -37,4 +37,7 @@ void init_image(struct image *img, int x, int y, uint16_t *pixels, int scanlen);
 int conv_rle(struct image *img, uint16_t ckey);
 void blitfb_rle(uint16_t *fb, int x, int y, struct image *img);
 
+int conv_rle_alpha(struct image *img);
+void blendfb_rle_alpha(uint16_t *fb, int x, int y, struct image *img);
+
 #endif	/* IMAGE_H_ */

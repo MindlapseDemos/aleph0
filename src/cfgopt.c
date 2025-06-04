@@ -14,7 +14,8 @@ struct options opt = {
 	0,	/* mouse */
 	0,	/* sball */
 	0,	/* vsync */
-	0	/* dbgmode */
+	0,	/* dbgmode */
+	0	/* dbgsingle */
 };
 #else
 /* debug build default options */
@@ -25,7 +26,8 @@ struct options opt = {
 	1,	/* mouse */
 	0,	/* sball */
 	0,	/* vsync */
-	1	/* dbgmode */
+	1,	/* dbgmode */
+	0	/* dbgsingle */
 };
 #endif
 
@@ -45,6 +47,9 @@ int parse_args(int argc, char **argv)
 				opt.music = 0;
 			} else if(strcmp(argv[i], "-scr") == 0 || strcmp(argv[i], "-screen") == 0) {
 				scrname = argv[++i];
+			} else if(strcmp(argv[i], "-single") == 0) {
+				scrname = argv[++i];
+				opt.dbgsingle = 1;
 			} else if(strcmp(argv[i], "-list") == 0) {
 				print_screen_list();
 				exit(0);
@@ -110,6 +115,7 @@ static void print_usage(const char *argv0)
 	printf("Options:\n");
 	printf(" -music/-nomusic: enable/disable music playback\n");
 	printf(" -screen <name>: select starting screen (alias: -scr)\n");
+	printf(" -single <name>: select single screen\n");
 	printf(" -list: list available screens\n");
 	printf(" -logfile <path>: choose where to log messages\n");
 	printf(" -mouse/-nomouse: enable/disable mouse input\n");
@@ -212,6 +218,9 @@ int load_config(const char *fname)
 			opt.music = bool_value(value);
 		} else if(strcmp(key, "screen") == 0) {
 			opt.start_scr = strdup(value);
+		} else if(strcmp(key, "single") == 0) {
+			opt.start_scr = strdup(value);
+			opt.dbgsingle = 1;
 		} else if(strcmp(key, "logfile") == 0) {
 			opt.logfile = strdup(value);
 		} else if(strcmp(key, "mouse") == 0) {

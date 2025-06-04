@@ -95,6 +95,10 @@ int scr_init(void)
 
 	for(i=0; i<num_screens; i++) {
 		loadscr(i, num_screens);
+		if(opt.dbgsingle && strcmp(scr[i]->name, opt.start_scr) != 0) {
+			scr[i] = 0;
+			continue;
+		}
 		printf("initializing %s ...\n", scr[i]->name);
 		t0 = get_msec();
 		if(scr[i]->init() == -1) {

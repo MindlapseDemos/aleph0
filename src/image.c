@@ -578,7 +578,7 @@ err:
 	return -1;
 }
 
-void blitfb_rle_alpha(uint16_t *fb, int x, int y, struct image *img)
+void blendfb_rle(uint16_t *fb, int x, int y, struct image *img)
 {
 	int i, endx, endy, xpos, len, sx;
 	uint16_t *rleptr, *pixptr;

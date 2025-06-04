@@ -47,6 +47,7 @@ static const int colmnt[] = {16, 9, 24};
 static uint16_t mountcol, mountcol_mir;
 
 static float dbg_num;
+static struct image testimg;
 
 struct screen *credits_screen(void)
 {
@@ -76,6 +77,15 @@ static int credits_init(void)
 
 		bgoffs[i] = pfbm1(x, 8.0f, 5) * 32 + 16;
 	}
+
+	if(load_image(&testimg, "data/blendtst.png") == -1) {
+		fprintf(stderr, "failed to load blendtst image\n");
+		return -1;
+	}
+	/*if(conv_rle_alpha(&testimg) == -1) {
+		fprintf(stderr, "failed to convert blendtst image\n");
+		return -1;
+	}*/
 
 	return 0;
 }
@@ -154,6 +164,9 @@ static void credits_draw(void)
 	for(i=0; i<TENT_NODES; i++) {
 		//cs_cputs(fb_pixels, 100, 10 + i * 10, dbgtext[i]);
 	}
+
+	//blendfb_rle(fb_pixels, 10, 50, &testimg);
+	overlay_alpha(&fbimg, 0, 0, &testimg, 320, 240);
 
 	swap_buffers(fb_pixels);
 }

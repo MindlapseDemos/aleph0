@@ -24,7 +24,6 @@ struct image_rgba {
 };
 
 int load_image(struct image *img, const char *fname);
-int load_image_alpha(struct image *img, const char *fname);
 int dump_image(struct image *img, const char *fname);
 void destroy_image(struct image *img);
 
@@ -38,6 +37,6 @@ int conv_rle(struct image *img, uint16_t ckey);
 void blitfb_rle(uint16_t *fb, int x, int y, struct image *img);
 
 int conv_rle_alpha(struct image *img);
-void blendfb_rle_alpha(uint16_t *fb, int x, int y, struct image *img);
+void blendfb_rle(uint16_t *fb, int x, int y, struct image *img);
 
 #endif	/* IMAGE_H_ */

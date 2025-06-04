@@ -14,8 +14,6 @@
     <Filter Include="src\3dgfx">
       <UniqueIdentifier>{247ad6d6-b2d8-49b0-8c2e-811152c9d487}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\rt">
-    </Filter>
     <Filter Include="compiled_sprites">
       <UniqueIdentifier>{e144806a-dd28-4127-b341-45bfdc482559}</UniqueIdentifier>
     </Filter>
@@ -111,12 +109,6 @@
     <ClCompile Include="src\3dgfx\scene.c">
       <Filter>src\3dgfx</Filter>
     </ClCompile>
-    <ClCompile Include="src\rt\rt.c">
-      <Filter>src\rt</Filter>
-    </ClCompile>
-    <ClCompile Include="src\rt\rtgeom.c">
-      <Filter>src\rt</Filter>
-    </ClCompile>
     <ClCompile Include="src\scr\bump.c">
       <Filter>src\screens</Filter>
     </ClCompile>
@@ -145,9 +137,6 @@
       <Filter>src\screens</Filter>
     </ClCompile>
     <ClCompile Include="src\scr\3dzoom.c">
-      <Filter>src\screens</Filter>
-    </ClCompile>
-    <ClCompile Include="src\scr\raytrace.c">
       <Filter>src\screens</Filter>
     </ClCompile>
     <ClCompile Include="src\scr\smoketxt.c">
@@ -277,9 +266,6 @@
     </ClInclude>
     <ClInclude Include="src\3dgfx\scene.h">
       <Filter>src\3dgfx</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rt\rt.h">
-      <Filter>src\rt</Filter>
     </ClInclude>
     <ClInclude Include="src\scr\smoketxt.h">
       <Filter>src\screens</Filter>

@@ -90,8 +90,6 @@
     <ClCompile Include="src\3dgfx\polyclip.c" />
     <ClCompile Include="src\3dgfx\polyfill.c" />
     <ClCompile Include="src\3dgfx\scene.c" />
-    <ClCompile Include="src\rt\rt.c" />
-    <ClCompile Include="src\rt\rtgeom.c" />
     <ClCompile Include="src\bsptree.c" />
     <ClCompile Include="src\cfgopt.c" />
     <ClCompile Include="src\console.c" />
@@ -124,7 +122,6 @@
     <ClCompile Include="src\scr\minifx.c" />
     <ClCompile Include="src\scr\water.c" />
     <ClCompile Include="src\scr\3dzoom.c" />
-    <ClCompile Include="src\scr\raytrace.c" />
     <ClCompile Include="src\scr\smoketxt.c" />
     <ClCompile Include="src\scr\thunder.c" />
     <ClCompile Include="src\scr\tunnel.c" />
@@ -145,7 +142,6 @@
     <ClInclude Include="src\3dgfx\polyfill.h" />
     <ClInclude Include="src\3dgfx\polytmpl.h" />
     <ClInclude Include="src\3dgfx\scene.h" />
-    <ClInclude Include="src\rt\rt.h" />
     <ClInclude Include="src\audio.h" />
     <ClInclude Include="src\bsptree.h" />
     <ClInclude Include="src\cfgopt.h" />

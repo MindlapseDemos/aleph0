@@ -21,7 +21,6 @@ struct screen *thunder_screen(void);
 struct screen *metaballs_screen(void);
 struct screen *infcubes_screen(void);
 struct screen *hairball_screen(void);
-struct screen *raytrace_screen(void);
 struct screen *minifx_screen(void);
 struct screen *voxscape_screen(void);
 struct screen *hexfloor_screen(void);
@@ -59,7 +58,6 @@ void populate_screens(void)
 	scr[idx++] = metaballs_screen();
 	scr[idx++] = infcubes_screen();
 	scr[idx++] = hairball_screen();
-	scr[idx++] = raytrace_screen();
 	scr[idx++] = minifx_screen();
 	scr[idx++] = voxscape_screen();
 	scr[idx++] = hexfloor_screen();

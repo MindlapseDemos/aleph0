@@ -5,7 +5,6 @@ dosobj = src/dos/audos.obj src/dos/djdpmi.obj src/dos/gfx.obj src/dos/keyb.obj &
 	src/dos/mouse.obj src/dos/pci.obj
 3dobj = src/3dgfx/3dgfx.obj src/3dgfx/mesh.obj src/3dgfx/meshload.obj &
 	src/3dgfx/polyclip.obj src/3dgfx/polyfill.obj src/3dgfx/scene.obj
-rtobj = src/rt/rt.obj src/rt/rtgeom.obj
 srcobj = src/bsptree.obj src/cfgopt.obj src/console.obj src/demo.obj &
 	src/dynarr.obj src/gfxutil.obj src/msurf2.obj src/noise.obj &
 	src/rbtree.obj src/screen.obj src/tinyfps.obj src/treestor.obj &
@@ -14,7 +13,7 @@ srcobj = src/bsptree.obj src/cfgopt.obj src/console.obj src/demo.obj &
 scrobj = src/scr/bump.obj src/scr/grise.obj src/scr/hairball.obj &
 	src/scr/infcubes.obj src/scr/metaball.obj src/scr/molten.obj &
 	src/scr/smoketxt.obj src/scr/thunder.obj src/scr/tunnel.obj &
-	src/scr/raytrace.obj src/scr/minifx.obj src/scr/voxscape.obj &
+	src/scr/minifx.obj src/scr/voxscape.obj &
 	src/scr/hexfloor.obj src/scr/juliatun.obj src/scr/blobgrid.obj &
 	src/scr/3dzoom.obj src/scr/opt_rend.obj src/scr/opt_3d.obj &
 	src/scr/polka.obj src/scr/water.obj src/scr/waterasm.obj src/scr/credits.obj
@@ -31,7 +30,6 @@ dosobj = src\dos\audos.obj src\dos\djdpmi.obj src\dos\gfx.obj src\dos\keyb.obj &
 	src\dos\mouse.obj src\dos\pci.obj
 3dobj = src\3dgfx\3dgfx.obj src\3dgfx\mesh.obj src\3dgfx\meshload.obj &
 	src\3dgfx\polyclip.obj src\3dgfx\polyfill.obj src\3dgfx\scene.obj
-rtobj = src\rt\rt.obj src\rt\rtgeom.obj
 srcobj = src\bsptree.obj src\cfgopt.obj src\console.obj src\demo.obj &
 	src\dynarr.obj src\gfxutil.obj src\msurf2.obj src\noise.obj &
 	src\rbtree.obj src\screen.obj src\tinyfps.obj src\treestor.obj &
@@ -40,7 +38,7 @@ srcobj = src\bsptree.obj src\cfgopt.obj src\console.obj src\demo.obj &
 scrobj = src\scr\bump.obj src\scr\grise.obj src\scr\hairball.obj &
 	src\scr\infcubes.obj src\scr\metaball.obj src\scr\molten.obj &
 	src\scr\smoketxt.obj src\scr\thunder.obj src\scr\tunnel.obj &
-	src\scr\raytrace.obj src\scr\minifx.obj src\scr\voxscape.obj &
+	src\scr\minifx.obj src\scr\voxscape.obj &
 	src\scr\hexfloor.obj src\scr\juliatun.obj src\scr\blobgrid.obj &
 	src\scr\3dzoom.obj src\scr\opt_rend.obj src\scr\opt_3d.obj &
 	src\scr\polka.obj src\scr\water.obj src\scr\waterasm.obj src\scr\credits.obj
@@ -51,7 +49,7 @@ incpath = -Isrc -Isrc\dos -Isrc\3dgfx -Isrc\rt -Ilibs -Ilibs\imago\src &
 libpath = libpath libs\imago libpath libs\anim libpath libs\midas libpath libs\goat3d
 !endif
 
-obj = $(dosobj) $(3dobj) $(rtobj) $(scrobj) $(srcobj) $(csprobj)
+obj = $(dosobj) $(3dobj) $(scrobj) $(srcobj) $(csprobj)
 bin = demo.exe
 
 !include watcfg.mk

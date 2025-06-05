@@ -373,7 +373,7 @@ static int initDistMap()
 				int rMin = 255;
 				for (yi = 0; yi < pixStep; ++yi) {
 					for (xi = 0; xi < pixStep; ++xi) {
-						const int h = hmap[i];
+						const int h = hmap[(y+yi) * HMAP_WIDTH + x+xi];
 						int hb = 16;
 						int safeR = 0;
 						for (r = 0; r < DIST_RADIUS; ++r) {
@@ -381,7 +381,7 @@ static int initDistMap()
 							Point2D* p = &distOffsets[r * MAX_POINTS_PER_RADIUS];
 							for (n = 0; n < count; ++n) {
 								const int xp = (x + xi + p[n].x) & (HMAP_WIDTH - 1);
-								const int yp = (y + yi + p[n].y) & (HMAP_WIDTH - 1);
+								const int yp = (y + yi + p[n].y) & (HMAP_HEIGHT - 1);
 								const int hCheck = hmap[yp * HMAP_WIDTH + xp] - (hb >> 1);
 								if (h < hCheck) {
 									safeR = r + 1;

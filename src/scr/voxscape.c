@@ -70,13 +70,13 @@
 #define SEA_LEVEL 1
 
 /* When getting different PNG maps, comment out the below and run on PC. Then comment in and use the produced BIN files (and probably will remove the PNGs at the end from data) */
-/*#define CALCULATE_DIST_MAP
+/* #define CALCULATE_DIST_MAP
 #define SAVE_DIST_MAP
 #define SAVE_COLOR_MAP
-#define SAVE_HEIGHT_MAP*/
+#define SAVE_HEIGHT_MAP */
 
 /* Let's minify the distmap */
-#define DMAP_SHIFT 0 //2
+#define DMAP_SHIFT 2
 #define DMAP_WIDTH (HMAP_WIDTH >> DMAP_SHIFT)
 #define DMAP_HEIGHT (HMAP_HEIGHT >> DMAP_SHIFT)
 #define DMAP_SIZE (DMAP_WIDTH * DMAP_HEIGHT)

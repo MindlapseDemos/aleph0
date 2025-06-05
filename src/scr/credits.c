@@ -47,6 +47,7 @@ static const int colmnt[] = {16, 9, 24};
 static uint16_t mountcol, mountcol_mir;
 
 static float dbg_num;
+static unsigned int dbg_toggle;
 static struct image testimg;
 
 struct screen *credits_screen(void)
@@ -161,11 +162,13 @@ static void credits_draw(void)
 
 	g3d_disable(G3D_CLIP_PLANE0);
 
-	for(i=0; i<TENT_NODES; i++) {
-		//cs_cputs(fb_pixels, 100, 10 + i * 10, dbgtext[i]);
-	}
+	/*for(i=0; i<TENT_NODES; i++) {
+		cs_cputs(fb_pixels, 100, 10 + i * 10, dbgtext[i]);
+	}*/
 
-	blendfb_rle(fb_pixels, 0, 0, &testimg);
+	if(dbg_toggle) {
+		blendfb_rle(fb_pixels, -50, 0, &testimg);
+	}
 
 	swap_buffers(fb_pixels);
 }
@@ -246,6 +249,10 @@ static void credits_keyb(int key)
 	case '-':
 		dbg_num -= 0.5;
 		printf("dbg: %f\n", dbg_num);
+		break;
+
+	case 'd':
+		dbg_toggle ^= 1;
 		break;
 	}
 }

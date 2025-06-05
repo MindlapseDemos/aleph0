@@ -628,20 +628,22 @@ void blendfb_rle(uint16_t *fb, int x, int y, struct image *img)
 			if(op == ARLE_OP_COPY) {
 				memcpy(fb + x, pixptr, len * 2);
 			} else {
+				unsigned char *aptr = aline + sx;
+				uint16_t *fbptr = fb + x;
 				for(i=0; i<len; i++) {
 					unsigned int sr, sg, sb, dr, dg, db;
-					unsigned int sa = aline[sx];
+					unsigned int sa = aptr[i];
 					unsigned int da = 255 - sa;
 					uint16_t scol = pixptr[i];
-					uint16_t dcol = fb[x];
+					uint16_t dcol = fbptr[i];
 
 					sr = UNPACK_R16(scol);
 					sg = UNPACK_G16(scol);
 					sb = UNPACK_B16(scol);
-					dr = ((UNPACK_R16(dcol) * da) + (sr * sa)) >> 8;
-					dg = ((UNPACK_R16(dcol) * da) + (sg * sa)) >> 8;
-					db = ((UNPACK_R16(dcol) * da) + (sb * sa)) >> 8;
-					fb[x] = PACK_RGB16(dr, dg, db);
+					dr = (UNPACK_R16(dcol) * da >> 8) + sr;
+					dg = (UNPACK_G16(dcol) * da >> 8) + sg;
+					db = (UNPACK_B16(dcol) * da >> 8) + sb;
+					fbptr[i] = PACK_RGB16(dr, dg, db);
 				}
 			}
 			sx += len;
@@ -657,7 +659,7 @@ void blendfb_rle(uint16_t *fb, int x, int y, struct image *img)
 				x = xpos;
 				y++;
 				sx = 0;
-				aline += img->scanlen;
+				aline += img->width;
 			}
 		}
 	}

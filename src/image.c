@@ -481,7 +481,6 @@ void blitfb_rle(uint16_t *fb, int x, int y, struct image *img)
 		} \
 		rledata = tmp; \
 		num_rle_ops++; \
-		printf("ARLE SKIP: %ld\n", (skip)); \
 	} while(0)
 
 #define ADD_ARLE_SPAN(op, count, ptr) \
@@ -503,7 +502,6 @@ void blitfb_rle(uint16_t *fb, int x, int y, struct image *img)
 			rledata = tmp; \
 		} \
 		num_rle_ops++; \
-		printf("ARLE %s: %ld\n", (op) == ARLE_OP_COPY ? "COPY" : "BLEND", (count)); \
 	} while(0)
 
 

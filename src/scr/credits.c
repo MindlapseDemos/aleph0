@@ -82,10 +82,10 @@ static int credits_init(void)
 		fprintf(stderr, "failed to load blendtst image\n");
 		return -1;
 	}
-	/*if(conv_rle_alpha(&testimg) == -1) {
+	if(conv_rle_alpha(&testimg) == -1) {
 		fprintf(stderr, "failed to convert blendtst image\n");
 		return -1;
-	}*/
+	}
 
 	return 0;
 }
@@ -165,8 +165,7 @@ static void credits_draw(void)
 		//cs_cputs(fb_pixels, 100, 10 + i * 10, dbgtext[i]);
 	}
 
-	//blendfb_rle(fb_pixels, 10, 50, &testimg);
-	overlay_alpha(&fbimg, 0, 0, &testimg, 320, 240);
+	blendfb_rle(fb_pixels, 0, 0, &testimg);
 
 	swap_buffers(fb_pixels);
 }

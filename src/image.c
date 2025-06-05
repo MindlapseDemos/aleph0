@@ -481,6 +481,7 @@ void blitfb_rle(uint16_t *fb, int x, int y, struct image *img)
 		} \
 		rledata = tmp; \
 		num_rle_ops++; \
+		printf("ARLE SKIP: %ld\n", (skip)); \
 	} while(0)
 
 #define ADD_ARLE_SPAN(op, count, ptr) \
@@ -502,6 +503,7 @@ void blitfb_rle(uint16_t *fb, int x, int y, struct image *img)
 			rledata = tmp; \
 		} \
 		num_rle_ops++; \
+		printf("ARLE %s: %ld\n", (op) == ARLE_OP_COPY ? "COPY" : "BLEND", (count)); \
 	} while(0)
 
 
@@ -530,30 +532,27 @@ int conv_rle_alpha(struct image *img)
 		for(j=0; j<img->width; j++) {
 			if(*aptr < 4) {
 				/* transparent pixel */
-				if(op) {
+				if(op && count) {
 					/* we had non-transparent up to now, add a span */
 					ADD_ARLE_SPAN(op, count, cptr - count);
 					count = 0;
 					op = 0;
-				} else {
-					/* previous was transparent, increment skip */
-					skip++;
 				}
+				skip++;
+
 			} else {
 				int newop = *aptr < 252 ? ARLE_OP_BLEND : ARLE_OP_COPY;
-				if(!op) {
+				if(!op && skip) {
 					/* we had transparent up to now, add a skip */
 					ADD_ARLE_SKIP(skip);
 					skip = 0;
-				} else if(op != newop) {
+				} else if(op != newop && count) {
 					/* we had the other kind of non-skip up to now, add a span */
 					ADD_ARLE_SPAN(op, count, cptr - count);
 					count = 0;
-				} else {
-					/* previous was the same, increment count */
-					count++;
 				}
-				op = ARLE_OP_BLEND;
+				count++;
+				op = newop;
 			}
 			cptr++;
 			aptr++;
@@ -565,7 +564,7 @@ int conv_rle_alpha(struct image *img)
 			count = 0;
 			op = 0;
 		}
-		ADD_RLE_SKIP(0);	/* skip with 0 count means skip to next scanline */
+		ADD_ARLE_SKIP(0);	/* skip with 0 count means skip to next scanline */
 		skip = 0;
 	}
 
@@ -630,9 +629,19 @@ void blendfb_rle(uint16_t *fb, int x, int y, struct image *img)
 				memcpy(fb + x, pixptr, len * 2);
 			} else {
 				for(i=0; i<len; i++) {
+					unsigned int sr, sg, sb, dr, dg, db;
 					unsigned int sa = aline[sx];
 					unsigned int da = 255 - sa;
-					fb[x] = ((pixptr[i] * sa) + (fb[x] * da)) >> 8;
+					uint16_t scol = pixptr[i];
+					uint16_t dcol = fb[x];
+
+					sr = UNPACK_R16(scol);
+					sg = UNPACK_G16(scol);
+					sb = UNPACK_B16(scol);
+					dr = ((UNPACK_R16(dcol) * da) + (sr * sa)) >> 8;
+					dg = ((UNPACK_R16(dcol) * da) + (sg * sa)) >> 8;
+					db = ((UNPACK_R16(dcol) * da) + (sb * sa)) >> 8;
+					fb[x] = PACK_RGB16(dr, dg, db);
 				}
 			}
 			sx += len;

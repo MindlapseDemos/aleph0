@@ -181,6 +181,19 @@ static int write_file(struct img_pixmap *img, struct img_io *io)
 			return -1;
 		}
 		img = &tmpimg;
+	} else if(img->fmt == IMG_FMT_RGB565) {
+		if(img_copy(&tmpimg, img) == -1) {
+			return -1;
+		}
+		if(img_convert(&tmpimg, IMG_FMT_RGB24) == -1) {
+			return -1;
+		}
+		img = &tmpimg;
+	}
+	if((coltype = fmt_to_png_type(img->fmt)) == -1) {
+		png_destroy_write_struct(&png, &info);
+		img_destroy(&tmpimg);
+		return -1;
 	}
 
 	txt.compression = PNG_TEXT_COMPRESSION_NONE;
@@ -195,7 +208,6 @@ static int write_file(struct img_pixmap *img, struct img_io *io)
 	}
 	png_set_write_fn(png, io, write_func, flush_func);
 
-	coltype = fmt_to_png_type(img->fmt);
 	png_set_IHDR(png, info, img->width, img->height, 8, coltype, PNG_INTERLACE_NONE,
 			PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 	png_set_text(png, info, &txt, 1);

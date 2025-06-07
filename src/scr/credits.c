@@ -12,8 +12,9 @@
 #include "mesh.h"
 #include "imago2.h"
 #include "noise.h"
+#include "font.h"
 
-#define VFOV	60.0f
+#define VFOV	60
 
 static int credits_init(void);
 static void credits_destroy(void);
@@ -22,7 +23,7 @@ static void credits_draw(void);
 static void left_side(float tint);
 static void right_side(float tint);
 static void credits_keyb(int key);
-static void backdrop(void);
+static void backdrop(float theta, float phi);
 
 static struct screen scr = {
 	"credits",
@@ -33,7 +34,7 @@ static struct screen scr = {
 	credits_keyb
 };
 
-static float cam_theta, cam_phi = 15;
+static float cam_theta, cam_phi;
 static float cam_dist = 10;
 
 #define BGCOL_SIZE	128
@@ -46,9 +47,29 @@ static const int colhor[] = {128, 80, 64};
 static const int colmnt[] = {16, 9, 24};
 static uint16_t mountcol, mountcol_mir;
 
+static struct font fnt;
+
 static float dbg_num;
 static unsigned int dbg_toggle;
-static struct image testimg;
+
+#define CRD_LINES	12
+static const char *crd_text[CRD_LINES] = {
+	"CODE",
+	" NUCLEAR",
+	" OPTIMUS",
+	" SAMURAI",
+	"",
+	"GRAPHICS",
+	" DSTAR",
+	" JADE",
+	" LUTHER",
+	"",
+	"MUSIC",
+	" NOXS"
+};
+static float crd_texv[CRD_LINES + 1];
+static struct image ctex;
+
 
 struct screen *credits_screen(void)
 {
@@ -57,9 +78,10 @@ struct screen *credits_screen(void)
 
 static int credits_init(void)
 {
-	int i;
+	int i, y, adv;
 	int col[3];
 	float xform[16];
+	uint16_t *src, *dst;
 
 	mountcol = PACK_RGB16(colmnt[0], colmnt[1], colmnt[2]);
 	mountcol_mir = PACK_RGB16(colmnt[0] / 2, colmnt[1] / 2, colmnt[2] / 2);
@@ -79,20 +101,41 @@ static int credits_init(void)
 		bgoffs[i] = pfbm1(x, 8.0f, 5) * 32 + 16;
 	}
 
-	if(load_image(&testimg, "data/blendtst.png") == -1) {
-		fprintf(stderr, "failed to load blendtst image\n");
+	if(load_font(&fnt, "data/aleph0.gmp", PACK_RGB16(255, 220, 192)) == -1) {
 		return -1;
 	}
-	if(conv_rle_alpha(&testimg) == -1) {
-		fprintf(stderr, "failed to convert blendtst image\n");
+
+	/* prepare credits texture */
+	init_image(&ctex, 320, 240, 0, 320);
+	if(!(ctex.pixels = calloc(320 * 240, 2))) {
+		fprintf(stderr, "failed to allocate credits texture\n");
 		return -1;
 	}
+
+	adv = fnt.advance * 3 / 2;
+	y = 0;
+	for(i=0; i<CRD_LINES; i++) {
+		crd_texv[i] = (float)y / (float)ctex.height;
+		draw_text(&fnt, ctex.pixels, 80, y + adv / 5, crd_text[i]);
+		y += adv;
+	}
+	crd_texv[i] = (float)y / (float)ctex.height;
+	/* reconfigure the texture to become 256x256 */
+	src = dst = ctex.pixels;
+	for(i=0; i<ctex.height; i++) {
+		if(i) memmove(dst, src, 512);
+		dst += 256;
+		src += 320;
+	}
+	init_image(&ctex, 256, 256, ctex.pixels, 256);
+	save_image(&ctex, "ctex.png");
 
 	return 0;
 }
 
 static void credits_destroy(void)
 {
+	destroy_font(&fnt);
 }
 
 static void credits_start(long trans_time)
@@ -131,18 +174,22 @@ static void credits_draw(void)
 {
 	int i;
 	float clip_plane[] = {0, 1, 0, 0};
+	float t = (float)time_msec / 2000.0f;
+	float theta = cam_theta + cos(t) * 8.0f;
+	float phi = cam_phi + sin(t * 2.0f) * 2.0f;
+	float dist = cam_dist + sin(t * 0.75f) * 2.0f + 1.0f;
 
 	credits_update();
 
 	g3d_clear(G3D_DEPTH_BUFFER_BIT);
 
-	backdrop();
+	backdrop(theta, phi);
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
-	g3d_translate(0, -2, -cam_dist);
-	g3d_rotate(cam_phi, 1, 0, 0);
-	g3d_rotate(cam_theta, 0, 1, 0);
+	g3d_translate(0, -2.5, -dist);
+	g3d_rotate(phi, 1, 0, 0);
+	g3d_rotate(theta, 0, 1, 0);
 
 	g3d_clip_plane(0, clip_plane);
 	g3d_enable(G3D_CLIP_PLANE0);
@@ -165,10 +212,6 @@ static void credits_draw(void)
 	/*for(i=0; i<TENT_NODES; i++) {
 		cs_cputs(fb_pixels, 100, 10 + i * 10, dbgtext[i]);
 	}*/
-
-	if(dbg_toggle) {
-		blendfb_rle(fb_pixels, -50, 0, &testimg);
-	}
 
 	swap_buffers(fb_pixels);
 }
@@ -237,6 +280,50 @@ static void left_side(float tint)
 
 static void right_side(float tint)
 {
+	int i, j;
+	float x, y, u, dx, dy, du, v0, v1;
+
+	g3d_push_matrix();
+	g3d_translate(0, 2, 0);
+
+	g3d_polygon_mode(G3D_FLAT);
+	g3d_disable(G3D_LIGHTING);
+	g3d_enable(G3D_TEXTURE_2D);
+	g3d_enable(G3D_ADD_BLEND);
+	g3d_set_texture(ctex.width, ctex.height, ctex.pixels);
+
+	dx = 10.0f / 3.0f;
+	du = 1.0f / 3.0f;
+	dy = 1.0f;
+
+	y = (time_msec & 0x7fff) / 1000.0f - 3.0f;
+	g3d_begin(G3D_QUADS);
+	for(i=0; i<CRD_LINES; i++) {
+		u = 0;
+		x = -1;
+		v0 = crd_texv[i];
+		v1 = crd_texv[i + 1];
+		g3d_color3f(1, 1, 1);
+		for(j=0; j<3; j++) {
+			g3d_texcoord(u, v1);
+			g3d_vertex(x, y - 1, 0.1);
+			g3d_texcoord(u + du, v1);
+			g3d_vertex(x + dx, y - 1, 0.1);
+			g3d_texcoord(u + du, v0);
+			g3d_vertex(x + dx, y, 0.1);
+			g3d_texcoord(u, v0);
+			g3d_vertex(x, y, 0.1);
+			x += dx;
+			u += du;
+		}
+		y -= dy;
+	}
+	g3d_end();
+
+	g3d_disable(G3D_ADD_BLEND);
+	g3d_disable(G3D_TEXTURE_2D);
+
+	g3d_pop_matrix();
 }
 
 static void credits_keyb(int key)
@@ -257,16 +344,16 @@ static void credits_keyb(int key)
 	}
 }
 
-static void backdrop(void)
+static void backdrop(float theta, float phi)
 {
 	int i, j, hory;
 	uint16_t *fbptr, pcol;
 	int cidx, offs = -10;
 	int startidx;
 
-	startidx = cround64(cam_theta * (float)BGOFFS_SIZE) / 360;
+	startidx = cround64(theta * (float)BGOFFS_SIZE) / 360;
 
-	hory = (fb_height - 2 * fb_height * cround64(cam_phi) / VFOV) / 2;
+	hory = (fb_height - ((2 * fb_height * cround64((phi * 256.0f)) / VFOV) >> 8)) / 2;
 	if(hory > fb_height) hory = fb_height;
 
 	if(hory > 0) {

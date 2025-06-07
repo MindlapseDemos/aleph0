@@ -103,6 +103,7 @@
     <ClCompile Include="src\glut\miniglut.c" />
     <ClCompile Include="src\glut\w32dir.c" />
     <ClCompile Include="src\image.c" />
+    <ClCompile Include="src\font.c" />
     <ClCompile Include="src\msurf2.c" />
     <ClCompile Include="src\noise.c" />
     <ClCompile Include="src\rbtree.c" />
@@ -155,6 +156,7 @@
     <ClInclude Include="src\glut\miniglut.h" />
     <ClInclude Include="src\glut\w32dir.h" />
     <ClInclude Include="src\image.h" />
+    <ClInclude Include="src\font.h" />
     <ClInclude Include="src\mcubes.h" />
     <ClInclude Include="src\msurf2.h" />
     <ClInclude Include="src\noise.h" />

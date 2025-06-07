@@ -9,7 +9,8 @@ srcobj = src/bsptree.obj src/cfgopt.obj src/console.obj src/demo.obj &
 	src/dynarr.obj src/gfxutil.obj src/msurf2.obj src/noise.obj &
 	src/rbtree.obj src/screen.obj src/tinyfps.obj src/treestor.obj &
 	src/image.obj src/ts_text.obj src/util.obj src/util_s.obj src/cpuid.obj &
-	src/cpuid_s.obj src/darray.obj src/data.obj src/rlebmap.obj src/dseq.obj
+	src/cpuid_s.obj src/darray.obj src/data.obj src/rlebmap.obj src/dseq.obj &
+	src/font.obj
 scrobj = src/scr/bump.obj src/scr/grise.obj src/scr/hairball.obj &
 	src/scr/infcubes.obj src/scr/metaball.obj src/scr/molten.obj &
 	src/scr/smoketxt.obj src/scr/thunder.obj src/scr/tunnel.obj &
@@ -34,7 +35,8 @@ srcobj = src\bsptree.obj src\cfgopt.obj src\console.obj src\demo.obj &
 	src\dynarr.obj src\gfxutil.obj src\msurf2.obj src\noise.obj &
 	src\rbtree.obj src\screen.obj src\tinyfps.obj src\treestor.obj &
 	src\image.obj src\ts_text.obj src\util.obj src\util_s.obj src\cpuid.obj &
-	src\cpuid_s.obj src\darray.obj src\data.obj src\rlebmap.obj src\dseq.obj
+	src\cpuid_s.obj src\darray.obj src\data.obj src\rlebmap.obj src\dseq.obj &
+	src\font.obj
 scrobj = src\scr\bump.obj src\scr\grise.obj src\scr\hairball.obj &
 	src\scr\infcubes.obj src\scr\metaball.obj src\scr\molten.obj &
 	src\scr\smoketxt.obj src\scr\thunder.obj src\scr\tunnel.obj &

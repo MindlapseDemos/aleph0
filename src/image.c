@@ -97,6 +97,7 @@ int load_image(struct image *img, const char *fname)
 not565:
 	fclose(fp);
 
+#ifndef IMG_NOANIM
 	if(memcmp(sig, "animtex", 7) == 0) {
 		/* it's an animated texture. read metadata, and recurse with the new name*/
 		struct ts_node *root, *node;
@@ -163,6 +164,7 @@ not565:
 		ts_free_tree(root);
 		return 0;
 	}
+#endif	/* !def IMG_NOANIM */
 
 	/* just a regular image */
 	img_init(&pixmap);
@@ -212,18 +214,14 @@ noalpha:
 	calc_pow2(img);
 
 	if(img->alpha) {
-		/* premultiply alpha */
-		for(i=0; i<pixcount; i++) {
-			int r = UNPACK_R16(img->pixels[i]);
-			int g = UNPACK_G16(img->pixels[i]);
-			int b = UNPACK_B16(img->pixels[i]);
-			r = (r * img->alpha[i]) >> 8;
-			g = (g * img->alpha[i]) >> 8;
-			b = (b * img->alpha[i]) >> 8;
-			img->pixels[i] = PACK_RGB16(r, g, b);
-		}
+		premul_alpha(img);
 	}
 	return 0;
+}
+
+int save_image(struct image *img, const char *fname)
+{
+	return img_save_pixels(fname, img->pixels, img->width, img->height, IMG_FMT_RGB565);
 }
 
 int dump_image(struct image *img, const char *fname)
@@ -311,6 +309,22 @@ void init_image(struct image *img, int x, int y, uint16_t *pixels, int scanlen)
 	img->pixels = pixels;
 
 	calc_pow2(img);
+}
+
+void premul_alpha(struct image *img)
+{
+	unsigned int i, pixcount = img->height * img->scanlen;
+
+	/* premultiply alpha */
+	for(i=0; i<pixcount; i++) {
+		int r = UNPACK_R16(img->pixels[i]);
+		int g = UNPACK_G16(img->pixels[i]);
+		int b = UNPACK_B16(img->pixels[i]);
+		r = (r * img->alpha[i]) >> 8;
+		g = (g * img->alpha[i]) >> 8;
+		b = (b * img->alpha[i]) >> 8;
+		img->pixels[i] = PACK_RGB16(r, g, b);
+	}
 }
 
 #define RLE_OP_SKIP			0

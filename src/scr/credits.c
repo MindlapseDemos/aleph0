@@ -47,28 +47,28 @@ static const int colhor[] = {128, 80, 64};
 static const int colmnt[] = {16, 9, 24};
 static uint16_t mountcol, mountcol_mir;
 
-static struct font fnt;
-
 static float dbg_num;
 static unsigned int dbg_toggle;
 
 #define CRD_LINES	12
 static const char *crd_text[CRD_LINES] = {
 	"CODE",
-	" NUCLEAR",
-	" OPTIMUS",
-	" SAMURAI",
+	"  NUCLEAR",
+	"  OPTIMUS",
+	"  SAMURAI",
 	"",
 	"GRAPHICS",
-	" DSTAR",
-	" JADE",
-	" LUTHER",
+	"  DSTAR",
+	"  JADE",
+	"  LUTHER",
 	"",
 	"MUSIC",
-	" NOXS"
+	"  NOXS"
 };
 static float crd_texv[CRD_LINES + 1];
 static struct image ctex;
+
+static int ev_zoom, ev_text;
 
 
 struct screen *credits_screen(void)
@@ -82,6 +82,7 @@ static int credits_init(void)
 	int col[3];
 	float xform[16];
 	uint16_t *src, *dst;
+	struct font fnt;
 
 	mountcol = PACK_RGB16(colmnt[0], colmnt[1], colmnt[2]);
 	mountcol_mir = PACK_RGB16(colmnt[0] / 2, colmnt[1] / 2, colmnt[2] / 2);
@@ -115,11 +116,13 @@ static int credits_init(void)
 	adv = fnt.advance * 3 / 2;
 	y = 0;
 	for(i=0; i<CRD_LINES; i++) {
-		crd_texv[i] = (float)y / (float)ctex.height;
-		draw_text(&fnt, ctex.pixels, 80, y + adv / 5, crd_text[i]);
+		crd_texv[i] = (float)y / 256.0f;
+		/*draw_text(&fnt, ctex.pixels, 80, y + adv / 5, crd_text[i]);*/
+		draw_text(&fnt, ctex.pixels, 0, y + adv / 5, crd_text[i]);
 		y += adv;
 	}
-	crd_texv[i] = (float)y / (float)ctex.height;
+	crd_texv[CRD_LINES] = (float)y / 256.0f;
+	destroy_font(&fnt);
 	/* reconfigure the texture to become 256x256 */
 	src = dst = ctex.pixels;
 	for(i=0; i<ctex.height; i++) {
@@ -130,12 +133,14 @@ static int credits_init(void)
 	init_image(&ctex, 256, 256, ctex.pixels, 256);
 	save_image(&ctex, "ctex.png");
 
+	ev_zoom = dseq_lookup("credits.zoom");
+	ev_text = dseq_lookup("credits.text");
+
 	return 0;
 }
 
 static void credits_destroy(void)
 {
-	destroy_font(&fnt);
 }
 
 static void credits_start(long trans_time)
@@ -176,8 +181,10 @@ static void credits_draw(void)
 	float clip_plane[] = {0, 1, 0, 0};
 	float t = (float)time_msec / 2000.0f;
 	float theta = cam_theta + cos(t) * 8.0f;
-	float phi = cam_phi + sin(t * 2.0f) * 2.0f;
-	float dist = cam_dist + sin(t * 0.75f) * 2.0f + 1.0f;
+	float phi = cam_phi + sin(t * 1.2f) * 2.0f;
+	float dist;
+
+	dist = cam_dist + dseq_value(ev_zoom) / 1024.0f;
 
 	credits_update();
 
@@ -278,10 +285,15 @@ static void left_side(float tint)
 	}
 }
 
+#define TXQUAD_SUB	4
+#define DX			(5.0f / TXQUAD_SUB)
+#define DU			(0.5f / TXQUAD_SUB)
+#define DY			1.0f
+
 static void right_side(float tint)
 {
 	int i, j;
-	float x, y, u, dx, dy, du, v0, v1;
+	float x, y, u, v0, v1, fade, t;
 
 	g3d_push_matrix();
 	g3d_translate(0, 2, 0);
@@ -292,31 +304,39 @@ static void right_side(float tint)
 	g3d_enable(G3D_ADD_BLEND);
 	g3d_set_texture(ctex.width, ctex.height, ctex.pixels);
 
-	dx = 10.0f / 3.0f;
-	du = 1.0f / 3.0f;
-	dy = 1.0f;
-
-	y = (time_msec & 0x7fff) / 1000.0f - 3.0f;
+	//y = dseq_value(ev_text) / 1024.0f;
+	y = (time_msec & 0x7fff) / 1024.0f - 2.0f;
 	g3d_begin(G3D_QUADS);
 	for(i=0; i<CRD_LINES; i++) {
+		if(crd_text[i][0] == 0) {
+			y -= DY;
+			continue;
+		}
+		t = y / 5.8f;
+		if(t < 0.0f) t = 0.0f; else if(t > 1.0f) t = 1.0f;
+		fade = sin(t * CGM_PI);
+		if(fade < 0.01) {
+			y -= DY;
+			continue;
+		}
 		u = 0;
-		x = -1;
+		x = fade * 0.5f + 1;//-1;
 		v0 = crd_texv[i];
 		v1 = crd_texv[i + 1];
-		g3d_color3f(1, 1, 1);
-		for(j=0; j<3; j++) {
+		g3d_color3f(fade, fade, fade);
+		for(j=0; j<TXQUAD_SUB; j++) {
 			g3d_texcoord(u, v1);
-			g3d_vertex(x, y - 1, 0.1);
-			g3d_texcoord(u + du, v1);
-			g3d_vertex(x + dx, y - 1, 0.1);
-			g3d_texcoord(u + du, v0);
-			g3d_vertex(x + dx, y, 0.1);
+			g3d_vertex(x, y - 2, 0.1);
+			g3d_texcoord(u + DU, v1);
+			g3d_vertex(x + DX, y - 2, 0.1);
+			g3d_texcoord(u + DU, v0);
+			g3d_vertex(x + DX, y - 1, 0.1);
 			g3d_texcoord(u, v0);
-			g3d_vertex(x, y, 0.1);
-			x += dx;
-			u += du;
+			g3d_vertex(x, y - 1, 0.1);
+			x += DX;
+			u += DU;
 		}
-		y -= dy;
+		y -= DY;
 	}
 	g3d_end();
 

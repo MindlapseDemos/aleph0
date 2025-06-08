@@ -348,6 +348,7 @@ static int read_event(int parid, struct ts_node *tsn)
 		} else if(sscanf(attr->name, "key:%ld", &key_time) == 1) {
 			SKIP_NOTNUM("key");
 			add_key(trk, key_time + par_start, attr->val.inum);
+			printf("add key %s: t[%ld] v(%d)\n", attr->name, key_time + par_start, attr->val.inum);
 
 		} else if(sscanf(attr->name, "keyabs:%ld", &key_time) == 1) {
 			SKIP_NOTNUM("keyabs");

@@ -15,7 +15,7 @@
 #   - end: event interval end time, relative to parent.
 #   - dur: event interval duration, pair with start or wait.
 #   - key:<time>: defines explicit value for a specified time
-#   - startabs: same as abs, but absolute time, not relative to parent
+#   - startabs: same as start, but absolute time, not relative to parent
 #   - endabs: same as end, but absolute time, not relative to parent
 #   - keyabs:<abstime>: same as key, but absolute time, not relative to parent
 #   - interp: one of <step|linear|smoothstep>
@@ -103,6 +103,25 @@ demoseq {
 			interp = "smoothstep"
 			key:0 = 0
 			key:2000 = 1024
+		}
+	}
+
+	credits {
+		wait = 0
+		dur = 0
+
+		zoom {
+			interp = "smoothstep"
+			key:0 = 20480
+			key:1200 = 0
+		}
+
+		text {
+			trans = 0
+			wait = 0
+			interp = "linear"
+			key:0 = 0
+			key:6000 = 20480
 		}
 	}
 }

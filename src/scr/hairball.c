@@ -291,7 +291,7 @@ static void update(void)
 		thing.xform[14] = thing.pos.z;
 	}
 
-	bgscroll_x = (int)(thing.pos.x * (MAX_BGSCROLL_X * 0.1f)) + MAX_BGSCROLL_X / 2;
+	bgscroll_x = time_msec / 30;//(int)(thing.pos.x * (MAX_BGSCROLL_X * 0.1f)) + MAX_BGSCROLL_X / 2;
 	bgscroll_y = (int)(-thing.pos.y * (MAX_BGSCROLL_Y * 0.3f)) + MAX_BGSCROLL_Y / 2;
 
 	thing_dt = msec - prev_thing_upd;

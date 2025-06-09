@@ -14,6 +14,7 @@
 #include "cgmath/cgmath.h"
 #include "anim.h"
 #include "dynarr.h"
+#include "imago2.h"
 
 #define NUM_TENT		8
 #define TENT_NODES		6
@@ -89,10 +90,10 @@ static struct thing thing;
 static struct g3d_mesh sphmesh;
 static struct g3d_mesh tentmesh[NUM_TENT];
 static struct g3d_material thingmtl;
-static struct image envmap, bgimg;
+static struct image envmap, bgimg, galaxyimg;
 static int bgscroll_x, bgscroll_y;
 
-#define BGIMG_WIDTH		512
+#define BGIMG_WIDTH		1024
 #define BGIMG_HEIGHT	350
 #define MAX_BGSCROLL_X	(BGIMG_WIDTH - 320)
 #define MAX_BGSCROLL_Y	(BGIMG_HEIGHT - 240)
@@ -136,6 +137,13 @@ static int init(void)
 	if(load_anim(thing.anim, "data/thing.anm") != -1) {
 		playanim = 1;
 	}
+
+	/* galaxy sprite */
+	if(load_image(&galaxyimg, "data/galaxy.png") == -1) {
+		fprintf(stderr, "failed to load galaxy sprite\n");
+		return -1;
+	}
+	conv_rle_alpha(&galaxyimg);
 
 	return 0;
 }
@@ -291,7 +299,7 @@ static void update(void)
 		thing.xform[14] = thing.pos.z;
 	}
 
-	bgscroll_x = time_msec / 30;//(int)(thing.pos.x * (MAX_BGSCROLL_X * 0.1f)) + MAX_BGSCROLL_X / 2;
+	bgscroll_x = time_msec >> 5;
 	bgscroll_y = (int)(-thing.pos.y * (MAX_BGSCROLL_Y * 0.3f)) + MAX_BGSCROLL_Y / 2;
 
 	thing_dt = msec - prev_thing_upd;
@@ -323,6 +331,8 @@ static void draw(void)
 
 	g3d_clear(/*G3D_COLOR_BUFFER_BIT | */G3D_DEPTH_BUFFER_BIT);
 	draw_backdrop();
+
+	blendfb_rle(fb_pixels, 10, 40, &galaxyimg);
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();

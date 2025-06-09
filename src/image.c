@@ -202,6 +202,8 @@ not565:
 			img->alpha[i] = *pptr;
 			pptr += 4;
 		}
+
+		img_premul_alpha(&pixmap);
 	}
 noalpha:
 	if(img_convert(&pixmap, IMG_FMT_RGB565) == -1) {
@@ -212,10 +214,6 @@ noalpha:
 
 	img->pixels = pixmap.pixels;
 	calc_pow2(img);
-
-	if(img->alpha) {
-		premul_alpha(img);
-	}
 	return 0;
 }
 
@@ -645,7 +643,14 @@ void blendfb_rle(uint16_t *fb, int x, int y, struct image *img)
 				for(i=0; i<len; i++) {
 					unsigned int sr, sg, sb, dr, dg, db;
 					unsigned int sa = aptr[i];
-					unsigned int da = 255 - sa;
+
+					/* XXX the following should be 255 - sa, but probably due
+					 * to 565 conversions, colors seem to be slightly darker,
+					 * creating a darkening effect in alpha blended areas, so I
+					 * fudged the destination alpha factor to compensate by
+					 * trial and error.
+					 */
+					unsigned int da = 280 - sa;
 					uint16_t scol = pixptr[i];
 					uint16_t dcol = fbptr[i];
 

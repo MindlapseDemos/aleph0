@@ -1,6 +1,6 @@
 /*
 libimago - a multi-format image file input/output library.
-Copyright (C) 2010-2021 John Tsiombikas <nuclear@member.fsf.org>
+Copyright (C) 2010-2025 John Tsiombikas <nuclear@member.fsf.org>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published
@@ -159,6 +159,8 @@ int img_quantize(struct img_pixmap *img, int maxcol, IMG_OPTARG(enum img_dither 
 /* Flip the image vertically or horizontally */
 void img_vflip(struct img_pixmap *img);
 void img_hflip(struct img_pixmap *img);
+
+void img_premul_alpha(struct img_pixmap *img);
 
 /* Converts an image from an integer pixel format to the corresponding floating point one */
 int img_to_float(struct img_pixmap *img);

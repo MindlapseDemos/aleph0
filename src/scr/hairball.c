@@ -91,7 +91,7 @@ static struct g3d_mesh sphmesh;
 static struct g3d_mesh tentmesh[NUM_TENT];
 static struct g3d_material thingmtl;
 static struct image envmap, bgimg, galaxyimg;
-static int bgscroll_x, bgscroll_y;
+static int bgscroll_x, bgscroll_y, galscroll_x, galscroll_y;
 
 #define BGIMG_WIDTH		1024
 #define BGIMG_HEIGHT	350
@@ -300,7 +300,14 @@ static void update(void)
 	}
 
 	bgscroll_x = time_msec >> 5;
-	bgscroll_y = (int)(-thing.pos.y * (MAX_BGSCROLL_Y * 0.3f)) + MAX_BGSCROLL_Y / 2;
+	bgscroll_y = (int)(-thing.pos.y * (MAX_BGSCROLL_Y * 0.2f)) + MAX_BGSCROLL_Y / 2;
+
+	bgscroll_x &= bgimg.xmask;
+	if(bgscroll_y < 0) bgscroll_y = 0;
+	if(bgscroll_y >= BGIMG_HEIGHT - 240) bgscroll_y = BGIMG_HEIGHT - 240 - 1;
+
+	galscroll_x = 500 - bgscroll_x * 1.6;
+	galscroll_y = 100 - bgscroll_y * 1.6;
 
 	thing_dt = msec - prev_thing_upd;
 	if(thing_dt >= 33) {
@@ -332,7 +339,7 @@ static void draw(void)
 	g3d_clear(/*G3D_COLOR_BUFFER_BIT | */G3D_DEPTH_BUFFER_BIT);
 	draw_backdrop();
 
-	blendfb_rle(fb_pixels, 10, 40, &galaxyimg);
+	blendfb_rle(fb_pixels, galscroll_x, galscroll_y, &galaxyimg);
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
@@ -396,10 +403,6 @@ static void draw_backdrop(void)
 {
 	int i, j;
 	uint16_t *dptr, *sptr;
-
-	bgscroll_x &= bgimg.xmask;
-	if(bgscroll_y < 0) bgscroll_y = 0;
-	if(bgscroll_y >= BGIMG_HEIGHT - 240) bgscroll_y = BGIMG_HEIGHT - 240 - 1;
 
 	dptr = fb_pixels;
 	sptr = bgimg.pixels + (bgscroll_y << bgimg.xshift) + bgscroll_x;

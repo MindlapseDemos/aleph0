@@ -227,8 +227,9 @@ static void left_side(float tint)
 {
 	int i, j, otherm, curm = 0;
 	float mat[2][16], angle, t, f, a;
-	cgm_vec3 pos[TENT_NODES], norm[TENT_NODES], pprev, nprev;
+	cgm_vec3 pos[TENT_NODES], norm[TENT_NODES], pprev, nprev, nvec;
 	cgm_vec3 tang;
+	float rad[TENT_NODES];
 
 	for(j=0; j<NUM_TENT; j++) {
 		g3d_push_matrix();
@@ -258,28 +259,63 @@ static void left_side(float tint)
 
 		cgm_vcons(&pprev, 0, 0, 0);
 		for(i=0; i<TENT_NODES; i++) {
-			float s = (1.0 - (float)i / (float)TENT_NODES) * 0.5 + 0.05;
+			rad[i] = (1.0 - (float)i / (float)TENT_NODES) * 0.5 + 0.05;
 			cgm_vcsub(&tang, pos + i, &pprev);
-			cgm_vcons(norm + i, -tang.y * s, tang.x * s, 0);
+			cgm_vcons(norm + i, -tang.y, tang.x, 0);
 			pprev = pos[i];
 		}
 
 
 		g3d_disable(G3D_LIGHTING);
+		g3d_polygon_mode(G3D_WIRE);
 
 		cgm_vcons(&pprev, 0, 0, 0);
 		cgm_vcons(&nprev, -TENT_DIST * 0.5, 0, 0);
 		g3d_begin(G3D_QUADS);
 		g3d_color3f(0.15 * tint, 0.85 * tint, 0.15 * tint);
 		for(i=0; i<TENT_NODES; i++) {
+			nvec.x = norm[i].x * rad[i];
+			nvec.y = norm[i].y * rad[i];
+
+			g3d_normal(nprev.x, nprev.y, 0);
 			g3d_vertex(pprev.x + nprev.x, pprev.y + nprev.y, 0);
+			g3d_normal(0, 0, 1);
+			g3d_vertex(pprev.x, pprev.y, rad[i]);
+			g3d_vertex(pos[i].x, pos[i].y, rad[i]);
+			g3d_normal(norm[i].x, norm[i].y, 0);
+			g3d_vertex(pos[i].x + nvec.x, pos[i].y + nvec.y, 0);
+
+			g3d_normal(0, 0, 1);
+			g3d_vertex(pprev.x, pprev.y, rad[i]);
+			g3d_normal(-nprev.x, -nprev.y, 0);
 			g3d_vertex(pprev.x - nprev.x, pprev.y - nprev.y, 0);
-			g3d_vertex(pos[i].x - norm[i].x, pos[i].y - norm[i].y, 0);
-			g3d_vertex(pos[i].x + norm[i].x, pos[i].y + norm[i].y, 0);
+			g3d_normal(-norm[i].x, -norm[i].y, 0);
+			g3d_vertex(pos[i].x - nvec.x, pos[i].y - nvec.y, 0);
+			g3d_normal(0, 0, 1);
+			g3d_vertex(pos[i].x, pos[i].y, rad[i]);
+
 			pprev = pos[i];
-			nprev = norm[i];
+			nprev = nvec;
 		}
 		g3d_end();
+
+		/*
+		g3d_begin(G3D_LINES);
+		g3d_color3f(0.15 * tint, 0.15 * tint, 0.65 * tint);
+		for(i=0; i<TENT_NODES; i++) {
+			nvec.x = norm[i].x * rad[i];
+			nvec.y = norm[i].y * rad[i];
+			g3d_vertex(pos[i].x + nvec.x, pos[i].y + nvec.y, 0);
+			g3d_vertex(pos[i].x + nvec.x + norm[i].x, pos[i].y + nvec.y + norm[i].y, 0);
+
+			g3d_vertex(pos[i].x, pos[i].y, rad[i]);
+			g3d_vertex(pos[i].x, pos[i].y, rad[i] + 1);
+
+			g3d_vertex(pos[i].x - nvec.x, pos[i].y - nvec.y, 0);
+			g3d_vertex(pos[i].x - nvec.x - norm[i].x, pos[i].y - nvec.y - norm[i].y, 0);
+		}
+		g3d_end();
+		*/
 
 		g3d_pop_matrix();
 	}

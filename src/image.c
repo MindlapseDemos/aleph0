@@ -681,3 +681,99 @@ void blendfb_rle(uint16_t *fb, int x, int y, struct image *img)
 		}
 	}
 }
+
+void blend_rle(struct image *destimg, int x, int y, struct image *img)
+{
+	int i, endx, endy, xpos, len, sx;
+	uint16_t *rleptr, *pixptr;
+	unsigned char *aline;
+	unsigned int rle, count, op;
+	uint16_t *fb = destimg->pixels;
+
+	endy = y + img->height;
+	if(endy > destimg->height) endy = destimg->height;
+
+	xpos = x;
+
+	aline = img->alpha;
+	sx = 0;
+
+	fb += y * destimg->scanlen;
+	rleptr = img->pixels;
+	while(y < endy) {
+		rle = (unsigned int)*rleptr++;
+		count = rle & ARLE_COUNT_BITS;
+		op = rle & ARLE_OP_BITS;
+
+		if(op) {
+			/* RLE OP BLEND or COPY */
+			pixptr = rleptr;
+			rleptr += count;
+			if(y < 0) continue;
+
+			endx = x + (int)count;
+			if(endx <= 0) {
+				x = endx;
+				sx += count;
+				continue;
+			}
+
+			if(x < 0) {
+				pixptr -= x;
+				sx -= x;
+				x = 0;
+			}
+			if(endx > destimg->width) endx = destimg->width;
+
+			if((len = endx - x) <= 0) {
+				x = endx;
+				sx += len;
+				continue;
+			}
+
+			if(op == ARLE_OP_COPY) {
+				memcpy(fb + x, pixptr, len * 2);
+			} else {
+				unsigned char *aptr = aline + sx;
+				uint16_t *fbptr = fb + x;
+				for(i=0; i<len; i++) {
+					unsigned int sr, sg, sb, dr, dg, db;
+					unsigned int sa = aptr[i];
+
+					/* XXX the following should be 255 - sa, but probably due
+					 * to 565 conversions, colors seem to be slightly darker,
+					 * creating a darkening effect in alpha blended areas, so I
+					 * fudged the destination alpha factor to compensate by
+					 * trial and error.
+					 */
+					unsigned int da = 280 - sa;
+					uint16_t scol = pixptr[i];
+					uint16_t dcol = fbptr[i];
+
+					sr = UNPACK_R16(scol);
+					sg = UNPACK_G16(scol);
+					sb = UNPACK_B16(scol);
+					dr = (UNPACK_R16(dcol) * da >> 8) + sr;
+					dg = (UNPACK_G16(dcol) * da >> 8) + sg;
+					db = (UNPACK_B16(dcol) * da >> 8) + sb;
+					fbptr[i] = PACK_RGB16(dr, dg, db);
+				}
+			}
+			sx += len;
+			x = endx;
+		} else {
+			/* RLE OP SKIP */
+			if(count) {
+				x += count;
+				sx += count;
+			} else {
+				/* skip with 0 count means next scanline */
+				fb += destimg->scanlen;
+				x = xpos;
+				y++;
+				sx = 0;
+				aline += img->width;
+			}
+		}
+	}
+}

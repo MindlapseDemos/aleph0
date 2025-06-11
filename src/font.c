@@ -124,3 +124,20 @@ void draw_text(struct font *fnt, uint16_t *fb, int x, int y, const char *str)
 		x += g->adv;
 	}
 }
+
+
+void draw_text_img(struct font *fnt, struct image *img, int x, int y, const char *str)
+{
+	int c;
+	struct glyph *g;
+
+	while((c = *str++)) {
+		if(c < fnt->gmin || c > fnt->gmax) {
+			if(c == ' ') x += fnt->glyphs['I' - fnt->gmin].adv << 1;
+			continue;
+		}
+		g = fnt->glyphs + c - fnt->gmin;
+		blend_rle(img, x, y, &g->img);
+		x += g->adv;
+	}
+}

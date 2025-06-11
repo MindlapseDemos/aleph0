@@ -227,7 +227,7 @@ static void unpack_rgb565(struct pixel *unp, void *pptr, int count, struct img_c
 		uint16_t r, g, b, p = *pix++;
 		b = (p & 0x1f) << 3;
 		if(b & 8) b |= 7;	/* fill LSbits with whatever bit 0 was */
-		g = (p >> 2) & 0xfc;
+		g = (p >> 3) & 0xfc;
 		if(g & 4) g |= 3;	/* ditto */
 		r = (p >> 8) & 0xf8;
 		if(r & 8) r |= 7;	/* same */

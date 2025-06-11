@@ -19,6 +19,7 @@
 static int credits_init(void);
 static void credits_destroy(void);
 static void credits_start(long trans_time);
+static void credits_stop(long trans_time);
 static void credits_draw(void);
 static void left_side(float tint);
 static void right_side(float tint);
@@ -29,7 +30,7 @@ static struct screen scr = {
 	"credits",
 	credits_init,
 	credits_destroy,
-	credits_start, 0,
+	credits_start, credits_stop,
 	credits_draw,
 	credits_keyb
 };
@@ -47,10 +48,12 @@ static const int colhor[] = {128, 80, 64};
 static const int colmnt[] = {16, 9, 24};
 static uint16_t mountcol, mountcol_mir;
 
+static struct image envmap;
+
 static float dbg_num;
 static unsigned int dbg_toggle;
 
-#define CRD_LINES	12
+#define CRD_LINES	15
 static const char *crd_text[CRD_LINES] = {
 	"CODE",
 	"  NUCLEAR",
@@ -63,7 +66,10 @@ static const char *crd_text[CRD_LINES] = {
 	"  LUTHER",
 	"",
 	"MUSIC",
-	"  NOXS"
+	"  NOXS",
+	"",
+	"OGANIZER",
+	"  RAMON"
 };
 static float crd_texv[CRD_LINES + 1];
 static struct image ctex;
@@ -107,8 +113,8 @@ static int credits_init(void)
 	}
 
 	/* prepare credits texture */
-	init_image(&ctex, 320, 240, 0, 320);
-	if(!(ctex.pixels = calloc(320 * 240, 2))) {
+	init_image(&ctex, 256, 512, 0, 256);
+	if(!(ctex.pixels = calloc(256 * 300, 2))) {
 		fprintf(stderr, "failed to allocate credits texture\n");
 		return -1;
 	}
@@ -116,22 +122,19 @@ static int credits_init(void)
 	adv = fnt.advance * 3 / 2;
 	y = 0;
 	for(i=0; i<CRD_LINES; i++) {
-		crd_texv[i] = (float)y / 256.0f;
-		/*draw_text(&fnt, ctex.pixels, 80, y + adv / 5, crd_text[i]);*/
-		draw_text(&fnt, ctex.pixels, 0, y + adv / 5, crd_text[i]);
+		crd_texv[i] = (float)y / 512.0f;
+		draw_text_img(&fnt, &ctex, 0, y + adv / 5, crd_text[i]);
 		y += adv;
 	}
-	crd_texv[CRD_LINES] = (float)y / 256.0f;
+	crd_texv[CRD_LINES] = (float)y / 512.0f;
 	destroy_font(&fnt);
-	/* reconfigure the texture to become 256x256 */
-	src = dst = ctex.pixels;
-	for(i=0; i<ctex.height; i++) {
-		if(i) memmove(dst, src, 512);
-		dst += 256;
-		src += 320;
-	}
-	init_image(&ctex, 256, 256, ctex.pixels, 256);
 	save_image(&ctex, "ctex.png");
+
+	/* load envmap */
+	if(load_image(&envmap, "data/crenv.jpg") == -1) {
+		fprintf(stderr, "failed to load credits envmap\n");
+		return -1;
+	}
 
 	ev_zoom = dseq_lookup("credits.zoom");
 	ev_text = dseq_lookup("credits.text");
@@ -159,6 +162,11 @@ static void credits_start(long trans_time)
 
 	g3d_polygon_mode(G3D_GOURAUD);
 	g3d_light_ambient(0, 0, 0);
+}
+
+static void credits_stop(long trans_time)
+{
+	destroy_image(&envmap);
 }
 
 static void credits_update(void)
@@ -210,8 +218,8 @@ static void credits_draw(void)
 	g3d_clip_plane(0, clip_plane);
 
 	g3d_front_face(G3D_CW);
-	left_side(0.8);
-	right_side(0.8);
+	left_side(0.5);
+	right_side(0.5);
 	g3d_front_face(G3D_CCW);
 
 	g3d_disable(G3D_CLIP_PLANE0);
@@ -227,9 +235,9 @@ static void left_side(float tint)
 {
 	int i, j, otherm, curm = 0;
 	float mat[2][16], angle, t, f, a;
-	cgm_vec3 pos[TENT_NODES], norm[TENT_NODES], pprev, nprev, nvec;
+	cgm_vec3 pos[TENT_NODES], norm[TENT_NODES], pprev, nprev, nvec, pvec;
 	cgm_vec3 tang;
-	float rad[TENT_NODES];
+	float rad[TENT_NODES], sprev;
 
 	for(j=0; j<NUM_TENT; j++) {
 		g3d_push_matrix();
@@ -267,37 +275,46 @@ static void left_side(float tint)
 
 
 		g3d_disable(G3D_LIGHTING);
-		g3d_polygon_mode(G3D_WIRE);
+		g3d_enable(G3D_TEXTURE_2D);
+		g3d_set_texture(envmap.width, envmap.height, envmap.pixels);
+		g3d_enable(G3D_TEXTURE_GEN);
 
+		sprev = TENT_DIST * 0.5f;
 		cgm_vcons(&pprev, 0, 0, 0);
-		cgm_vcons(&nprev, -TENT_DIST * 0.5, 0, 0);
+		cgm_vcons(&nprev, -sprev, 0, 0);
+		pvec = nprev;
 		g3d_begin(G3D_QUADS);
-		g3d_color3f(0.15 * tint, 0.85 * tint, 0.15 * tint);
+		g3d_color3f(tint, tint, tint);
 		for(i=0; i<TENT_NODES; i++) {
 			nvec.x = norm[i].x * rad[i];
 			nvec.y = norm[i].y * rad[i];
 
 			g3d_normal(nprev.x, nprev.y, 0);
-			g3d_vertex(pprev.x + nprev.x, pprev.y + nprev.y, 0);
+			g3d_vertex(pprev.x + pvec.x, pprev.y + pvec.y, 0);
 			g3d_normal(0, 0, 1);
-			g3d_vertex(pprev.x, pprev.y, rad[i]);
+			g3d_vertex(pprev.x, pprev.y, sprev);
 			g3d_vertex(pos[i].x, pos[i].y, rad[i]);
 			g3d_normal(norm[i].x, norm[i].y, 0);
 			g3d_vertex(pos[i].x + nvec.x, pos[i].y + nvec.y, 0);
 
 			g3d_normal(0, 0, 1);
-			g3d_vertex(pprev.x, pprev.y, rad[i]);
+			g3d_vertex(pprev.x, pprev.y, sprev);
 			g3d_normal(-nprev.x, -nprev.y, 0);
-			g3d_vertex(pprev.x - nprev.x, pprev.y - nprev.y, 0);
+			g3d_vertex(pprev.x - pvec.x, pprev.y - pvec.y, 0);
 			g3d_normal(-norm[i].x, -norm[i].y, 0);
 			g3d_vertex(pos[i].x - nvec.x, pos[i].y - nvec.y, 0);
 			g3d_normal(0, 0, 1);
 			g3d_vertex(pos[i].x, pos[i].y, rad[i]);
 
 			pprev = pos[i];
-			nprev = nvec;
+			nprev = norm[i];
+			pvec = nvec;
+			sprev = rad[i];
 		}
 		g3d_end();
+
+		g3d_disable(G3D_TEXTURE_GEN);
+		g3d_disable(G3D_TEXTURE_2D);
 
 		/*
 		g3d_begin(G3D_LINES);
@@ -359,7 +376,7 @@ static void right_side(float tint)
 		x = fade * 0.5f + 1;//-1;
 		v0 = crd_texv[i];
 		v1 = crd_texv[i + 1];
-		g3d_color3f(fade, fade, fade);
+		g3d_color3f(fade * tint, fade * tint, fade * tint);
 		for(j=0; j<TXQUAD_SUB; j++) {
 			g3d_texcoord(u, v1);
 			g3d_vertex(x, y - 2, 0.1);

@@ -19,7 +19,6 @@
 static int credits_init(void);
 static void credits_destroy(void);
 static void credits_start(long trans_time);
-static void credits_stop(long trans_time);
 static void credits_draw(void);
 static void left_side(float tint);
 static void right_side(float tint);
@@ -30,7 +29,7 @@ static struct screen scr = {
 	"credits",
 	credits_init,
 	credits_destroy,
-	credits_start, credits_stop,
+	credits_start, 0,
 	credits_draw,
 	credits_keyb
 };
@@ -144,6 +143,7 @@ static int credits_init(void)
 
 static void credits_destroy(void)
 {
+	destroy_image(&envmap);
 }
 
 static void credits_start(long trans_time)
@@ -162,11 +162,6 @@ static void credits_start(long trans_time)
 
 	g3d_polygon_mode(G3D_GOURAUD);
 	g3d_light_ambient(0, 0, 0);
-}
-
-static void credits_stop(long trans_time)
-{
-	destroy_image(&envmap);
 }
 
 static void credits_update(void)
@@ -224,9 +219,10 @@ static void credits_draw(void)
 
 	g3d_disable(G3D_CLIP_PLANE0);
 
-	/*for(i=0; i<TENT_NODES; i++) {
+	for(i=0; i<TENT_NODES; i++) {
+		if(!*dbgtext[i]) continue;
 		cs_cputs(fb_pixels, 100, 10 + i * 10, dbgtext[i]);
-	}*/
+	}
 
 	swap_buffers(fb_pixels);
 }
@@ -254,9 +250,6 @@ static void left_side(float tint)
 			cgm_midentity(mat[curm]);
 			cgm_mtranslate(mat[curm], 0, TENT_DIST, 0);
 			angle = sin(t + f) * a;
-			if(j == 0) {
-				sprintf(dbgtext[i], "%+.2f (t:%.2f|f:%.2f|a:%.2f)", angle, t, f, a);
-			}
 			cgm_mrotate_z(mat[curm], angle);
 			cgm_mmul(mat[curm], mat[otherm]);
 
@@ -357,8 +350,9 @@ static void right_side(float tint)
 	g3d_enable(G3D_ADD_BLEND);
 	g3d_set_texture(ctex.width, ctex.height, ctex.pixels);
 
-	//y = dseq_value(ev_text) / 1024.0f;
-	y = (time_msec & 0x7fff) / 1024.0f - 2.0f;
+	y = dseq_value(ev_text) / 1024.0f;
+	sprintf(dbgtext[0], "credits.text: %.2f\n", y);
+	//y = (time_msec & 0x7fff) / 1024.0f - 2.0f;
 	g3d_begin(G3D_QUADS);
 	for(i=0; i<CRD_LINES; i++) {
 		if(crd_text[i][0] == 0) {

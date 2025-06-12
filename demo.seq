@@ -118,10 +118,9 @@ demoseq {
 
 		text {
 			trans = 0
-			wait = 0
 			interp = "linear"
-			key:0 = 0
-			key:6000 = 20480
+			key:1200 = 0
+			key:8000 = 20480
 		}
 	}
 }

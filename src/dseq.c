@@ -57,7 +57,7 @@ static uint32_t trigmap[TRIGMAP_SIZE];
 #define CLRTRIG(x)	trigmap[(x) >> 5] &= ~(1 << ((x) & 31))
 #define ISTRIG(x)	(trigmap[(x) >> 5] & (1 << ((x) & 31)))
 
-#define MAX_ACTIVE_TRANS	8
+#define MAX_ACTIVE_TRANS	16
 struct transition trans[MAX_ACTIVE_TRANS];
 
 static int read_event(int parid, struct ts_node *tsn);

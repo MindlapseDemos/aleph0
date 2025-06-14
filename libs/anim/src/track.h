@@ -28,7 +28,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 enum anm_interpolator {
 	ANM_INTERP_STEP,
 	ANM_INTERP_LINEAR,
-	ANM_INTERP_CUBIC
+	ANM_INTERP_CUBIC,
+	ANM_INTERP_SIGMOID
 };
 
 enum anm_extrapolator {

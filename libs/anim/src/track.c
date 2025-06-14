@@ -30,6 +30,7 @@ static int find_prev_key(const struct anm_keyframe *arr, int start, int end, anm
 static float interp_step(float v0, float v1, float v2, float v3, float t);
 static float interp_linear(float v0, float v1, float v2, float v3, float t);
 static float interp_cubic(float v0, float v1, float v2, float v3, float t);
+static float interp_sigmoid(float v0, float v1, float v2, float v3, float t);
 
 static anm_time_t remap_extend(anm_time_t tm, anm_time_t start, anm_time_t end);
 static anm_time_t remap_clamp(anm_time_t tm, anm_time_t start, anm_time_t end);
@@ -41,6 +42,7 @@ static float (*interp[])(float, float, float, float, float) = {
 	interp_step,
 	interp_linear,
 	interp_cubic,
+	interp_sigmoid,
 	0
 };
 
@@ -349,6 +351,12 @@ static float interp_cubic(float a, float b, float c, float d, float t)
 	w = 2.0 * b;
 
 	return 0.5 * (x * tsq * t + y * tsq + z * t + w);
+}
+
+static float interp_sigmoid(float v0, float v1, float v2, float v3, float t)
+{
+	float x = (x - v1) / (v2 - v1);
+	return x * x * (3.0f - 2.0f * x);
 }
 
 static anm_time_t remap_extend(anm_time_t tm, anm_time_t start, anm_time_t end)

@@ -181,10 +181,10 @@ static int numParticlesVisible = 0;
 static int didElectroidsMovedYetOnce = 0;
 static int startScrollingBump = 0;
 
-static int ev_electroids;
-static int ev_scrollUp;
-static int ev_lightsIn;
-static int ev_scalerIn;
+static dseq_event *ev_electroids;
+static dseq_event *ev_scrollUp;
+static dseq_event *ev_lightsIn;
+static dseq_event *ev_scalerIn;
 
 
 struct screen *bump_screen(void)
@@ -782,7 +782,7 @@ static void bumpScript()
 	if (dseq_triggered(ev_scrollUp)) {
 		startScrollingBump = 1;
 	}
-	if (val1 = dseq_value(ev_lightsIn)) {
+	if ((val1 = dseq_value(ev_lightsIn)) > 0.0f) {
 		if (val1 != prevVal1) {
 			/* printf("lightsIn) %d\n", val1); */
 			prevVal1 = val1;

@@ -73,7 +73,7 @@ static const char *crd_text[CRD_LINES] = {
 static float crd_texv[CRD_LINES + 1];
 static struct image ctex;
 
-static int ev_zoom, ev_text;
+static dseq_event *ev_zoom, *ev_text;
 
 
 struct screen *credits_screen(void)
@@ -187,7 +187,7 @@ static void credits_draw(void)
 	float phi = cam_phi + sin(t * 1.2f) * 2.0f;
 	float dist;
 
-	dist = cam_dist + dseq_value(ev_zoom) / 1024.0f;
+	dist = cam_dist + dseq_value(ev_zoom);
 
 	credits_update();
 
@@ -350,7 +350,7 @@ static void right_side(float tint)
 	g3d_enable(G3D_ADD_BLEND);
 	g3d_set_texture(ctex.width, ctex.height, ctex.pixels);
 
-	y = dseq_value(ev_text) / 1024.0f;
+	y = dseq_value(ev_text);
 	sprintf(dbgtext[0], "credits.text: %.2f\n", y);
 	//y = (time_msec & 0x7fff) / 1024.0f - 2.0f;
 	g3d_begin(G3D_QUADS);

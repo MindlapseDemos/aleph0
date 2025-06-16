@@ -3,24 +3,23 @@
 # Any block except the root "demoseq" defines a demo event with the same name.
 # Demo events can take arbitrary values as a function of time. Either by
 # explicitly listing key values, or with start/end/wait/dur attributes.  Key
-# times defined in nested events are relative to the parent event start time
-# which is defined as the time of its first non-zero key.
-#
-# Times are in milliseconds. Values are expected to be 22.10 fixed point, so
-# implicit keys defined by start attributes get a value of 1024.
+# times defined in nested events are relative to the parent event start time.
 #
 # Attribute semantics:
 #   - start: event interval start time, relative to parent.
-#   - wait: interval start time, relative to the last encountered key time
+#   - startabs: same as start, but absolute time, not relative to parent.
+#   - wait: interval start time, relative to the last encountered end time.
+#   - dur: event interval duration.
 #   - end: event interval end time, relative to parent.
-#   - dur: event interval duration, pair with start or wait.
-#   - key:<time>: defines explicit value for a specified time
-#   - startabs: same as start, but absolute time, not relative to parent
 #   - endabs: same as end, but absolute time, not relative to parent
-#   - keyabs:<abstime>: same as key, but absolute time, not relative to parent
-#   - interp: one of <step|linear|smoothstep>
-#   - trans: transition duration, 0 (default) means until the next key
-#
+#   - key(<msec>): explicit key/value, time in milliseconds relative to parent
+#   - keyabs(<msec>): same as key, but absolute time, not relative to parent
+#   - ksec(<sec>): explicit key/value, time in seconds relative to parent
+#   - ksecabs(<sec>): same as ksec, but absolute time, not relative to parent
+#   - interp: one of <step|linear|cubic|smoothstep>
+#   - extrap: one of <extend|clamp|repeat|pingpong>
+#   - trans_in/trans_out: auto-key in/out transition duration (milliseconds)
+#   - trans: sets both trans_in and trans_out
 #
 # WARNING!!!!! WARNING!!!!! WARNING!!!!! WARNING!!!!! WARNING!!!!! WARNING!!!!!
 # prev screen transition out + new screen transition in both run during the new
@@ -30,25 +29,25 @@
 demoseq {
 	tunnel {
 		start = 0
-		dur = 0
 		trans_in = 500
 		trans_out = 250
 
 		text {
-			key:1000 = 1024	# mindlapse & desire solid
-			key:2000 = 2048	# mindlapse & desire disperse
-			key:4500 = 0
-			key:5500 = 3072	# presents solid
-			key:6500 = 4096	# presents disperse
-			key:9000 = 0
+			key(1000) = 1	# mindlapse & desire solid
+			key(2000) = 2	# mindlapse & desire disperse
+			key(4500) = 0
+			key(5500) = 3	# presents solid
+			key(6500) = 4	# presents disperse
+			key(9000) = 0
 		}
-		accel { 
+		accel {
 			wait = 1000
-			dur = 1100
-			wait = 0
-			dur = 1100
-			wait = 0
-			dur = 1100
+			key(0) = 1
+			key(1) = 0
+			key(1100) = 1
+			key(1101) = 0
+			key(2200) = 1
+			key(3300) = 0
 		}
 	}
 
@@ -64,7 +63,7 @@ demoseq {
 		faces {
 			interp = "smoothstep"
 			trans = 800
-			key:1500 = 1024
+			key(0) = 1024
 		}
 	}
 
@@ -74,8 +73,8 @@ demoseq {
 
 		electroids {
 			interp = "linear"
-			key:0 = 0
-			key:8192 = 64
+			key(0) = 0
+			key(2) = 64
 		}
 
 		scrollUp {
@@ -85,8 +84,8 @@ demoseq {
 
 		lightsIn {
 			interp = "smoothstep"
-			key:12288 = 0
-			key:16384 = 1024
+			key(8) = 0
+			key(4) = 1024
 		}
 
 		scalerIn {
@@ -101,8 +100,8 @@ demoseq {
 
 		rise {
 			interp = "smoothstep"
-			key:0 = 0
-			key:2000 = 1024
+			key(0) = 0
+			key(0) = 1024
 		}
 	}
 
@@ -112,15 +111,17 @@ demoseq {
 
 		zoom {
 			interp = "smoothstep"
-			key:0 = 20480
-			key:1200 = 0
+			key(0) = 20480
+			key(0) = 0
 		}
 
 		text {
 			trans = 0
+			wait = 0
+			dur = 8000
 			interp = "linear"
-			key:1200 = 0
-			key:8000 = 20480
+			#key(0) = 0
+			#key(0) = 20480
 		}
 	}
 }

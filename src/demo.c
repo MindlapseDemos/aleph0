@@ -28,7 +28,7 @@
 #define GUARD_XPAD	0
 #define GUARD_YPAD	64
 
-static void screen_evtrig(int evid, int val, void *cls);
+static void screen_evtrig(dseq_event *ev, enum dseq_trig_mask trig, void *cls);
 static void init_mmx_routines(void);
 
 int fb_width, fb_height, fb_bpp, fb_scan_size;
@@ -114,17 +114,18 @@ int demo_init(void)
 
 	if(dseq_isopen()) {
 		/* find all the events matching screen names and assign trigger callbacks */
-		int i, num_scr, evid;
+		int i, num_scr;
+		dseq_event *ev;
 
 		num_scr = scr_num_screens();
 		for(i=0; i<num_scr; i++) {
 			if(!(scr = scr_screen(i)) || !scr->name) {
 				continue;
 			}
-			if((evid = dseq_lookup(scr->name)) >= 0) {
-				dseq_trig_callback(evid, DSEQ_TRIG_ALL, screen_evtrig, (void*)i);
+			if((ev = dseq_lookup(scr->name))) {
+				dseq_set_callback(ev, DSEQ_TRIG_START, screen_evtrig, (void*)i);
 
-				dseq_transtime(evid, &scr->trans_in, &scr->trans_out);
+				dseq_transtime(ev, &scr->trans_in, &scr->trans_out);
 			}
 		}
 	}
@@ -358,15 +359,16 @@ void demo_run(long start_time)
 
 void demo_runpart(const char *name)
 {
-	int i, evid, nscr;
+	int i, nscr;
 	long evstart;
+	dseq_event *ev;
 
-	if((evid = dseq_lookup(name)) == -1) {
+	if(!(ev = dseq_lookup(name))) {
 		return;
 	}
 
 	ignore_scrchg_trig = 1;
-	evstart = dseq_evstart(evid);
+	evstart = dseq_start_time(ev);
 	reset_timer(evstart);
 
 	if(curscr) {
@@ -416,10 +418,8 @@ void mouse_orbit_update(float *theta, float *phi, float *dist)
 }
 
 /* process demo sequence triggers for screen changes */
-static void screen_evtrig(int evid, int val, void *cls)
+static void screen_evtrig(dseq_event *ev, enum dseq_trig_mask trig, void *cls)
 {
-	if(val <= 0 || ignore_scrchg_trig) return;
-
 	change_screen((intptr_t)cls);
 }
 

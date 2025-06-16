@@ -1,471 +1,357 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "dseq.h"
-#include "treestor.h"
-#include "dynarr.h"
 #include "demo.h"
-#include "util.h"
+#include "track.h"
+#include "treestor.h"
 #include "cgmath/cgmath.h"
+#include "dynarr.h"
+#include "anim.h"
 
-struct key {
-	long tm;
-	int val;
-};
-
-struct transition {
-	int id;
-	int val[2];
-	long start, end, dur;
-};
-
-struct track {
+struct dseq_event {
 	char *name;
-	int parent;
-	int num;
-	int cur_val;
-	struct key *keys;	/* dynarr */
+	struct dseq_event *parent;
+	struct dseq_event *next;	/* next event to become active */
+	long relstart;				/* start time relative to previous event in list */
+
 	enum dseq_interp interp;
-	int trans_time[2];	/* transition times (in/out), 0 (default) means whole interval */
-	int (*interp_func)(struct transition *trs, int t);
+	enum dseq_extrap extrap;
 
-	dseq_callback_func trigcb;
-	void *trigcls;
+	float cur_t, cur_val;		/* updated by dseq_update */
+	long start, dur;
+	struct anm_track track;
+
+	dseq_callback_func cbfunc;
+	void *cbcls;
+	unsigned int trigmask:8;
+	unsigned int active:1;
+	unsigned int trigd:1;
+
+	long trans_in, trans_out;	/* only used by demo screens */
 };
 
-struct event {
-	long reltime;
-	int id;
-	struct key *key;
-	struct event *next;
+static dseq_event *events;
+static int num_events;
 
-	dseq_callback_func trigcb;
-	void *trigcls;
-};
+static dseq_event *nextev;			/* pointer to the next event to become active */
+static dseq_event *active_events;	/* linked list of currently active events */
 
-static struct track *tracks;	/* dynarr */
-static int num_tracks;
-static long last_key_time;
-static struct event *events;	/* linked list */
-static struct event *next_event;
-static long prev_upd;
 static int started;
+static long prev_upd;
 
-#define TRIGMAP_SIZE	4
-static uint32_t trigmap[TRIGMAP_SIZE];
-
-#define TRIGGER(x)	trigmap[(x) >> 5] |= (1 << ((x) & 31))
-#define CLRTRIG(x)	trigmap[(x) >> 5] &= ~(1 << ((x) & 31))
-#define ISTRIG(x)	(trigmap[(x) >> 5] & (1 << ((x) & 31)))
-
-#define MAX_ACTIVE_TRANS	16
-struct transition trans[MAX_ACTIVE_TRANS];
-
-static int read_event(int parid, struct ts_node *tsn);
-static void destroy_track(struct track *trk);
-static int keycmp(const void *a, const void *b);
-static int interp_step(struct transition *trs, int t);
-static int interp_linear(struct transition *trs, int t);
-static int interp_smoothstep(struct transition *trs, int t);
-
-static void dump_track(FILE *fp, struct track *trk);
+static int count_events(struct ts_node *ts);
+static dseq_event *load_event(struct ts_node *tsev, dseq_event *evprev, dseq_event *par);
+static int evcmp(const void *ap, const void *bp);
 
 
 int dseq_open(const char *fname)
 {
-	int i;
-	struct ts_node *ts, *tsnode;
-	struct key **trk_key;
-	struct event *ev, *evtail;
-
-	if(tracks) {
-		fprintf(stderr, "dseq_open: a demo sequence file is already open\n");
-		return -1;
-	}
+	struct ts_node *ts, *tsn;
+	dseq_event *ev = 0;
 
 	if(!(ts = ts_load(fname))) {
+		fprintf(stderr, "dseq_open: failed to load: %s\n", fname);
 		return -1;
 	}
 	if(strcmp(ts->name, "demoseq") != 0) {
-		fprintf(stderr, "invalid demo sequence file: %s\n", fname);
-		ts_free_tree(ts);
-		return -1;
-	}
-
-	if(!(tracks = dynarr_alloc(0, sizeof *tracks))) {
-		fprintf(stderr, "dseq_open: failed to allocate tracks\n");
+		fprintf(stderr, "dseq_open: invalid demo script: %s\n", fname);
 		goto err;
 	}
 
-	tsnode = ts->child_list;
-	while(tsnode) {
-		if(read_event(-1, tsnode) == -1) {
-			goto err;
-		}
-
-		tsnode = tsnode->next;
-	}
-
-	num_tracks = dynarr_size(tracks);
-	printf("dseq_open(%s): loaded %d event tracks\n", fname, num_tracks);
-	ts_free_tree(ts); ts = 0;
-
-	if(!(trk_key = malloc(num_tracks * sizeof *trk_key))) {
-		fprintf(stderr, "dseq_open: failed to construct arrray of %d track pointers\n", num_tracks);
+	if((num_events = count_events(ts->child_list)) <= 0) {
+		fprintf(stderr, "dseq_open: found no events in %s\n", fname);
 		goto err;
 	}
-
-	for(i=0; i<num_tracks; i++) {
-		tracks[i].num = dynarr_size(tracks[i].keys);
-		/* sort all track keys */
-		qsort(tracks[i].keys, tracks[i].num, sizeof *tracks[i].keys, keycmp);
-		/* initialize track pointer for the next event list construction step */
-		trk_key[i] = tracks[i].keys;
+	if(!(events = calloc(num_events, sizeof *events))) {
+		fprintf(stderr, "dseq_open: failed to allocate space for the %d events of %s\n", num_events, fname);
+		goto err;
 	}
+	num_events = 0;
 
-	/* generate global list of ordered relative events */
-	evtail = 0;
-	for(;;) {
-		struct key *next_key = 0;
-		int next_trk;
-
-		for(i=0; i<num_tracks; i++) {
-			if(trk_key[i] >= tracks[i].keys + tracks[i].num) {
-				continue;
-			}
-			if(!next_key || trk_key[i]->tm < next_key->tm) {
-				next_key = trk_key[i];
-				next_trk = i;
-			}
-		}
-
-		if(!next_key) break;
-
-		/* create event and advance the track pointer */
-		if(!(ev = calloc(1, sizeof *ev))) {
-			fprintf(stderr, "dseq_open: failed to allocate event\n");
+	tsn = ts->child_list;
+	while(tsn) {
+		if(!(ev = load_event(tsn, ev, 0))) {
 			goto err;
 		}
-		ev->id = next_trk;
-		ev->next = 0;
-		ev->key = next_key;
-		if(events) {
-			ev->reltime = next_key->tm - evtail->key->tm;
-			evtail->next = ev;
-			evtail = ev;
-		} else {
-			ev->reltime = next_key->tm;
-			events = evtail = ev;
-		}
-		trk_key[next_trk]++;
+		tsn = tsn->next;
 	}
+	ts_free_tree(ts);
 
-	started = 0;
+	qsort(events, num_events, sizeof *events, evcmp);
 
-	/*{
-		FILE *fp = fopen("tracks", "wb");
-		if(fp) {
-			for(i=0; i<num_tracks; i++) {
-				dump_track(fp, tracks + i);
-			}
-			fclose(fp);
-		}
-	}*/
-
-	free(trk_key);
+	printf("dseq_load: loaded %d events from %s\n", num_events, fname);
+	nextev = active_events = 0;
 	return 0;
 
 err:
-	while(events) {
-		ev = events;
-		events = events->next;
-		free(ev);
-	}
-	for(i=0; i<dynarr_size(tracks); i++) {
-		destroy_track(tracks + i);
-	}
-	dynarr_free(tracks);
-	tracks = 0;
+	free(events);
+	events = 0;
+	num_events = 0;
+	nextev = active_events = 0;
 	ts_free_tree(ts);
 	return -1;
 }
 
-static int add_key(struct track *trk, long tm, int val)
+static int count_events(struct ts_node *tsev)
 {
-	void *tmp;
-	struct key key;
-	key.tm = tm;
-	key.val = val;
-
-	if(!(tmp = dynarr_push(trk->keys, &key))) {
-		fprintf(stderr, "dseq_open: failed to add key\n");
-		return -1;
+	int count = 0;
+	if(!tsev) return 0;
+	while(tsev) {
+		count += 1 + count_events(tsev->child_list);
+		tsev = tsev->next;
 	}
-	trk->keys = tmp;
-	last_key_time = tm;
-	return 0;
-}
-
-static int prefix_length(int id)
-{
-	int len = 0;
-	while(id >= 0) {
-		len += strlen(tracks[id].name) + 1;
-		id = tracks[id].parent;
-	}
-	return len;
-}
-
-static int fullpath(char *buf, int id)
-{
-	int len;
-	if(id < 0) return 0;
-
-	len = fullpath(buf, tracks[id].parent);
-	return len + sprintf(buf + len, "%s.", tracks[id].name);
+	return count;
 }
 
 #define SKIP_NOTNUM(attrname) \
 	do { \
 		if(attr->val.type != TS_NUMBER) { \
-			fprintf(stderr, "dseq_open: %s:%s expected number, got: \"%s\"\n", name, attrname, attr->val.str); \
+			fprintf(stderr, "dseq_open: %s:%s expected number, got: \"%s\"\n", tsev->name, attrname, attr->val.str); \
 			goto next; \
 		} \
 	} while(0)
 
-#define ADD_START_END(s, e) \
-	do { \
-		add_key(trk, (s), 1024); \
-		add_key(trk, (e), 0); \
-		start = end = -1; \
-	} while(0)
-
-#define ADD_START_DUR(s, d) \
-	do { \
-		add_key(trk, (s), 1024); \
-		add_key(trk, (s) + (d), 0); \
-		start = dur = -1; \
-	} while(0)
-
-
-static int read_event(int parid, struct ts_node *tsn)
+static dseq_event *load_event(struct ts_node *tsev, dseq_event *evprev, dseq_event *par)
 {
-	int id, namelen;
-	char *name;
+	int namelen;
+	dseq_event *ev, *subev = 0;
 	struct ts_attr *attr;
-	struct ts_node *child;
-	struct track *trk, tmptrk;
-	long start = -1, dur = -1, end = -1;
-	long par_start = 0;
-	long key_time;
+	struct ts_node *tssub;
+	long par_start, key_msec;
+	float key_sec;
+	long end;
+	long defer_end = -1, delay_end = 0;
 
+	ev = events + num_events;
+	memset(ev, 0, sizeof *ev);
 
-	namelen = strlen(tsn->name);
-	if(parid >= 0) {
-		namelen += strlen(tracks[parid].name) + 1;
+	if(anm_init_track(&ev->track) == -1) {
+		fprintf(stderr, "dseq_load: failed to initialize keyframe track\n");
+		return 0;
 	}
-	if(!(name = malloc(namelen + 1))) {
-		fprintf(stderr, "dseq_open: failed to allocate track name\n");
-		return -1;
+	dseq_set_interp(ev, DSEQ_STEP);
+	dseq_set_extrap(ev, DSEQ_CLAMP);
+
+	namelen = strlen(tsev->name);
+	if(par) {
+		namelen += strlen(par->name) + 1;
 	}
-	if(parid >= 0) {
-		sprintf(name, "%s.%s", tracks[parid].name, tsn->name);
+	if(!(ev->name = malloc(namelen + 1))) {
+		anm_destroy_track(&ev->track);
+		fprintf(stderr, "dseq_load: failed to allocate event name\n");
+		return 0;
+	}
+	if(par) {
+		sprintf(ev->name, "%s.%s", par->name, tsev->name);
 	} else {
-		strcpy(name, tsn->name);
+		strcpy(ev->name, tsev->name);
 	}
 
-	id = dynarr_size(tracks);
-	if(!(trk = dynarr_push(tracks, &tmptrk))) {
-		fprintf(stderr, "dseq_open: failed to resize tracks\n");
-		return -1;
-	}
-	tracks = trk;
-	trk = tracks + id;
-	memset(trk, 0, sizeof *trk);
-	trk->name = name;
-	trk->parent = parid;
+	par_start = par ? par->start : 0;
 
-	if(!(trk->keys = dynarr_alloc(0, sizeof *trk->keys))) {
-		fprintf(stderr, "dseq_open: failed to allocate event track\n");
-		tracks = dynarr_pop(tracks);
-		free(name);
-		return -1;
-	}
-
-	if(parid >= 0) {
-		par_start = dynarr_empty(tracks[parid].keys) ? 0 : tracks[parid].keys[0].tm;
-	}
-
-	attr = tsn->attr_list;
+	attr = tsev->attr_list;
 	while(attr) {
 		if(strcmp(attr->name, "start") == 0) {
 			SKIP_NOTNUM("start");
-			start = attr->val.inum + par_start;
-			if(end >= 0) {
-				ADD_START_END(start, end);
-			} else if(dur > 0) {
-				ADD_START_DUR(start, dur);
-			}
-
-		} else if(strcmp(attr->name, "wait") == 0) {
-			SKIP_NOTNUM("wait");
-			start = last_key_time + attr->val.inum;
-			if(end >= 0) {
-				ADD_START_END(start, end);
-			} else if(dur > 0) {
-				ADD_START_DUR(start, dur);
-			}
-
+			ev->start = attr->val.inum + par_start;
 		} else if(strcmp(attr->name, "startabs") == 0) {
 			SKIP_NOTNUM("startabs");
-			start = attr->val.inum;
-			if(end >= 0) {
-				ADD_START_END(start, end);
-			} else if(dur > 0) {
-				ADD_START_DUR(start, dur);
-			}
-
-		} else if(strcmp(attr->name, "end") == 0) {
-			SKIP_NOTNUM("end");
-			end = attr->val.inum + par_start;
-			if(start >= 0) {
-				ADD_START_END(start, end);
-			}
-
-		} else if(strcmp(attr->name, "endabs") == 0) {
-			SKIP_NOTNUM("endabs");
-			end = attr->val.inum;
-			if(start >= 0) {
-				ADD_START_END(start, end);
-			}
+			ev->start = attr->val.inum;
+		} else if(strcmp(attr->name, "wait") == 0) {
+			SKIP_NOTNUM("wait");
+			ev->start = attr->val.inum + (evprev ? evprev->start + evprev->dur : 0);
 
 		} else if(strcmp(attr->name, "dur") == 0) {
 			SKIP_NOTNUM("dur");
-			dur = attr->val.inum;
-			if(start >= 0) {
-				ADD_START_DUR(start, dur);
-			}
+			ev->dur = attr->val.inum;
+		} else if(strcmp(attr->name, "end") == 0) {
+			SKIP_NOTNUM("end");
+			defer_end = attr->val.inum + par_start;
+		} else if(strcmp(attr->name, "endabs") == 0) {
+			SKIP_NOTNUM("endabs");
+			defer_end = attr->val.inum;
+		} else if(strcmp(attr->name, "delayend") == 0) {
+			SKIP_NOTNUM("delayend");
+			delay_end = attr->val.inum;
 
-		} else if(sscanf(attr->name, "key:%ld", &key_time) == 1) {
+		} else if(strcmp(attr->name, "trans_in") == 0){
+			SKIP_NOTNUM("trans_in");
+			ev->trans_in = attr->val.inum;
+		} else if(strcmp(attr->name, "trans_out") == 0) {
+			SKIP_NOTNUM("trans_out");
+			ev->trans_out = attr->val.inum;
+		} else if(strcmp(attr->name, "trans") == 0) {
+			SKIP_NOTNUM("trans");
+			ev->trans_in = ev->trans_out = attr->val.inum;
+
+		} else if(sscanf(attr->name, "key(%ld)", &key_msec) == 1) {
 			SKIP_NOTNUM("key");
-			add_key(trk, key_time + par_start, attr->val.inum);
-			printf("add key %s: t[%ld] v(%d)\n", attr->name, key_time + par_start, attr->val.inum);
-
-		} else if(sscanf(attr->name, "keyabs:%ld", &key_time) == 1) {
+			anm_set_value(&ev->track, key_msec + par_start, attr->val.fnum);
+		} else if(sscanf(attr->name, "keyabs(%ld)", &key_msec) == 1) {
 			SKIP_NOTNUM("keyabs");
-			add_key(trk, key_time, attr->val.inum);
+			anm_set_value(&ev->track, key_msec, attr->val.fnum);
+		} else if(sscanf(attr->name, "ksec(%f)", &key_sec) == 1) {
+			SKIP_NOTNUM("ksec");
+			anm_set_value(&ev->track, (long)(key_sec * 1000.0f) + par_start, attr->val.fnum);
+		} else if(sscanf(attr->name, "ksecabs(%f)", &key_sec) == 1) {
+			SKIP_NOTNUM("ksecabs");
+			anm_set_value(&ev->track, (long)(key_sec * 1000.0f), attr->val.fnum);
 
 		} else if(strcmp(attr->name, "interp") == 0) {
 			if(attr->val.type != TS_STRING) {
 				fprintf(stderr, "dseq_open: %s:%s expected string, got: \"%s\"\n",
-						name, attr->name, attr->val.str);
+						tsev->name, attr->name, attr->val.str);
 				goto next;
 			}
 			if(strcmp(attr->val.str, "step") == 0) {
-				trk->interp = DSEQ_STEP;
-				trk->interp_func = interp_step;
+				anm_set_track_interpolator(&ev->track, ANM_INTERP_STEP);
+				ev->interp = DSEQ_STEP;
 			} else if(strcmp(attr->val.str, "linear") == 0) {
-				trk->interp = DSEQ_LINEAR;
-				trk->interp_func = interp_linear;
+				anm_set_track_interpolator(&ev->track, ANM_INTERP_LINEAR);
+				ev->interp = DSEQ_LINEAR;
+			} else if(strcmp(attr->val.str, "cubic") == 0) {
+				anm_set_track_interpolator(&ev->track, ANM_INTERP_CUBIC);
+				ev->interp = DSEQ_CUBIC;
 			} else if(strcmp(attr->val.str, "smoothstep") == 0) {
-				trk->interp = DSEQ_SMOOTHSTEP;
-				trk->interp_func = interp_smoothstep;
+				anm_set_track_interpolator(&ev->track, ANM_INTERP_SIGMOID);
+				ev->interp = DSEQ_SMOOTHSTEP;
 			} else {
 				fprintf(stderr, "dseq_open: %s: unrecognized interpolation type: %s\n",
-						name, attr->val.str);
+						tsev->name, attr->val.str);
 				goto next;
 			}
 
-		} else if(strcmp(attr->name, "trans") == 0) {
-			SKIP_NOTNUM("trans");
-			trk->trans_time[0] = trk->trans_time[1] = attr->val.inum;
+		} else if(strcmp(attr->name, "extrap") == 0) {
+			if(attr->val.type != TS_STRING) {
+				fprintf(stderr, "dseq_open: %s: %s expected string, got: \"%s\"\n",
+						tsev->name, attr->name, attr->val.str);
+				goto next;
+			}
+			if(strcmp(attr->val.str, "extend") == 0) {
+				anm_set_track_extrapolator(&ev->track, ANM_EXTRAP_EXTEND);
+				ev->extrap = DSEQ_EXTEND;
+			} else if(strcmp(attr->val.str, "clamp") == 0) {
+				anm_set_track_extrapolator(&ev->track, ANM_EXTRAP_CLAMP);
+				ev->extrap = DSEQ_CLAMP;
+			} else if(strcmp(attr->val.str, "repeat") == 0) {
+				anm_set_track_extrapolator(&ev->track, ANM_EXTRAP_REPEAT);
+				ev->extrap = DSEQ_REPEAT;
+			} else if(strcmp(attr->val.str, "pingpong") == 0) {
+				anm_set_track_extrapolator(&ev->track, ANM_EXTRAP_PINGPONG);
+				ev->extrap = DSEQ_PINGPONG;
+			} else {
+				fprintf(stderr, "dseq_open: %s: unrecognized extrapolation type: %s\n",
+						tsev->name, attr->val.str);
+				goto next;
+			}
+		}
 
-		} else if(strcmp(attr->name, "trans_in") == 0) {
-			SKIP_NOTNUM("trans_in");
-			trk->trans_time[0] = attr->val.inum;
+next:	attr = attr->next;
+	}
 
-		} else if(strcmp(attr->name, "trans_out") == 0) {
-			SKIP_NOTNUM("trans_out");
-			trk->trans_time[1] = attr->val.inum;
-
+	if(ev->start < 0) {
+		/* start not explicitly specified */
+		if(ev->track.count > 0) {
+			/* ... compute based on keyframe track start */
+			ev->start = ev->track.keys[0].time;
 		} else {
-			fprintf(stderr, "dseq_open: ignoring unknown attribute: \"%s\"\n", attr->name);
-			goto next;
+			ev->start = 0;
+			fprintf(stderr, "warning: can't determine start time for event %s\n", ev->name);
 		}
-next:
-		attr = attr->next;
 	}
 
-	child = tsn->child_list;
-	while(child) {
-		if(read_event(id, child) == -1) {
-			return -1;
+	if(defer_end >= 0) {
+		if(defer_end < ev->start) {
+			ev->dur = ev->start - defer_end;
+			ev->start = defer_end;
+		} else {
+			ev->dur = defer_end - ev->start;
 		}
-		child = child->next;
 	}
-	return 0;
-}
 
-static void destroy_track(struct track *trk)
-{
-	free(trk->name);
-	dynarr_free(trk->keys);
-}
+	if(ev->dur <= 0) {
+		/* duration not explicitly specified */
+		if(ev->track.count > 0) {
+			/* ... compute based on keyframe track length */
+			ev->dur = ev->track.keys[ev->track.count - 1].time - ev->start;
+		} else if(ev->trans_in | ev->trans_out) {
+			/* ... if there's no keyframes, make it the sum of transition times */
+			ev->dur = ev->trans_in + ev->trans_out;
+		} else {
+			ev->dur = 1000;
+			fprintf(stderr, "warning: can't determine duration for event %s\n", ev->name);
+		}
+		ev->dur += delay_end;
+	}
+	end = ev->start + ev->dur;
 
-static int keycmp(const void *a, const void *b)
-{
-	return ((struct key*)a)->tm - ((struct key*)b)->tm;
+	/* if we have no keyframes, add some */
+	if(ev->track.count <= 0) {
+		if(ev->interp == DSEQ_STEP || ev->trans_in <= 0) {
+			anm_set_value(&ev->track, ev->start, 1);
+		} else {
+			anm_set_value(&ev->track, ev->start, 0);
+			anm_set_value(&ev->track, ev->start + ev->trans_in, 1);
+		}
+
+		if(ev->interp == DSEQ_STEP || ev->trans_out <= 0) {
+			anm_set_value(&ev->track, end, 0);
+		} else {
+			anm_set_value(&ev->track, end - ev->trans_out, 1);
+			anm_set_value(&ev->track, end, 0);
+		}
+	}
+
+	num_events++;
+	/* done with this event, now load any sub-events */
+
+	tssub = tsev->child_list;
+	while(tssub) {
+		subev = load_event(tssub, subev, ev);
+		tssub = tssub->next;
+	}
+
+	return ev;
 }
 
 void dseq_close(void)
 {
 	int i;
-	struct event *ev;
 
-	while(events) {
-		ev = events;
-		events = events->next;
-		free(ev);
+	for(i=0; i<num_events; i++) {
+		free(events[i].name);
+		anm_destroy_track(&events[i].track);
 	}
+	free(events);
 	events = 0;
-
-	for(i=0; i<dynarr_size(tracks); i++) {
-		destroy_track(tracks + i);
-	}
-	dynarr_free(tracks);
-	tracks = 0;
-
-	started = 0;
+	num_events = 0;
 }
 
 int dseq_isopen(void)
 {
-	return tracks ? 1 : 0;
+	return events != 0;
 }
 
 void dseq_start(void)
 {
 	int i;
-	struct event *ev;
-	long prev_time = 0;
+	long prev_start = 0;
 
-	for(i=0; i<num_tracks; i++) {
-		tracks[i].cur_val = 0;
-	}
+	for(i=0; i<num_events; i++) {
+		events[i].cur_t = 0;
+		events[i].cur_val = 0;
 
-	ev = events;
-	while(ev) {
-		ev->reltime = ev->key->tm - prev_time;
-		prev_time = ev->key->tm;
-		ev = ev->next;
-	}
-	next_event = events;
-	prev_upd = 0;
+		events[i].relstart = events[i].start - prev_start;
+		prev_start = events[i].start;
 
-	for(i=0; i<MAX_ACTIVE_TRANS; i++) {
-		trans[i].id = -1;
+		events[i].next = i < num_events - 1 ? events + i + 1 : 0;
 	}
 
 	started = 1;
+	nextev = events;
+	active_events = 0;
+	prev_upd = 0;
 }
 
 void dseq_stop(void)
@@ -482,218 +368,197 @@ void dseq_ffwd(long tm)
 {
 	if(tm <= 0) return;
 
-	while(next_event) {
-		next_event->reltime -= tm;
-		if(next_event->reltime > 0) break;
-		tm = -next_event->reltime;
-		next_event = next_event->next;
+	while(nextev) {
+		nextev->relstart -= tm;
+		if(nextev->relstart > 0) break;
+		tm = -nextev->relstart;
+		nextev = nextev->next;
 	}
-}
-
-int setup_transition(int id, struct event *trigev)
-{
-	int i;
-	long trans_time;
-	struct track *trk = tracks + id;
-	struct transition *trs;
-
-	for(i=0; i<MAX_ACTIVE_TRANS; i++) {
-		if(trans[i].id == -1) break;
-	}
-	if(i >= MAX_ACTIVE_TRANS) {
-		fprintf(stderr, "failed to allocate transition for %s\n", trk->name);
-		return -1;
-	}
-
-	trs = trans + i;
-	trs->id = id;
-	trs->start = next_event->key->tm;
-
-
-	/* if trans_time is non-zero, we ignore the interval and set the
-	 * transition duration to whatever was requested.  Also if there's no
-	 * other key after this, assume a transition time of 1sec
-	 */
-	if((trk->trans_time[0] | trk->trans_time[1]) || next_event->key >= trk->keys + trk->num - 1) {
-		trs->val[0] = trk->cur_val;
-		trs->val[1] = next_event->key->val;
-		if(trs->val[0] < trs->val[1]) {	/* trans-in */
-			trans_time = trk->trans_time[0] ? trk->trans_time[0] : 500;
-		} else {	/* trans-out */
-			trans_time = trk->trans_time[1] ? trk->trans_time[1] : 500;
-		}
-		trs->end = trs->start + trans_time;
-	} else {
-		trs->end = next_event->key[1].tm;
-		trs->val[0] = next_event->key->val;
-		trs->val[1] = next_event->key[1].val;
-	}
-
-	if(trs->val[0] == trs->val[1]) {
-		trs->id = -1;
-		return 0;
-	}
-	trs->dur = trs->end - trs->start;
-
-	printf("DBG: setup transition for %s: %d->%d at %ld in %ld msec\n", tracks[id].name,
-			trs->val[0], trs->val[1], trs->start, trs->dur);
-
-	return 0;
 }
 
 void dseq_update(void)
 {
-	int i, id;
 	long dt;
-	int32_t t;
-	struct transition *trs;
-	struct track *trk;
+	dseq_event *ev, *prev, dummy;
 
 	if(!started) return;
+
+	/* update active events */
+	dummy.next = active_events;
+	prev = &dummy;
+	while((ev = prev->next)) {
+		if(time_msec >= ev->start + ev->dur) {
+			ev->cur_t = 1.0f;
+			ev->cur_val = 0.0f;	/* do we want to use the extrapolators too ? */
+			/* remove from active list */
+			prev->next = ev->next;
+			ev->active = 0;
+			/* trigger end callbacks */
+			if(ev->cbfunc && (ev->trigmask & DSEQ_TRIG_END)) {
+				ev->cbfunc(ev, DSEQ_TRIG_END, ev->cbcls);
+			}
+		} else {
+			ev->cur_t = (float)(time_msec - ev->start) / (float)ev->dur;
+			ev->cur_val = anm_get_value(&ev->track, time_msec);
+			prev = prev->next;
+		}
+	}
+	active_events = dummy.next;
+
 
 	dt = time_msec - prev_upd;
 	prev_upd = time_msec;
 
-	/* update active transitions */
-	for(i=0; i<MAX_ACTIVE_TRANS; i++) {
-		if(trans[i].id == -1) continue;
+	/* activate any pending events */
+	while(nextev) {
+		nextev->relstart -= dt;
+		if(nextev->relstart > 0) break;	/* no pending events reached yet */
+		dt = -nextev->relstart;
 
-		trs = trans + i;
-		trk = tracks + trs->id;
-		if(time_msec >= trs->end) {
-			trk->cur_val = trs->val[1];
-			trs->id = -1;
-		} else {
-			t = ((time_msec - trs->start) << 10) / trs->dur;
-			trk->cur_val = trk->interp_func(trs, t);
+		ev = nextev;
+		nextev = nextev->next;
+
+		/* add to the active events */
+		ev->active = 1;
+		ev->next = active_events;
+		active_events = ev;
+
+		ev->cur_t = (float)(time_msec - ev->start) / (float)ev->dur;
+		ev->cur_val = anm_get_value(&ev->track, time_msec);
+
+		/* trigger any start callbacks */
+		ev->trigd = 1;
+		if(ev->cbfunc && (ev->trigmask & DSEQ_TRIG_START)) {
+			ev->cbfunc(ev, DSEQ_TRIG_START, ev->cbcls);
 		}
-	}
-
-	/* trigger any pending events */
-	while(next_event) {
-		id = next_event->id;
-		next_event->reltime -= dt;
-		if(next_event->reltime > 0) break;
-		dt = -next_event->reltime;
-
-		trk = tracks + id;
-
-		/* step can't have transitions */
-		if(trk->interp == DSEQ_STEP || setup_transition(id, next_event) == -1) {
-			trk->cur_val = next_event->key->val;
-		}
-		TRIGGER(id);
-
-		/* call trigger callbacks */
-		if(next_event->trigcb) {
-			next_event->trigcb(id, next_event->key->val, next_event->trigcls);
-		}
-		if(trk->trigcb) {
-			trk->trigcb(id, next_event->key->val, trk->trigcls);
-		}
-
-		next_event = next_event->next;
 	}
 }
 
 
-int dseq_lookup(const char *evname)
+dseq_event *dseq_lookup(const char *evname)
 {
 	int i;
-	for(i=0; i<num_tracks; i++) {
-		if(strcmp(tracks[i].name, evname) == 0) {
-			return i;
+	for(i=0; i<num_events; i++) {
+		if(strcmp(events[i].name, evname) == 0) {
+			return events + i;
 		}
 	}
-	return -1;
+	return 0;
 }
 
-const char *dseq_name(int evid)
+const char *dseq_name(dseq_event *ev)
 {
-	if(evid < 0) return "unknown";
-	return tracks[evid].name;
+	return ev->name;
 }
 
-int dseq_transtime(int evid, int *in, int *out)
+int dseq_transtime(dseq_event *ev, int *in, int *out)
 {
-	struct track *trk = tracks + evid;
-	if(evid < 0) return 0;
-	if(out) *out = trk->trans_time[1];
-	if(in) *in = trk->trans_time[0];
-	return trk->trans_time[0];
+	if(in) *in = ev->trans_in;
+	if(out) *out = ev->trans_out;
+	return ev->trans_in;
 }
 
-long dseq_evstart(int evid)
+long dseq_start_time(dseq_event *ev)
 {
-	if(evid < 0) return -1;
-	return tracks[evid].num > 0 ? tracks[evid].keys[0].tm : -1;
+	return ev->start;
 }
 
-int dseq_value(int evid)
+long dseq_end_time(dseq_event *ev)
 {
-	if(evid < 0) return 0;
-	return tracks[evid].cur_val;
+	return ev->start + ev->dur;
 }
 
-int dseq_triggered(int evid)
+long dseq_duration(dseq_event *ev)
 {
-	int trig;
-	if(evid < 0) return 0;
-	trig = ISTRIG(evid);
-	CLRTRIG(evid);
+	return ev->dur;
+}
+
+int dseq_isactive(dseq_event *ev)
+{
+	return ev->active;
+}
+
+long dseq_time(dseq_event *ev)
+{
+	return time_msec - ev->start;
+}
+
+float dseq_param(dseq_event *ev)
+{
+	return ev->cur_t;
+}
+
+long dseq_value(dseq_event *ev)
+{
+	return ev->cur_val;
+}
+
+int dseq_triggered(dseq_event *ev)
+{
+	int trig = ev->trigd;
+	ev->trigd = 0;
 	return trig;
 }
 
-#define CHECK_REPLACE(x)	\
-	if(x) fprintf(stderr, "warning replacing previous %s callback\n", type == DSEQ_TRIG_ONCE ? "event" : "track");
-
-void dseq_trig_callback(int evid, enum dseq_trig_type type, dseq_callback_func func, void *cls)
+void dseq_set_interp(dseq_event *ev, enum dseq_interp in)
 {
-	struct event *ev;
+	enum anm_interpolator anm_in;
 
-	if(evid < 0) return;
+	ev->interp = in;
 
-	if(type == DSEQ_TRIG_ONCE) {
-		ev = events;
-		while(ev) {
-			if(ev->id == evid) {
-				CHECK_REPLACE(ev->trigcb);
-				ev->trigcb = func;
-				ev->trigcls = cls;
-			}
-			ev = ev->next;
-		}
-	} else {
-		CHECK_REPLACE(tracks[evid].trigcb);
-		tracks[evid].trigcb = func;
-		tracks[evid].trigcls = cls;
+	switch(in) {
+	case DSEQ_LINEAR:
+		anm_in = ANM_INTERP_LINEAR;
+		break;
+	case DSEQ_CUBIC:
+		anm_in = ANM_INTERP_CUBIC;
+		break;
+	case DSEQ_SMOOTHSTEP:
+		anm_in = ANM_INTERP_SIGMOID;
+		break;
+	case DSEQ_STEP:
+	default:
+		anm_in = ANM_INTERP_STEP;
 	}
+
+	anm_set_track_interpolator(&ev->track, anm_in);
 }
 
-static int interp_step(struct transition *trs, int t)
+void dseq_set_extrap(dseq_event *ev, enum dseq_extrap ex)
 {
-	return trs->val[0];
-}
+	enum anm_extrapolator anm_ex;
 
-static int interp_linear(struct transition *trs, int t)
-{
-	return trs->val[0] + (((trs->val[1] - trs->val[0]) * t) >> 10);
-}
+	ev->extrap = ex;
 
-static int interp_smoothstep(struct transition *trs, int t)
-{
-	float tt = cgm_smoothstep(0, 1024, t);
-	return cround64(trs->val[0] + (trs->val[1] - trs->val[0]) * tt);	/* TODO: fixed point */
-}
-
-static void dump_track(FILE *fp, struct track *trk)
-{
-	int i;
-	static const char *interpstr[] = {"step", "linear", "smoothstep"};
-
-	fprintf(fp, "%s (%s/%d/%d)\n", trk->name, interpstr[trk->interp], trk->trans_time[0], trk->trans_time[1]);
-
-	for(i=0; i<trk->num; i++) {
-		fprintf(fp, "\t%ld: %d\n", trk->keys[i].tm, trk->keys[i].val);
+	switch(ex) {
+	case DSEQ_EXTEND:
+		anm_ex = ANM_EXTRAP_EXTEND;
+		break;
+	case DSEQ_REPEAT:
+		anm_ex = ANM_EXTRAP_REPEAT;
+		break;
+	case DSEQ_PINGPONG:
+		anm_ex = ANM_EXTRAP_PINGPONG;
+		break;
+	case DSEQ_CLAMP:
+	default:
+		anm_ex = ANM_EXTRAP_CLAMP;
 	}
+
+	anm_set_track_extrapolator(&ev->track, anm_ex);
+}
+
+void dseq_set_callback(dseq_event *ev, enum dseq_trig_mask mask,
+		dseq_callback_func func, void *cls)
+{
+	ev->cbfunc = func;
+	ev->cbcls = cls;
+	ev->trigmask = mask;
+}
+
+
+
+static int evcmp(const void *ap, const void *bp)
+{
+	return ((dseq_event*)ap)->start - ((dseq_event*)bp)->start;
 }

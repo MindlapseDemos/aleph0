@@ -59,7 +59,7 @@ static int show_voxdbg, show_wire;
 static unsigned long start_time;
 static float prev_upd;
 
-static int ev_rise;
+static dseq_event *ev_rise;
 
 
 struct screen *molten_screen(void)
@@ -160,7 +160,7 @@ static void molten_update(void)
 	cgm_mrotate(xform, tsec, 0, 1, 0);
 
 	if(dseq_started()) {
-		rise_val = (float)dseq_value(ev_rise) / 1024.0f;
+		rise_val = (float)dseq_value(ev_rise);
 	} else {
 		rise_val = 1.0f;
 	}

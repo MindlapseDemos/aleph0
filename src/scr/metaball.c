@@ -57,7 +57,7 @@ static struct msurf_volume vol;
 
 #define NUM_MBALLS	3
 
-static int evid_faces;
+static dseq_event *ev_faces;
 
 
 struct screen *metaballs_screen(void)
@@ -112,7 +112,7 @@ static int init(void)
 	mmesh.iarr = 0;
 	mmesh.vcount = mmesh.icount = 0;
 
-	evid_faces = dseq_lookup("metaballs.faces");
+	ev_faces = dseq_lookup("metaballs.faces");
 	return 0;
 }
 
@@ -183,7 +183,7 @@ static void draw(void)
 	/* sprites */
 	blitfb_rle(fb_pixels, 160 - 121/2, 0, spr);
 	blitfb_rle(fb_pixels, 160 - 197/2, 240 - 45, spr + 1);
-	if((faces = dseq_value(evid_faces))) {
+	if((faces = dseq_value(ev_faces))) {
 		int offs = faces * 98 >> 10;
 		blitfb_rle(fb_pixels, offs - 98, 20, spr + 2);
 		blitfb_rle(fb_pixels, 320 - offs, 21, spr + 3);

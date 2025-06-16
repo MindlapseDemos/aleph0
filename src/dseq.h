@@ -4,15 +4,25 @@
 enum dseq_interp {
 	DSEQ_STEP,
 	DSEQ_LINEAR,
+	DSEQ_CUBIC,
 	DSEQ_SMOOTHSTEP
 };
 
-enum dseq_trig_type {
-	DSEQ_TRIG_ONCE,
-	DSEQ_TRIG_ALL
+enum dseq_extrap {
+	DSEQ_EXTEND,
+	DSEQ_CLAMP,
+	DSEQ_REPEAT,
+	DSEQ_PINGPONG
 };
 
-typedef void (*dseq_callback_func)(int evid, int val, void *cls);
+enum dseq_trig_mask {
+	DSEQ_TRIG_START	= 0x01,
+	DSEQ_TRIG_END	= 0x02,
+	DSEQ_TRIG_ALL	= 0xff
+};
+
+typedef struct dseq_event dseq_event;
+typedef void (*dseq_callback_func)(dseq_event*, enum dseq_trig_mask, void*);
 
 int dseq_open(const char *fname);
 void dseq_close(void);
@@ -26,18 +36,25 @@ void dseq_ffwd(long tm);
 void dseq_update(void);
 
 /* looks for an event by name, and returns its id, or -1 if it doesn't exist */
-int dseq_lookup(const char *evname);
+dseq_event *dseq_lookup(const char *evname);
 
-const char *dseq_name(int evid);
-int dseq_transtime(int evid, int *in, int *out);
+const char *dseq_name(dseq_event *ev);
+int dseq_transtime(dseq_event *ev, int *in, int *out);
+long dseq_start_time(dseq_event *ev);
+long dseq_end_time(dseq_event *ev);
+long dseq_duration(dseq_event *ev);
 
-long dseq_evstart(int evid);
+int dseq_isactive(dseq_event *ev);
+long dseq_time(dseq_event *ev);		/* the time from the start of the event */
+float dseq_param(dseq_event *ev);	/* parametric t during active event */
+long dseq_value(dseq_event *ev);	/* the current value of the event */
+int dseq_triggered(dseq_event *ev);
 
-/* returns the current value of event track by id */
-int dseq_value(int evid);
-/* returns 1 if specified event changed state since last update, 0 otherwise */
-int dseq_triggered(int evid);
 
-void dseq_trig_callback(int evid, enum dseq_trig_type type, dseq_callback_func func, void *cls);
+void dseq_set_interp(dseq_event *ev, enum dseq_interp in);
+void dseq_set_extrap(dseq_event *ev, enum dseq_extrap ex);
+
+void dseq_set_callback(dseq_event *ev, enum dseq_trig_mask mask,
+		dseq_callback_func func, void *cls);
 
 #endif	/* DEMO_SEQUENCER_H_ */

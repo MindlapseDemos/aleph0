@@ -83,7 +83,8 @@ static unsigned char *smokebuf, *cur_smokebuf, *prev_smokebuf;
 static unsigned int smoke_cmap[256 * 4], fadepal[256 * 4];
 static struct img_pixmap textimg[2];
 
-static int ev_text, ev_accel, text_state;
+static dseq_event *ev_text, *ev_accel;
+static int text_state;
 
 
 struct screen *tunnel_screen(void)
@@ -283,7 +284,7 @@ samespeed:
 	toffs = cround64(tunpos);
 
 	if(dseq_triggered(ev_text)) {
-		text_state = dseq_value(ev_text) >> 10;
+		text_state = cround64(dseq_value(ev_text));
 		if(text_state == 0 || text_state == 2 || text_state == 4) {
 			curstx = text_state ? stx[(text_state >> 1) - 1] : 0;
 			/* clear smoke buffer */
@@ -293,19 +294,17 @@ samespeed:
 		}
 
 	} else if(dseq_triggered(ev_accel)) {
-		if(dseq_value(ev_accel)) {
-			/* accelerate */
-			nextblur = (blurlevel + 1) & 3;
-			nextspeed = speedtab[nextblur];
-			accel_start = time_msec - start_time;
-		}
+		/* accelerate */
+		nextblur = (blurlevel + 1) & 3;
+		nextspeed = speedtab[nextblur];
+		accel_start = time_msec - start_time;
 	}
 
 	if(text_state == 2 || text_state == 4) {
 		int fade;
 		update_smktxt(curstx);
 
-		fade = ~dseq_value(ev_text) & 0x3ff;
+		fade = 1.0f - dseq_value(ev_text);
 		if(fade > 256) fade = 256;
 
 		for(i=0; i<256; i++) {

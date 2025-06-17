@@ -228,12 +228,19 @@ int anm_set_value(struct anm_track *track, anm_time_t tm, float val)
 
 float anm_get_value(const struct anm_track *track, anm_time_t tm)
 {
+	int ck;
+	return anm_get_value_ex(track, tm, &ck);
+}
+
+float anm_get_value_ex(const struct anm_track *track, anm_time_t tm, int *curkey)
+{
 	int idx0, idx1, last_idx;
 	anm_time_t tstart, tend;
 	float t, dt;
 	float v0, v1, v2, v3;
 
 	if(!track->count) {
+		*curkey = -1;
 		return track->def_val;
 	}
 
@@ -243,6 +250,7 @@ float anm_get_value(const struct anm_track *track, anm_time_t tm)
 	tend = track->keys[last_idx].time;
 
 	if(tstart == tend) {
+		*curkey = 0;
 		return track->keys[0].val;
 	}
 
@@ -251,6 +259,8 @@ float anm_get_value(const struct anm_track *track, anm_time_t tm)
 	idx0 = anm_get_key_interval(track, tm);
 	assert(idx0 >= 0 && idx0 < track->count);
 	idx1 = idx0 + 1;
+
+	*curkey = idx0;
 
 	if(idx0 == last_idx) {
 		return track->keys[idx0].val;

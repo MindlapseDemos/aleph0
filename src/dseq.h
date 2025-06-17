@@ -16,9 +16,10 @@ enum dseq_extrap {
 };
 
 enum dseq_trig_mask {
-	DSEQ_TRIG_START	= 0x01,
-	DSEQ_TRIG_END	= 0x02,
-	DSEQ_TRIG_ALL	= 0xff
+	DSEQ_TRIG_START		= 0x01,		/* start of active range */
+	DSEQ_TRIG_END		= 0x02,		/* end of active range */
+	DSEQ_TRIG_KEY		= 0x04,		/* keyframe */
+	DSEQ_TRIG_ALL		= 0xff
 };
 
 typedef struct dseq_event dseq_event;
@@ -54,7 +55,7 @@ int dseq_triggered(dseq_event *ev);
 void dseq_set_interp(dseq_event *ev, enum dseq_interp in);
 void dseq_set_extrap(dseq_event *ev, enum dseq_extrap ex);
 
-void dseq_set_callback(dseq_event *ev, enum dseq_trig_mask mask,
+void dseq_set_trigger(dseq_event *ev, enum dseq_trig_mask mask,
 		dseq_callback_func func, void *cls);
 
 #endif	/* DEMO_SEQUENCER_H_ */

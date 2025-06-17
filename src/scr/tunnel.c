@@ -187,6 +187,8 @@ static int tun_init(void)
 
 	ev_text = dseq_lookup("tunnel.text");
 	ev_accel = dseq_lookup("tunnel.accel");
+
+	dseq_set_trigger(ev_text, DSEQ_TRIG_KEY, 0, 0);
 	return 0;
 }
 

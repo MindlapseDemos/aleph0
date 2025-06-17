@@ -19,6 +19,7 @@ struct dseq_event {
 	enum dseq_extrap extrap;
 
 	float cur_t, cur_val;		/* updated by dseq_update */
+	int cur_key;				/* current key interval */
 	long start, dur;
 	struct anm_track track;
 
@@ -43,6 +44,8 @@ static long prev_upd;
 static int count_events(struct ts_node *ts);
 static dseq_event *load_event(struct ts_node *tsev, dseq_event *evprev, dseq_event *par);
 static int evcmp(const void *ap, const void *bp);
+
+static void dump_event(FILE *fp, dseq_event *ev);
 
 
 int dseq_open(const char *fname)
@@ -81,6 +84,19 @@ int dseq_open(const char *fname)
 	qsort(events, num_events, sizeof *events, evcmp);
 
 	printf("dseq_load: loaded %d events from %s\n", num_events, fname);
+
+	{
+		int i;
+		FILE *fp = fopen("events", "wb");
+		if(fp) {
+			for(i=0; i<num_events; i++) {
+				dump_event(fp, events + i);
+			}
+			fclose(fp);
+		}
+	}
+
+	started = 0;
 	nextev = active_events = 0;
 	return 0;
 
@@ -118,7 +134,7 @@ static dseq_event *load_event(struct ts_node *tsev, dseq_event *evprev, dseq_eve
 	dseq_event *ev, *subev = 0;
 	struct ts_attr *attr;
 	struct ts_node *tssub;
-	long par_start, key_msec;
+	long par_start, key_msec, subdur = 0;
 	float key_sec;
 	long end;
 	long defer_end = -1, delay_end = 0;
@@ -147,6 +163,7 @@ static dseq_event *load_event(struct ts_node *tsev, dseq_event *evprev, dseq_eve
 	} else {
 		strcpy(ev->name, tsev->name);
 	}
+	num_events++;
 
 	par_start = par ? par->start : 0;
 
@@ -261,6 +278,20 @@ next:	attr = attr->next;
 		}
 	}
 
+
+	/* load sub-events now, so that we can take their keyframe tracks into
+	 * account for computing event duration
+	 */
+
+	tssub = tsev->child_list;
+	while(tssub) {
+		subev = load_event(tssub, subev, ev);
+		tssub = tssub->next;
+
+		subdur += subev->dur;
+	}
+
+
 	if(defer_end >= 0) {
 		if(defer_end < ev->start) {
 			ev->dur = ev->start - defer_end;
@@ -283,6 +314,10 @@ next:	attr = attr->next;
 			fprintf(stderr, "warning: can't determine duration for event %s\n", ev->name);
 		}
 		ev->dur += delay_end;
+
+		if(ev->dur < subdur) {
+			ev->dur = subdur;
+		}
 	}
 	end = ev->start + ev->dur;
 
@@ -302,16 +337,6 @@ next:	attr = attr->next;
 			anm_set_value(&ev->track, end, 0);
 		}
 	}
-
-	num_events++;
-	/* done with this event, now load any sub-events */
-
-	tssub = tsev->child_list;
-	while(tssub) {
-		subev = load_event(tssub, subev, ev);
-		tssub = tssub->next;
-	}
-
 	return ev;
 }
 
@@ -341,6 +366,7 @@ void dseq_start(void)
 	for(i=0; i<num_events; i++) {
 		events[i].cur_t = 0;
 		events[i].cur_val = 0;
+		events[i].cur_key = -1;
 
 		events[i].relstart = events[i].start - prev_start;
 		prev_start = events[i].start;
@@ -378,8 +404,11 @@ void dseq_ffwd(long tm)
 
 void dseq_update(void)
 {
+	int curkey;
 	long dt;
 	dseq_event *ev, *prev, dummy;
+	float newval;
+	unsigned int reason;
 
 	if(!started) return;
 
@@ -387,20 +416,28 @@ void dseq_update(void)
 	dummy.next = active_events;
 	prev = &dummy;
 	while((ev = prev->next)) {
+		reason = 0;
 		if(time_msec >= ev->start + ev->dur) {
 			ev->cur_t = 1.0f;
-			ev->cur_val = 0.0f;	/* do we want to use the extrapolators too ? */
 			/* remove from active list */
 			prev->next = ev->next;
 			ev->active = 0;
-			/* trigger end callbacks */
-			if(ev->cbfunc && (ev->trigmask & DSEQ_TRIG_END)) {
-				ev->cbfunc(ev, DSEQ_TRIG_END, ev->cbcls);
-			}
+			reason = DSEQ_TRIG_END;
 		} else {
 			ev->cur_t = (float)(time_msec - ev->start) / (float)ev->dur;
-			ev->cur_val = anm_get_value(&ev->track, time_msec);
 			prev = prev->next;
+		}
+		ev->cur_val = anm_get_value_ex(&ev->track, time_msec, &curkey);
+		if(curkey != ev->cur_key) {
+			reason |= DSEQ_TRIG_KEY;
+			ev->cur_key = curkey;
+		}
+
+		if(reason) {
+			ev->trigd = 1;
+			if(ev->cbfunc) {
+				ev->cbfunc(ev, reason, ev->cbcls);
+			}
 		}
 	}
 	active_events = dummy.next;
@@ -424,12 +461,20 @@ void dseq_update(void)
 		active_events = ev;
 
 		ev->cur_t = (float)(time_msec - ev->start) / (float)ev->dur;
-		ev->cur_val = anm_get_value(&ev->track, time_msec);
+		ev->cur_val = anm_get_value_ex(&ev->track, time_msec, &curkey);
+
+		reason = DSEQ_TRIG_START;
+		if(curkey != ev->cur_key) {
+			reason |= DSEQ_TRIG_KEY;
+			ev->cur_key = curkey;
+		}
 
 		/* trigger any start callbacks */
-		ev->trigd = 1;
-		if(ev->cbfunc && (ev->trigmask & DSEQ_TRIG_START)) {
-			ev->cbfunc(ev, DSEQ_TRIG_START, ev->cbcls);
+		if(ev->trigmask & reason) {
+			ev->trigd = 1;
+			if(ev->cbfunc) {
+				ev->cbfunc(ev, reason, ev->cbcls);
+			}
 		}
 	}
 }
@@ -548,7 +593,7 @@ void dseq_set_extrap(dseq_event *ev, enum dseq_extrap ex)
 	anm_set_track_extrapolator(&ev->track, anm_ex);
 }
 
-void dseq_set_callback(dseq_event *ev, enum dseq_trig_mask mask,
+void dseq_set_trigger(dseq_event *ev, enum dseq_trig_mask mask,
 		dseq_callback_func func, void *cls)
 {
 	ev->cbfunc = func;
@@ -561,4 +606,18 @@ void dseq_set_callback(dseq_event *ev, enum dseq_trig_mask mask,
 static int evcmp(const void *ap, const void *bp)
 {
 	return ((dseq_event*)ap)->start - ((dseq_event*)bp)->start;
+}
+
+
+static void dump_event(FILE *fp, dseq_event *ev)
+{
+	int i;
+	static const char *instr[] = {"step", "linear", "cubic", "smoothstep"};
+	static const char *exstr[] = {"extend", "clamp", "repeat", "pingpong"};
+
+	fprintf(fp, "%s (%s|%s)\n", ev->name, instr[ev->interp], exstr[ev->extrap]);
+
+	for(i=0; i<ev->track.count; i++) {
+		fprintf(fp, "\t%ld: %.2f\n", ev->track.keys[i].time, ev->track.keys[i].val);
+	}
 }

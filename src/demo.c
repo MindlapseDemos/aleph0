@@ -123,7 +123,7 @@ int demo_init(void)
 				continue;
 			}
 			if((ev = dseq_lookup(scr->name))) {
-				dseq_set_callback(ev, DSEQ_TRIG_START, screen_evtrig, (void*)i);
+				dseq_set_trigger(ev, DSEQ_TRIG_START, screen_evtrig, (void*)i);
 
 				dseq_transtime(ev, &scr->trans_in, &scr->trans_out);
 			}
@@ -420,6 +420,7 @@ void mouse_orbit_update(float *theta, float *phi, float *dist)
 /* process demo sequence triggers for screen changes */
 static void screen_evtrig(dseq_event *ev, enum dseq_trig_mask trig, void *cls)
 {
+	if(ignore_scrchg_trig) return;
 	change_screen((intptr_t)cls);
 }
 

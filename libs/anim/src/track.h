@@ -114,6 +114,7 @@ int anm_set_value(struct anm_track *track, anm_time_t tm, float val);
 
 /* evaluates and returns the value of the track for a particular time */
 float anm_get_value(const struct anm_track *track, anm_time_t tm);
+float anm_get_value_ex(const struct anm_track *track, anm_time_t tm, int *curkey);
 
 /* evaluates a set of 4 tracks treated as a quaternion, to perform slerp instead
  * of linear interpolation. Result is returned through the last argument, which

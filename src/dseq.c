@@ -134,13 +134,15 @@ static dseq_event *load_event(struct ts_node *tsev, dseq_event *evprev, dseq_eve
 	dseq_event *ev, *subev = 0;
 	struct ts_attr *attr;
 	struct ts_node *tssub;
-	long par_start, key_msec, subdur = 0;
+	long par_start, key_msec, subend, max_subend = -1;
 	float key_sec;
 	long end;
-	long defer_end = -1, delay_end = 0;
+	long prev_time, defer_end = -1, delay_end = 0;
 
 	ev = events + num_events;
 	memset(ev, 0, sizeof *ev);
+
+	ev->start = -1;
 
 	if(anm_init_track(&ev->track) == -1) {
 		fprintf(stderr, "dseq_load: failed to initialize keyframe track\n");
@@ -166,6 +168,7 @@ static dseq_event *load_event(struct ts_node *tsev, dseq_event *evprev, dseq_eve
 	num_events++;
 
 	par_start = par ? par->start : 0;
+	prev_time = evprev ? evprev->start + evprev->dur : par_start;
 
 	attr = tsev->attr_list;
 	while(attr) {
@@ -204,16 +207,33 @@ static dseq_event *load_event(struct ts_node *tsev, dseq_event *evprev, dseq_eve
 
 		} else if(sscanf(attr->name, "key(%ld)", &key_msec) == 1) {
 			SKIP_NOTNUM("key");
-			anm_set_value(&ev->track, key_msec + par_start, attr->val.fnum);
+			key_msec += par_start;
+			anm_set_value(&ev->track, key_msec, attr->val.fnum);
+			prev_time = key_msec;
 		} else if(sscanf(attr->name, "keyabs(%ld)", &key_msec) == 1) {
 			SKIP_NOTNUM("keyabs");
 			anm_set_value(&ev->track, key_msec, attr->val.fnum);
+			prev_time = key_msec;
+		} else if(sscanf(attr->name, "waitkey(%ld)", &key_msec) == 1) {
+			SKIP_NOTNUM("waitkey");
+			key_msec += prev_time;
+			anm_set_value(&ev->track, key_msec, attr->val.fnum);
+			prev_time = key_msec;
 		} else if(sscanf(attr->name, "ksec(%f)", &key_sec) == 1) {
 			SKIP_NOTNUM("ksec");
-			anm_set_value(&ev->track, (long)(key_sec * 1000.0f) + par_start, attr->val.fnum);
+			key_msec = (long)(key_sec * 1000.0f) + par_start;
+			anm_set_value(&ev->track, key_msec, attr->val.fnum);
+			prev_time = key_msec;
 		} else if(sscanf(attr->name, "ksecabs(%f)", &key_sec) == 1) {
 			SKIP_NOTNUM("ksecabs");
-			anm_set_value(&ev->track, (long)(key_sec * 1000.0f), attr->val.fnum);
+			key_msec = (long)(key_sec * 1000.0f);
+			anm_set_value(&ev->track, key_msec, attr->val.fnum);
+			prev_time = key_msec;
+		} else if(sscanf(attr->name, "waitksec(%f)", &key_sec) == 1) {
+			SKIP_NOTNUM("waitksec");
+			key_msec = (long)(key_sec * 1000.0f) + prev_time;
+			anm_set_value(&ev->track, key_msec, attr->val.fnum);
+			prev_time = key_msec;
 
 		} else if(strcmp(attr->name, "interp") == 0) {
 			if(attr->val.type != TS_STRING) {
@@ -288,7 +308,10 @@ next:	attr = attr->next;
 		subev = load_event(tssub, subev, ev);
 		tssub = tssub->next;
 
-		subdur += subev->dur;
+		subend = subev->start + subev->dur;
+		if(subend > max_subend) {
+			max_subend = subend;
+		}
 	}
 
 
@@ -315,8 +338,8 @@ next:	attr = attr->next;
 		}
 		ev->dur += delay_end;
 
-		if(ev->dur < subdur) {
-			ev->dur = subdur;
+		if(ev->start + ev->dur < max_subend) {
+			ev->dur = max_subend - ev->start;
 		}
 	}
 	end = ev->start + ev->dur;
@@ -615,7 +638,8 @@ static void dump_event(FILE *fp, dseq_event *ev)
 	static const char *instr[] = {"step", "linear", "cubic", "smoothstep"};
 	static const char *exstr[] = {"extend", "clamp", "repeat", "pingpong"};
 
-	fprintf(fp, "%s (%s|%s)\n", ev->name, instr[ev->interp], exstr[ev->extrap]);
+	fprintf(fp, "%s (%s|%s) [%ld - %ld (%ld)]\n", ev->name, instr[ev->interp],
+			exstr[ev->extrap], ev->start, ev->start + ev->dur, ev->dur);
 
 	for(i=0; i<ev->track.count; i++) {
 		fprintf(fp, "\t%ld: %.2f\n", ev->track.keys[i].time, ev->track.keys[i].val);

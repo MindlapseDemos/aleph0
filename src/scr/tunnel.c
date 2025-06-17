@@ -189,6 +189,7 @@ static int tun_init(void)
 	ev_accel = dseq_lookup("tunnel.accel");
 
 	dseq_set_trigger(ev_text, DSEQ_TRIG_KEY, 0, 0);
+	dseq_set_trigger(ev_accel, DSEQ_TRIG_KEY, 0, 0);
 	return 0;
 }
 
@@ -306,7 +307,7 @@ samespeed:
 		int fade;
 		update_smktxt(curstx);
 
-		fade = 1.0f - dseq_value(ev_text);
+		fade = ~cround64(dseq_value(ev_text) * 1024.0f) & 0x3ff;
 		if(fade > 256) fade = 256;
 
 		for(i=0; i<256; i++) {

@@ -13,8 +13,10 @@
 #   - end: event interval end time, relative to parent.
 #   - endabs: same as end, but absolute time, not relative to parent
 #   - key(<msec>): explicit key/value, time in milliseconds relative to parent
+#   - waitkey(<msec>): same as key, but relative to the last encountered end time
 #   - keyabs(<msec>): same as key, but absolute time, not relative to parent
 #   - ksec(<sec>): explicit key/value, time in seconds relative to parent
+#   - waitksec(<sec>): same as ksec, but relative to the last encountered end time
 #   - ksecabs(<sec>): same as ksec, but absolute time, not relative to parent
 #   - interp: one of <step|linear|cubic|smoothstep>
 #   - extrap: one of <extend|clamp|repeat|pingpong>
@@ -41,13 +43,12 @@ demoseq {
 			key(9000) = 0
 		}
 		accel {
-			wait = 1000
-			key(0) = 1
-			key(1) = 0
-			key(1100) = 1
-			key(1101) = 0
-			key(2200) = 1
-			key(3300) = 0
+			waitkey(1000) = 1
+			waitkey(1) = 0
+			waitkey(1100) = 1
+			waitkey(1) = 0
+			waitkey(1100) = 1
+			waitkey(1100) = 0
 		}
 	}
 

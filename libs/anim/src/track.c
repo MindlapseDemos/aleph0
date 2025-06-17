@@ -192,7 +192,7 @@ int anm_get_key_interval(const struct anm_track *track, anm_time_t tm)
 	}
 
 	last = track->count - 1;
-	if(tm > track->keys[last].time) {
+	if(tm >= track->keys[last].time) {
 		return last;
 	}
 

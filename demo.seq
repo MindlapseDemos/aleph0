@@ -30,7 +30,6 @@
 
 demoseq {
 	tunnel {
-		start = 0
 		trans_in = 500
 		trans_out = 250
 
@@ -52,24 +51,43 @@ demoseq {
 		}
 	}
 
-	blobgrid {
-		wait = 0
+	galaxyrise {
 		dur = 2000
 	}
 
-	metaballs {
-		wait = 0
+	blobgrid {
 		dur = 2000
+	}
 
-		faces {
-			interp = "smoothstep"
-			trans = 800
-			key(0) = 1024
-		}
+	hairball {
+		dur = 2000
+	}
+
+	reactor {
+		dur = 2000
+	}
+
+	infcubes {
+		dur = 2000
+	}
+
+	hexfloor {
+		dur = 2000
+	}
+
+	juliatunnel {
+		dur = 2000
+	}
+
+	voxelscape {
+		dur = 2000
+	}
+
+	polka {
+		dur = 2000
 	}
 
 	bump {
-		wait = 0
 		dur = 16384
 
 		electroids {
@@ -95,15 +113,28 @@ demoseq {
 		}
 	}
 
+	metaballs {
+		dur = 2000
+
+		faces {
+			interp = "smoothstep"
+			trans = 800
+			key(0) = 1024
+		}
+	}
+
 	molten {
-		wait = 0
-		dur = 0
+		dur = 2000
 
 		rise {
 			interp = "smoothstep"
 			key(0) = 0
 			key(0) = 1024
 		}
+	}
+
+	water {
+		dur = 2000
 	}
 
 	credits {

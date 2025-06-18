@@ -19,7 +19,7 @@ static void draw(void);
 
 
 static struct screen scr = {
-	"3dzoom",
+	"reactor",
 	init,
 	destroy,
 	start,

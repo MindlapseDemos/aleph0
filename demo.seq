@@ -107,22 +107,18 @@ demoseq {
 	}
 
 	credits {
-		wait = 0
-		dur = 0
-
 		zoom {
 			interp = "smoothstep"
-			key(0) = 20480
-			key(0) = 0
+			waitkey(0) = 30
+			waitkey(1500) = 0
 		}
 
 		text {
-			trans = 0
-			wait = 0
-			dur = 8000
-			interp = "linear"
-			#key(0) = 0
-			#key(0) = 20480
+			dur = 20000
+		}
+
+		fade {
+			dur = 2000
 		}
 	}
 }

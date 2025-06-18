@@ -53,7 +53,7 @@ static unsigned int bmask_diff, prev_bmask;
 
 static unsigned long nframes;
 static int con_active;
-static int ignore_scrchg_trig;
+static int ignore_scrchg_trig, running, show_dseq_dbg;
 
 extern uint16_t loading_pixels[];	/* data.asm */
 
@@ -248,6 +248,10 @@ void demo_post_draw(void *pixels)
 		if(curscr_name) {
 			cs_dputs(pixels, curscr_name_pos, 240 - 16, curscr_name);
 		}
+
+		if(show_dseq_dbg) {
+			dseq_dbg_draw();
+		}
 	}
 
 	if(con_active) {
@@ -316,12 +320,26 @@ void demo_keyboard(int key, int press)
 			demo_run(0);
 			break;
 
+		case KB_F3:
+			show_dseq_dbg ^= 1;
+			break;
+
 		case '/':
 			if(!con_active) {
 				con_start();
 				con_active = con_input('/');
 				return;
 			}
+
+		case ' ':
+			if(running) {
+				if(dseq_started()) {
+					dseq_stop();
+				} else {
+					dseq_resume();
+				}
+			}
+			break;
 
 		default:
 			if(con_active) {
@@ -355,6 +373,8 @@ void demo_run(long start_time)
 	reset_timer(start_time);
 	dseq_start();
 	dseq_ffwd(start_time);
+
+	running = 1;
 }
 
 void demo_runpart(const char *name)
@@ -386,9 +406,11 @@ void demo_runpart(const char *name)
 		}
 	}
 
-	dseq_ffwd(evstart);
 	reset_timer(evstart);
 	dseq_start();
+	dseq_ffwd(evstart);
+
+	running = 1;
 }
 
 

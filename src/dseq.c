@@ -293,8 +293,7 @@ next:	attr = attr->next;
 			/* ... compute based on keyframe track start */
 			ev->start = ev->track.keys[0].time;
 		} else {
-			ev->start = 0;
-			fprintf(stderr, "warning: can't determine start time for event %s\n", ev->name);
+			ev->start = evprev ? evprev->start + evprev->dur : 0;
 		}
 	}
 
@@ -346,17 +345,19 @@ next:	attr = attr->next;
 
 	/* if we have no keyframes, add some */
 	if(ev->track.count <= 0) {
-		if(ev->interp == DSEQ_STEP || ev->trans_in <= 0) {
+		if(ev->interp == DSEQ_STEP) {
 			anm_set_value(&ev->track, ev->start, 1);
 		} else {
+			long tt = ev->trans_in > 0 ? ev->trans_in : 1;
 			anm_set_value(&ev->track, ev->start, 0);
-			anm_set_value(&ev->track, ev->start + ev->trans_in, 1);
+			anm_set_value(&ev->track, ev->start + tt, 1);
 		}
 
-		if(ev->interp == DSEQ_STEP || ev->trans_out <= 0) {
+		if(ev->interp == DSEQ_STEP) {
 			anm_set_value(&ev->track, end, 0);
 		} else {
-			anm_set_value(&ev->track, end - ev->trans_out, 1);
+			long tt = ev->trans_out > 0 ? ev->trans_out : 1;
+			anm_set_value(&ev->track, end - tt, 1);
 			anm_set_value(&ev->track, end, 0);
 		}
 	}
@@ -400,12 +401,18 @@ void dseq_start(void)
 	started = 1;
 	nextev = events;
 	active_events = 0;
-	prev_upd = 0;
+	prev_upd = time_msec;
 }
 
 void dseq_stop(void)
 {
 	started = 0;
+}
+
+void dseq_resume(void)
+{
+	started = 1;
+	prev_upd = time_msec;
 }
 
 int dseq_started(void)
@@ -419,7 +426,7 @@ void dseq_ffwd(long tm)
 
 	while(nextev) {
 		nextev->relstart -= tm;
-		if(nextev->relstart > 0) break;
+		if(nextev->relstart >= 0) break;
 		tm = -nextev->relstart;
 		nextev = nextev->next;
 	}
@@ -556,7 +563,7 @@ float dseq_param(dseq_event *ev)
 	return ev->cur_t;
 }
 
-long dseq_value(dseq_event *ev)
+float dseq_value(dseq_event *ev)
 {
 	return ev->cur_val;
 }
@@ -624,6 +631,28 @@ void dseq_set_trigger(dseq_event *ev, enum dseq_trig_mask mask,
 	ev->trigmask = mask;
 }
 
+
+void dseq_dbg_draw(void)
+{
+	int y = 20;
+	char buf[128];
+	dseq_event *ev;
+
+	sprintf(buf, "time: %ld", time_msec);
+	cs_cputs(fb_pixels, 5, y, buf); y += 8;
+	cs_cputs(fb_pixels, 5, y, "active:"); y += 8;
+	ev = active_events;
+	while(ev) {
+		sprintf(buf, "%s: %.2f -> %.2f", ev->name, ev->cur_t, ev->cur_val);
+		cs_cputs(fb_pixels, 10, y, buf); y += 8;
+		ev = ev->next;
+	}
+
+	if(nextev) {
+		sprintf(buf, "next: %s in %ld", nextev->name, nextev->relstart);
+		cs_cputs(fb_pixels, 5, y + 5, buf);
+	}
+}
 
 
 static int evcmp(const void *ap, const void *bp)

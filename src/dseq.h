@@ -31,6 +31,7 @@ int dseq_isopen(void);
 
 void dseq_start(void);
 void dseq_stop(void);
+void dseq_resume(void);
 int dseq_started(void);
 void dseq_ffwd(long tm);
 
@@ -48,7 +49,7 @@ long dseq_duration(dseq_event *ev);
 int dseq_isactive(dseq_event *ev);
 long dseq_time(dseq_event *ev);		/* the time from the start of the event */
 float dseq_param(dseq_event *ev);	/* parametric t during active event */
-long dseq_value(dseq_event *ev);	/* the current value of the event */
+float dseq_value(dseq_event *ev);	/* the current value of the event */
 int dseq_triggered(dseq_event *ev);
 
 
@@ -57,5 +58,7 @@ void dseq_set_extrap(dseq_event *ev, enum dseq_extrap ex);
 
 void dseq_set_trigger(dseq_event *ev, enum dseq_trig_mask mask,
 		dseq_callback_func func, void *cls);
+
+void dseq_dbg_draw(void);
 
 #endif	/* DEMO_SEQUENCER_H_ */

@@ -365,8 +365,8 @@ static float interp_cubic(float a, float b, float c, float d, float t)
 
 static float interp_sigmoid(float v0, float v1, float v2, float v3, float t)
 {
-	float x = (x - v1) / (v2 - v1);
-	return x * x * (3.0f - 2.0f * x);
+	float s = v2 - v1;
+	return (t * t * (3.0f - 2.0f * t)) * s + v1;
 }
 
 static anm_time_t remap_extend(anm_time_t tm, anm_time_t start, anm_time_t end)

@@ -327,7 +327,7 @@ void init_timer(int res_hz)
 void reset_timer(unsigned long ms)
 {
 	start_time = glutGet(GLUT_ELAPSED_TIME) - ms;
-	time_msec = 0;
+	time_msec = get_msec();
 }
 
 unsigned long get_msec(void)

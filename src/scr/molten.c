@@ -31,6 +31,7 @@
 static int molten_init(void);
 static void molten_destroy(void);
 static void molten_start(long trans_time);
+static void molten_stop(long trans_time);
 static void molten_draw(void);
 static void molten_keyb(int key);
 static int gen_sflake(cgm_vec4 *sarr, int num, int depth, float x, float y, float z, float rad);
@@ -39,7 +40,7 @@ static struct screen scr = {
 	"molten",
 	molten_init,
 	molten_destroy,
-	molten_start, 0,
+	molten_start, molten_stop,
 	molten_draw,
 	molten_keyb
 };
@@ -137,8 +138,13 @@ static void molten_start(long trans_time)
 	g3d_polygon_mode(G3D_FLAT);
 
 	start_time = time_msec;
-	prev_upd = time_msec;
+	prev_upd = 0;
 	cgm_vcons(&viewtgt, 0, 0, 0);
+}
+
+static void molten_stop(long trans_time)
+{
+	g3d_texture_mode(G3D_TEX_MODULATE);
 }
 
 static void molten_update(void)

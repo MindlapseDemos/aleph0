@@ -28,7 +28,7 @@ static struct screen scr = {
 };
 
 static float cam_theta, cam_phi;
-static float cam_dist = 200;
+static float cam_dist = 800;
 
 static struct g3d_scene *scn;
 
@@ -43,7 +43,7 @@ static int init(void)
 {
 	struct goat3d *g;
 
-	if(!(g = goat3d_create()) || goat3d_load(g, "data/3dzoom/techroom.g3d") == -1) {
+	if(!(g = goat3d_create()) || goat3d_load(g, "data/3dzoom/reactor.g3d") == -1) {
 		goat3d_free(g);
 		return -1;
 	}
@@ -64,13 +64,13 @@ static void start(long trans_time)
 {
 	g3d_matrix_mode(G3D_PROJECTION);
 	g3d_load_identity();
-	g3d_perspective(VFOV, 1.3333333, 5.0, 1000.0);
+	g3d_perspective(VFOV, 1.3333333, 10.0, 2000.0);
 
 	g3d_enable(G3D_CULL_FACE);
 	g3d_enable(G3D_DEPTH_TEST);
-	g3d_enable(G3D_LIGHTING);
+	g3d_disable(G3D_LIGHTING);
 	g3d_enable(G3D_LIGHT0);
-	g3d_polygon_mode(G3D_GOURAUD);
+	g3d_polygon_mode(G3D_FLAT);
 
 	g3d_clear_color(0, 0, 0);
 }

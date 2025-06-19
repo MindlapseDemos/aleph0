@@ -42,10 +42,14 @@ fi
 
 # convert goat3d scenes
 mkdir -p data/3dzoom
-if [ ! -f data/3dzoom/techroom.g3d -o data/src/3dzoom/techroom.obj -nt data/3dzoom/techroom.g3d ]; then
-	if ass2goat data/src/3dzoom/techroom.obj; then
-		mv data/src/3dzoom/techroom.goat3d data/3dzoom/techroom.g3d
-		cp data/src/3dzoom/*.png data/3dzoom
+if [ ! -f data/3dzoom/reactor.g3d -o data/src/3dzoom/reactor.obj -nt data/3dzoom/reactor.g3d ]; then
+	if ass2goat data/src/3dzoom/reactor.obj; then
+		mv data/src/3dzoom/reactor.goat3d data/3dzoom/reactor.g3d
+		for i in data/src/3dzoom/*.png; do
+			dest=data/3dzoom/`basename $i`
+			echo "resizing $i to 256x256 -> $dest"
+			convert -resize 256x256 $i $dest
+		done
 	fi
 fi
 

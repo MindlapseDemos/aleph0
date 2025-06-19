@@ -1,4 +1,4 @@
-#include <cgmath/cgmath.h>
+#include "cgmath/cgmath.h"
 #include "demo.h"
 #include "imago2.h"
 #include "noise.h"
@@ -39,19 +39,8 @@ static int scrollTableRounded[REFLECTION_HEIGHT];
 static int scrollModTable[REFLECTION_HEIGHT];
 static float nearScrollAmount = 0.0f;
 
-static int loadAndProcessNormal();
+static int loadAndProcessNormal(void);
 static void updateScrollTables(float dt);
-
-
-
-
-
-
-
-
-
-
-
 
 
 static void updatePropeller(float t);
@@ -63,7 +52,7 @@ static void stop(long trans_time);
 static void draw(void);
 
 static void convert32To16(unsigned int *src32, unsigned short *dst16, unsigned int pixelCount);
-static void initScrollTables();
+static void initScrollTables(void);
 static int artW = 0;
 static int artH = 0;
 
@@ -96,7 +85,7 @@ static int init(void) {
 	struct ts_node *props = 0;
 	struct ts_attr *attr = 0;
 	int i=0;
-	
+
 	struct rbnode *bitmap_node = 0;
 	char *filename = 0;
 	char tb[100];
@@ -136,18 +125,17 @@ static int init(void) {
 	}
 
 
-	// TODO: Free the config file and bitmap tree
+	/* TODO: Free the config file and bitmap tree */
 
 	/* Allocate back buffer */
-	effectBuffer = (unsigned short *)calloc(EFFECT_BUFFER_W * EFFECT_BUFFER_H, sizeof(unsigned short));
+	effectBuffer = calloc(EFFECT_BUFFER_W * EFFECT_BUFFER_H, sizeof(unsigned short));
 
-	if (!(artBuffer =
-		  img_load_pixels(ART_FILENAME, &artW, &artH, IMG_FMT_RGB565))) {
+	if (!(artBuffer = img_load_pixels(ART_FILENAME, &artW, &artH, IMG_FMT_RGB565))) {
 		fprintf(stderr, "failed to load image " ART_FILENAME "\n");
 		INIT_ERROR;
 	}
 
-	
+
 	initScrollTables();
 	if (loadAndProcessNormal()) {
 		fprintf(stderr, "failed to process normalmap\n");
@@ -212,7 +200,7 @@ static void oldTv(unsigned short *dst, unsigned short *src, float sr, float tr, 
 	int ir, ig, ib;
 
 	for (i=0; i<FB_WIDTH; i++) {
-		// decompose pixel
+		/* decompose pixel */
 		*r++ = XR(*pixel);
 		*g++ = XG(*pixel);
 		*b++ = XB(*pixel);
@@ -230,7 +218,7 @@ static void oldTv(unsigned short *dst, unsigned short *src, float sr, float tr, 
 		ur = 0.5f * ur + 0.5f;
 		ug = 0.5f * ug + 0.5f;
 		ub = 0.5f * ub + 0.5f;
-		
+
 		ir = sample(tvBuffers.r, ur) + 0.5f;
 		ig = sample(tvBuffers.g, ug) + 0.5f;
 		ib = sample(tvBuffers.b, ub) + 0.5f;
@@ -293,7 +281,7 @@ static void draw(void) {
 	int accum = 0;
 	int md, sc;
 	int scrolledIndex;
-	struct rbnode *bitmap_node = 0;
+	struct rbnode *node, *bitmap_node = 0;
 
 	/*******************************************************************************/
 	if (!allSystemsGo) {
@@ -385,7 +373,7 @@ static void draw(void) {
 	for (scanline = 0; scanline < FB_HEIGHT; scanline++) {
 		memcpy(dst, src, FB_WIDTH * 2);
 		/*
-		oldTv(dst, src, 
+		oldTv(dst, src,
 			rScale(scanline, time_sec), rShift(scanline, time_sec),
 			gScale(scanline, time_sec), gShift(scanline, time_sec),
 			bScale(scanline, time_sec), bShift(scanline, time_sec));
@@ -396,21 +384,17 @@ static void draw(void) {
 	swap_buffers(0);
 	return;
 	/*******************************************************************************/
-	
-	
+
+
 
 	rb_begin(bitmap_props);
-	struct rbnode *node = rb_next(bitmap_props);
+	node = rb_next(bitmap_props);
 	while (node) {
 		RleBitmap *rle = node->data;
 		rleBlitScale(node->data, effectBuffer + EFFECT_BUFFER_PADDING, FB_WIDTH, FB_HEIGHT, EFFECT_BUFFER_W,
 			100, 120, 2, 2);
 		node = rb_next(bitmap_props);
 	}
-
-	
-
-	
 
 	swap_buffers(0);
 }
@@ -432,7 +416,7 @@ static void convert32To16(unsigned int *src32, unsigned short *dst16, unsigned i
  * and minimum (1x) at the bottom (closest to the viewer). Rest of the scan set to black.
  * This way close scans appear smoother. Also unpack R (horizontal) component of the normal.
  */
-static int loadAndProcessNormal() {
+static int loadAndProcessNormal(void) {
 	int scanline;
 	int i;
 	int x;
@@ -465,9 +449,9 @@ static int loadAndProcessNormal() {
 
 	/* Allocate displacement map */
 	displacementMap = (short *)calloc(normalmapW * normalmapH, sizeof(short));
-	
 
-	
+
+
 	/* Set up destination pointers for pass 1 and 2 */
 	src = normalmap;
 	dst = (unsigned short *)displacementMap;
@@ -480,7 +464,7 @@ static int loadAndProcessNormal() {
 			if (x < artW) {
 				/* Extract R (horizontal component of the normal) */
 				*dst = (unsigned short)(src[x] >> 8) & 0xFF;
-				
+
 				/* Find bounds */
 				if ((short)*dst > maxDisplacement)
 					maxDisplacement = (short)(*dst);
@@ -508,15 +492,13 @@ static int loadAndProcessNormal() {
 			*dst2 = 2 * MAX_DISPLACEMENT * (*dst2 - minDisplacement) /
 				    (maxDisplacement - minDisplacement) -
 					MAX_DISPLACEMENT;
-			
+
 			/* Further scale down displacements with distance. */
 			*dst2 = (short)((float)*dst2 / scrollScaleTable[scanline] +
 					0.5f);
 			dst2++;
 		}
 	}
-
-	
 
 	return 0;
 }
@@ -528,7 +510,7 @@ static float distanceScale(int scanline) {
 	return 1.0f / (1.0f / farScale + (1.0f - 1.0f / farScale) * t);
 }
 
-static void initScrollTables() {
+static void initScrollTables(void) {
 	int i = 0;
 	for (i = 0; i < REFLECTION_HEIGHT; i++) {
 		scrollScaleTable[i] = distanceScale(i);

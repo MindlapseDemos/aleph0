@@ -17,7 +17,7 @@ void init_g3dmtl(struct g3d_material *mtl)
 
 int init_mesh(struct g3d_mesh *mesh, int prim, int num_verts, int num_idx)
 {
-	mesh->name = 0;
+	memset(mesh, 0, sizeof *mesh);
 	mesh->prim = prim;
 	if(num_verts > 0) {
 		mesh->varr = malloc_nf(num_verts * sizeof *mesh->varr);
@@ -31,7 +31,6 @@ int init_mesh(struct g3d_mesh *mesh, int prim, int num_verts, int num_idx)
 	}
 	mesh->vcount = num_verts;
 	mesh->icount = num_idx;
-	mesh->mtl = 0;
 	return 0;
 }
 
@@ -69,6 +68,7 @@ int copy_mesh(struct g3d_mesh *dest, struct g3d_mesh *src)
 		memcpy(dest->iarr, src->iarr, src->icount * sizeof *src->iarr);
 	}
 	dest->icount = src->icount;
+	dest->flags = src->flags;
 	return 0;
 }
 

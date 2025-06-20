@@ -28,9 +28,10 @@ static struct screen scr = {
 };
 
 static float cam_theta, cam_phi;
-static float cam_dist = 800;
+static float cam_dist = 80;
 
 static struct g3d_scene *scn;
+static struct g3d_mesh *poolmesh;
 
 
 struct screen *zoom3d_screen(void)
@@ -53,6 +54,9 @@ static int init(void)
 	conv_goat3d_scene(scn, g);
 	goat3d_free(g);
 
+	poolmesh = scn_find_mesh(scn, "Plane");
+	poolmesh->flags |= G3DMESH_SKIP;
+
 	return 0;
 }
 
@@ -64,7 +68,7 @@ static void start(long trans_time)
 {
 	g3d_matrix_mode(G3D_PROJECTION);
 	g3d_load_identity();
-	g3d_perspective(VFOV, 1.3333333, 10.0, 2000.0);
+	g3d_perspective(VFOV, 1.3333333, 15.0, 300.0);
 
 	g3d_enable(G3D_CULL_FACE);
 	g3d_enable(G3D_DEPTH_TEST);
@@ -83,6 +87,7 @@ static void update(void)
 
 static void draw(void)
 {
+	float texanim = (float)time_msec / 8192.0f;
 	update();
 
 	g3d_matrix_mode(G3D_MODELVIEW);
@@ -97,6 +102,15 @@ static void draw(void)
 	g3d_clear(G3D_COLOR_BUFFER_BIT | G3D_DEPTH_BUFFER_BIT);
 
 	scn_draw(scn);
+
+	/* draw animated energy "pool" */
+	g3d_enable(G3D_TEXTURE_MAT);
+	g3d_matrix_mode(G3D_TEXTURE);
+	g3d_load_identity();
+	g3d_translate(texanim, texanim, 0);
+	draw_mesh(poolmesh);
+	g3d_disable(G3D_TEXTURE_MAT);
+	g3d_matrix_mode(G3D_MODELVIEW);
 
 	swap_buffers(fb_pixels);
 }

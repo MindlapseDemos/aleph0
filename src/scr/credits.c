@@ -127,7 +127,6 @@ static int credits_init(void)
 	}
 	crd_texv[CRD_LINES] = (float)y / 512.0f;
 	destroy_font(&fnt);
-	save_image(&ctex, "ctex.png");
 
 	/* load envmap */
 	if(load_image(&envmap, "data/crenv.jpg") == -1) {

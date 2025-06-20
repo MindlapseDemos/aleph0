@@ -41,17 +41,34 @@ if [ ! -f data/aleph0.gmp -o data/src/aleph0.ttf -nt data/aleph0.gmp -o $0 -nt d
 fi
 
 # convert goat3d scenes
-mkdir -p data/3dzoom
-if [ ! -f data/3dzoom/reactor.g3d -o data/src/3dzoom/reactor.obj -nt data/3dzoom/reactor.g3d ]; then
-	if ass2goat data/src/3dzoom/reactor.obj; then
-		mv data/src/3dzoom/reactor.goat3d data/3dzoom/reactor.g3d
-		for i in data/src/3dzoom/*.png; do
-			dest=data/3dzoom/`basename $i`
-			echo "resizing $i to 256x256 -> $dest"
-			convert -resize 256x256 $i $dest
-		done
+srcdir=data/src/3dzoom
+dstdir=data/3dzoom
+
+convimg()
+{
+	if [ ! -f $2 -o $1 -nt $2 -o $0 -nt $2 ]; then
+		sz=`identify $1 | awk '{ print $3 }'`
+		echo "image $1 -> $2 ($sz -> $3)"
+		convert -resize $3 -quality 95 $1 $2
+	fi
+}
+
+mkdir -p $dstdir
+if [ ! -f $dstdir/reactor.g3d -o $srcdir/reactor.obj -nt $dstdir/reactor.g3d ]; then
+	if ass2goat $srcdir/reactor.obj; then
+		mv $srcdir/reactor.goat3d $dstdir/reactor.g3d
 	fi
 fi
+
+for i in $srcdir/wall*.png; do
+	dest=$dstdir/`basename $i .png`.jpg
+	convimg $i $dest 256x256
+done
+
+convimg $srcdir/pool.png $dstdir/pool.jpg 64x64
+convimg $srcdir/base.png $dstdir/base.jpg 256x128
+convimg $srcdir/floor.png $dstdir/floor.jpg 128x256
+convimg $srcdir/columns.png $dstdir/columns.jpg 32x256
 
 # generate curved tunnel multi-lut!
 #if [ ! -f tools/tungen ]; then

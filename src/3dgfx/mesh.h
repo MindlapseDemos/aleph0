@@ -19,6 +19,7 @@ struct g3d_mesh {
 	uint16_t *iarr;
 	int vcount, icount;
 	char *name;
+	unsigned int flags;
 
 	struct g3d_material *mtl;
 };

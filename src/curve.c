@@ -293,7 +293,7 @@ void crv_eval(const struct curve *cu, float t, cgm_vec3 *res)
 	if(t < 0.0f) t = 0.0f;
 	if(t > 1.0f) t = 1.0f;
 
-	idx0 = cround64(t * (num_cp - 1));
+	idx0 = cround64(floor(t * (num_cp - 1)));
 	if(num_cp - 2 < idx0) idx0 = num_cp - 2;
 	idx1 = idx0 + 1;
 
@@ -381,4 +381,5 @@ int crv_load(struct curve *cu, const char *fname)
 
 err:
 	ts_free_tree(ts);
+	return -1;
 }

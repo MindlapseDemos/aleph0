@@ -10,13 +10,14 @@
 #include "dynarr.h"
 #include "curve.h"
 
-#define VFOV	60.0f
+#define VFOV	80.0f
 
 
 static int init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
+static void keypress(int key);
 
 
 static struct screen scr = {
@@ -25,7 +26,8 @@ static struct screen scr = {
 	destroy,
 	start,
 	0,
-	draw
+	draw,
+	keypress
 };
 
 static float cam_theta, cam_phi;
@@ -36,6 +38,7 @@ static struct g3d_mesh *poolmesh;
 
 static struct curve campath;
 
+static int dbgfreelook;
 
 struct screen *zoom3d_screen(void)
 {
@@ -68,7 +71,7 @@ static int init(void)
 	}
 	num_cp = crv_num_points(&campath);
 	for(i=0; i<num_cp; i++) {
-		cgm_vscale(campath.cp + i, 0.1f);
+		cgm_vscale(campath.cp + i, 0.036f);
 	}
 
 	return 0;
@@ -93,32 +96,42 @@ static void start(long trans_time)
 	g3d_clear_color(0, 0, 0);
 }
 
-cgm_vec3 campos, camtarg = {0};
+static cgm_vec3 campos, camtarg = {0};
+static float cam_t;
 
 static void update(void)
 {
-	crv_eval(&campath, time_msec * 0.1f, &campos);
+	cam_t = fmod((float)time_msec * 0.00005f, 1.0f);
+	crv_eval(&campath, cam_t, &campos);
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
 }
 
 static void draw(void)
 {
+	int i;
 	float viewmat[16];
 	float texanim = (float)time_msec / 8192.0f;
 	cgm_vec3 up = {0, 1, 0};
+	char buf[64];
+	cgm_vec3 pos, prev;
+	float t;
+	int num_samples;
+
 	update();
 
-	cgm_minv_lookat(viewmat, &campos, &camtarg, &up);
-
 	g3d_matrix_mode(G3D_MODELVIEW);
-	g3d_load_matrix(viewmat);
-	/*g3d_load_identity();
-	g3d_translate(0, -0.5, -cam_dist);
-	g3d_rotate(cam_phi, 1, 0, 0);
-	g3d_rotate(cam_theta, 0, 1, 0);
-	*/
-	if(opt.sball) {
-		g3d_mult_matrix(sball_matrix);
+	g3d_load_identity();
+	if(!dbgfreelook) {
+		g3d_rotate_z(0.4);
+		cgm_minv_lookat(viewmat, &campos, &camtarg, &up);
+		g3d_mult_matrix(viewmat);
+	} else {
+		g3d_translate(0, -0.5, -cam_dist);
+		g3d_rotate(cam_phi, 1, 0, 0);
+		g3d_rotate(cam_theta, 0, 1, 0);
+		if(opt.sball) {
+			g3d_mult_matrix(sball_matrix);
+		}
 	}
 
 	g3d_clear(G3D_COLOR_BUFFER_BIT | G3D_DEPTH_BUFFER_BIT);
@@ -135,4 +148,13 @@ static void draw(void)
 	g3d_matrix_mode(G3D_MODELVIEW);
 
 	swap_buffers(fb_pixels);
+}
+
+static void keypress(int key)
+{
+	switch(key) {
+	case ' ':
+		dbgfreelook ^= 1;
+		break;
+	}
 }

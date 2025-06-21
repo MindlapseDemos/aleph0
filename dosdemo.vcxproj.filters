@@ -64,6 +64,9 @@
     <ClCompile Include="src\font.c">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\curve.c">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="src\msurf2.c">
       <Filter>src</Filter>
     </ClCompile>
@@ -214,6 +217,9 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\font.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\curve.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\mcubes.h">

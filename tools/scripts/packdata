@@ -1,1 +1,1 @@
-zip -r data.zip data -x *.svn* -x data/src/*
+zip -r data.zip data -x '*.svn*' -x 'data/src/*'

@@ -8,6 +8,7 @@
 #include "util.h"
 #include "gfxutil.h"
 #include "dynarr.h"
+#include "curve.h"
 
 #define VFOV	60.0f
 
@@ -33,6 +34,8 @@ static float cam_dist = 80;
 static struct g3d_scene *scn;
 static struct g3d_mesh *poolmesh;
 
+static struct curve campath;
+
 
 struct screen *zoom3d_screen(void)
 {
@@ -42,6 +45,7 @@ struct screen *zoom3d_screen(void)
 
 static int init(void)
 {
+	int i, num_cp;
 	struct goat3d *g;
 
 	if(!(g = goat3d_create()) || goat3d_load(g, "data/3dzoom/reactor.g3d") == -1) {
@@ -56,6 +60,16 @@ static int init(void)
 
 	poolmesh = scn_find_mesh(scn, "Plane");
 	poolmesh->flags |= G3DMESH_SKIP;
+
+	if(crv_load(&campath, "data/rcampath.crv") == -1) {
+		fprintf(stderr, "reactor: failed to load camera path spline\n");
+		goat3d_free(g);
+		return -1;
+	}
+	num_cp = crv_num_points(&campath);
+	for(i=0; i<num_cp; i++) {
+		cgm_vscale(campath.cp + i, 0.1f);
+	}
 
 	return 0;
 }
@@ -79,22 +93,30 @@ static void start(long trans_time)
 	g3d_clear_color(0, 0, 0);
 }
 
+cgm_vec3 campos, camtarg = {0};
 
 static void update(void)
 {
+	crv_eval(&campath, time_msec * 0.1f, &campos);
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
 }
 
 static void draw(void)
 {
+	float viewmat[16];
 	float texanim = (float)time_msec / 8192.0f;
+	cgm_vec3 up = {0, 1, 0};
 	update();
 
+	cgm_minv_lookat(viewmat, &campos, &camtarg, &up);
+
 	g3d_matrix_mode(G3D_MODELVIEW);
-	g3d_load_identity();
+	g3d_load_matrix(viewmat);
+	/*g3d_load_identity();
 	g3d_translate(0, -0.5, -cam_dist);
 	g3d_rotate(cam_phi, 1, 0, 0);
 	g3d_rotate(cam_theta, 0, 1, 0);
+	*/
 	if(opt.sball) {
 		g3d_mult_matrix(sball_matrix);
 	}

@@ -167,7 +167,7 @@ void POLYFILL(struct pvertex *varr)
 	if(top < 0) top = 0;
 	if(bot >= pfill_fb.height) bot = pfill_fb.height - 1;
 
-	fbptr = pfill_fb.pixels + top * pfill_fb.width;
+	fbptr = pfill_fb.pixels + top * pfill_fb.scanlen;
 	for(i=top; i<=bot; i++) {
 		start = left[i].x;
 		len = right[i].x - start;
@@ -307,7 +307,7 @@ void POLYFILL(struct pvertex *varr)
 			*pptr++ = color;
 #endif
 		}
-		fbptr += pfill_fb.width;
+		fbptr += pfill_fb.scanlen;
 	}
 }
 

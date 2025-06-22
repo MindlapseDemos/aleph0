@@ -85,6 +85,8 @@ static void destroy(void)
 
 static void start(long trans_time)
 {
+	/*g3d_framebuffer(240, 240, fb_pixels + 320 - 240, 320);*/
+
 	g3d_matrix_mode(G3D_PROJECTION);
 	g3d_load_identity();
 	g3d_perspective(VFOV, 1.3333333, 15.0, 300.0);
@@ -96,6 +98,11 @@ static void start(long trans_time)
 	g3d_polygon_mode(G3D_FLAT);
 
 	g3d_clear_color(0, 0, 0);
+}
+
+static void stop(long trans_time)
+{
+	g3d_framebuffer(320, 240, fb_pixels, 320);
 }
 
 static cgm_vec3 campos, camtarg = {0};

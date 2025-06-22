@@ -93,7 +93,7 @@ int demo_init(void)
 	if(g3d_init() == -1) {
 		return -1;
 	}
-	g3d_framebuffer(FB_WIDTH, FB_HEIGHT, fb_pixels);
+	g3d_framebuffer(FB_WIDTH, FB_HEIGHT, fb_pixels, FB_WIDTH);
 
 	if(opt.music) {
 		if(!(mod = au_load_module("data/music.xm"))) {

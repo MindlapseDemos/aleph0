@@ -93,12 +93,12 @@ demoseq {
 		electroids {
 			interp = "linear"
 			key(0) = 0
-			key(2) = 64
+			key(8192) = 64
 		}
 
 		scrollUp {
 			wait = 0
-			dur = 4096
+			dur = 0
 		}
 
 		lightsIn {

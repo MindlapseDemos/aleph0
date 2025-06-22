@@ -778,13 +778,14 @@ static void bumpScript()
 
 	numParticlesVisible = dseq_value(ev_electroids);
 	CLAMP(numParticlesVisible, 0, NUM_PARTICLES);
+	//printf("%d\n", numParticlesVisible);
 
 	if (dseq_triggered(ev_scrollUp)) {
 		startScrollingBump = 1;
 	}
 	if ((val1 = dseq_value(ev_lightsIn)) > 0.0f) {
 		if (val1 != prevVal1) {
-			/* printf("lightsIn) %d\n", val1); */
+			//printf("lightsIn) %d\n", val1);
 			prevVal1 = val1;
 		}
 	}

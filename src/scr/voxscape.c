@@ -334,6 +334,48 @@ static int initHeightmapAndColormap()
 	return 0;
 }
 
+static void distmapHack()
+{
+	//static int dist[255];
+	int count = DMAP_SIZE;
+	unsigned char* dm = distMap;
+	//int min = 256;
+	//int max = -1;
+	//int i;
+	//memset(dist, 0, sizeof(int) * 255);
+	do {
+		unsigned char c = *dm;
+		//if (c < min) min = c;
+		//if (c > max) max = c;
+		//dist[c]++;
+
+		if (c < 10) {
+			c *= 1.75f;
+		} else if (c < 30) {
+			c *= 1.5f;
+		} else {
+			c *= 1.25f;
+		}
+
+		*dm++ = c;
+	} while (--count != 0);
+	//printf("ABC %d %d\n", min, max);
+
+	/*
+	for (i = 0; i < 255; ++i) {
+		int a = dist[i] >> 8;
+		//if (a > 0) printf("%d) %d\n", i, a);
+		if (a > 0) {
+			int j;
+			printf("%d) ", i);
+			for (j = 0; j < a; ++j) {
+				printf("*");
+			}
+			printf("\n");
+		}
+	}
+	*/
+}
 
 static int initDistMap()
 {
@@ -419,6 +461,8 @@ static int initDistMap()
 		CLAMP(f, 0.0f, 1.0f)
 		petrubTab[i] = (int)(f * PETRUB_RANGE);
 	}
+
+	distmapHack();
 
 	return 0;
 }
@@ -564,25 +608,21 @@ static uint16_t reflectSample(int px, int py, int dvx, int dvy, int ph, int dh, 
 	int vx = px;
 	int vy = py;
 
-	int distOffset = (vy >> (FP_SCAPE + DMAP_SHIFT)) * DMAP_WIDTH + (vx >> (FP_SCAPE + DMAP_SHIFT));
-	int distMapOffset = distOffset & (DMAP_SIZE - 1);
-	int sampleOffset = (vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE);
-	int sampleMapOffset = sampleOffset & (HMAP_SIZE - 1);
 	for (i = 0; i < remainingSteps;) {
+		int distOffset = (vy >> (FP_SCAPE + DMAP_SHIFT)) * DMAP_WIDTH + (vx >> (FP_SCAPE + DMAP_SHIFT));
+		int distMapOffset = distOffset & (DMAP_SIZE - 1);
 		const int safeSteps = distMap[distMapOffset];
 
 		if (safeSteps == 0) {
 			return reflectSky(px, py, dvx, dvy, dh, petrubation>>1);
 		} else {
+			int sampleMapOffset;
 			vx += safeSteps * dvx;
 			vy += safeSteps * dvy;
+
+			sampleMapOffset = ((vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE)) & (HMAP_SIZE - 1);
+
 			ph += safeSteps * dh;
-
-			distOffset = (vy >> (FP_SCAPE + DMAP_SHIFT)) * DMAP_WIDTH + (vx >> (FP_SCAPE + DMAP_SHIFT));
-			distMapOffset = distOffset & (DMAP_SIZE - 1);
-			sampleOffset = (vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE);
-			sampleMapOffset = sampleOffset & (HMAP_SIZE - 1);
-
 			if ((ph >> FP_SCALE) < hmap[sampleMapOffset]) {
 				return pal[cmap[sampleMapOffset] + (petrubation >> 2) * 256];
 			}
@@ -714,8 +754,8 @@ static void renderScape(int petrT)
 		const int dvy = pixStep * ((vyR - vyL) / VIS_HOR_STEPS);
 		int vx = vxL;
 		int vy = vyL;
-		int flip = 0;
-		uint16_t cvPrev = 0;
+		//int flip = 0;
+		//uint16_t cvPrev = 0;
 
 		const uint16_t* pmapPtr = pmap +shadeVoxOff[i];
 		uint16_t* pmapPtrShade;
@@ -743,7 +783,7 @@ static void renderScape(int petrT)
 					if (hm > SEA_LEVEL) {
 						cv = pmapPtr[cmap[mapOffset]];
 					} else {
-						if (flip == 0 || j==VIS_HOR_STEPS - pixStep) {
+						/*if (flip == 0 || j == VIS_HOR_STEPS - pixStep) {
 							const int petrubation = petrubTab[(((petrubTab[j >> 1] + i) >> 1) + petrT) & (PETRUB_SIZE - 1)];
 							const int dh = ((playerHeight + petrubation - hm) << FP_SCALE) / (i + 1);
 							const int dvxH = viewNearStepVec[j].x;
@@ -751,22 +791,32 @@ static void renderScape(int petrT)
 							cv = reflectSample(vx, vy, dvxH, dvyH, hm << FP_SCALE, dh, VIS_VER_STEPS - i, pmapPtrShade, petrubation);
 						} else {
 							cv = 0;
-						}
+						}*/
+
+						//if (j == VIS_HOR_STEPS - pixStep) {
+							const int petrubation = petrubTab[(((petrubTab[j >> 1] + i) >> 1) + petrT) & (PETRUB_SIZE - 1)];
+							const int dh = ((playerHeight + petrubation - hm) << FP_SCALE) / (i + 1);
+							const int dvxH = viewNearStepVec[j].x;
+							const int dvyH = viewNearStepVec[j].y;
+							cv = reflectSample(vx, vy, dvxH, dvyH, hm << FP_SCALE, dh, VIS_VER_STEPS - i, pmapPtrShade, petrubation);
+						//}
 					}
 
 					yH = yMaxHolder[j];
 					yMaxHolder[j] = h;
 
-					columnRenderDataPtr->hCount = h - yH;
-					columnRenderDataPtr->cv = cv;
-					columnRenderDataPtr->dst = dstBase - (yH -1) * FB_WIDTH + j;
-					++columnRenderDataPtr;
+					//columnRenderDataPtr->hCount = h - yH;
+					//columnRenderDataPtr->cv = cv;
+					//columnRenderDataPtr->dst = dstBase - (yH -1) * FB_WIDTH + j;
+					//++columnRenderDataPtr;
+
+					drawColumnFunc(h - yH, cv, dstBase - (yH - 1) * FB_WIDTH + j);
 				}
 			}
 			vx += dvx; vy += dvy;
-			flip ^= 1;
+			//flip ^= 1;
 		}
-		columnRenderDataPtr->cv = 0;
+		/*columnRenderDataPtr->cv = 0;
 		lastColumnRenderDataPtr = columnRenderDataPtr;
 
 		columnRenderDataPtr = columnRenderData;
@@ -791,7 +841,7 @@ static void renderScape(int petrT)
 			}
 			cvPrev = cv;
 			++columnRenderDataPtr; 
-		};
+		};*/
 
 		vxL += dvxL; vyL += dvyL;
 		vxR += dvxR; vyR += dvyR;

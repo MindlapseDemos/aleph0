@@ -39,6 +39,7 @@ static struct g3d_mesh *poolmesh;
 static struct curve campath;
 
 static int dbgfreelook;
+static dseq_event *ev_reactor;
 
 struct screen *zoom3d_screen(void)
 {
@@ -74,6 +75,7 @@ static int init(void)
 		cgm_vscale(campath.cp + i, 0.036f);
 	}
 
+	ev_reactor = dseq_lookup("reactor");
 	return 0;
 }
 
@@ -101,7 +103,7 @@ static float cam_t;
 
 static void update(void)
 {
-	cam_t = fmod((float)time_msec * 0.00005f, 1.0f);
+	cam_t = dseq_param(ev_reactor);
 	crv_eval(&campath, cam_t, &campos);
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
 }
@@ -121,7 +123,7 @@ static void draw(void)
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
-	if(!dbgfreelook) {
+	if(dseq_started()) {
 		g3d_rotate_z(0.4);
 		cgm_minv_lookat(viewmat, &campos, &camtarg, &up);
 		g3d_mult_matrix(viewmat);

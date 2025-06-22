@@ -86,12 +86,6 @@ typedef struct Point2D
 	int x,y;
 } Point2D;
 
-typedef struct ColumnRenderData
-{
-	uint16_t hCount;
-	uint16_t cv;
-	uint16_t* dst;
-}ColumnRenderData;
 
 static unsigned char* distMap;
 
@@ -104,7 +98,6 @@ static int *isin = NULL;
 static Point2D *viewNearPosVec = NULL;
 static Point2D *viewNearStepVec = NULL;
 static int* yMaxHolder = NULL;
-static ColumnRenderData* columnRenderData = NULL;
 
 static unsigned char *hmap = NULL;
 static unsigned char *cmap = NULL;
@@ -334,47 +327,25 @@ static int initHeightmapAndColormap()
 	return 0;
 }
 
+/* Ugly hack and can get artifact */
+/* Also points out there could be a more optimal distance field, mine is just tweaked to something but not precise */
 static void distmapHack()
 {
-	//static int dist[255];
 	int count = DMAP_SIZE;
 	unsigned char* dm = distMap;
-	//int min = 256;
-	//int max = -1;
-	//int i;
-	//memset(dist, 0, sizeof(int) * 255);
 	do {
 		unsigned char c = *dm;
-		//if (c < min) min = c;
-		//if (c > max) max = c;
-		//dist[c]++;
 
-		if (c < 10) {
-			c *= 1.75f;
-		} else if (c < 30) {
+		if (c < 8) {
 			c *= 1.5f;
-		} else {
+		} else if (c < 16) {
 			c *= 1.25f;
+		} else {
+			c *= 1.125f;
 		}
 
 		*dm++ = c;
 	} while (--count != 0);
-	//printf("ABC %d %d\n", min, max);
-
-	/*
-	for (i = 0; i < 255; ++i) {
-		int a = dist[i] >> 8;
-		//if (a > 0) printf("%d) %d\n", i, a);
-		if (a > 0) {
-			int j;
-			printf("%d) ", i);
-			for (j = 0; j < a; ++j) {
-				printf("*");
-			}
-			printf("\n");
-		}
-	}
-	*/
 }
 
 static int initDistMap()
@@ -524,7 +495,6 @@ static int init(void)
 	viewNearPosVec = malloc(VIS_HOR_STEPS * sizeof(Point2D));
 	viewNearStepVec = malloc(VIS_HOR_STEPS * sizeof(Point2D));
 	yMaxHolder = malloc(VIS_HOR_STEPS * sizeof(int));
-	columnRenderData = (ColumnRenderData*)malloc((VIS_HOR_STEPS + 1) * sizeof(ColumnRenderData));
 
 
 	if(initHeightmapAndColormap() == -1 || initDistMap() == -1) {
@@ -543,7 +513,6 @@ static void destroy(void)
 	free(viewNearPosVec);
 	free(viewNearStepVec);
 	free(yMaxHolder);
-	free(columnRenderData);
 	free(hmap);
 	free(cmap);
 	free(pmap);
@@ -754,15 +723,10 @@ static void renderScape(int petrT)
 		const int dvy = pixStep * ((vyR - vyL) / VIS_HOR_STEPS);
 		int vx = vxL;
 		int vy = vyL;
-		//int flip = 0;
-		//uint16_t cvPrev = 0;
 
 		const uint16_t* pmapPtr = pmap +shadeVoxOff[i];
 		uint16_t* pmapPtrShade;
 		const int heightScale = heightScaleTab[i];
-
-		ColumnRenderData* columnRenderDataPtr = columnRenderData;
-		ColumnRenderData* lastColumnRenderDataPtr = columnRenderData;
 
 		int shadePalI = i + (int)((VIS_VER_STEPS - 1) * REFLECT_SHADE);
 		CLAMP(shadePalI, 0, VIS_VER_STEPS-1)
@@ -783,65 +747,21 @@ static void renderScape(int petrT)
 					if (hm > SEA_LEVEL) {
 						cv = pmapPtr[cmap[mapOffset]];
 					} else {
-						/*if (flip == 0 || j == VIS_HOR_STEPS - pixStep) {
-							const int petrubation = petrubTab[(((petrubTab[j >> 1] + i) >> 1) + petrT) & (PETRUB_SIZE - 1)];
-							const int dh = ((playerHeight + petrubation - hm) << FP_SCALE) / (i + 1);
-							const int dvxH = viewNearStepVec[j].x;
-							const int dvyH = viewNearStepVec[j].y;
-							cv = reflectSample(vx, vy, dvxH, dvyH, hm << FP_SCALE, dh, VIS_VER_STEPS - i, pmapPtrShade, petrubation);
-						} else {
-							cv = 0;
-						}*/
-
-						//if (j == VIS_HOR_STEPS - pixStep) {
-							const int petrubation = petrubTab[(((petrubTab[j >> 1] + i) >> 1) + petrT) & (PETRUB_SIZE - 1)];
-							const int dh = ((playerHeight + petrubation - hm) << FP_SCALE) / (i + 1);
-							const int dvxH = viewNearStepVec[j].x;
-							const int dvyH = viewNearStepVec[j].y;
-							cv = reflectSample(vx, vy, dvxH, dvyH, hm << FP_SCALE, dh, VIS_VER_STEPS - i, pmapPtrShade, petrubation);
-						//}
+						const int petrubation = petrubTab[(((petrubTab[j >> 1] + i) >> 1) + petrT) & (PETRUB_SIZE - 1)];
+						const int dh = ((playerHeight + petrubation - hm) << FP_SCALE) / (i + 1);
+						const int dvxH = viewNearStepVec[j].x;
+						const int dvyH = viewNearStepVec[j].y;
+						cv = reflectSample(vx, vy, dvxH, dvyH, hm << FP_SCALE, dh, VIS_VER_STEPS - i, pmapPtrShade, petrubation);
 					}
 
 					yH = yMaxHolder[j];
 					yMaxHolder[j] = h;
 
-					//columnRenderDataPtr->hCount = h - yH;
-					//columnRenderDataPtr->cv = cv;
-					//columnRenderDataPtr->dst = dstBase - (yH -1) * FB_WIDTH + j;
-					//++columnRenderDataPtr;
-
 					drawColumnFunc(h - yH, cv, dstBase - (yH - 1) * FB_WIDTH + j);
 				}
 			}
 			vx += dvx; vy += dvy;
-			//flip ^= 1;
 		}
-		/*columnRenderDataPtr->cv = 0;
-		lastColumnRenderDataPtr = columnRenderDataPtr;
-
-		columnRenderDataPtr = columnRenderData;
-		while (columnRenderDataPtr != lastColumnRenderDataPtr)
-		{
-			int hCount = (int)columnRenderDataPtr->hCount;
-			uint16_t cv = columnRenderDataPtr->cv;
-			uint16_t* dst = columnRenderDataPtr->dst;
-
-			if (cv != 0) {
-				drawColumnFunc(hCount, cv, dst);
-			} else {
-				uint16_t cvNext = (columnRenderDataPtr+1)->cv;
-				const int r0 = (cvPrev >> 11) & 31;
-				const int g0 = (cvPrev >> 5) & 63;
-				const int b0 = cvPrev & 31;
-				const int r1 = (cvNext >> 11) & 31;
-				const int g1 = (cvNext >> 5) & 63;
-				const int b1 = cvNext & 31;
-				const uint16_t cvMix = (((r0 + r1) >> 1) << 11) | (((g0 + g1) >> 1) << 5) | ((b0 + b1) >> 1);
-				drawColumnFunc(hCount, cvMix, dst);
-			}
-			cvPrev = cv;
-			++columnRenderDataPtr; 
-		};*/
 
 		vxL += dvxL; vyL += dvyL;
 		vxR += dvxR; vyR += dvyR;

@@ -31,6 +31,7 @@ int dseq_isopen(void);
 
 void dseq_start(void);
 void dseq_stop(void);
+void dseq_pause(void);
 void dseq_resume(void);
 int dseq_started(void);
 void dseq_ffwd(long tm);

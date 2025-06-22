@@ -53,7 +53,8 @@ static unsigned int bmask_diff, prev_bmask;
 
 static unsigned long nframes;
 static int con_active;
-static int ignore_scrchg_trig, running, show_dseq_dbg;
+static int running, show_dseq_dbg;
+static struct screen *runonlypart;
 
 extern uint16_t loading_pixels[];	/* data.asm */
 
@@ -157,8 +158,10 @@ int demo_init(void)
 void demo_cleanup(void)
 {
 #ifdef __GLIBC__
-	printf("malloc statistics:\n");
-	malloc_stats();
+	if(opt.dbgmode) {
+		printf("malloc statistics:\n");
+		malloc_stats();
+	}
 #endif
 
 	if(opt.music) {
@@ -334,7 +337,7 @@ void demo_keyboard(int key, int press)
 		case ' ':
 			if(running) {
 				if(dseq_started()) {
-					dseq_stop();
+					dseq_pause();
 				} else {
 					dseq_resume();
 				}
@@ -369,7 +372,7 @@ void demo_run(long start_time)
 		curscr = 0;
 	}
 
-	ignore_scrchg_trig = 0;
+	runonlypart = 0;
 	reset_timer(start_time);
 	dseq_start();
 	dseq_ffwd(start_time);
@@ -387,7 +390,6 @@ void demo_runpart(const char *name)
 		return;
 	}
 
-	ignore_scrchg_trig = 1;
 	evstart = dseq_start_time(ev);
 	reset_timer(evstart);
 
@@ -398,13 +400,16 @@ void demo_runpart(const char *name)
 		curscr = 0;
 	}
 
+	runonlypart = 0;
 	nscr = scr_num_screens();
 	for(i=0; i<nscr; i++) {
 		if(strcmp(scr_screen(i)->name, name) == 0) {
+			runonlypart = scr_screen(i);
 			change_screen(i);
 			break;
 		}
 	}
+	if(!runonlypart) return;
 
 	reset_timer(evstart);
 	dseq_start();
@@ -442,8 +447,12 @@ void mouse_orbit_update(float *theta, float *phi, float *dist)
 /* process demo sequence triggers for screen changes */
 static void screen_evtrig(dseq_event *ev, enum dseq_trig_mask trig, void *cls)
 {
-	if(ignore_scrchg_trig) return;
-	change_screen((intptr_t)cls);
+	int scrno = (intptr_t)cls;
+	if(runonlypart && scr_screen(scrno) != runonlypart) {
+		dseq_stop();
+		return;
+	}
+	change_screen(scrno);
 }
 
 /* initialize pointers to various routines which have MMX versions if they're

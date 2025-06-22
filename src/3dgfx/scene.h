@@ -5,6 +5,11 @@
 #include "mesh.h"
 #include "goat3d.h"
 
+/* mesh flags */
+enum {
+	G3DMESH_SKIP	= 1
+};
+
 struct g3d_node {
 	char *name;
 	struct g3d_mesh *mesh;

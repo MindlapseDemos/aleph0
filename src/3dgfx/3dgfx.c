@@ -147,7 +147,7 @@ void g3d_reset(void)
 	st->clear_depth = 0xffffff;
 }
 
-void g3d_framebuffer(int width, int height, void *pixels)
+void g3d_framebuffer(int width, int height, void *pixels, int scanlen)
 {
 	static int max_height;
 
@@ -173,6 +173,7 @@ void g3d_framebuffer(int width, int height, void *pixels)
 	pfill_fb.pixels = pixels;
 	pfill_fb.width = width;
 	pfill_fb.height = height;
+	pfill_fb.scanlen = scanlen;
 
 	g3d_viewport(0, 0, width, height);
 }
@@ -207,7 +208,7 @@ void g3d_clear_depth(float z)
 void g3d_clear(unsigned int mask)
 {
 	if(mask & G3D_COLOR_BUFFER_BIT) {
-		memset16(pfill_fb.pixels, st->clear_color, pfill_fb.width * pfill_fb.height);
+		memset16(pfill_fb.pixels, st->clear_color, pfill_fb.scanlen * pfill_fb.height);
 	}
 	if(mask & G3D_DEPTH_BUFFER_BIT) {
 		memset16(pfill_zbuf, st->clear_depth, pfill_fb.width * pfill_fb.height * sizeof *pfill_zbuf / 2);
@@ -549,7 +550,7 @@ static INLINE int calc_mask(unsigned int x)
 void g3d_set_texture(int xsz, int ysz, void *pixels)
 {
 	pfill_tex.pixels = pixels;
-	pfill_tex.width = xsz;
+	pfill_tex.width = pfill_tex.scanlen = xsz;
 	pfill_tex.height = ysz;
 
 	pfill_tex.xshift = calc_shift(xsz);
@@ -689,7 +690,7 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 		case 1:
 			if(st->opt & (G3D_ALPHA_BLEND | G3D_ADD_BLEND)) {
 				int r, g, b, inv_alpha;
-				g3d_pixel *dest = pfill_fb.pixels + (pv[0].y >> 8) * st->width + (pv[0].x >> 8);
+				g3d_pixel *dest = pfill_fb.pixels + (pv[0].y >> 8) * pfill_fb.scanlen + (pv[0].x >> 8);
 				if(st->opt & G3D_ALPHA_BLEND) {
 					inv_alpha = 255 - pv[0].a;
 					r = ((int)pv[0].r * pv[0].a + G3D_UNPACK_R(*dest) * inv_alpha) >> 8;
@@ -705,7 +706,7 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 				}
 				*dest++ = G3D_PACK_RGB(r, g, b);
 			} else {
-				g3d_pixel *dest = pfill_fb.pixels + (pv[0].y >> 8) * st->width + (pv[0].x >> 8);
+				g3d_pixel *dest = pfill_fb.pixels + (pv[0].y >> 8) * pfill_fb.scanlen + (pv[0].x >> 8);
 				*dest = G3D_PACK_RGB(pv[0].r, pv[0].g, pv[0].b);
 			}
 			break;

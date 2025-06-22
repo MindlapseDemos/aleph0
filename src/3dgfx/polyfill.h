@@ -40,7 +40,7 @@ struct pgradient {
 
 struct pimage {
 	g3d_pixel *pixels;
-	int width, height;
+	int width, height, scanlen;
 
 	int xshift, yshift;
 	unsigned int xmask, ymask;

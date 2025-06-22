@@ -64,7 +64,12 @@ demoseq {
 	}
 
 	reactor {
-		dur = 2000
+		dur = 12000
+
+		flash {
+			start = 11250
+			dur = 750
+		}
 	}
 
 	infcubes {

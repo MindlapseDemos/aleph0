@@ -599,7 +599,9 @@ void scn_draw(struct g3d_scene *scn)
 	if(darr_empty(scn->nodes)) {
 		num = darr_size(scn->meshes);
 		for(i=0; i<num; i++) {
-			draw_mesh(scn->meshes[i]);
+			if(!(scn->meshes[i]->flags & G3DMESH_SKIP)) {
+				draw_mesh(scn->meshes[i]);
+			}
 		}
 	} else {
 		num = darr_size(scn->nodes);
@@ -623,7 +625,7 @@ void scn_draw_node(struct g3d_node *node)
 	g3d_push_matrix();
 	g3d_mult_matrix(node->xform);
 
-	if(node->mesh) {
+	if(node->mesh && !(node->mesh->flags & G3DMESH_SKIP)) {
 		draw_mesh(node->mesh);
 	}
 

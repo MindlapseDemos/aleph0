@@ -404,9 +404,16 @@ void dseq_start(void)
 	prev_upd = time_msec;
 }
 
-void dseq_stop(void)
+void dseq_pause(void)
 {
 	started = 0;
+}
+
+void dseq_stop(void)
+{
+	dseq_pause();
+	active_events = 0;
+	nextev = 0;
 }
 
 void dseq_resume(void)

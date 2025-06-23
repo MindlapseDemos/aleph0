@@ -421,10 +421,17 @@ int link_goat3d_node(struct g3d_scene *scn, struct g3d_node *dstnode, struct goa
 {
 	int i, num;
 	struct goat3d_node *gnode;
-	struct g3d_node *node, *tail;
+	struct g3d_node *node, *tail = 0;
 
 	if((gnode = goat3d_get_node_parent(srcnode))) {
 		dstnode->parent = scn_find_node(scn, goat3d_get_node_name(gnode));
+	}
+
+	if(dstnode->child) {
+		tail = dstnode->child;
+		while(tail->next) {
+			tail = tail->next;
+		}
 	}
 
 	num = goat3d_get_node_child_count(srcnode);
@@ -432,7 +439,7 @@ int link_goat3d_node(struct g3d_scene *scn, struct g3d_node *dstnode, struct goa
 		gnode = goat3d_get_node_child(srcnode, i);
 		if((node = scn_find_node(scn, goat3d_get_node_name(gnode)))) {
 			node->next = 0;
-			if(dstnode->child) {
+			if(tail) {
 				tail->next = node;
 				tail = node;
 			} else {
@@ -610,6 +617,16 @@ void scn_draw(struct g3d_scene *scn)
 			if(node->parent) continue;
 
 			scn_draw_node(node);
+		}
+	}
+}
+
+void scn_draw_meshes(struct g3d_scene *scn)
+{
+	int i, num = darr_size(scn->meshes);
+	for(i=0; i<num; i++) {
+		if(!(scn->meshes[i]->flags & G3DMESH_SKIP)) {
+			draw_mesh(scn->meshes[i]);
 		}
 	}
 }

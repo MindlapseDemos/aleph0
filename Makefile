@@ -14,7 +14,7 @@ srcobj = src/bsptree.obj src/cfgopt.obj src/console.obj src/demo.obj &
 scrobj = src/scr/bump.obj src/scr/grise.obj src/scr/hairball.obj &
 	src/scr/infcubes.obj src/scr/metaball.obj src/scr/molten.obj &
 	src/scr/smoketxt.obj src/scr/thunder.obj src/scr/tunnel.obj &
-	src/scr/minifx.obj src/scr/voxscape.obj &
+	src/scr/minifx.obj src/scr/voxscape.obj src/scr/space.obj &
 	src/scr/hexfloor.obj src/scr/juliatun.obj src/scr/blobgrid.obj &
 	src/scr/3dzoom.obj src/scr/opt_rend.obj src/scr/opt_3d.obj &
 	src/scr/polka.obj src/scr/water.obj src/scr/waterasm.obj src/scr/credits.obj
@@ -40,7 +40,7 @@ srcobj = src\bsptree.obj src\cfgopt.obj src\console.obj src\demo.obj &
 scrobj = src\scr\bump.obj src\scr\grise.obj src\scr\hairball.obj &
 	src\scr\infcubes.obj src\scr\metaball.obj src\scr\molten.obj &
 	src\scr\smoketxt.obj src\scr\thunder.obj src\scr\tunnel.obj &
-	src\scr\minifx.obj src\scr\voxscape.obj &
+	src\scr\minifx.obj src\scr\voxscape.obj src\scr\space.obj &
 	src\scr\hexfloor.obj src\scr\juliatun.obj src\scr\blobgrid.obj &
 	src\scr\3dzoom.obj src\scr\opt_rend.obj src\scr\opt_3d.obj &
 	src\scr\polka.obj src\scr\water.obj src\scr\waterasm.obj src\scr\credits.obj

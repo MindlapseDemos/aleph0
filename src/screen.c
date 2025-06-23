@@ -29,6 +29,7 @@ struct screen *blobgrid_screen(void);
 struct screen *polka_screen(void);
 struct screen *water_screen(void);
 struct screen *zoom3d_screen(void);
+struct screen *space_screen(void);
 struct screen *molten_screen(void);
 struct screen *credits_screen(void);
 
@@ -66,6 +67,7 @@ void populate_screens(void)
 	scr[idx++] = polka_screen();
 	scr[idx++] = water_screen();
 	scr[idx++] = zoom3d_screen();
+	scr[idx++] = space_screen();
 	scr[idx++] = molten_screen();
 	scr[idx++] = credits_screen();
 

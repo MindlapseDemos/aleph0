@@ -72,6 +72,10 @@ demoseq {
 		}
 	}
 
+	space {
+		dur = 6000
+	}
+
 	infcubes {
 		dur = 2000
 	}

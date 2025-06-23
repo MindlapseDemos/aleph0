@@ -92,6 +92,7 @@ void scn_merge_anims(struct g3d_scene *scn);
 
 void scn_eval_anim(struct g3d_anim *anim, long tm);
 void scn_draw(struct g3d_scene *scn);
+void scn_draw_meshes(struct g3d_scene *scn); /* ignore nodes, draw only meshes */
 void scn_draw_node(struct g3d_node *node);
 
 #endif	/* SCENE_H_ */

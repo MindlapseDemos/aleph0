@@ -53,6 +53,7 @@ convimg()
 	fi
 }
 
+# -- reactor room
 mkdir -p $dstdir
 if [ ! -f $dstdir/reactor.g3d -o $srcdir/reactor.obj -nt $dstdir/reactor.g3d ]; then
 	if ass2goat $srcdir/reactor.obj; then
@@ -69,6 +70,16 @@ convimg $srcdir/pool.png $dstdir/pool.jpg 64x64
 convimg $srcdir/base.png $dstdir/base.jpg 256x128
 convimg $srcdir/floor.png $dstdir/floor.jpg 128x256
 convimg $srcdir/columns.png $dstdir/columns.jpg 32x256
+
+# -- space scene
+srcdir=data/src/space
+if [ ! -f data/frig8.g3d -o $srcdir/frigate.obj -nt data/frig8.g3d ]; then
+	if ass2goat $srcdir/frigate.obj; then
+		mv $srcdir/frigate.goat3d data/frig8.g3d
+	fi
+fi
+
+convimg $srcdir/frigtex.png data/frigtex.jpg 256x256
 
 # generate curved tunnel multi-lut!
 #if [ ! -f tools/tungen ]; then

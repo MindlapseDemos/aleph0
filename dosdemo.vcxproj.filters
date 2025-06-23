@@ -145,6 +145,9 @@
     <ClCompile Include="src\scr\3dzoom.c">
       <Filter>src\screens</Filter>
     </ClCompile>
+    <ClCompile Include="src\scr\space.c">
+      <Filter>src\screens</Filter>
+    </ClCompile>
     <ClCompile Include="src\scr\smoketxt.c">
       <Filter>src\screens</Filter>
     </ClCompile>

@@ -44,10 +44,10 @@
 #define VIS_VER_STEPS ((VIS_FAR - VIS_NEAR) / VIS_VER_SKIP)
 #define VIS_HOR_STEPS (FB_WIDTH / PIXEL_SIZE)
 
-#define LOCK_PLAYER_TO_GROUND
+//#define LOCK_PLAYER_TO_GROUND
 
 #define FLY_HEIGHT 96
-#define V_PLAYER_HEIGHT 32
+#define V_PLAYER_HEIGHT 64
 #define V_HEIGHT_SCALER_SHIFT 7
 #define V_HEIGHT_SCALER (1 << V_HEIGHT_SCALER_SHIFT)
 #define HORIZON (FB_HEIGHT * 0.7)
@@ -85,6 +85,14 @@ typedef struct Point2D
 {
 	int x,y;
 } Point2D;
+
+static int posAnglePath[] = { 322, 330, 1358, 2322, 206, 241, 1306, 2322, 62, 157, 1236, 2369, -22, 146, 1180, 2393, -123, 55, 1120, 2393, -177, 55, 1098, 2041,
+-254, 55, 1099, 2199, -390, 88, 1087, 1810, -464, 129, 1162, 1398, -470, 136, 1248, 882, -423, 153, 1350, 513, -363, 145, 1429, 806, -339, 99, 1481, 918,
+-328, 66, 1551, 918, -310, 69, 1609, 717, -249, 63, 1676, 364, -170, 63, 1704, 3830, -156, 63, 1657, 2986, -170, 63, 1635, 2368, -242, 63, 1635, 1594,
+-250, 63, 1649, 1204, -253, 63, 1720, 898, -201, 87, 1875, 838, -189, 123, 1952, 932, -191, 127, 2034, 1072, -191, 136, 2070, 820, -178, 147, 2114, 938,
+-168, 193, 2190, 938, -161, 207, 2244, 938, -147, 223, 2348, 938, -132, 260, 2466, 938, -117, 321, 2584, 938, -94, 329, 2758, 938, -78, 266, 2858, 797,
+-48, 211, 2942, 797, 25, 129, 3083, 688, 90, 129, 3187, 558, 156, 142, 3263, 558, 262, 236, 3384, 464, 327, 250, 3424, 104, 391, 228, 3424, 3997,
+470, 181, 3413, 58, 556, 164, 3446, 497, 588, 134, 3515, 763, 636, 109, 3629, 763, 681, 109, 3725, 593, 754, 86, 3758, 3953, 778, 55, 3765, 3168 };
 
 
 static unsigned char* distMap;
@@ -809,14 +817,14 @@ static void move(int dt)
 	const int velX = (speedX * isin[(viewAngle.y + SIN_TO_COS) & (SIN_LENGTH-1)]) >> FP_BASE;
 	const int velZ = (speedZ * isin[viewAngle.y & (SIN_LENGTH-1)]) >> FP_BASE;
 
-	/* printf("%d %d %d\n", viewPos.x >> FP_VIEWER, viewPos.z >> FP_VIEWER, viewAngle.y); */
+	static int pJustPressed = 0;
 
 	if (kb_isdown('w')) {
 		viewPos.x += velX;
 		viewPos.z += velZ;
 	}
 
-	if (kb_isdown('s')) {
+	if (kb_isdown('s') || kb_isdown('x')) {
 		viewPos.x -= velX;
 		viewPos.z -= velZ;
 	}
@@ -827,6 +835,22 @@ static void move(int dt)
 
 	if (kb_isdown('d')) {
 		viewAngle.y += speedX;
+	}
+
+	if (kb_isdown('q')) {
+		viewPos.y += (speedX << 4);
+	}
+	if (kb_isdown('c')) {
+		viewPos.y -= (speedX << 4);
+	}
+
+	if (kb_isdown('p')) {
+		if (pJustPressed == 0) {
+			printf("%d, %d, %d, %d\n", viewPos.x >> FP_VIEWER, viewPos.y >> FP_VIEWER, viewPos.z >> FP_VIEWER, viewAngle.y & (SIN_LENGTH - 1));
+		}
+		pJustPressed = 1;
+	} else {
+		pJustPressed = 0;
 	}
 
 	if(mouse_bmask & MOUSE_BN_LEFT) {

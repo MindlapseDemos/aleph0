@@ -45,7 +45,13 @@
 #endif
 
 #ifdef _WIN32
+#if defined(_MSC_VER) && _MSC_VER <= 1200
+/* old windows build with msvc6 uses SDL */
+#define DRV_SDL	1
+#else
+/* for modern windows use directsound */
 #define DRV_DS	1
+#endif
 #endif
 
 #ifdef __EMSCRIPTEN__

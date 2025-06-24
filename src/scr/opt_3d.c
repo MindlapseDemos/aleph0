@@ -7,6 +7,7 @@
 #include "demo.h"
 #include "screen.h"
 #include "util.h"
+#include "inttypes.h"
 
 
 static int rotMat[9];
@@ -20,7 +21,7 @@ static int* currentIndexPtr;
 
 int isqrt(int x)
 {
-    long long int q = 1;	/* very high numbers over((1 << 30) - 1) will freeze in while if this wasn't 64bit */
+    int64_t q = 1;	/* very high numbers over((1 << 30) - 1) will freeze in while if this wasn't 64bit */
 	int r = 0;
     while (q <= x) {
         q <<= 2;

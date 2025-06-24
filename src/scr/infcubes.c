@@ -151,7 +151,7 @@ static int gen_phong_tex(struct pimage *img, int xsz, int ysz, float sexp,
 		u = -1.0f - offx;
 		for(j=0; j<xsz; j++) {
 			float d = sqrt(u * u + v * v);
-			float val = pow(cos(d * M_PI / 2.0f), sexp);
+			float val = pow(cos(d * CGM_PI / 2.0f), sexp);
 			int ival = abs((int)(val * 255.0f));
 
 			int r = dr + ival * sr / 256;

@@ -275,7 +275,7 @@ OutDir=.\Release
 InputPath=.\cspr\confont.asm
 
 "$(OutDir)\confont.obj" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	c:\nasm_win32\nasm -o $(OutDir)\confont.obj -f win32 $(InputPath)
+	nasm -o $(OutDir)\confont.obj -f win32 $(InputPath)
 
 # End Custom Build
 
@@ -286,7 +286,7 @@ OutDir=.\Debug
 InputPath=.\cspr\confont.asm
 
 "$(OutDir)\confont.obj" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	c:\nasm_win32\nasm -o $(OutDir)\confont.obj -f win32 $(InputPath)
+	nasm -o $(OutDir)\confont.obj -f win32 $(InputPath)
 
 # End Custom Build
 
@@ -304,7 +304,7 @@ OutDir=.\Release
 InputPath=.\cspr\dbgfont.asm
 
 "$(OutDir)\dbgfont.obj" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	c:\nasm_win32\nasm -o $(OutDir)\dbgfont.obj -f win32 $(InputPath)
+	nasm -o $(OutDir)\dbgfont.obj -f win32 $(InputPath)
 
 # End Custom Build
 
@@ -315,7 +315,7 @@ OutDir=.\Debug
 InputPath=.\cspr\dbgfont.asm
 
 "$(OutDir)\dbgfont.obj" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	c:\nasm_win32\nasm -o $(OutDir)\dbgfont.obj -f win32 $(InputPath)
+	nasm -o $(OutDir)\dbgfont.obj -f win32 $(InputPath)
 
 # End Custom Build
 
@@ -370,7 +370,7 @@ OutDir=.\Release
 InputPath=.\src\cpuid_s.asm
 
 "$(OutDir)\cpuid_s.obj" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	c:\nasm_win32\nasm -o $(OutDir)\cpuid_s.obj -f win32 $(InputPath)
+	nasm -o $(OutDir)\cpuid_s.obj -f win32 $(InputPath)
 
 # End Custom Build
 
@@ -381,7 +381,7 @@ OutDir=.\Debug
 InputPath=.\src\cpuid_s.asm
 
 "$(OutDir)\cpuid_s.obj" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	c:\nasm_win32\nasm -o $(OutDir)\cpuid_s.obj -f win32 $(InputPath)
+	nasm -o $(OutDir)\cpuid_s.obj -f win32 $(InputPath)
 
 # End Custom Build
 
@@ -415,7 +415,7 @@ OutDir=.\Release
 InputPath=.\src\data.asm
 
 "$(OutDir)\data.obj" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	c:\nasm_win32\nasm -o $(OutDir)\data.obj -f win32 $(InputPath)
+	nasm -o $(OutDir)\data.obj -f win32 $(InputPath)
 
 # End Custom Build
 
@@ -426,7 +426,7 @@ OutDir=.\Debug
 InputPath=.\src\data.asm
 
 "$(OutDir)\data.obj" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	c:\nasm_win32\nasm -o $(OutDir)\data.obj -f win32 $(InputPath)
+	nasm -o $(OutDir)\data.obj -f win32 $(InputPath)
 
 # End Custom Build
 
@@ -572,7 +572,7 @@ OutDir=.\Release
 InputPath=.\src\util_s.asm
 
 "$(OutDir)\util_s.obj" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	c:\nasm_win32\nasm -o $(OutDir)\util_s.obj -f win32 $(InputPath)
+	nasm -o $(OutDir)\util_s.obj -f win32 $(InputPath)
 
 # End Custom Build
 
@@ -583,7 +583,7 @@ OutDir=.\Debug
 InputPath=.\src\util_s.asm
 
 "$(OutDir)\util_s.obj" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	c:\nasm_win32\nasm -o $(OutDir)\util_s.obj -f win32 $(InputPath)
+	nasm -o $(OutDir)\util_s.obj -f win32 $(InputPath)
 
 # End Custom Build
 

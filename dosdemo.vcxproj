@@ -124,6 +124,7 @@
     <ClCompile Include="src\scr\minifx.c" />
     <ClCompile Include="src\scr\water.c" />
     <ClCompile Include="src\scr\3dzoom.c" />
+    <ClCompile Include="src\scr\space.c" />
     <ClCompile Include="src\scr\smoketxt.c" />
     <ClCompile Include="src\scr\thunder.c" />
     <ClCompile Include="src\scr\tunnel.c" />

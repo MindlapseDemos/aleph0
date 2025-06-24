@@ -18,6 +18,7 @@ static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
 static void keypress(int key);
+static int presort_cmp(const void *a, const void *b);
 
 
 static struct screen scr = {
@@ -62,8 +63,13 @@ static int init(void)
 	conv_goat3d_scene(scn, g);
 	goat3d_free(g);
 
-	poolmesh = scn_find_mesh(scn, "Plane");
-	poolmesh->flags |= G3DMESH_SKIP;
+	poolmesh = scn_find_mesh(scn, "3-Plane");
+	for(i=0; i<poolmesh->vcount; i++) {
+		poolmesh->varr[i].nx = poolmesh->varr[i].u;
+		poolmesh->varr[i].ny = poolmesh->varr[i].v;
+	}
+
+	qsort(scn->meshes, scn_mesh_count(scn), sizeof(struct g3d_mesh*), presort_cmp);
 
 	if(crv_load(&campath, "data/rcampath.crv") == -1) {
 		fprintf(stderr, "reactor: failed to load camera path spline\n");
@@ -92,7 +98,7 @@ static void start(long trans_time)
 	g3d_perspective(VFOV, 1.3333333, 15.0, 300.0);
 
 	g3d_enable(G3D_CULL_FACE);
-	g3d_enable(G3D_DEPTH_TEST);
+	g3d_disable(G3D_DEPTH_TEST);
 	g3d_disable(G3D_LIGHTING);
 	g3d_enable(G3D_LIGHT0);
 	g3d_polygon_mode(G3D_FLAT);
@@ -110,6 +116,16 @@ static float cam_t;
 
 static void update(void)
 {
+	int i;
+	float texanim = (float)(time_msec & 8191) / 8192.0f;
+	struct g3d_vertex *vptr = poolmesh->varr;
+
+	for(i=0; i<poolmesh->vcount; i++) {
+		vptr->u = vptr->nx + texanim;
+		vptr->v = vptr->ny + texanim;
+		vptr++;
+	}
+
 	cam_t = dseq_param(ev_reactor);
 	crv_eval(&campath, cam_t, &campos);
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
@@ -117,14 +133,10 @@ static void update(void)
 
 static void draw(void)
 {
-	int i;
+	unsigned int i, num;
 	float viewmat[16];
-	float texanim = (float)time_msec / 8192.0f;
 	cgm_vec3 up = {0, 1, 0};
 	char buf[64];
-	cgm_vec3 pos, prev;
-	float t;
-	int num_samples;
 
 	update();
 
@@ -143,20 +155,14 @@ static void draw(void)
 		}
 	}
 
-	g3d_clear(G3D_COLOR_BUFFER_BIT | G3D_DEPTH_BUFFER_BIT);
+	g3d_clear(G3D_COLOR_BUFFER_BIT);
 
-	scn_draw(scn);
+	num = scn_mesh_count(scn);
+	for(i=0; i<num; i++) {
+		draw_mesh(scn->meshes[i]);
+	}
 
-	/* draw animated energy "pool" */
-	g3d_enable(G3D_TEXTURE_MAT);
-	g3d_matrix_mode(G3D_TEXTURE);
-	g3d_load_identity();
-	g3d_translate(texanim, texanim, 0);
-	draw_mesh(poolmesh);
-	g3d_disable(G3D_TEXTURE_MAT);
-	g3d_matrix_mode(G3D_MODELVIEW);
-
-	swap_buffers(fb_pixels);
+	swap_buffers(0);
 }
 
 static void keypress(int key)
@@ -166,4 +172,13 @@ static void keypress(int key)
 		dbgfreelook ^= 1;
 		break;
 	}
+}
+
+/* comparison function for pre-sorting nodes by name */
+static int presort_cmp(const void *a, const void *b)
+{
+	const struct g3d_mesh *na = *(const struct g3d_mesh**)a;
+	const struct g3d_mesh *nb = *(const struct g3d_mesh**)b;
+
+	return strcmp(na->name, nb->name);
 }

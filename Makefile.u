@@ -4,13 +4,13 @@ obj = src/3dgfx/3dgfx.o src/3dgfx/mesh.o src/3dgfx/meshload.o \
 	  src/3dgfx/polyclip.o src/3dgfx/polyfill.o src/3dgfx/scene.o src/bsptree.o \
 	  src/cfgopt.o src/console.o src/cpuid.o src/darray.o src/demo.o src/dseq.o \
 	  src/dynarr.o src/gfxutil.o src/image.o src/msurf2.o src/noise.o \
-	  src/rbtree.o src/rlebmap.o src/rt/rt.o src/rt/rtgeom.o src/scr/3dzoom.o \
+	  src/rbtree.o src/rlebmap.o src/font.o src/curve.o src/scr/3dzoom.o \
 	  src/scr/blobgrid.o src/scr/bump.o src/scr/credits.o src/screen.o \
 	  src/scr/grise.o src/scr/hairball.o src/scr/hexfloor.o src/scr/infcubes.o \
 	  src/scr/juliatun.o src/scr/metaball.o src/scr/minifx.o src/scr/molten.o \
-	  src/scr/opt_3d.o src/scr/opt_rend.o src/scr/polka.o src/scr/raytrace.o \
+	  src/scr/opt_3d.o src/scr/opt_rend.o src/scr/polka.o src/scr/space.o \
 	  src/scr/smoketxt.o src/scr/thunder.o src/scr/tunnel.o src/scr/voxscape.o \
-	  src/scr/water.o src/sdl/main.o src/sdl/sball.o src/sdl/timer.o src/sdl/audio.o \
+	  src/scr/water.o src/sdl/main.o src/sdl/audio.o src/sdl/timer.o src/sdl/sball.o \
 	  src/tinyfps.o src/treestor.o src/ts_text.o src/util.o
 
 bin = sdldemo

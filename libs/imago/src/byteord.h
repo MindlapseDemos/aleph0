@@ -26,7 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/types.h>
 #endif
 
-#if defined(__DOS__) && defined(__WATCOMC__) && __WATCOMC__ < 1200
+#if (defined(__DOS__) && defined(__WATCOMC__) && __WATCOMC__ < 1200) || (defined(_MSC_VER) && _MSC_VER < 1600)
 typedef signed char int8_t;
 typedef unsigned char uint8_t;
 typedef short int16_t;

@@ -7,6 +7,7 @@
 #include "imago2.h"
 #include "demo.h"
 #include "screen.h"
+#include "util.h"
 
 /* Render blur in half x half dimenstions. Add one pixel padding in all 
  * directions (2 pixels horizontally, 2 pixels vertically).

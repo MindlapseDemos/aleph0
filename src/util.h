@@ -2,12 +2,17 @@
 #define UTIL_H_
 
 #include <stdlib.h>
+#include <math.h>
 #include "inttypes.h"
 
 #if defined(__WATCOMC__) || defined(_WIN32) || defined(__DJGPP__)
 #include <malloc.h>
 #else
 #include <alloca.h>
+#endif
+
+#ifndef M_PI
+#define M_PI	3.1415926535
 #endif
 
 #define INLINE __inline

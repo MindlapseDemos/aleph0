@@ -86,14 +86,27 @@ typedef struct Point2D
 	int x,y;
 } Point2D;
 
-static int posAnglePath[] = { 322, 330, 1358, 2322, 206, 241, 1306, 2322, 62, 157, 1236, 2369, -22, 146, 1180, 2393, -123, 55, 1120, 2393, -177, 55, 1098, 2041,
--254, 55, 1099, 2199, -390, 88, 1087, 1810, -464, 129, 1162, 1398, -470, 136, 1248, 882, -423, 153, 1350, 513, -363, 145, 1429, 806, -339, 99, 1481, 918,
--328, 66, 1551, 918, -310, 69, 1609, 717, -249, 63, 1676, 364, -170, 63, 1704, 3830, -156, 63, 1657, 2986, -170, 63, 1635, 2368, -242, 63, 1635, 1594,
--250, 63, 1649, 1204, -253, 63, 1720, 898, -201, 87, 1875, 838, -189, 123, 1952, 932, -191, 127, 2034, 1072, -191, 136, 2070, 820, -178, 147, 2114, 938,
--168, 193, 2190, 938, -161, 207, 2244, 938, -147, 223, 2348, 938, -132, 260, 2466, 938, -117, 321, 2584, 938, -94, 329, 2758, 938, -78, 266, 2858, 797,
--48, 211, 2942, 797, 25, 129, 3083, 688, 90, 129, 3187, 558, 156, 142, 3263, 558, 262, 236, 3384, 464, 327, 250, 3424, 104, 391, 228, 3424, 3997,
-470, 181, 3413, 58, 556, 164, 3446, 497, 588, 134, 3515, 763, 636, 109, 3629, 763, 681, 109, 3725, 593, 754, 86, 3758, 3953, 778, 55, 3765, 3168 };
+#define VOX_PATH_POINTS 64
 
+static int posAnglePath[4 * VOX_PATH_POINTS] = { 340233, 90192, 54574, 6338, 323207, 72416, 49295, 6338, 303759, 57360, 43269, 6338, 282239, 44976, 36600, 6338,
+265939, 39968, 30856, 6417, 247613, 25584, 23563, 6308, 225209, 18400, 17787, 6308, 201080, 18400, 15639, 6183, 173560, 38784, 13919, 6183,
+152824, 39280, 23263, 5703, 139198, 46272, 44106, 5309, 137995, 49024, 67281, 4919, 144185, 49024, 82847, 4652, 163512, 49024, 99795, 4808,
+169172, 49024, 111451, 4914, 175038, 35840, 129523, 4914, 181384, 25568, 149067, 4914, 188848, 25568, 172059, 4914, 199229, 25568, 180395, 3929,
+204470, 24576, 167130, 2976, 204470, 10544, 167130, 2976, 204470, 9088, 167130, 2976, 203630, 9088, 159984, 3038, 203630, 9088, 159984, 3974,
+212096, 19200, 158364, 3974, 237474, 45104, 153507, 3974, 254188, 50944, 147976, 3526, 263244, 54992, 130805, 3307, 271902, 55232, 104145, 3182,
+273996, 45472, 80489, 2954, 266675, 42288, 63894, 2630, 254154, 37264, 50320, 2537, 243170, 31824, 40089, 2537, 229840, 22944, 27667, 2537,
+218471, 15968, 19928, 2239, 203344, 24704, 15305, 2239, 189200, 31728, 10981, 2239, 167194, 38976, 5150, 2129, 148599, 47440, 6117, 1954,
+123326, 49632, 9700, 1954, 100637, 56752, 12918, 1954, 50540, 49696, 25707, 1504, 33812, 38624, 47994, 1253, 28991, 33616, 73114, 991,
+31032, 33616, 94916, 1006, 32042, 33616, 121572, 823, 43459, 33984, 138499, 542, 73865, 36992, 169958, 355, 98875, 28688, 169737, -75,
+126060, 28688, 166528, -75, 146661, 22704, 164098, -75, 163653, 22704, 160102, -69, 186984, 22704, 155710, -402, 190729, 22704, 161330, -1087,
+194442, 22704, 181248, -1197, 194954, 10592, 183138, -1197, 202008, 10592, 176166, -962, 202776, 10592, 167908, -1056, 
+199680, 16384, 172800, 1276, 199680, 16384, 172800, 2243, 200742, 16384, 171876, 2724, 
+227610, 32192, 152849, 3740, 255163, 65920, 133346, 4140, 282634, 99520, 113927, 5240 };
+
+typedef struct PathVals
+{
+	int x, y, z, a;
+} PathVals;
 
 static unsigned char* distMap;
 
@@ -809,8 +822,69 @@ static unsigned char getVoxelHeightUnderPlayer()
 	return hmap[mapOffset];
 }
 
+static int interpolate(int v0, int v1, float t)
+{
+	return (int)((1.0f - t) * (float)v0 + t * (float)v1);
+}
+
+static int interpolate2(int v0, int v1, int v2, float t)
+{
+	float a = (1.0f - t) * (float)v0 + t * (float)v1;
+	float b = (1.0f - t) * (float)v1 + t * (float)v2;
+	return (int)((1.0f - t) * a + t * b);
+}
+
+static int interpolate3(int v0, int v1, int v2, int v3, float t)
+{
+	float a = (1.0f - t) * (float)v0 + t * (float)v1;
+	float b = (1.0f - t) * (float)v1 + t * (float)v2;
+	float c = (1.0f - t) * (float)v2 + t * (float)v3;
+	float d = (1.0f - t) * a + t * b;
+	float e = (1.0f - t) * b + t * c;
+	return (int)((1.0f - t) * d + t * e);
+}
+
+static void moveThroughPath(int dt)
+{
+	static float tp = 0;
+	PathVals* pVals = (PathVals*)posAnglePath;
+	PathVals* pv0;
+	PathVals* pv1;
+	PathVals* pv2;
+	PathVals* pv3;
+
+	float tt = (float)dt * 0.0005f;
+
+	float t = fmodf(tp, 1.0f);
+
+	int i0 = 3 * (int)tp;
+	int i1 = i0 + 1;
+	int i2 = i0 + 2;
+	int i3 = i0 + 3;
+	CLAMP(i0, 0, VOX_PATH_POINTS - 1);
+	CLAMP(i1, 0, VOX_PATH_POINTS - 1);
+	CLAMP(i2, 0, VOX_PATH_POINTS - 1);
+	CLAMP(i3, 0, VOX_PATH_POINTS - 1);
+
+	pv0 = &pVals[i0];
+	pv1 = &pVals[i1];
+	pv2 = &pVals[i2];
+	pv3 = &pVals[i3];
+
+	viewPos.x = interpolate3(pv0->x, pv1->x, pv2->x, pv3->x, t);
+	viewPos.y = interpolate3(pv0->y, pv1->y, pv2->y, pv3->y, t);
+	viewPos.z = interpolate3(pv0->z, pv1->z, pv2->z, pv3->z, t);
+	viewAngle.y = interpolate3(pv0->a, pv1->a, pv2->a, pv3->a, t) & (SIN_LENGTH - 1);
+
+	tp += tt;
+
+	prevTime = time_msec;
+}
+
 static void move(int dt)
 {
+	static int pI = 0;
+
 	const int speedX = (dt << FP_VIEWER) >> 8;
 	const int speedZ = (dt << FP_VIEWER) >> 8;
 
@@ -846,7 +920,11 @@ static void move(int dt)
 
 	if (kb_isdown('p')) {
 		if (pJustPressed == 0) {
-			printf("%d, %d, %d, %d\n", viewPos.x >> FP_VIEWER, viewPos.y >> FP_VIEWER, viewPos.z >> FP_VIEWER, viewAngle.y & (SIN_LENGTH - 1));
+			printf("%d, %d, %d, %d, ", viewPos.x, viewPos.y, viewPos.z, viewAngle.y);
+			++pI;
+			if ((pI & 3)==0) {
+				printf("\n");
+			}
 		}
 		pJustPressed = 1;
 	} else {
@@ -865,8 +943,6 @@ static void move(int dt)
 	#endif
 
 	prevTime = time_msec;
-
-	updateRaySamplePosAndStep();
 }
 
 static void renderBitmapLineSky(int u, int du, int v, int dv, const unsigned char* src, const unsigned short* pal, unsigned short* dst)
@@ -998,7 +1074,9 @@ static void draw(void)
 	const int dt = time_msec - prevTime;
 	const int petrT = time_msec >> 6;
 
-	move(dt);
+	moveThroughPath(dt);
+	//move(dt);
+	updateRaySamplePosAndStep();
 
 	renderSky();
 

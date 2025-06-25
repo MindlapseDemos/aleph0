@@ -855,7 +855,7 @@ static void moveThroughPath(int dt)
 
 	float tt = (float)dt * 0.0005f;
 
-	float t = fmodf(tp, 1.0f);
+	float t = (float)fmod(tp, 1.0f);
 
 	int i0 = 3 * (int)tp;
 	int i1 = i0 + 1;

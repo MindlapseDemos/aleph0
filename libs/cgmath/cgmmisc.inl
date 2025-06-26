@@ -81,7 +81,7 @@ static CGM_INLINE float cgm_spline(float a, float b, float c, float d, float t)
 	cgm_wcons(&qfact, tsq * t, tsq, t, 1.0f);
 	cgm_wcons(&tmp, a, b, c, d);
 	cgm_wmul_m4v4(&tmp, mat);
-	cgm_wscale(&tmp, 1.0f / 6.0f);
+	cgm_wscale(&tmp, 0.5f);
 	return cgm_wdot(&tmp, &qfact);
 }
 

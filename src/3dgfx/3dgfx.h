@@ -47,8 +47,9 @@ enum {
 	G3D_TEXTURE_2D	= 0x000080,
 	G3D_ALPHA_BLEND	= 0x000100,
 	G3D_TEXTURE_GEN	= 0x000200,
+	G3D_COLOR_MATERIAL = 0x000400,
 	G3D_CLIP_FRUSTUM = 0x000800,/* when disabled, don't clip against the frustum */
-	G3D_CLIP_PLANE0 = 0x001000,	/* user-defined 3D clipping planes XXX not impl. */
+	G3D_CLIP_PLANE0 = 0x001000,	/* user-defined 3D clipping planes */
 	G3D_CLIP_PLANE1 = 0x002000,
 	G3D_CLIP_PLANE2 = 0x004000,
 	G3D_CLIP_PLANE3 = 0x008000,
@@ -167,5 +168,7 @@ void g3d_texcoord(float u, float v);
 void g3d_clip_plane(int idx, const float *eqn);
 
 int g3d_xform_point(float *xyzw);
+
+void g3d_shade(struct g3d_vertex *v);
 
 #endif	/* THREEDGFX_H_ */

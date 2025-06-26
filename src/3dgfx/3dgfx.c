@@ -89,7 +89,6 @@ static void imm_flush(void);
 static __inline void xform4_vec3(const float *mat, float *vec);
 static __inline void xform3_vec3(const float *mat, float *vec);
 static __inline void xform4_vec4(const float *mat, float *vec);
-static void shade(struct g3d_vertex *v);
 
 static struct g3d_state *st;
 static const float idmat[] = {
@@ -615,7 +614,7 @@ void g3d_draw_indexed(int prim, const struct g3d_vertex *varr, int varr_size,
 			if(NEED_NORMALS) {
 				xform3_vec3(st->norm_mat, &v[i].nx);
 				if(st->opt & G3D_LIGHTING) {
-					shade(v + i);
+					g3d_shade(v + i);
 				}
 				if(st->opt & G3D_TEXTURE_GEN) {
 					v[i].u = v[i].nx * 0.5 + 0.5;
@@ -964,6 +963,78 @@ int g3d_xform_point(float *vec)
 	return inside;
 }
 
+
+
+void g3d_shade(struct g3d_vertex *v)
+{
+	int i, r, g, b;
+	float color[3], kd[3];
+
+	if(st->opt & G3D_COLOR_MATERIAL) {
+		kd[0] = v->r;
+		kd[1] = v->g;
+		kd[2] = v->b;
+	} else {
+		kd[0] = st->mtl.kd[0];
+		kd[1] = st->mtl.kd[1];
+		kd[2] = st->mtl.kd[2];
+	}
+
+	color[0] = st->ambient[0] * kd[0];
+	color[1] = st->ambient[1] * kd[1];
+	color[2] = st->ambient[2] * kd[2];
+
+	for(i=0; i<MAX_LIGHTS; i++) {
+		float ldir[3];
+		float ndotl;
+
+		if(!(st->opt & (G3D_LIGHT0 << i))) {
+			continue;
+		}
+
+		ldir[0] = st->lt[i].x;
+		ldir[1] = st->lt[i].y;
+		ldir[2] = st->lt[i].z;
+
+		if(st->lt[i].type != LT_DIR) {
+			ldir[0] -= v->x;
+			ldir[1] -= v->y;
+			ldir[2] -= v->z;
+			NORMALIZE(ldir);
+		}
+
+		if((ndotl = v->nx * ldir[0] + v->ny * ldir[1] + v->nz * ldir[2]) < 0.0f) {
+			ndotl = 0.0f;
+		}
+
+		color[0] += kd[0] * st->lt[i].r * ndotl;
+		color[1] += kd[1] * st->lt[i].g * ndotl;
+		color[2] += kd[2] * st->lt[i].b * ndotl;
+
+		if(st->opt & G3D_SPECULAR) {
+			float ndoth;
+			ldir[2] += 1.0f;
+			NORMALIZE(ldir);
+			if((ndoth = v->nx * ldir[0] + v->ny * ldir[1] + v->nz * ldir[2]) < 0.0f) {
+				ndoth = 0.0f;
+			}
+			ndoth = pow(ndoth, st->mtl.shin);
+
+			color[0] += st->mtl.ks[0] * st->lt[i].r * ndoth;
+			color[1] += st->mtl.ks[1] * st->lt[i].g * ndoth;
+			color[2] += st->mtl.ks[2] * st->lt[i].b * ndoth;
+		}
+	}
+
+	r = cround64(color[0] * 255.0);
+	g = cround64(color[1] * 255.0);
+	b = cround64(color[2] * 255.0);
+
+	v->r = r > 255 ? 255 : r;
+	v->g = g > 255 ? 255 : g;
+	v->b = b > 255 ? 255 : b;
+}
+
 static __inline void xform4_vec3(const float *mat, float *vec)
 {
 	float x = mat[0] * vec[0] + mat[4] * vec[1] + mat[8] * vec[2] + mat[12];
@@ -993,67 +1064,6 @@ static __inline void xform4_vec4(const float *mat, float *vec)
 	vec[2] = z;
 	vec[1] = y;
 	vec[0] = x;
-}
-
-
-static void shade(struct g3d_vertex *v)
-{
-	int i, r, g, b;
-	float color[3];
-
-	color[0] = st->ambient[0] * st->mtl.kd[0];
-	color[1] = st->ambient[1] * st->mtl.kd[1];
-	color[2] = st->ambient[2] * st->mtl.kd[2];
-
-	for(i=0; i<MAX_LIGHTS; i++) {
-		float ldir[3];
-		float ndotl;
-
-		if(!(st->opt & (G3D_LIGHT0 << i))) {
-			continue;
-		}
-
-		ldir[0] = st->lt[i].x;
-		ldir[1] = st->lt[i].y;
-		ldir[2] = st->lt[i].z;
-
-		if(st->lt[i].type != LT_DIR) {
-			ldir[0] -= v->x;
-			ldir[1] -= v->y;
-			ldir[2] -= v->z;
-			NORMALIZE(ldir);
-		}
-
-		if((ndotl = v->nx * ldir[0] + v->ny * ldir[1] + v->nz * ldir[2]) < 0.0f) {
-			ndotl = 0.0f;
-		}
-
-		color[0] += st->mtl.kd[0] * st->lt[i].r * ndotl;
-		color[1] += st->mtl.kd[1] * st->lt[i].g * ndotl;
-		color[2] += st->mtl.kd[2] * st->lt[i].b * ndotl;
-
-		if(st->opt & G3D_SPECULAR) {
-			float ndoth;
-			ldir[2] += 1.0f;
-			NORMALIZE(ldir);
-			if((ndoth = v->nx * ldir[0] + v->ny * ldir[1] + v->nz * ldir[2]) < 0.0f) {
-				ndoth = 0.0f;
-			}
-			ndoth = pow(ndoth, st->mtl.shin);
-
-			color[0] += st->mtl.ks[0] * st->lt[i].r * ndoth;
-			color[1] += st->mtl.ks[1] * st->lt[i].g * ndoth;
-			color[2] += st->mtl.ks[2] * st->lt[i].b * ndoth;
-		}
-	}
-
-	r = cround64(color[0] * 255.0);
-	g = cround64(color[1] * 255.0);
-	b = cround64(color[2] * 255.0);
-
-	v->r = r > 255 ? 255 : r;
-	v->g = g > 255 ? 255 : g;
-	v->b = b > 255 ? 255 : b;
 }
 
 #endif	/* !def BUILD_OPENGL */

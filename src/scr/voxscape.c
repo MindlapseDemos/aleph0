@@ -136,6 +136,9 @@ static Vector3D viewAngle;
 
 static int prevTime;
 
+static dseq_event* ev_fade;
+static dseq_event* ev_flypath;
+
 
 static int init(void);
 static void destroy(void);
@@ -454,7 +457,7 @@ static int initDistMap()
 		petrubTab[i] = (int)(f * PETRUB_RANGE);
 	}
 
-	distmapHack();
+	//distmapHack();
 
 	return 0;
 }
@@ -521,6 +524,9 @@ static int init(void)
 	if(initHeightmapAndColormap() == -1 || initDistMap() == -1) {
 		return -1;
 	}
+
+	ev_fade = dseq_lookup("voxelscape.fade");
+	ev_flypath = dseq_lookup("voxelscape.flypath");
 
 	return 0;
 }
@@ -844,16 +850,16 @@ static int interpolate3(int v0, int v1, int v2, int v3, float t)
 	return (int)((1.0f - t) * d + t * e);
 }
 
-static void moveThroughPath(int dt)
+static void moveThroughPath()
 {
-	static float tp = 0;
 	PathVals* pVals = (PathVals*)posAnglePath;
 	PathVals* pv0;
 	PathVals* pv1;
 	PathVals* pv2;
 	PathVals* pv3;
 
-	float tt = (float)dt * 0.0005f;
+	float ft = dseq_value(ev_flypath);
+	float tp = ft * 12;
 
 	float t = (float)fmod(tp, 1.0f);
 
@@ -875,8 +881,6 @@ static void moveThroughPath(int dt)
 	viewPos.y = interpolate3(pv0->y, pv1->y, pv2->y, pv3->y, t);
 	viewPos.z = interpolate3(pv0->z, pv1->z, pv2->z, pv3->z, t);
 	viewAngle.y = interpolate3(pv0->a, pv1->a, pv2->a, pv3->a, t) & (SIN_LENGTH - 1);
-
-	tp += tt;
 
 	prevTime = time_msec;
 }
@@ -1069,12 +1073,31 @@ static void moveClouds(int dt)
 	skyMove2 += 8*dt;
 }
 
+static void doFades()
+{
+	float ft = dseq_value(ev_fade);
+	float fp = dseq_value(ev_flypath);
+
+	int count = FB_WIDTH * FB_HEIGHT;
+	if ((ft > 0.0f && ft < 1.0f) || (fp == 0.0f || fp == 1.0f)) {
+		int s = (int)(ft * 256);
+		uint16_t* vram = fb_pixels;
+		do {
+			uint16_t c = *vram;
+			int r = (UNPACK_R16(c) * s) >> 8;
+			int g = (UNPACK_G16(c) * s) >> 8;
+			int b = (UNPACK_B16(c) * s) >> 8;
+			*vram++ = PACK_RGB16(r,g,b);
+		} while (--count != 0);
+	}
+}
+
 static void draw(void)
 {
 	const int dt = time_msec - prevTime;
 	const int petrT = time_msec >> 6;
 
-	moveThroughPath(dt);
+	moveThroughPath();
 	//move(dt);
 	updateRaySamplePosAndStep();
 
@@ -1085,6 +1108,8 @@ static void draw(void)
 	/* testRenderDistMap(); */
 
 	moveClouds(dt);
+
+	doFades();
 
 	swap_buffers(0);
 }

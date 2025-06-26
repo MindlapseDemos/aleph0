@@ -971,9 +971,9 @@ void g3d_shade(struct g3d_vertex *v)
 	float color[3], kd[3];
 
 	if(st->opt & G3D_COLOR_MATERIAL) {
-		kd[0] = v->r;
-		kd[1] = v->g;
-		kd[2] = v->b;
+		kd[0] = (float)v->r / 255.0f;
+		kd[1] = (float)v->g / 255.0f;
+		kd[2] = (float)v->b / 255.0f;
 	} else {
 		kd[0] = st->mtl.kd[0];
 		kd[1] = st->mtl.kd[1];

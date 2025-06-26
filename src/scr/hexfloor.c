@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include "cgmath/cgmath.h"
@@ -23,6 +24,7 @@ struct hextile {
 static int init(void);
 static void destroy(void);
 static void start(long trans_time);
+static void stop(long trans_time);
 static void draw(void);
 static void draw_hextile(struct hextile *tile);
 
@@ -32,7 +34,7 @@ static struct screen scr = {
 	init,
 	destroy,
 	start,
-	0,
+	stop,
 	draw
 };
 
@@ -41,17 +43,18 @@ static float cam_dist = 12;
 
 static long part_start;
 
-static struct g3d_vertex hextop[12];
+static struct g3d_vertex hextop[6];
+static struct g3d_vertex hexsides[24];
 static uint16_t hextop_idx[12] = {
 	0, 5, 4, 0, 4, 3, 0, 3, 1, 1, 3, 2
 };
 static uint16_t hexsides_idx[] = {
-	1, 7, 6, 0,
-	2, 8, 7, 1,
-	3, 9, 8, 2,
-	4, 10, 9, 3,
-	5, 11, 10, 4,
-	0, 6, 11, 5
+	13, 12, 0, 1,
+	15, 14, 2, 3,
+	17, 16, 4, 5,
+	19, 18, 6, 7,
+	21, 20, 8, 9,
+	23, 22, 10, 11
 };
 
 #define TILES_XSZ	8
@@ -59,7 +62,7 @@ static uint16_t hexsides_idx[] = {
 #define NUM_TILES	(TILES_XSZ * TILES_YSZ)
 static struct hextile tiles[NUM_TILES];
 
-#define OBJ_HEIGHT	3.0f
+#define OBJ_HEIGHT	35.0f
 
 
 struct screen *hexfloor_screen(void)
@@ -67,25 +70,52 @@ struct screen *hexfloor_screen(void)
 	return &scr;
 }
 
+#define HALF_HEX_ANGLE	(M_PI / 6.0f)
 
 static int init(void)
 {
 	int i, j;
-	float theta;
+	float angle[6];
 	struct hextile *tile;
+	struct g3d_vertex *vptr;
+	float nx, nz;
 
 	for(i=0; i<6; i++) {
-		theta = (float)i / 6.0f * (M_PI * 2.0);
-		hextop[i].x = cos(theta);
-		hextop[i].z = sin(theta);
+		angle[i] = (float)i / 3.0f * M_PI;
+		hextop[i].x = cos(angle[i]);
+		hextop[i].z = sin(angle[i]);
 		hextop[i].y = 0;
 
-		hextop[i].r = rand() & 0xff;
-		hextop[i].g = rand() & 0xff;
-		hextop[i].b = rand() & 0xff;
+		hextop[i].nx = hextop[i].nz = 0;
+		hextop[i].ny = 1;
 
-		hextop[i + 6] = hextop[i];
+		hextop[i].r = 255;
+		hextop[i].g = 255;
+		hextop[i].b = 255;
+
+		hexsides[i * 2] = hextop[i];
+		hexsides[(i * 2 + 11) % 12] = hextop[i];
 	}
+
+	for(i=0; i<6; i++) {
+		nx = cos(angle[i] + HALF_HEX_ANGLE);
+		nz = sin(angle[i] + HALF_HEX_ANGLE);
+		hexsides[i * 2].nx = nx;
+		hexsides[i * 2].nz = nz;
+		hexsides[i * 2].ny = 0;
+
+		hexsides[i * 2 + 1].nx = nx;
+		hexsides[i * 2 + 1].nz = nz;
+		hexsides[i * 2 + 1].ny = 0;
+	}
+
+	vptr = hexsides + 12;
+	for(i=0; i<12; i++) {
+		*vptr = hexsides[i];
+		vptr->r = vptr->g = vptr->b = 0;
+		vptr++;
+	}
+
 
 	tile = tiles;
 	for(i=0; i<TILES_YSZ; i++) {
@@ -121,20 +151,29 @@ static void start(long trans_time)
 
 	g3d_enable(G3D_CULL_FACE);
 	g3d_enable(G3D_DEPTH_TEST);
-	g3d_disable(G3D_LIGHTING);
+	g3d_enable(G3D_LIGHTING);
+	g3d_enable(G3D_LIGHT0);
 	g3d_disable(G3D_TEXTURE_2D);
 
-	g3d_polygon_mode(G3D_FLAT);
+	g3d_enable(G3D_COLOR_MATERIAL);
+
+	g3d_polygon_mode(G3D_GOURAUD);
 
 	g3d_clear_color(85, 70, 136);
 
 	part_start = time_msec;
 }
 
+static void stop(long trans_time)
+{
+	g3d_disable(G3D_COLOR_MATERIAL);
+}
+
 static void update(void)
 {
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
 }
+
 
 static void draw(void)
 {
@@ -168,21 +207,24 @@ static void draw(void)
 	for(i=0; i<NUM_TILES; i++) {
 		float dx = pos.x - tile->x;
 		float dy = pos.z - tile->y;
-		float rdsq = rsqrt(dx * dx + dy * dy);
-		float force;
+		float dist = (dx * dx + dy * dy) * 0.45f;
+		float d = dist > CGM_PI / 2.0f ? CGM_PI / 2.0f : dist;
+		float newh = cos(d) * 3.0f;
 
-		force = rdsq * 5.0f - 2.0f;
+		if(newh > tile->height) {
+			tile->height = newh;
+		}
 
-		tile->vvel = (tile->vvel * 0.9 + force) * dt;
-		tile->height += tile->vvel;
-		if(tile->height > OBJ_HEIGHT * 0.9f) {
+		tile->height -= 0.75f * dt;
+		if(tile->height < 0.0f) tile->height = 0.0f;
+		/*if(tile->height > OBJ_HEIGHT * 0.9f) {
 			tile->height = OBJ_HEIGHT * 0.9f;
 			tile->vvel = 0.0f;
 		}
 		if(tile->height < 0.0f) {
 			tile->height = 0.0f;
 			tile->vvel = 0.0f;
-		}
+		}*/
 
 		draw_hextile(tile++);
 	}
@@ -203,23 +245,19 @@ static void draw_hextile(struct hextile *tile)
 {
 	int i, r, g, b;
 
+	for(i=0; i<6; i++) {
+		hextop[i].y = tile->height;
+	}
+
 	for(i=0; i<12; i++) {
-		if(i < 6) {
-			hextop[i].y = tile->height;
-		}
-		r = (int)(tile->r * tile->height);
-		g = (int)(tile->g * tile->height);
-		b = (int)(tile->b * tile->height);
-		hextop[i].r = clamp(r, 16, 255);
-		hextop[i].g = clamp(g, 16, 255);
-		hextop[i].b = clamp(b, 16, 255);
+		hexsides[i].y = tile->height;
 	}
 
 	g3d_push_matrix();
 	g3d_translate(tile->x, 0, tile->y);
 
 	g3d_draw_indexed(G3D_TRIANGLES, hextop, 6, hextop_idx, 12);
-	g3d_draw_indexed(G3D_QUADS, hextop, 6, hexsides_idx, sizeof hexsides_idx / sizeof *hexsides_idx);
+	g3d_draw_indexed(G3D_QUADS, hexsides, 24, hexsides_idx, 24);
 
 	g3d_pop_matrix();
 }

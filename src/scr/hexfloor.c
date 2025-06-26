@@ -15,10 +15,8 @@
 
 struct hextile {
 	float x, y, height;
-	float rad;
-	float vvel;
-	float lt;
 	unsigned char r, g, b;
+	int hidden;
 };
 
 static int init(void);
@@ -26,7 +24,8 @@ static void destroy(void);
 static void start(long trans_time);
 static void stop(long trans_time);
 static void draw(void);
-static void draw_hextile(struct hextile *tile);
+static void draw_hextile(struct hextile *tile, float t);
+static void keypress(int key);
 
 
 static struct screen scr = {
@@ -35,10 +34,11 @@ static struct screen scr = {
 	destroy,
 	start,
 	stop,
-	draw
+	draw,
+	keypress
 };
 
-static float cam_theta = 45, cam_phi = 20;
+static float cam_theta = 0, cam_phi = 20;
 static float cam_dist = 12;
 
 static long part_start;
@@ -57,12 +57,14 @@ static uint16_t hexsides_idx[] = {
 	23, 22, 10, 11
 };
 
-#define TILES_XSZ	8
+/* orig: 8/32, radsq: 140 */
+#define MAX_RAD_SQ	180.0f
+#define TILES_XSZ	9
 #define TILES_YSZ	32
 #define NUM_TILES	(TILES_XSZ * TILES_YSZ)
 static struct hextile tiles[NUM_TILES];
 
-#define OBJ_HEIGHT	35.0f
+#define OBJ_HEIGHT	5.0f
 
 
 struct screen *hexfloor_screen(void)
@@ -70,6 +72,7 @@ struct screen *hexfloor_screen(void)
 	return &scr;
 }
 
+#define HEX_SCALE		0.9f
 #define HALF_HEX_ANGLE	(M_PI / 6.0f)
 
 static int init(void)
@@ -82,8 +85,8 @@ static int init(void)
 
 	for(i=0; i<6; i++) {
 		angle[i] = (float)i / 3.0f * M_PI;
-		hextop[i].x = cos(angle[i]);
-		hextop[i].z = sin(angle[i]);
+		hextop[i].x = cos(angle[i]) * HEX_SCALE;
+		hextop[i].z = sin(angle[i]) * HEX_SCALE;
 		hextop[i].y = 0;
 
 		hextop[i].nx = hextop[i].nz = 0;
@@ -112,7 +115,7 @@ static int init(void)
 	vptr = hexsides + 12;
 	for(i=0; i<12; i++) {
 		*vptr = hexsides[i];
-		vptr->r = vptr->g = vptr->b = 0;
+		vptr->r = vptr->g = vptr->b = 64;
 		vptr++;
 	}
 
@@ -120,18 +123,19 @@ static int init(void)
 	tile = tiles;
 	for(i=0; i<TILES_YSZ; i++) {
 		for(j=0; j<TILES_XSZ; j++) {
+			float rad, dx, dy;
 			float offs = (float)(i & 1) * 1.5f;
 			tile->x = (j - TILES_XSZ / 2) * 3 + offs;
-			tile->y = (i - TILES_YSZ / 2) * hextop[1].z;
+			tile->y = (i - TILES_YSZ / 2) * 0.866;
 			tile->height = 0;
 
 			tile->r = rand() & 0xff;
 			tile->g = rand() & 0xff;
 			tile->b = rand() & 0xff;
 
-			tile->rad = sqrt(tile->x * tile->x + tile->y * tile->y);
-			tile->vvel = 0.0f;
-
+			dx = tile->x;
+			dy = tile->y;
+			tile->hidden = (dx * dx + dy * dy) > MAX_RAD_SQ;
 			tile++;
 		}
 	}
@@ -159,7 +163,7 @@ static void start(long trans_time)
 
 	g3d_polygon_mode(G3D_GOURAUD);
 
-	g3d_clear_color(85, 70, 136);
+	g3d_clear_color(0, 0, 0);
 
 	part_start = time_msec;
 }
@@ -203,13 +207,25 @@ static void draw(void)
 	pos.y = OBJ_HEIGHT;
 	pos.z = sin(tm * 1.0f) * 4.0f;
 
+	g3d_light_pos(0, pos.x, pos.y, pos.z);
+
+	g3d_enable(G3D_LIGHTING);
+
 	tile = tiles;
 	for(i=0; i<NUM_TILES; i++) {
-		float dx = pos.x - tile->x;
-		float dy = pos.z - tile->y;
-		float dist = (dx * dx + dy * dy) * 0.45f;
-		float d = dist > CGM_PI / 2.0f ? CGM_PI / 2.0f : dist;
-		float newh = cos(d) * 3.0f;
+		float dx, dy, dist, d, t, newh;
+
+		if(tile->hidden) {
+			tile++;
+			continue;
+		}
+
+		dx = pos.x - tile->x;
+		dy = pos.z - tile->y;
+		dist = (dx * dx + dy * dy) * 0.45f;
+		d = dist > CGM_PI / 2.0f ? CGM_PI / 2.0f : dist;
+		t = cos(d);
+		newh = t * 3.0f;
 
 		if(newh > tile->height) {
 			tile->height = newh;
@@ -217,18 +233,11 @@ static void draw(void)
 
 		tile->height -= 0.75f * dt;
 		if(tile->height < 0.0f) tile->height = 0.0f;
-		/*if(tile->height > OBJ_HEIGHT * 0.9f) {
-			tile->height = OBJ_HEIGHT * 0.9f;
-			tile->vvel = 0.0f;
-		}
-		if(tile->height < 0.0f) {
-			tile->height = 0.0f;
-			tile->vvel = 0.0f;
-		}*/
 
-		draw_hextile(tile++);
+		draw_hextile(tile++, t);
 	}
 
+	g3d_disable(G3D_LIGHTING);
 	draw_billboard(pos.x, pos.y, pos.z, 0.5f, 255, 255, 255, 255);
 
 	swap_buffers(fb_pixels);
@@ -241,16 +250,35 @@ static INLINE int clamp(int x, int a, int b)
 	return x;
 }
 
-static void draw_hextile(struct hextile *tile)
+#define LR		64
+#define LG		80
+#define LB		128
+
+#define HR		80
+#define HG		128
+#define HB		255
+
+static void draw_hextile(struct hextile *tile, float t)
 {
 	int i, r, g, b;
+	int tt = cround64(t * 255.0f);
+
+	r = LR + (((HR - LR) * tt) >> 8);
+	g = LG + (((HG - LG) * tt) >> 8);
+	b = LB + (((HB - LB) * tt) >> 8);
 
 	for(i=0; i<6; i++) {
 		hextop[i].y = tile->height;
+		hextop[i].r = r;
+		hextop[i].g = g;
+		hextop[i].b = b;
 	}
 
 	for(i=0; i<12; i++) {
 		hexsides[i].y = tile->height;
+		hexsides[i].r = r;
+		hexsides[i].g = g;
+		hexsides[i].b = b;
 	}
 
 	g3d_push_matrix();
@@ -260,4 +288,8 @@ static void draw_hextile(struct hextile *tile)
 	g3d_draw_indexed(G3D_QUADS, hexsides, 24, hexsides_idx, 24);
 
 	g3d_pop_matrix();
+}
+
+static void keypress(int key)
+{
 }

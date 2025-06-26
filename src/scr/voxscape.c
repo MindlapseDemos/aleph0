@@ -1097,8 +1097,11 @@ static void draw(void)
 	const int dt = time_msec - prevTime;
 	const int petrT = time_msec >> 6;
 
-	moveThroughPath();
-	//move(dt);
+	if (dseq_started()) {
+		moveThroughPath();
+	} else {
+		move(dt);
+	}
 	updateRaySamplePosAndStep();
 
 	renderSky();
@@ -1109,7 +1112,9 @@ static void draw(void)
 
 	moveClouds(dt);
 
-	doFades();
+	if (dseq_started()) {
+		doFades();
+	}
 
 	swap_buffers(0);
 }

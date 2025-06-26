@@ -596,7 +596,6 @@ static uint16_t reflectSky(int px, int py, int dvx, int dvy, int vh, int petruba
 	return skyPal[(int)((PAL_SHADES-1) * REFLECT_SHADE) + (petrubation>>1)][skyTex[v * SKY_TEX_WIDTH + u]];
 }
 
-
 static uint16_t reflectSample(int px, int py, int dvx, int dvy, int ph, int dh, int remainingSteps, uint16_t* pal, int petrubation)
 {
 	int i;
@@ -612,14 +611,16 @@ static uint16_t reflectSample(int px, int py, int dvx, int dvy, int ph, int dh, 
 		if (safeSteps == 0) {
 			return reflectSky(px, py, dvx, dvy, dh, petrubation>>1);
 		} else {
-			int sampleMapOffset;
+			int sampleMapOffset, h;
 			vx += safeSteps * dvx;
 			vy += safeSteps * dvy;
 
 			sampleMapOffset = ((vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE)) & (HMAP_SIZE - 1);
 
 			ph += safeSteps * dh;
-			if ((ph >> FP_SCALE) < hmap[sampleMapOffset]) {
+			h = ph >> FP_SCALE;
+			if (h > 96) break;	// hack value
+			if (h < hmap[sampleMapOffset]) {
 				return pal[cmap[sampleMapOffset] + (petrubation >> 2) * 256];
 			}
 			i += safeSteps;

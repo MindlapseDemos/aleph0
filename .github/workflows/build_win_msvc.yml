@@ -27,8 +27,7 @@ jobs:
     - name: prepare datafiles
       run: |
         svn export svn://mutantstargoat.com/datadirs/dosdemo data
-        rd /s data\bin
-        rd /s data\src
+        tools/procdata.bat
       
     - name: build demo
       working-directory: ${{env.GITHUB_WORKSPACE}}

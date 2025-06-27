@@ -35,6 +35,7 @@ jobs:
     - name: prepare datafiles
       run: |
         svn export svn://mutantstargoat.com/datadirs/dosdemo data
+        tools/procdata
         ln data/bin/midas.lib .
         rm -r data/bin data/src
     - name: build libs/imago

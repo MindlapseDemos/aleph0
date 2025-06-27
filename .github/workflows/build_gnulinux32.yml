@@ -22,6 +22,7 @@ jobs:
     - name: prepare datafiles
       run: |
         svn export svn://mutantstargoat.com/datadirs/dosdemo data
+        tools/procdata
         rm -r data/bin data/src
 
     - name: build demo

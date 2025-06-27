@@ -23,7 +23,7 @@ jobs:
     - name: install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install nasm subversion
+        sudo apt-get install libpng-dev libjpeg-dev nasm subversion
 
     - name: install toolchain
       if: steps.cache-tc.outputs.cache-hit != 'true'
@@ -35,6 +35,7 @@ jobs:
     - name: prepare datafiles
       run: |
         svn export svn://mutantstargoat.com/datadirs/dosdemo data
+        tools/procdata
         ln data/bin/libmidas.a libs/midas/libmidas.a
         rm -rf data/bin data/src
 

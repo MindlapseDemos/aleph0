@@ -29,6 +29,7 @@
 #define GUARD_YPAD	64
 
 static void screen_evtrig(dseq_event *ev, enum dseq_trig_mask trig, void *cls);
+static void end_evtrig(dseq_event *ev, enum dseq_trig_mask trig, void *cls);
 static void init_mmx_routines(void);
 
 int fb_width, fb_height, fb_bpp, fb_scan_size;
@@ -128,6 +129,10 @@ int demo_init(void)
 
 				dseq_transtime(ev, &scr->trans_in, &scr->trans_out);
 			}
+		}
+
+		if(!opt.dbgmode && (ev = dseq_lookup("quit"))) {
+			dseq_set_trigger(ev, DSEQ_TRIG_START, end_evtrig, 0);
 		}
 	}
 
@@ -453,6 +458,11 @@ static void screen_evtrig(dseq_event *ev, enum dseq_trig_mask trig, void *cls)
 		return;
 	}
 	change_screen(scrno);
+}
+
+static void end_evtrig(dseq_event *ev, enum dseq_trig_mask trig, void *cls)
+{
+	demo_quit();
 }
 
 /* initialize pointers to various routines which have MMX versions if they're

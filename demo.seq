@@ -52,15 +52,15 @@ demoseq {
 	}
 
 	galaxyrise {
-		dur = 2000
+		dur = 7000
 	}
 
 	blobgrid {
-		dur = 2000
+		dur = 8000
 	}
 
 	hairball {
-		dur = 2000
+		dur = 10000
 	}
 
 	reactor {
@@ -72,12 +72,12 @@ demoseq {
 		}
 	}
 
-	space {
-		dur = 6000
+	infcubes {
+		dur = 7000
 	}
 
-	infcubes {
-		dur = 2000
+	space {
+		dur = 7000
 	}
 
 	hexfloor {
@@ -85,7 +85,7 @@ demoseq {
 	}
 
 	juliatunnel {
-		dur = 2000
+		dur = 8000
 	}
 
 	voxelscape {
@@ -108,7 +108,7 @@ demoseq {
 	}
 
 	polka {
-		dur = 2000
+		dur = 8000
 	}
 
 	bump {
@@ -138,7 +138,7 @@ demoseq {
 	}
 
 	metaballs {
-		dur = 2000
+		dur = 10000
 
 		faces {
 			interp = "smoothstep"
@@ -148,17 +148,17 @@ demoseq {
 	}
 
 	molten {
-		dur = 2000
+		dur = 8000
 
 		rise {
 			interp = "smoothstep"
-			key(0) = 0
-			key(0) = 1024
+			key(0) = -1
+			key(2000) = 1
 		}
 	}
 
 	water {
-		dur = 2000
+		dur = 8000
 	}
 
 	credits {
@@ -175,6 +175,10 @@ demoseq {
 		fade {
 			dur = 2000
 		}
+	}
+
+	quit {
+		dur = 1
 	}
 }
 

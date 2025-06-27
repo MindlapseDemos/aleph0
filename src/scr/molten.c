@@ -200,7 +200,7 @@ static void molten_update(void)
 	mmesh.vcount = vol.num_verts;
 	mmesh.varr = vol.varr;
 
-	/*viewpos.x = sin(tsec * 0.4f) * 3.0;*/
+	viewpos.x = sin(tsec * 0.4f) * 3.0;
 
 	cgm_vlerp(&viewtgt, &viewtgt, &newpos, 0.75f * dt);
 }

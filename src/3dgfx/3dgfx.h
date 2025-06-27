@@ -168,6 +168,7 @@ void g3d_texcoord(float u, float v);
 void g3d_clip_plane(int idx, const float *eqn);
 
 int g3d_xform_point(float *xyzw);
+void g3d_viewspace_vertex(struct g3d_vertex *v);
 
 void g3d_shade(struct g3d_vertex *v);
 

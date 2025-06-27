@@ -963,7 +963,13 @@ int g3d_xform_point(float *vec)
 	return inside;
 }
 
+void g3d_viewspace_vertex(struct g3d_vertex *v)
+{
+	int mvtop = st->mtop[G3D_MODELVIEW];
 
+	xform4_vec3(st->mat[G3D_MODELVIEW][mvtop], &v->x);
+	xform3_vec3(st->mat[G3D_MODELVIEW][mvtop], &v->nx);
+}
 
 void g3d_shade(struct g3d_vertex *v)
 {

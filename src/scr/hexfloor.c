@@ -45,6 +45,7 @@ static float cam_dist = 12;
 
 static long part_start;
 
+static cgm_vec2 hexv[6];
 static struct g3d_vertex hextop[6];
 static struct g3d_vertex hexsides[24];
 static uint16_t hextop_idx[12] = {
@@ -94,8 +95,13 @@ static int init(void)
 
 	for(i=0; i<6; i++) {
 		angle[i] = (float)i / 3.0f * M_PI;
-		hextop[i].x = cos(angle[i]) * HEX_SCALE;
-		hextop[i].z = sin(angle[i]) * HEX_SCALE;
+		hexv[i].x = cos(angle[i]) * HEX_SCALE;
+		hexv[i].y = sin(angle[i]) * HEX_SCALE;
+	}
+
+	for(i=0; i<6; i++) {
+		hextop[i].x = hexv[i].x;
+		hextop[i].z = hexv[i].y;
 		hextop[i].y = 0;
 
 		hextop[i].nx = hextop[i].nz = 0;
@@ -124,7 +130,9 @@ static int init(void)
 	vptr = hexsides + 12;
 	for(i=0; i<12; i++) {
 		*vptr = hexsides[i];
-		vptr->r = vptr->g = vptr->b = 64;
+		vptr->r = 32;
+		vptr->g = 24;
+		vptr->b = 48;
 		vptr++;
 	}
 
@@ -186,6 +194,7 @@ static void start(long trans_time)
 	g3d_polygon_mode(G3D_GOURAUD);
 
 	g3d_clear_color(0, 0, 0);
+	g3d_light_ambient(0.4, 0.4, 0.4);
 
 	part_start = time_msec;
 	prev_tm = 0;
@@ -297,14 +306,7 @@ static void draw(void)
 	g3d_end();
 	*/
 
-	swap_buffers(fb_pixels);
-}
-
-static INLINE int clamp(int x, int a, int b)
-{
-	if(x < a) return a;
-	if(x > b) return b;
-	return x;
+	swap_buffers(0);
 }
 
 #define LR		64
@@ -319,32 +321,84 @@ static void draw_hextile(struct hextile *tile, float t)
 {
 	int i, r, g, b;
 	int tt = cround64(t * 255.0f);
+	struct g3d_vertex cv;
+	struct g3d_vertex *vptr;
 
 	r = LR + (((HR - LR) * tt) >> 8);
 	g = LG + (((HG - LG) * tt) >> 8);
 	b = LB + (((HB - LB) * tt) >> 8);
 
+	cv.x = tile->x;
+	cv.z = tile->y;
+	cv.y = tile->height;
+	cv.r = r;
+	cv.g = g;
+	cv.b = b;
+	cv.nx = cv.nz = 0;
+	cv.ny = 1;
+
+	g3d_viewspace_vertex(&cv);
+	g3d_shade(&cv);
+
+	vptr = hextop;
 	for(i=0; i<6; i++) {
-		hextop[i].y = tile->height;
-		hextop[i].r = r;
-		hextop[i].g = g;
-		hextop[i].b = b;
+		vptr->x = hexv[i].x + tile->x;
+		vptr->z = hexv[i].y + tile->y;
+		vptr->y = tile->height;
+		vptr->r = cv.r;
+		vptr->g = cv.g;
+		vptr->b = cv.b;
+		vptr++;
 	}
 
-	for(i=0; i<12; i++) {
-		hexsides[i].y = tile->height;
-		hexsides[i].r = r;
-		hexsides[i].g = g;
-		hexsides[i].b = b;
-	}
-
-	g3d_push_matrix();
-	g3d_translate(tile->x, 0, tile->y);
-
+	/* for hex TOPs lighting is computed once for the whole face at the top
+	 * of this function, to avoid discontinuities due to different angles of
+	 * each triangle the hex is made of. Flat shading is all we need for all
+	 * of them.
+	 */
+	g3d_disable(G3D_LIGHTING);
+	g3d_polygon_mode(G3D_FLAT);
 	g3d_draw_indexed(G3D_TRIANGLES, hextop, 6, hextop_idx, 12);
-	g3d_draw_indexed(G3D_QUADS, hexsides, 24, hexsides_idx, 24);
 
-	g3d_pop_matrix();
+	/* only draw the sides if the tile is not at 0 level, let it compute
+	 * lighting, and do gouraud to show a nice gradient due to color-material
+	 * at the sides (see init for the color of the bottom vertices)
+	 */
+	if(tile->height > 0.0f) {
+		float x = hextop->x;
+		float z = hextop->z;
+
+		vptr = hexsides;
+		vptr->x = x;
+		vptr->z = z;
+		vptr[11].x = x;
+		vptr[11].z = z;
+		vptr += 2;
+		for(i=1; i<6; i++) {
+			x = hextop[i].x;
+			z = hextop[i].z;
+			vptr->x = x;
+			vptr->z = z;
+			vptr[-1].x = x;
+			vptr[-1].z = z;
+			vptr += 2;
+		}
+
+		vptr = hexsides;
+		for(i=0; i<12; i++) {
+			vptr[12].x = vptr->x;
+			vptr[12].z = vptr->z;
+			vptr->y = tile->height;
+			vptr->r = r;
+			vptr->g = g;
+			vptr->b = b;
+			vptr++;
+		}
+
+		g3d_enable(G3D_LIGHTING);
+		g3d_polygon_mode(G3D_GOURAUD);
+		g3d_draw_indexed(G3D_QUADS, hexsides, 24, hexsides_idx, 24);
+	}
 }
 
 static void keypress(int key)

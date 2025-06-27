@@ -269,6 +269,10 @@ void end_loadscr(void)
 	swap_buffers(pixels);
 	if(load_delay) {
 		sleep_msec(load_delay * 3);
+	} else {
+		if(!opt.dbgmode) {
+			sleep_msec(300);
+		}
 	}
 }
 

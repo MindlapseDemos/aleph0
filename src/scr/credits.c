@@ -67,7 +67,7 @@ static const char *crd_text[CRD_LINES] = {
 	"MUSIC",
 	"  NO@XS",
 	"",
-	"OGANIZER",
+	"ORGANIZER",
 	"  RAMON"
 };
 static float crd_texv[CRD_LINES + 1];

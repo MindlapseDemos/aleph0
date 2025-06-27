@@ -60,7 +60,7 @@ demoseq {
 	}
 
 	hairball {
-		dur = 10000
+		dur = 15000
 	}
 
 	reactor {
@@ -73,19 +73,19 @@ demoseq {
 	}
 
 	infcubes {
-		dur = 7000
+		dur = 8000
 	}
 
 	space {
-		dur = 7000
+		dur = 8000
 	}
 
 	hexfloor {
-		dur = 20000
+		dur = 18000
 	}
 
 	juliatunnel {
-		dur = 8000
+		dur = 9000
 	}
 
 	voxelscape {
@@ -108,7 +108,7 @@ demoseq {
 	}
 
 	polka {
-		dur = 8000
+		dur = 10000
 	}
 
 	bump {
@@ -148,7 +148,7 @@ demoseq {
 	}
 
 	molten {
-		dur = 8000
+		dur = 10000
 
 		rise {
 			interp = "smoothstep"
@@ -158,7 +158,7 @@ demoseq {
 	}
 
 	water {
-		dur = 8000
+		dur = 10000
 	}
 
 	credits {

@@ -70,11 +70,12 @@ cp data/grise/* $outdir/data/grise
 cp demo.seq $outdir/data/demo.seq
 
 cp aleph0.nfo $outdir/aleph0.nfo
+unix2dos $outdir/aleph0.nfo
 
 echo 'debug = false' >$outdir/demo.cfg
 
 if ! $release; then
-	echo 'PREVIEW BUILD, DO NOT DISTRIBUTE' >PREVIEW.txt
+	echo 'PREVIEW BUILD, DO NOT DISTRIBUTE' >$outdir/PREVIEW.txt
 else
 	git archive -o $outdir/alephsrc.zip --prefix=alephsrc/ HEAD
 fi

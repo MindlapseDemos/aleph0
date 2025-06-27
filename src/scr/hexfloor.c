@@ -227,7 +227,7 @@ static void draw(void)
 		pos.x = cos(t_campos) * 12.0f;
 		pos.z = sin(t_campos * 3.0f) * 12.0f;
 		pos.y = OBJ_HEIGHT + 1.5f;
-		//crv_eval(&path, fmod(t_campos, 1.0f), &pos);
+		/*crv_eval(&path, fmod(t_campos, 1.0f), &pos);*/
 		crv_eval(&path, fmod(t_camtarg, 1.0f), &targ);
 
 		targ.y = OBJ_HEIGHT * 0.4;

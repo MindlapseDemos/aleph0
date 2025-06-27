@@ -37,7 +37,7 @@ fi
 # convert ttf font to glyphmaps
 if [ ! -f data/aleph0.gmp -o data/src/aleph0.ttf -nt data/aleph0.gmp -o $0 -nt data/aleph0.gmp ]; then
 	echo 'font2glyphmap: aleph0.ttf'
-	font2glyphmap -o data/aleph0.gmp -size 12 -range 65-91 data/src/aleph0.ttf
+	font2glyphmap -o data/aleph0.gmp -size 12 -range 64-91 data/src/aleph0.ttf
 fi
 
 # convert goat3d scenes

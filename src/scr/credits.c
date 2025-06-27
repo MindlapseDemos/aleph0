@@ -65,7 +65,7 @@ static const char *crd_text[CRD_LINES] = {
 	"  LUTHER",
 	"",
 	"MUSIC",
-	"  NOXS",
+	"  NO@XS",
 	"",
 	"OGANIZER",
 	"  RAMON"

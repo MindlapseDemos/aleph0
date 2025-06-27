@@ -173,7 +173,7 @@ extern int dbg_visited;
 static void draw(void)
 {
 	char buf[128];
-	int faces;
+	float faces;
 
 	update();
 
@@ -184,7 +184,7 @@ static void draw(void)
 	blitfb_rle(fb_pixels, 160 - 121/2, 0, spr);
 	blitfb_rle(fb_pixels, 160 - 197/2, 240 - 45, spr + 1);
 	if((faces = dseq_value(ev_faces))) {
-		int offs = faces * 98 >> 10;
+		int offs = cround64(faces * 98.0f);
 		blitfb_rle(fb_pixels, offs - 98, 20, spr + 2);
 		blitfb_rle(fb_pixels, 320 - offs, 21, spr + 3);
 	}

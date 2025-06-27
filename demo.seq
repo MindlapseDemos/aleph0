@@ -64,10 +64,10 @@ demoseq {
 	}
 
 	reactor {
-		dur = 12000
+		dur = 10000
 
 		flash {
-			start = 11250
+			wait = 9250
 			dur = 750
 		}
 	}
@@ -142,8 +142,8 @@ demoseq {
 
 		faces {
 			interp = "smoothstep"
-			trans = 800
-			key(0) = 1024
+			key(0) = 0
+			key(800) = 1
 		}
 	}
 

@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# XXX change this before release
+release=false
+
 bindos=bin/djdemo.exe
 binlnx=bin/demo
 binwin=bin/demo-win32.exe
@@ -37,23 +40,30 @@ if [ ! -f cwsdpmi.exe ]; then
 	exit 1
 fi
 
-#outdir=aleph0
-# XXX change this before release
-echo 'packaging preview build ...'
-outdir=alephpre
+if $release; then
+	outdir=aleph0
+	archive=aleph0.zip
+	echo "packaging release archive: $archive ..."
+else
+	outdir=alephpre
+	archive=aleph-preview.zip
+	echo "packaging preview archive: $archive ..."
+fi
 
 rm -rf $outdir
 mkdir -p $outdir
 cp $bindos $outdir/aleph0.exe
 cp cwsdpmi.exe $outdir/cwsdpmi.exe
 cp $binlnx $outdir/aleph0
+strip $outdir/aleph0
 cp $binwin $outdir/alephwin.exe
+chmod +x $outdir/alephwin.exe
 [ -n "$binarm" ] && cp $binarm $outdir/alephpi
 [ -n "$binbsd" ] && cp $binbsd $outdir/alephbsd
 [ -n "$binsgi" ] && cp $binsgi $outdir/alephsgi
 
 mkdir -p $outdir/data $outdir/data/3dzoom $outdir/data/bump $outdir/data/grise
-cp data/* $outdir/data
+cp data/* $outdir/data 2>/dev/null
 cp data/3dzoom/* $outdir/data/3dzoom
 cp data/bump/* $outdir/data/bump
 cp data/grise/* $outdir/data/grise
@@ -62,10 +72,12 @@ cp demo.seq $outdir/data/demo.seq
 cp aleph0.nfo $outdir/aleph0.nfo
 
 echo 'debug = false' >$outdir/demo.cfg
-# XXX change this before release
-echo 'PREVIEW BUILD, DO NOT DISTRIBUTE' >PREVIEW.txt
 
-# XXX change this before release
-#git archive -o $outdir/alephsrc.zip --prefix=alephsrc/ HEAD
+if ! $release; then
+	echo 'PREVIEW BUILD, DO NOT DISTRIBUTE' >PREVIEW.txt
+else
+	git archive -o $outdir/alephsrc.zip --prefix=alephsrc/ HEAD
+fi
 
-zip -r aleph0.zip $outdir
+rm -f $archive
+zip -rq $archive $outdir

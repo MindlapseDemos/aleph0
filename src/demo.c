@@ -176,7 +176,16 @@ void demo_cleanup(void)
 	g3d_destroy();
 
 	if(time_msec) {
-		float fps = (float)nframes / ((float)time_msec / 1000.0f);
+		float sec = (float)time_msec / 1000.0f;
+		float fps = (float)nframes / sec;
+
+		if(sec > 60.0f) {
+			int min = (int)(sec / 60.0f);
+			sec = fmod(sec, 60.0f);
+			printf("runtime: %d min, %.3f sec\n", min, sec);
+		} else {
+			printf("runtime: %.3f sec\n", sec);
+		}
 		printf("average framerate: %.1f\n", fps);
 	}
 }

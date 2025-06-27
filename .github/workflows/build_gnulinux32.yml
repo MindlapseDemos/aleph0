@@ -22,7 +22,7 @@ jobs:
     - name: prepare datafiles
       run: |
         svn export svn://mutantstargoat.com/datadirs/dosdemo data
-        tools/procdata
+        rm -r data/bin data/src
 
     - name: build demo
       run: |
@@ -35,5 +35,6 @@ jobs:
         path: |
           data/
           demo-gnulinux
+          demo.seq
 
 # vi:ts=2 sts=2 sw=2 expandtab:

@@ -22,9 +22,9 @@ opt = -O3 -ffast-math -fno-strict-aliasing
 warn = -pedantic -Wall -Wno-unused-function -Wno-unused-variable -Wno-unknown-pragmas
 
 ifdef RELEASE
-	dbg = -g
-	def = -DNDEBUG# -DNO_SOUND
+	def = -DNDEBUG
 else
+	dbg = -g
 	#def = -DNO_SOUND
 endif
 #prof = -pg

@@ -100,6 +100,7 @@ static int bgscroll_x, bgscroll_y, galscroll_x, galscroll_y;
 
 static int playanim, record;
 static long anim_start_time;
+static long prev_thing_upd;
 
 
 struct screen *hairball_screen(void)
@@ -259,12 +260,12 @@ static void start(long trans_time)
 	printf("thing triangles: %d\n", TENT_NTRIS * NUM_TENT + sphmesh.icount / 4);
 
 	start_time = time_msec;
+	prev_thing_upd = 0;
 }
 
 static void update(void)
 {
 	static float prev_mx, prev_my;
-	static long prev_thing_upd;
 	int mouse_dx, mouse_dy;
 	long msec = time_msec - start_time;
 	long thing_dt;

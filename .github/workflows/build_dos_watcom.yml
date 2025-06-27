@@ -35,8 +35,8 @@ jobs:
     - name: prepare datafiles
       run: |
         svn export svn://mutantstargoat.com/datadirs/dosdemo data
-        tools/procdata
         ln data/bin/midas.lib .
+        rm -r data/bin data/src
     - name: build libs/imago
       run: |
         source ow/owsetenv-dos.sh
@@ -65,5 +65,6 @@ jobs:
           data/
           demo.exe
           dos4gw.exe
+          demo.seq
 
 # vi:ts=2 sts=2 sw=2 expandtab:

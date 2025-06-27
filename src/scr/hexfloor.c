@@ -4,10 +4,12 @@
 #include "cgmath/cgmath.h"
 #include "demo.h"
 #include "3dgfx.h"
+#include "dseq.h"
 #include "mesh.h"
 #include "screen.h"
 #include "util.h"
 #include "gfxutil.h"
+#include "curve.h"
 
 #define VFOV	50.0f
 #define HFOV	(VFOV * 1.333333f)
@@ -65,6 +67,12 @@ static uint16_t hexsides_idx[] = {
 static struct hextile tiles[NUM_TILES];
 
 #define OBJ_HEIGHT	5.0f
+#define NUM_PATH_POINTS		24
+
+static struct curve path;
+static dseq_event *ev_hexfloor;
+
+static float prev_tm;
 
 
 struct screen *hexfloor_screen(void)
@@ -74,6 +82,7 @@ struct screen *hexfloor_screen(void)
 
 #define HEX_SCALE		0.9f
 #define HALF_HEX_ANGLE	(M_PI / 6.0f)
+
 
 static int init(void)
 {
@@ -140,11 +149,24 @@ static int init(void)
 		}
 	}
 
+	crv_init(&path);
+	path.type = CURVE_BSPLINE;
+	for(i=0; i<NUM_PATH_POINTS; i++) {
+		float t = (float)i / (NUM_PATH_POINTS - 1) * CGM_PI * 2.0f;
+		cgm_vec3 p;
+		p.x = cos(t * 3.0f) * 7.0f;
+		p.z = sin(t * 2.0f) * 7.0f;
+		p.y = OBJ_HEIGHT;
+		crv_add(&path, &p);
+	}
+	ev_hexfloor = dseq_lookup("hexfloor");
+
 	return 0;
 }
 
 static void destroy(void)
 {
+	crv_destroy(&path);
 }
 
 static void start(long trans_time)
@@ -166,6 +188,7 @@ static void start(long trans_time)
 	g3d_clear_color(0, 0, 0);
 
 	part_start = time_msec;
+	prev_tm = 0;
 }
 
 static void stop(long trans_time)
@@ -183,29 +206,47 @@ static void draw(void)
 {
 	int i;
 	struct hextile *tile;
-	static float prev_tm;
 	float dt, tm = (float)(time_msec - part_start) / 1000.0f;
-	cgm_vec3 pos;
+	float t_obj, t_campos, t_camtarg;
+	cgm_vec3 pos, targ, up = {0, 1, 0};
+	float viewmat[16];
 
 	dt = tm - prev_tm;
 	prev_tm = tm;
 
 	update();
 
+	t_campos = dseq_param(ev_hexfloor);
+	t_camtarg = t_campos;
+	t_obj = t_camtarg + 0.01;
+
+
 	g3d_matrix_mode(G3D_MODELVIEW);
-	g3d_load_identity();
-	g3d_translate(0, -2, -cam_dist);
-	g3d_rotate(cam_phi, 1, 0, 0);
-	g3d_rotate(cam_theta, 0, 1, 0);
-	if(opt.sball) {
-		g3d_mult_matrix(sball_matrix);
+	if(dseq_started()) {
+		t_campos *= CGM_PI * 2.0f;
+		pos.x = cos(t_campos) * 12.0f;
+		pos.z = sin(t_campos * 3.0f) * 12.0f;
+		pos.y = OBJ_HEIGHT + 1.5f;
+		//crv_eval(&path, fmod(t_campos, 1.0f), &pos);
+		crv_eval(&path, fmod(t_camtarg, 1.0f), &targ);
+
+		targ.y = OBJ_HEIGHT * 0.4;
+
+		cgm_minv_lookat(viewmat, &pos, &targ, &up);
+		g3d_load_matrix(viewmat);
+	} else {
+		g3d_load_identity();
+		g3d_translate(0, -2, -cam_dist);
+		g3d_rotate(cam_phi, 1, 0, 0);
+		g3d_rotate(cam_theta, 0, 1, 0);
+		if(opt.sball) {
+			g3d_mult_matrix(sball_matrix);
+		}
 	}
 
 	g3d_clear(G3D_COLOR_BUFFER_BIT | G3D_DEPTH_BUFFER_BIT);
 
-	pos.x = cos(tm * 0.5f) * 4.0f;
-	pos.y = OBJ_HEIGHT;
-	pos.z = sin(tm * 1.0f) * 4.0f;
+	crv_eval(&path, t_obj, &pos);
 
 	g3d_light_pos(0, pos.x, pos.y, pos.z);
 
@@ -239,6 +280,22 @@ static void draw(void)
 
 	g3d_disable(G3D_LIGHTING);
 	draw_billboard(pos.x, pos.y, pos.z, 0.5f, 255, 255, 255, 255);
+
+	/*
+	g3d_begin(G3D_POINTS);
+	g3d_color3f(0, 0.5, 0);
+	for(i=0; i<4096; i++) {
+		crv_eval(&path, (float)i / 4095.0f, &pos);
+		g3d_vertex(pos.x, pos.y, pos.z);
+	}
+
+	g3d_color3f(1, 0, 0);
+	for(i=0; i<crv_num_points(&path); i++) {
+		pos = path.cp[i];
+		g3d_vertex(pos.x, pos.y, pos.z);
+	}
+	g3d_end();
+	*/
 
 	swap_buffers(fb_pixels);
 }

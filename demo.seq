@@ -81,7 +81,7 @@ demoseq {
 	}
 
 	hexfloor {
-		dur = 2000
+		dur = 20000
 	}
 
 	juliatunnel {

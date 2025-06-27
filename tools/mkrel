@@ -1,0 +1,71 @@
+#!/bin/sh
+
+bindos=bin/djdemo.exe
+binlnx=bin/demo
+binwin=bin/demo-win32.exe
+binarm=bin/demopi
+binbsd=bin/demobsd
+binsgi=bin/demosgi
+
+if [ ! -f $bindos ]; then
+	echo "DOS build missing (expected: $bindos)"
+	exit 1
+fi
+if [ ! -f $binlnx ]; then
+	echo "GNU/Linux x86 build missing (expected: $binlnx)"
+	exit 1
+fi
+if [ ! -f $binwin ]; then
+	echo "Win32 build missing (expected: $binwin)"
+	exit 1
+fi
+if [ ! -f $binarm ]; then
+	echo "Warning: ARM GNU/Linux build missing (expected: $binarm)"
+	binarm=
+fi
+if [ ! -f $binbsd ]; then
+	echo "Warning: FreeBSD build missing (expected: $binbsd)"
+	binbsd=
+fi
+if [ ! -f $binsgi ]; then
+	echo "Warning: SGI IRIX build missing (expected: $binsgi)"
+	binsgi=
+fi
+
+if [ ! -f cwsdpmi.exe ]; then
+	echo "cwsdpmi.exe not found"
+	exit 1
+fi
+
+#outdir=aleph0
+# XXX change this before release
+echo 'packaging preview build ...'
+outdir=alephpre
+
+rm -rf $outdir
+mkdir -p $outdir
+cp $bindos $outdir/aleph0.exe
+cp cwsdpmi.exe $outdir/cwsdpmi.exe
+cp $binlnx $outdir/aleph0
+cp $binwin $outdir/alephwin.exe
+[ -n "$binarm" ] && cp $binarm $outdir/alephpi
+[ -n "$binbsd" ] && cp $binbsd $outdir/alephbsd
+[ -n "$binsgi" ] && cp $binsgi $outdir/alephsgi
+
+mkdir -p $outdir/data $outdir/data/3dzoom $outdir/data/bump $outdir/data/grise
+cp data/* $outdir/data
+cp data/3dzoom/* $outdir/data/3dzoom
+cp data/bump/* $outdir/data/bump
+cp data/grise/* $outdir/data/grise
+cp demo.seq $outdir/data/demo.seq
+
+cp aleph0.nfo $outdir/aleph0.nfo
+
+echo 'debug = false' >$outdir/demo.cfg
+# XXX change this before release
+echo 'PREVIEW BUILD, DO NOT DISTRIBUTE' >PREVIEW.txt
+
+# XXX change this before release
+#git archive -o $outdir/alephsrc.zip --prefix=alephsrc/ HEAD
+
+zip -r aleph0.zip $outdir

@@ -1,0 +1,155 @@
+name: Build and package
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: install dependencies
+      run: |
+        sudo dpkg --add-architecture i386
+        sudo apt-get update
+        sudo apt-get install gcc-multilib libgl-dev:i386 libpng-dev libjpeg-dev libasound2-dev:i386 nasm subversion
+
+    - name: prepare datafiles
+      run: |
+        svn export svn://mutantstargoat.com/datadirs/dosdemo data
+        tools/procdata
+        rm -r data/bin data/src
+
+    - name: build demo
+      run: |
+        make
+        ln demo demo-gnulinux
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: demo-gnulinux
+        path: |
+          demo
+
+  build-win-msvc:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ilammy/setup-nasm@v1
+    
+    - name: prepare environment
+      uses: microsoft/setup-msbuild@v2
+
+    - name: build tools
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: |
+        msbuild -m -p:Configuration=Release -t:img2bin .
+        msbuild -m -p:Configuration=Release -t:csprite .
+
+    - name: prepare datafiles
+      run: |
+        svn export svn://mutantstargoat.com/datadirs/dosdemo data
+        tools/procdata.bat
+      
+    - name: build demo
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: |
+        msbuild -m -p:Configuration=Release -t:dosdemo .
+        copy Release\dosdemo.exe demo-win32.exe
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: demo-win32
+        path: |
+          demo-win32.exe
+
+  build-dos-djgpp:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: cache toolchain
+      id: cache-tc
+      uses: actions/cache@v4
+      with:
+        path: djgpp
+        key: djgpp-cache1
+
+    - name: install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install libpng-dev libjpeg-dev nasm subversion
+
+    - name: install toolchain
+      if: steps.cache-tc.outputs.cache-hit != 'true'
+      run: |
+        wget http://mutantstargoat.com/~nuclear/djgpp_bundle.tar.gz
+        tar xzvf djgpp_bundle.tar.gz
+        sed -i 's/HOME/GITHUB_WORKSPACE/g' djgpp/setenv
+
+    - name: prepare datafiles
+      run: |
+        svn export svn://mutantstargoat.com/datadirs/dosdemo data
+        tools/procdata
+        ln data/bin/libmidas.a libs/midas/libmidas.a
+        rm -rf data/bin data/src
+
+    - name: build demo
+      run: |
+        source djgpp/setenv
+        make -f Makefile.dj
+        cp djgpp/i586-pc-msdosdjgpp/bin/cwsdpmi.exe .
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: djdemo
+        path: |
+          djdemo.exe
+          cwsdpmi.exe
+
+  pack:
+    runs-on: ubuntu-latest
+    needs: [build-linux, build-win-msvc, build-dos-djgpp]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install dependencies
+        run: sudo apt-get install subversion
+
+      - name: prepare datafiles
+        run: svn export svn://mutantstargoat.com/datadirs/dosdemo data
+
+      - name: download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: builds
+
+      - run: ls -R builds
+
+      - name: package
+        run: |
+          mkdir -p bin
+          cp builds/demo-gnulinux/* bin
+          cp builds/demo-win32/* bin
+          cp builds/djdemo/* bin
+          mv bin/cwsdpmi.exe .
+          tools/mkrel
+
+      - name: set short commit id
+        id: vars
+        run: echo "COMMIT_ID=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: upload archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: aleph0-pack-${{ env.COMMIT_ID }}
+          path: aleph-preview.zip
+
+# XXX after release:
+#         path: aleph0.zip
+
+# vi:ts=2 sts=2 sw=2 expandtab:

@@ -53,14 +53,15 @@ fi
 rm -rf $outdir
 mkdir -p $outdir
 cp $bindos $outdir/aleph0.exe
-cp cwsdpmi.exe $outdir/cwsdpmi.exe
 cp $binlnx $outdir/aleph0
 strip $outdir/aleph0
 cp $binwin $outdir/alephwin.exe
-chmod +x $outdir/alephwin.exe
 [ -n "$binarm" ] && cp $binarm $outdir/alephpi
 [ -n "$binbsd" ] && cp $binbsd $outdir/alephbsd
 [ -n "$binsgi" ] && cp $binsgi $outdir/alephsgi
+
+chmod 775 $outdir/*
+cp cwsdpmi.exe $outdir/cwsdpmi.exe
 
 mkdir -p $outdir/data $outdir/data/3dzoom $outdir/data/bump $outdir/data/grise
 cp data/* $outdir/data 2>/dev/null

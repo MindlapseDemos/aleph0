@@ -44,6 +44,8 @@ unsigned long time_msec;
 int mouse_x, mouse_y;
 unsigned int mouse_bmask;
 
+struct font demofont;
+
 static struct au_module *mod;
 
 float sball_matrix[] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
@@ -100,6 +102,10 @@ int demo_init(void)
 		if(!(mod = au_load_module("data/music.xm"))) {
 			return -1;
 		}
+	}
+
+	if(load_font(&demofont, "data/aleph0.gmp", PACK_RGB16(255, 220, 192)) == -1) {
+		return -1;
 	}
 
 	if(dseq_open("demo.seq") == -1) {
@@ -168,6 +174,8 @@ void demo_cleanup(void)
 		malloc_stats();
 	}
 #endif
+
+	destroy_font(&demofont);
 
 	if(opt.music) {
 		au_free_module(mod);

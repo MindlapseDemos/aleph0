@@ -14,7 +14,6 @@
 #define VFOV	50.0f
 #define HFOV	(VFOV * 1.333333f)
 
-
 struct hextile {
 	float x, y, height;
 	unsigned char r, g, b;
@@ -28,6 +27,8 @@ static void stop(long trans_time);
 static void draw(void);
 static void draw_hextile(struct hextile *tile, float t);
 static void keypress(int key);
+
+static void greet_trig(dseq_event *ev, enum dseq_trig_mask type, void *cls);
 
 
 static struct screen scr = {
@@ -75,6 +76,17 @@ static dseq_event *ev_hexfloor;
 
 static float prev_tm;
 
+static const char *greetstr[] = {
+	"GREET@A", "GREET@B", "GREET@C", "GREET@D", "GREET@E", "GREET@F"
+};
+#define NUM_GREETS	(sizeof greetstr / sizeof *greetstr)
+static dseq_event *ev_greets[NUM_GREETS];
+static int cur_greet;
+static struct {int x, y;} gpos[NUM_GREETS] = {
+	{10, 10}, {180, 200}, {30, 150}, {200, 50}, {40, 80}, {64, 100}
+};
+#define LINECOLOR	PACK_RGB16(255, 192, 80)
+
 
 struct screen *hexfloor_screen(void)
 {
@@ -92,6 +104,7 @@ static int init(void)
 	struct hextile *tile;
 	struct g3d_vertex *vptr;
 	float nx, nz;
+	char name[32];
 
 	for(i=0; i<6; i++) {
 		angle[i] = (float)i / 3.0f * M_PI;
@@ -169,6 +182,16 @@ static int init(void)
 	}
 	ev_hexfloor = dseq_lookup("hexfloor");
 
+	for(i=0; i<NUM_GREETS; i++) {
+		sprintf(name, "hexfloor.greet%d", i);
+		if((ev_greets[i] = dseq_lookup(name))) {
+			printf("set trigger\n");
+			dseq_set_trigger(ev_greets[i], DSEQ_TRIG_START | DSEQ_TRIG_END, greet_trig, (void*)i);
+		} else {
+			fprintf(stderr, "Warning: missing event for greet %d: %s\n", i, greetstr[i]);
+		}
+	}
+
 	return 0;
 }
 
@@ -195,6 +218,8 @@ static void start(long trans_time)
 
 	g3d_clear_color(0, 0, 0);
 	g3d_light_ambient(0.4, 0.4, 0.4);
+
+	cur_greet = -1;
 
 	part_start = time_msec;
 	prev_tm = 0;
@@ -306,6 +331,27 @@ static void draw(void)
 	g3d_end();
 	*/
 
+	/* greet text */
+	if(cur_greet >= 0) {
+		cgm_vec4 pt;
+		int x0, y0, x1;
+		int x = gpos[cur_greet].x;
+		int y = gpos[cur_greet].y;
+		int ybot = y + demofont.advance + 3;
+		int len = calc_text_len(&demofont, greetstr[cur_greet]) + 8;
+		draw_text(&demofont, fb_pixels, x, y, greetstr[cur_greet]);
+
+		cgm_wcons(&pt, pos.x, pos.y, pos.z, 1);
+		g3d_xform_point(&pt.x);
+		x0 = cround64(pt.x);
+		y0 = cround64(pt.y);
+
+		x1 = x0 > x ? x + len : x;
+
+		draw_line(x, ybot, x + len, ybot, LINECOLOR);
+		draw_line(x0, y0, x1, ybot, LINECOLOR);
+	}
+
 	swap_buffers(0);
 }
 
@@ -403,4 +449,14 @@ static void draw_hextile(struct hextile *tile, float t)
 
 static void keypress(int key)
 {
+}
+
+static void greet_trig(dseq_event *ev, enum dseq_trig_mask type, void *cls)
+{
+	if(type & DSEQ_TRIG_END) {
+		cur_greet = -1;
+		return;
+	}
+
+	cur_greet = (intptr_t)cls;
 }

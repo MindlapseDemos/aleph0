@@ -87,7 +87,7 @@ static int credits_init(void)
 	int col[3];
 	float xform[16];
 	uint16_t *src, *dst;
-	struct font fnt;
+	/*struct font demofont;*/
 
 	mountcol = PACK_RGB16(colmnt[0], colmnt[1], colmnt[2]);
 	mountcol_mir = PACK_RGB16(colmnt[0] / 2, colmnt[1] / 2, colmnt[2] / 2);
@@ -107,9 +107,9 @@ static int credits_init(void)
 		bgoffs[i] = pfbm1(x, 8.0f, 5) * 32 + 16;
 	}
 
-	if(load_font(&fnt, "data/aleph0.gmp", PACK_RGB16(255, 220, 192)) == -1) {
+	/*if(load_font(&demofont, "data/aleph0.gmp", PACK_RGB16(255, 220, 192)) == -1) {
 		return -1;
-	}
+	}*/
 
 	/* prepare credits texture */
 	init_image(&ctex, 256, 512, 0, 256);
@@ -118,15 +118,15 @@ static int credits_init(void)
 		return -1;
 	}
 
-	adv = fnt.advance * 3 / 2;
+	adv = demofont.advance * 3 / 2;
 	y = 0;
 	for(i=0; i<CRD_LINES; i++) {
 		crd_texv[i] = (float)y / 512.0f;
-		draw_text_img(&fnt, &ctex, 0, y + adv / 5, crd_text[i]);
+		draw_text_img(&demofont, &ctex, 0, y + adv / 5, crd_text[i]);
 		y += adv;
 	}
 	crd_texv[CRD_LINES] = (float)y / 512.0f;
-	destroy_font(&fnt);
+	/*destroy_font(&demofont);*/
 
 	/* load envmap */
 	if(load_image(&envmap, "data/crenv.jpg") == -1) {

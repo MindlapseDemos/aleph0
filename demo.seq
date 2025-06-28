@@ -22,6 +22,7 @@
 #   - extrap: one of <extend|clamp|repeat|pingpong>
 #   - trans_in/trans_out: auto-key in/out transition duration (milliseconds)
 #   - trans: sets both trans_in and trans_out
+#   - delayend <msec>: delay the end some time beyond the end of the last event
 #
 # WARNING!!!!! WARNING!!!!! WARNING!!!!! WARNING!!!!! WARNING!!!!! WARNING!!!!!
 # prev screen transition out + new screen transition in both run during the new
@@ -81,7 +82,33 @@ demoseq {
 	}
 
 	hexfloor {
-		dur = 18000
+		#dur = 18000
+
+		greet0 {
+			wait = 2000
+			dur = 2000
+		}
+		greet1 {
+			wait = 1500
+			dur = 2000
+		}
+		greet2 {
+			wait = 1500
+			dur = 2000
+		}
+		greet3 {
+			wait = 1500
+			dur = 2000
+		}
+		greet4 {
+			wait = 1500
+			dur = 2000
+		}
+		greet5 {
+			wait = 1500
+			dur = 2000
+		}
+		delayend = 4000
 	}
 
 	juliatunnel {
@@ -148,7 +175,7 @@ demoseq {
 	}
 
 	molten {
-		dur = 10000
+		dur = 12000
 
 		rise {
 			interp = "smoothstep"

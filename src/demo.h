@@ -8,6 +8,7 @@
 #include "cfgopt.h"
 #include "timer.h"
 #include "cgmath/cgmath.h"
+#include "font.h"
 
 extern int fb_width, fb_height, fb_bpp;
 #define FB_WIDTH	320
@@ -22,6 +23,8 @@ extern struct image fbimg;
 extern unsigned long time_msec;
 extern int mouse_x, mouse_y;
 extern unsigned int mouse_bmask;
+
+extern struct font demofont;
 
 enum {
 	MOUSE_BN_LEFT		= 1,

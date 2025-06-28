@@ -83,7 +83,7 @@ static const char *greetstr[] = {
 static dseq_event *ev_greets[NUM_GREETS];
 static int cur_greet;
 static struct {int x, y;} gpos[NUM_GREETS] = {
-	{10, 10}, {180, 200}, {30, 150}, {200, 50}, {40, 80}, {64, 100}
+	{-10, -50}, {20, 30}, {35, -12}, {-20, 20}, {12, 8}, {-10, -40}
 };
 #define LINECOLOR	PACK_RGB16(255, 192, 80)
 
@@ -334,22 +334,29 @@ static void draw(void)
 	/* greet text */
 	if(cur_greet >= 0) {
 		cgm_vec4 pt;
-		int x0, y0, x1;
-		int x = gpos[cur_greet].x;
-		int y = gpos[cur_greet].y;
-		int ybot = y + demofont.advance + 3;
+		int px, py, x0, x1, y0, y1;
+		int dx = gpos[cur_greet].x;
+		int dy = gpos[cur_greet].y;
 		int len = calc_text_len(&demofont, greetstr[cur_greet]) + 8;
-		draw_text(&demofont, fb_pixels, x, y, greetstr[cur_greet]);
 
 		cgm_wcons(&pt, pos.x, pos.y, pos.z, 1);
 		g3d_xform_point(&pt.x);
-		x0 = cround64(pt.x);
-		y0 = cround64(pt.y);
+		px = cround64(pt.x);
+		py = cround64(pt.y);
 
-		x1 = x0 > x ? x + len : x;
+		if(dx < 0) {
+			x0 = px - dx - len;
+		} else {
+			x0 = px + dx;
+		}
+		x1 = x0 + len;
+		y0 = py + dy;
+		y1 = y0 + demofont.advance;
 
-		draw_line(x, ybot, x + len, ybot, LINECOLOR);
-		draw_line(x0, y0, x1, ybot, LINECOLOR);
+		draw_text(&demofont, fb_pixels, x0, y0, greetstr[cur_greet]);
+
+		draw_line(x0, y1, x1, y1, LINECOLOR);
+		draw_line(px, py, dx < 0 ? x1 : x0, y1, LINECOLOR);
 	}
 
 	swap_buffers(0);

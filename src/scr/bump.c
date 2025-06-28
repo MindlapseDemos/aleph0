@@ -6,6 +6,7 @@
 #include "demo.h"
 #include "screen.h"
 #include "noise.h"
+#include "gfxutil.h"
 #include "imago2.h"
 
 #include "opt_rend.h"
@@ -159,6 +160,7 @@ static dseq_event *ev_electroids;
 static dseq_event *ev_scrollUp;
 static dseq_event *ev_lightsIn;
 static dseq_event *ev_scalerIn;
+static dseq_event *ev_fade;
 
 
 struct screen *bump_screen(void)
@@ -374,6 +376,7 @@ static int init(void)
 	ev_scrollUp = dseq_lookup("bump.scrollUp");
 	ev_lightsIn = dseq_lookup("bump.lightsIn");
 	ev_scalerIn = dseq_lookup("bump.scalerIn");
+	ev_fade = dseq_lookup("bump.fade");
 
 	return 0;
 }
@@ -812,6 +815,27 @@ static void bumpScript()
 	}
 }
 
+static void fadeLightmap(float ft)
+{
+	int x, y, s;
+	uint16_t* src;
+
+	if (ft>0.99f) return;
+
+	s = (int)(ft * 256);
+	src = lightmap + LMAP_OFFSET_Y * LMAP_WIDTH + LMAP_OFFSET_X;
+	for (y = 0; y < FB_HEIGHT; ++y) {
+		for (x = 0; x < FB_WIDTH; ++x) {
+			uint16_t c = *src;
+			int r = (UNPACK_R16(c) * s) >> 8;
+			int g = (UNPACK_G16(c) * s) >> 8;
+			int b = (UNPACK_B16(c) * s) >> 8;
+			*src++ = PACK_RGB16(r, g, b);
+		}
+		src += LMAP_WIDTH - FB_WIDTH;
+	}
+}
+
 static void draw(void)
 {
 	int i;
@@ -839,6 +863,8 @@ static void draw(void)
 			renderParticles();
 		}
 	}
+
+	fadeLightmap(dseq_value(ev_fade));
 
 	blitBumpTextScript(t);
 

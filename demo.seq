@@ -162,6 +162,18 @@ demoseq {
 			wait = 0
 			dur = 8192
 		}
+
+		fade {
+			interp = "linear"
+			key(0) = 0
+			key(2048) = 1
+			interp = "linear"
+			key(8192) = 1
+			key(9215) = 0
+			interp = "linear"
+			key(9216) = 0
+			key(10240) = 1
+		}
 	}
 
 	metaballs {

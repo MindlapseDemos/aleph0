@@ -180,7 +180,7 @@ static dseq_event *load_event(struct ts_node *tsev, dseq_event *evprev, dseq_eve
 			ev->start = attr->val.inum;
 		} else if(strcmp(attr->name, "wait") == 0) {
 			SKIP_NOTNUM("wait");
-			ev->start = attr->val.inum + (evprev ? evprev->start + evprev->dur : 0);
+			ev->start = attr->val.inum + prev_time;
 
 		} else if(strcmp(attr->name, "dur") == 0) {
 			SKIP_NOTNUM("dur");

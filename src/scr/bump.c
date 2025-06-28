@@ -5,6 +5,7 @@
 
 #include "demo.h"
 #include "screen.h"
+#include "noise.h"
 #include "imago2.h"
 
 #include "opt_rend.h"
@@ -31,7 +32,7 @@ static struct screen scr = {
 #define BIGGER_LIGHT_WIDTH 384
 #define BIGGER_LIGHT_HEIGHT BIGGER_LIGHT_WIDTH
 
-#define NUM_PARTICLES 50
+#define NUM_PARTICLES 48
 #define PARTICLE_LIGHT_WIDTH 16
 #define PARTICLE_LIGHT_HEIGHT 16
 
@@ -43,13 +44,17 @@ static struct screen scr = {
 #define LMAP_OFFSET_X ((LMAP_WIDTH - FB_WIDTH) / 2)
 #define LMAP_OFFSET_Y ((LMAP_HEIGHT - FB_HEIGHT) / 2)
 
+#define FAINT_LMAP_WIDTH 256
+#define FAINT_LMAP_HEIGHT 256
+
+static unsigned char* faintLmapTex;
+
 
 static unsigned char electroPathData[] = {NUM_PARTICLES,
         6, 117,5,4,3, 114,5,3,4, 110,1,2,6, 110,251,1,3, 113,248,0,7, 120,248,255,7,
         27, 250,5,0,19, 13,5,7,13, 26,18,6,6, 26,24,7,5, 31,29,0,15, 46,29,7,2, 48,31,0,32, 80,31,7,10, 90,41,6,8, 90,49,7,8, 98,57,6,4, 98,61,7,4, 102,65,0,14, 116,65,1,2, 118,63,2,27, 118,36,3,5, 113,31,4,3, 110,31,3,12, 98,19,2,30, 98,245,1,11, 109,234,2,16, 109,218,1,8, 117,210,0,26, 143,210,1,12, 155,198,2,38, 155,160,1,4, 159,156,255,4,
         2, 130,9,6,48, 130,57,255,48,
         8, 84,5,3,4, 80,1,2,6, 80,251,1,7, 87,244,2,16, 87,228,1,52, 139,176,2,4, 139,172,1,6, 145,166,255,6,
-        2, 202,4,2,11, 202,249,255,11,
         2, 46,5,2,13, 46,248,255,13,
         7, 39,13,0,3, 42,13,7,10, 52,23,0,32, 84,23,7,14, 98,37,6,8, 98,45,7,8, 106,53,255,8,
         12, 121,14,4,12, 109,14,3,3, 106,11,2,18, 106,249,1,11, 117,238,2,16, 117,222,1,4, 121,218,0,48, 169,218,1,6, 175,212,2,40, 175,172,3,2, 173,170,2,14, 173,156,255,14,
@@ -91,7 +96,6 @@ static unsigned char electroPathData[] = {NUM_PARTICLES,
         7, 127,173,6,3, 127,176,5,48, 79,224,6,16, 79,240,5,9, 70,249,6,17, 70,10,7,4, 74,14,255,4,
         5, 31,178,7,3, 34,181,6,19, 34,200,5,2, 32,202,4,41, 247,202,255,41,
         7, 145,184,5,22, 123,206,4,8, 115,206,5,10, 105,216,6,16, 105,232,5,11, 94,243,6,26, 94,13,255,26,
-        2, 1,231,4,8, 249,231,255,8,
         18, 29,248,6,23, 29,15,7,8, 37,23,0,9, 46,23,7,4, 50,27,0,32, 82,27,7,12, 94,39,6,8, 94,47,7,8, 102,55,6,4, 102,59,7,2, 104,61,0,8, 112,61,1,2, 114,59,2,8, 114,51,3,12, 102,39,2,4, 102,35,3,8, 94,27,2,8, 94,19,255,8,
         9, 180,249,6,8, 180,1,5,3, 177,4,4,16, 161,4,5,4, 157,8,6,52, 157,60,7,7, 164,67,0,38, 202,67,7,4, 206,71,255,4,
         10, 191,249,6,9, 191,2,5,6, 185,8,4,19, 166,8,5,4, 162,12,6,17, 162,29,7,4, 166,33,6,18, 166,51,7,12, 178,63,0,26, 204,63,255,26
@@ -218,7 +222,7 @@ static void generateBigLight(unsigned short *lightBitmap, Edge *lightEdges, unsi
 {
 	const int lightRadius = lightWidth / 2;
 
-	const float rgbMul[12] = { 	0.325, 0.35, 0.375,
+	const float rgbMul[12] = { 	0.275, 0.125, 0.0,
 								0.5, 0,    0,
 								0,    0.5, 0,
 								0,    0,    0.5 };
@@ -274,7 +278,7 @@ static void generateParticleLight()
 			float invDist = ((float)particleRadius - (float)sqrt(xc * xc + yc * yc)) / (float)particleRadius;
 			if (invDist < 0.0f) invDist = 0.0f;
 
-			c = (int)(pow(invDist, 4.5f) * 31);
+			c = (int)(pow(invDist, 4.5f) * 27);
 			CLAMP(c,0,29)
 			particleLight[i++] = ((c >> 1) << 11) | (c << 5) | (c >> 1);
 		}
@@ -299,6 +303,26 @@ static void precalculateBumpInclination()
 			const int di = dy * LMAP_WIDTH + dx;
 
 			bumpOffset[i++] = di;
+		}
+	}
+}
+
+static void initFaintLightmapBackground()
+{
+	int x, y, i;
+	const float scale = 1.0f / 32.0f;
+	const int perX = (int)(scale * FAINT_LMAP_WIDTH);
+	const int perY = (int)(scale * FAINT_LMAP_HEIGHT);
+
+	faintLmapTex = (unsigned char*)malloc(FAINT_LMAP_WIDTH * FAINT_LMAP_HEIGHT);
+
+	i = 0;
+	for (y = 0; y < FAINT_LMAP_HEIGHT; ++y) {
+		for (x = 0; x < FAINT_LMAP_WIDTH; ++x) {
+			float f = pfbm2((float)x * scale, (float)y * scale, perX, perY, 8) + 0.25f;
+			//float f = pturbulence2((float)x * scale, (float)y * scale, perX, perY, 4);
+			CLAMP(f, 0.0f, 0.99f);
+			faintLmapTex[i++] = (int)(f * 5.0f);
 		}
 	}
 }
@@ -343,6 +367,8 @@ static int init(void)
 	generateBigLight(biggerLight, biggerLightEdges, BIGGER_LIGHT_WIDTH, BIGGER_LIGHT_HEIGHT, 0);
 
 	generateParticleLight();
+
+	initFaintLightmapBackground();
 
 	ev_electroids = dseq_lookup("bump.electroids");
 	ev_scrollUp = dseq_lookup("bump.scrollUp");
@@ -431,8 +457,11 @@ static void renderLight(unsigned short *lightBitmap, Edge *lightEdges, unsigned 
 	unsigned short* dst;
 
 	const int x0 = lightPos->x;
-	const int y0 = lightPos->y;
-	const int y1 = lightPos->y + lightHeight;
+	int y0 = lightPos->y;
+	int y1 = lightPos->y + lightHeight;
+
+	CLAMP(y0, -LMAP_OFFSET_Y, LMAP_HEIGHT - LMAP_OFFSET_Y - 1);
+	CLAMP(y1, -LMAP_OFFSET_Y, LMAP_HEIGHT - LMAP_OFFSET_Y - 1);
 
 	dst = lightmap + (y0 + LMAP_OFFSET_Y) * LMAP_WIDTH + x0 + LMAP_OFFSET_X;
 	src = lightBitmap;
@@ -502,7 +531,7 @@ static void animateBiggerLight()
 	center.y = (FB_HEIGHT >> 1) - (BIGGER_LIGHT_HEIGHT / 2);
 
 	biggerLightPoint.x = center.x + sin(0.6f * dt) * (12.0f + disperse);
-	biggerLightPoint.y = center.y + sin(0.8f * dt) * (8.0f + disperse);
+	biggerLightPoint.y = center.y + sin(0.8f * dt) * (28.0f + disperse);
 		
 	x0 = biggerLightPoint.x + LMAP_OFFSET_X;
 	x1 = biggerLightPoint.x + LMAP_OFFSET_X + BIGGER_LIGHT_WIDTH;
@@ -617,6 +646,9 @@ static void animateParticleElectroids(int t)
 			PathPointTrack* ppTrack = &pathPointTracks[pptI];
 			PathPoint* pathPoint = &ppTrack->pathPoint[ppTrack->index];
 
+			int speed = i & 3;
+			if (speed == 0) speed = 1;
+
 			if (ppTrack->pixelWalk == 0) {
 				p->x = pathPoint->x - (PARTICLE_LIGHT_WIDTH / 2);
 				p->y = pathPoint->y - (PARTICLE_LIGHT_HEIGHT / 2);
@@ -625,13 +657,13 @@ static void animateParticleElectroids(int t)
 				const int pDirIndex = pathPoint->dir;
 				if (pDirIndex < 8) {
 					const Point2D* pDir = &dir[pDirIndex];
-					p->x += pDir->x;
-					p->y += pDir->y;
+					p->x += speed * pDir->x;
+					p->y += speed * pDir->y;
 				}
 			}
 
-			ppTrack->pixelWalk++;
-			if (ppTrack->pixelWalk == pathPoint->pixelLength) {
+			ppTrack->pixelWalk += speed;
+			if (ppTrack->pixelWalk >= pathPoint->pixelLength) {
 				ppTrack->pixelWalk = 0;
 				ppTrack->index++;
 				if (ppTrack->pathPoint[ppTrack->index].dir == 255 || ppTrack->index >= ppTrack->numPoints) {
@@ -738,7 +770,23 @@ static void blitBumpTexWave(int t)
 static void blitBumpTextScript(int t)
 {
 	blitBumpTexDefault(startScrollingBump * t);
-	/* blitBumpTexWave(t); */
+	//blitBumpTexWave(t);
+}
+
+static void renderLightmapOverlay(int t)
+{
+	int x, y;
+	int tt = t >> 6;
+
+	unsigned int* dst = (unsigned int*)(lightmap + LMAP_OFFSET_Y * LMAP_WIDTH + LMAP_OFFSET_X);
+	for (y = 0; y < FB_HEIGHT; ++y) {
+		unsigned char* src = &faintLmapTex[(y & (FAINT_LMAP_HEIGHT - 1)) * FAINT_LMAP_WIDTH];
+		for (x = 0; x < FB_WIDTH / 2; ++x) {
+			int c = src[(x + tt) & (FAINT_LMAP_WIDTH - 1)] + src[(x + 2 * tt) & (FAINT_LMAP_WIDTH - 1)];
+			*dst++ = (c << 16) | c;
+		}
+		dst += (LMAP_WIDTH - FB_WIDTH)/2;
+	}
 }
 
 static void bumpScript()
@@ -773,16 +821,16 @@ static void draw(void)
 
 	eraseLightmapArea(lightMinX, lightMinY, lightMaxX, lightMaxY);
 
-	/*
-	animateBiggerLight();
-	renderLight(biggerLight, biggerLightEdges, BIGGER_LIGHT_WIDTH, BIGGER_LIGHT_HEIGHT, &biggerLightPoint, 1);
-	*/
+	renderLightmapOverlay(t);
 
-	animateBigLights();
+	animateBiggerLight();
+	renderLight(biggerLight, biggerLightEdges, BIGGER_LIGHT_WIDTH, BIGGER_LIGHT_HEIGHT, &biggerLightPoint, 0);
+
+	/*animateBigLights();
 	for (i=0; i<NUM_BIG_LIGHTS; ++i) {
 		const int shouldBlit = (i==0) ? 1 : 0;
 		renderLight(bigLight[i], bigLightEdges, BIG_LIGHT_WIDTH, BIG_LIGHT_HEIGHT, &bigLightPoint[i], shouldBlit);
-	}
+	}*/
 
 
 	if (numParticlesVisible > 0) {

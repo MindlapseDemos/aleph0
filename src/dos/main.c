@@ -97,7 +97,7 @@ int main(int argc, char **argv)
 	fflush(stdout);
 	reset_timer(0);
 
-	for(;;) {
+	while(!quit) {
 		int key;
 		while((key = kb_getkey()) != -1) {
 			demo_keyboard(key, 1);

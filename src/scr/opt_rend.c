@@ -572,7 +572,8 @@ static void printBlobGfxCode(int index)
 
 void initBlobGfx()
 {
-	static unsigned char tempData[(BLOB_SIZES_NUM_MAX + 3) * (BLOB_SIZES_NUM_MAX + 4 * BLOB_SIZEX_PAD)];
+	/*static unsigned char tempData[(BLOB_SIZES_NUM_MAX + 3) * (BLOB_SIZES_NUM_MAX + 4 * BLOB_SIZEX_PAD)];*/
+	unsigned char tempData[650];	/* original was too small for the amount of data written */
 
 	if (!isBlobGfxInit) {
 		int i,j,x,y;

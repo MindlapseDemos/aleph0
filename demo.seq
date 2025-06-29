@@ -74,7 +74,13 @@ demoseq {
 	}
 
 	infcubes {
-		dur = 8000
+		zoom {
+			interp = "linear"
+			key(0) = 1
+			key(500) = 0
+			key(4700) = 0
+			key(5000) = -0.9
+		}
 	}
 
 	space {
@@ -85,30 +91,45 @@ demoseq {
 		#dur = 18000
 
 		greet0 {
+			interp = "smoothstep"
+			trans = 250
 			wait = 2000
 			dur = 2000
 		}
 		greet1 {
+			interp = "smoothstep"
+			trans = 250
 			wait = 1500
 			dur = 2000
 		}
 		greet2 {
+			interp = "smoothstep"
+			trans = 250
 			wait = 1500
 			dur = 2000
 		}
 		greet3 {
+			interp = "smoothstep"
+			trans = 250
 			wait = 1500
 			dur = 2000
 		}
 		greet4 {
+			interp = "smoothstep"
+			trans = 250
 			wait = 1500
 			dur = 2000
 		}
 		greet5 {
+			interp = "smoothstep"
+			trans = 250
 			wait = 1500
 			dur = 2000
 		}
-		delayend = 4000
+		delayend {
+			wait = 0
+			dur = 2000
+		}
 	}
 
 	juliatunnel {

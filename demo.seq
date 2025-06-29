@@ -85,30 +85,45 @@ demoseq {
 		#dur = 18000
 
 		greet0 {
+			interp = "smoothstep"
+			trans = 250
 			wait = 2000
 			dur = 2000
 		}
 		greet1 {
+			interp = "smoothstep"
+			trans = 250
 			wait = 1500
 			dur = 2000
 		}
 		greet2 {
+			interp = "smoothstep"
+			trans = 250
 			wait = 1500
 			dur = 2000
 		}
 		greet3 {
+			interp = "smoothstep"
+			trans = 250
 			wait = 1500
 			dur = 2000
 		}
 		greet4 {
+			interp = "smoothstep"
+			trans = 250
 			wait = 1500
 			dur = 2000
 		}
 		greet5 {
+			interp = "smoothstep"
+			trans = 250
 			wait = 1500
 			dur = 2000
 		}
-		delayend = 4000
+		delayend {
+			wait = 0
+			dur = 2000
+		}
 	}
 
 	juliatunnel {

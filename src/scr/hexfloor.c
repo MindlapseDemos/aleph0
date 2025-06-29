@@ -83,9 +83,9 @@ static const char *greetstr[] = {
 static dseq_event *ev_greets[NUM_GREETS];
 static int cur_greet;
 static struct {int x, y;} gpos[NUM_GREETS] = {
-	{-10, -50}, {20, 30}, {35, -12}, {-20, 20}, {12, 8}, {-10, -40}
+	{-100, -50}, {20, 30}, {35, -120}, {-20, 50}, {12, 45}, {-80, -40}
 };
-#define LINECOLOR	PACK_RGB16(255, 192, 80)
+#define LINECOLOR	PACK_RGB16(240, 212, 184)
 
 static struct image star;
 
@@ -356,7 +356,7 @@ static void hex_draw(void)
 
 	/* greet text */
 	if(cur_greet >= 0) {
-		int x0, x1, y0, y1;
+		int x0, x1, y0, y1, endx, endy, tt;
 		int dx = gpos[cur_greet].x;
 		int dy = gpos[cur_greet].y;
 		int len = calc_text_len(&demofont, greetstr[cur_greet]) + 8;
@@ -367,18 +367,46 @@ static void hex_draw(void)
 		py = cround64(pt.y);
 
 		if(dx < 0) {
-			x0 = px - dx - len;
+			x0 = px + dx - len;
 		} else {
 			x0 = px + dx;
 		}
+		if(x0 < 5) x0 = 5;
 		x1 = x0 + len;
+		if(x1 > 315) {
+			x1 = 315;
+			x0 = x1 - len;
+		}
 		y0 = py + dy;
+		if(y0 < 5) y0 = 5;
 		y1 = y0 + demofont.advance;
 
-		draw_text(&demofont, fb_pixels, x0, y0, greetstr[cur_greet]);
+		tt = cround64(dseq_value(ev_greets[cur_greet]) * 1024.0f);
+		{
+			char buf[128];
+			sprintf(buf, "tt: %d", tt);
+			cs_cputs(fb_pixels, 0, 0, buf);
+		}
 
-		draw_line(x0, y1, x1, y1, LINECOLOR);
-		draw_line(px, py, dx < 0 ? x1 : x0, y1, LINECOLOR);
+		if(tt > 768) {
+			draw_text(&demofont, fb_pixels, x0, y0, greetstr[cur_greet]);
+		}
+
+		if(dx >= 0) {
+			int tmp = x0;
+			x0 = x1;
+			x1 = tmp;
+		}
+
+		if(tt > 512) {
+			endx = x1 + (((x0 - x1) * (tt - 512)) >> 9);
+			draw_line(endx, y1, x1, y1, LINECOLOR);
+			draw_line(px, py, x1, y1, LINECOLOR);
+		} else {
+			endx = px + (((x1 - px) * tt) >> 9);
+			endy = py + (((y1 - py) * tt) >> 9);
+			draw_line(px, py, endx, endy, LINECOLOR);
+		}
 	}
 
 	swap_buffers(0);

@@ -382,11 +382,6 @@ static void hex_draw(void)
 		y1 = y0 + demofont.advance;
 
 		tt = cround64(dseq_value(ev_greets[cur_greet]) * 1024.0f);
-		{
-			char buf[128];
-			sprintf(buf, "tt: %d", tt);
-			cs_cputs(fb_pixels, 0, 0, buf);
-		}
 
 		if(tt > 768) {
 			draw_text(&demofont, fb_pixels, x0, y0, greetstr[cur_greet]);

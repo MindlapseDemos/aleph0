@@ -74,7 +74,13 @@ demoseq {
 	}
 
 	infcubes {
-		dur = 8000
+		zoom {
+			interp = "linear"
+			key(0) = 1
+			key(500) = 0
+			key(4700) = 0
+			key(5000) = -0.9
+		}
 	}
 
 	space {

@@ -20,25 +20,25 @@ struct hextile {
 	int hidden;
 };
 
-static int init(void);
-static void destroy(void);
-static void start(long trans_time);
-static void stop(long trans_time);
-static void draw(void);
+static int hex_init(void);
+static void hex_destroy(void);
+static void hex_start(long trans_time);
+static void hex_stop(long trans_time);
+static void hex_draw(void);
 static void draw_hextile(struct hextile *tile, float t);
-static void keypress(int key);
+static void hex_keypress(int key);
 
 static void greet_trig(dseq_event *ev, enum dseq_trig_mask type, void *cls);
 
 
 static struct screen scr = {
 	"hexfloor",
-	init,
-	destroy,
-	start,
-	stop,
-	draw,
-	keypress
+	hex_init,
+	hex_destroy,
+	hex_start,
+	hex_stop,
+	hex_draw,
+	hex_keypress
 };
 
 static float cam_theta = 0, cam_phi = 20;
@@ -87,6 +87,8 @@ static struct {int x, y;} gpos[NUM_GREETS] = {
 };
 #define LINECOLOR	PACK_RGB16(255, 192, 80)
 
+static struct image star;
+
 
 struct screen *hexfloor_screen(void)
 {
@@ -97,7 +99,7 @@ struct screen *hexfloor_screen(void)
 #define HALF_HEX_ANGLE	(M_PI / 6.0f)
 
 
-static int init(void)
+static int hex_init(void)
 {
 	int i, j;
 	float angle[6];
@@ -105,6 +107,12 @@ static int init(void)
 	struct g3d_vertex *vptr;
 	float nx, nz;
 	char name[32];
+
+	if(load_image(&star, "data/psys03.png") == -1) {
+		return -1;
+	}
+	save_image(&star, "foo.ppm");
+	/*conv_rle_alpha(&star);*/
 
 	for(i=0; i<6; i++) {
 		angle[i] = (float)i / 3.0f * M_PI;
@@ -195,12 +203,12 @@ static int init(void)
 	return 0;
 }
 
-static void destroy(void)
+static void hex_destroy(void)
 {
 	crv_destroy(&path);
 }
 
-static void start(long trans_time)
+static void hex_start(long trans_time)
 {
 	g3d_matrix_mode(G3D_PROJECTION);
 	g3d_load_identity();
@@ -225,7 +233,7 @@ static void start(long trans_time)
 	prev_tm = 0;
 }
 
-static void stop(long trans_time)
+static void hex_stop(long trans_time)
 {
 	g3d_disable(G3D_COLOR_MATERIAL);
 }
@@ -236,7 +244,7 @@ static void update(void)
 }
 
 
-static void draw(void)
+static void hex_draw(void)
 {
 	int i;
 	struct hextile *tile;
@@ -244,6 +252,8 @@ static void draw(void)
 	float t_obj, t_campos, t_camtarg;
 	cgm_vec3 pos, targ, up = {0, 1, 0};
 	float viewmat[16];
+	cgm_vec4 pt;
+	int px, py;
 
 	dt = tm - prev_tm;
 	prev_tm = tm;
@@ -312,8 +322,12 @@ static void draw(void)
 		draw_hextile(tile++, t);
 	}
 
+	g3d_polygon_mode(G3D_FLAT);
 	g3d_disable(G3D_LIGHTING);
-	draw_billboard(pos.x, pos.y, pos.z, 0.5f, 255, 255, 255, 255);
+	g3d_enable(G3D_TEXTURE_2D | G3D_ADD_BLEND);
+	g3d_set_texture(star.width, star.height, star.pixels);
+	draw_billboard(pos.x, pos.y, pos.z, 1.0f, 255, 255, 255, 255);
+	g3d_disable(G3D_TEXTURE_2D | G3D_ADD_BLEND);
 
 	/*
 	g3d_begin(G3D_POINTS);
@@ -331,10 +345,18 @@ static void draw(void)
 	g3d_end();
 	*/
 
+	/*
+	cgm_wcons(&pt, pos.x, pos.y, pos.z, 1);
+	g3d_xform_point(&pt.x);
+	px = cround64(pt.x);
+	py = cround64(pt.y);
+
+	blendfb_rle(fb_pixels, px - star.width / 2, py - star.height / 2, &star);
+	*/
+
 	/* greet text */
 	if(cur_greet >= 0) {
-		cgm_vec4 pt;
-		int px, py, x0, x1, y0, y1;
+		int x0, x1, y0, y1;
 		int dx = gpos[cur_greet].x;
 		int dy = gpos[cur_greet].y;
 		int len = calc_text_len(&demofont, greetstr[cur_greet]) + 8;
@@ -454,7 +476,7 @@ static void draw_hextile(struct hextile *tile, float t)
 	}
 }
 
-static void keypress(int key)
+static void hex_keypress(int key)
 {
 }
 

@@ -137,21 +137,21 @@ demoseq {
 	}
 
 	voxelscape {
-		dur = 24576
+		dur = 28672
 
 		fade {
 			interp = "linear"
 			key(0) = 0
 			key(2048) = 1
 			interp = "linear"
-			key(22528) = 1
-			key(24576) = 0
+			key(26624) = 1
+			key(28672) = 0
 		}
 
 		flypath {
 			interp = "linear"
 			key(0) = 0
-			key(24576) = 1
+			key(28672) = 1
 		}
 	}
 

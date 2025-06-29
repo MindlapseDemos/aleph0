@@ -166,6 +166,8 @@ static void start(long trans_time)
 	struct g3d_vertex *vert;
 	uint16_t *idxptr, vidx;
 
+	if(!trans_time) return;
+
 	g3d_enable(G3D_DEPTH_TEST);
 	g3d_enable(G3D_CULL_FACE);
 	g3d_enable(G3D_LIGHT0);
@@ -288,15 +290,22 @@ static void update(void)
 		thing.rot = sball_rot;
 
 	} else {
-		if(playanim) {
-			long atime = time_msec - anim_start_time;
+		if(dseq_started()) {
+			long atime = dseq_time(ev_scr);
 
 			anm_get_position(&thing.node, &thing.pos.x, atime);
 			anm_get_rotation(&thing.node, &thing.rot.x, atime);
 		} else {
-			if(mouse_bmask & MOUSE_BN_MIDDLE) {
-				thing.pos.x += mouse_dx * 0.05;
-				thing.pos.y -= mouse_dy * 0.05;
+			if(playanim) {
+				long atime = time_msec - anim_start_time;
+
+				anm_get_position(&thing.node, &thing.pos.x, atime);
+				anm_get_rotation(&thing.node, &thing.rot.x, atime);
+			} else {
+				if(mouse_bmask & MOUSE_BN_MIDDLE) {
+					thing.pos.x += mouse_dx * 0.05;
+					thing.pos.y -= mouse_dy * 0.05;
+				}
 			}
 		}
 
@@ -306,7 +315,7 @@ static void update(void)
 		thing.xform[14] = thing.pos.z;
 	}
 
-	bgscroll_x = time_msec >> 5;
+	bgscroll_x = time_msec >> 4;
 	bgscroll_y = (int)(-thing.pos.y * (MAX_BGSCROLL_Y * 0.2f)) + MAX_BGSCROLL_Y / 2;
 
 	bgscroll_x &= bgimg.xmask;
@@ -351,8 +360,6 @@ static void draw(void)
 
 	g3d_clear(/*G3D_COLOR_BUFFER_BIT | */G3D_DEPTH_BUFFER_BIT);
 	draw_backdrop();
-
-	blendfb_rle(fb_pixels, galscroll_x, galscroll_y, &galaxyimg);
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
@@ -443,6 +450,8 @@ static void draw_backdrop(void)
 			dptr += 320;
 			sptr += BGIMG_WIDTH;
 		}
+
+		blendfb_rle(fb_pixels, galscroll_x, galscroll_y, &galaxyimg);
 	}
 }
 

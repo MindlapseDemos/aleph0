@@ -61,9 +61,9 @@ demoseq {
 	}
 
 	hairball {
-		interp = "smoothstep"
-		trans = 1000
-		dur = 15000
+		interp = "linear"
+		trans = 600
+		dur = 18000
 	}
 
 	reactor {
@@ -94,37 +94,37 @@ demoseq {
 
 		greet0 {
 			interp = "smoothstep"
-			trans = 250
+			trans = 350
 			wait = 2000
 			dur = 2000
 		}
 		greet1 {
 			interp = "smoothstep"
-			trans = 250
+			trans = 350
 			wait = 1500
 			dur = 2000
 		}
 		greet2 {
 			interp = "smoothstep"
-			trans = 250
+			trans = 350
 			wait = 1500
 			dur = 2000
 		}
 		greet3 {
 			interp = "smoothstep"
-			trans = 250
+			trans = 350
 			wait = 1500
 			dur = 2000
 		}
 		greet4 {
 			interp = "smoothstep"
-			trans = 250
+			trans = 350
 			wait = 1500
 			dur = 2000
 		}
 		greet5 {
 			interp = "smoothstep"
-			trans = 250
+			trans = 350
 			wait = 1500
 			dur = 2000
 		}

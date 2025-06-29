@@ -268,15 +268,16 @@ void demo_draw(void)
 /* called by swap_buffers just before the actual swap */
 void demo_post_draw(void *pixels)
 {
-	if(opt.dbgmode) {
-		drawFps(pixels);
-		if(curscr_name) {
-			cs_dputs(pixels, curscr_name_pos, 240 - 16, curscr_name);
-		}
+	/* no consoles, cursors, fps counters and part names in non-debug mode */
+	if(!opt.dbgmode) return;
 
-		if(show_dseq_dbg) {
-			dseq_dbg_draw();
-		}
+	drawFps(pixels);
+	if(curscr_name) {
+		cs_dputs(pixels, curscr_name_pos, 240 - 16, curscr_name);
+	}
+
+	if(show_dseq_dbg) {
+		dseq_dbg_draw();
 	}
 
 	if(con_active) {
@@ -443,6 +444,10 @@ void demo_runpart(const char *name)
 
 void mouse_orbit_update(float *theta, float *phi, float *dist)
 {
+	if(!opt.dbgmode) {
+		return;	/* no interactivity in non-debug mode */
+	}
+
 	if(mouse_bmask) {
 		if(bmask_diff == 0) {
 

@@ -530,11 +530,13 @@ dseq_event *dseq_lookup(const char *evname)
 
 const char *dseq_name(dseq_event *ev)
 {
+	if(!ev) return 0;
 	return ev->name;
 }
 
 int dseq_transtime(dseq_event *ev, int *in, int *out)
 {
+	if(!ev) return 0;
 	if(in) *in = ev->trans_in;
 	if(out) *out = ev->trans_out;
 	return ev->trans_in;
@@ -542,42 +544,51 @@ int dseq_transtime(dseq_event *ev, int *in, int *out)
 
 long dseq_start_time(dseq_event *ev)
 {
+	if(!ev) return 0;
 	return ev->start;
 }
 
 long dseq_end_time(dseq_event *ev)
 {
+	if(!ev) return 0;
 	return ev->start + ev->dur;
 }
 
 long dseq_duration(dseq_event *ev)
 {
+	if(!ev) return 0;
 	return ev->dur;
 }
 
 int dseq_isactive(dseq_event *ev)
 {
+	if(!ev) return 0;
 	return ev->active;
 }
 
 long dseq_time(dseq_event *ev)
 {
+	if(!ev) return 0;
 	return time_msec - ev->start;
 }
 
 float dseq_param(dseq_event *ev)
 {
+	if(!ev) return 0.0f;
 	return ev->cur_t;
 }
 
 float dseq_value(dseq_event *ev)
 {
+	if(!ev) return 0.0f;
 	return ev->cur_val;
 }
 
 int dseq_triggered(dseq_event *ev)
 {
-	int trig = ev->trigd;
+	int trig;
+	if(!ev) return 0;
+	trig = ev->trigd;
 	ev->trigd = 0;
 	return trig;
 }
@@ -586,6 +597,7 @@ void dseq_set_interp(dseq_event *ev, enum dseq_interp in)
 {
 	enum anm_interpolator anm_in;
 
+	if(!ev) return;
 	ev->interp = in;
 
 	switch(in) {
@@ -610,6 +622,7 @@ void dseq_set_extrap(dseq_event *ev, enum dseq_extrap ex)
 {
 	enum anm_extrapolator anm_ex;
 
+	if(!ev) return;
 	ev->extrap = ex;
 
 	switch(ex) {
@@ -633,6 +646,7 @@ void dseq_set_extrap(dseq_event *ev, enum dseq_extrap ex)
 void dseq_set_trigger(dseq_event *ev, enum dseq_trig_mask mask,
 		dseq_callback_func func, void *cls)
 {
+	if(!ev) return;
 	ev->cbfunc = func;
 	ev->cbcls = cls;
 	ev->trigmask = mask;

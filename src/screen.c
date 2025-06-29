@@ -114,6 +114,11 @@ int scr_init(void)
 			itime[idx].name = scr[i]->name;
 			itime[idx++].time = get_msec() - t0;
 		}
+
+		if(!opt.dbgmode) {
+			/* for non-debug mode, remove all interactivity */
+			scr[i]->keypress = 0;
+		}
 	}
 
 	qsort(itime, idx, sizeof *itime, scrtime_cmp);

@@ -84,6 +84,9 @@ static int yp_l[JULIA_LAYERS];
 
 unsigned char *juliaQuarterBuffer;
 
+static dseq_event *ev_fade;
+
+
 struct screen *juliatunnel_screen(void)
 {
 	return &scr;
@@ -134,6 +137,8 @@ static int init(void)
 			cb += db;
 		}
 	}
+
+	ev_fade = dseq_lookup("juliatunnel.fade");
 
 	return 0;
 }
@@ -468,6 +473,8 @@ static void draw(void)
 	int i;
 	float tt = 0;
 
+	const float ft = dseq_value(ev_fade);
+
 	/* const int t = 3200; */
 	/* const int layerAdv = 0; */
 
@@ -492,6 +499,8 @@ static void draw(void)
 
 	calcJuliaQuarter(scale, palAnimOffset);
 	renderJuliaQuarter(scale, palAnimOffset);
+
+	fadeToBlack16bpp(ft, fb_pixels, FB_WIDTH, FB_HEIGHT, FB_WIDTH);
 
 	swap_buffers(0);
 }

@@ -136,6 +136,15 @@ demoseq {
 
 	juliatunnel {
 		dur = 9000
+
+		fade {
+			interp = "linear"
+			key(0) = 0
+			key(1024) = 1
+			interp = "linear"
+			key(8256) = 1
+			key(9000) = 0
+		}
 	}
 
 	voxelscape {

@@ -53,5 +53,6 @@ void renderPolygons(Object3D* obj, Vertex3D* screenVertices);
 void setRenderingMode(int mode);
 int getRenderingMode();
 void setClipValY(int y);
+void fadeToBlack16bpp(float ft, uint16_t* src, int width, int height, int stride);
 
 #endif

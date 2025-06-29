@@ -862,7 +862,7 @@ static void draw(void)
 			}
 		}
 
-		fadeLightmap(ft);
+		fadeToBlack16bpp(ft, lightmap + LMAP_OFFSET_Y * LMAP_WIDTH + LMAP_OFFSET_X, FB_WIDTH, FB_HEIGHT, LMAP_WIDTH);
 
 		blitBumpTextureScript(t);
 

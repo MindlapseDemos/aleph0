@@ -1084,25 +1084,6 @@ static void moveClouds(int dt)
 	skyMove2 += 8*dt;
 }
 
-static void doFades()
-{
-	float ft = dseq_value(ev_fade);
-	float fp = dseq_value(ev_flypath);
-
-	int count = FB_WIDTH * FB_HEIGHT;
-	if ((ft > 0.0f && ft < 1.0f) || (fp == 0.0f || fp == 1.0f)) {
-		int s = (int)(ft * 256);
-		uint16_t* vram = fb_pixels;
-		do {
-			uint16_t c = *vram;
-			int r = (UNPACK_R16(c) * s) >> 8;
-			int g = (UNPACK_G16(c) * s) >> 8;
-			int b = (UNPACK_B16(c) * s) >> 8;
-			*vram++ = PACK_RGB16(r,g,b);
-		} while (--count != 0);
-	}
-}
-
 static void draw(void)
 {
 	const int dt = time_msec - prevTime;
@@ -1124,7 +1105,7 @@ static void draw(void)
 	moveClouds(dt);
 
 	if (dseq_started()) {
-		doFades();
+		fadeToBlack16bpp(dseq_value(ev_fade), fb_pixels, FB_WIDTH, FB_HEIGHT, FB_WIDTH);
 	}
 
 	swap_buffers(0);

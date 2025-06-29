@@ -257,7 +257,7 @@ static int loadAndConvertImgColormapPng()
 		unsigned char* cmapDst;
 
 		img_init(&mapPic);
-		if (img_load(&mapPic, "data/vxc1.png") == -1) {
+		if (img_load(&mapPic, "data/src/voxel/vxc1.png") == -1) {
 			fprintf(stderr, "failed to load voxel colormap image\n");
 			return -1;
 		}
@@ -302,7 +302,7 @@ static int loadAndConvertImgHeightmapPng()
 		int hMax = 0;
 
 		img_init(&mapPic);
-		if (img_load(&mapPic, "data/vxh1.png") == -1) {
+		if (img_load(&mapPic, "data/src/voxel/vxh1.png") == -1) {
 			fprintf(stderr, "failed to load voxel heightmap image\n");
 			return -1;
 		}

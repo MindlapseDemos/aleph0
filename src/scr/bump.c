@@ -155,10 +155,10 @@ static int lightMaxY = LMAP_HEIGHT-1;
 static int numParticlesVisible = 0;
 static int didElectroidsMovedYetOnce = 0;
 static int startScrollingBump = 0;
+static int startWaveBumpAndRGBlights = 0;
 
 static dseq_event *ev_electroids;
 static dseq_event *ev_scrollUp;
-static dseq_event *ev_lightsIn;
 static dseq_event *ev_scalerIn;
 static dseq_event *ev_fade;
 
@@ -224,10 +224,10 @@ static void generateBigLight(unsigned short *lightBitmap, Edge *lightEdges, unsi
 {
 	const int lightRadius = lightWidth / 2;
 
-	const float rgbMul[12] = { 	0.275, 0.125, 0.0,
-								0.5, 0,    0,
-								0,    0.5, 0,
-								0,    0,    0.5 };
+	const float rgbMul[12] = { 	0.425, 0.225, 0.0,
+								0.5, 0.0,    0.0,
+								0.0,    0.5, 0.0,
+								0.0,    0.0,    0.5 };
 
 	const float *rgb = &rgbMul[3 * rgbIndex];
 
@@ -280,7 +280,7 @@ static void generateParticleLight()
 			float invDist = ((float)particleRadius - (float)sqrt(xc * xc + yc * yc)) / (float)particleRadius;
 			if (invDist < 0.0f) invDist = 0.0f;
 
-			c = (int)(pow(invDist, 4.5f) * 27);
+			c = (int)(pow(invDist, 5.0f) * 29);
 			CLAMP(c,0,29)
 			particleLight[i++] = ((c >> 1) << 11) | (c << 5) | (c >> 1);
 		}
@@ -324,7 +324,7 @@ static void initFaintLightmapBackground()
 			float f = pfbm2((float)x * scale, (float)y * scale, perX, perY, 8) + 0.25f;
 			//float f = pturbulence2((float)x * scale, (float)y * scale, perX, perY, 4);
 			CLAMP(f, 0.0f, 0.99f);
-			faintLmapTex[i++] = (int)(f * 5.0f);
+			faintLmapTex[i++] = (int)(f * 9.0f);
 		}
 	}
 }
@@ -374,7 +374,6 @@ static int init(void)
 
 	ev_electroids = dseq_lookup("bump.electroids");
 	ev_scrollUp = dseq_lookup("bump.scrollUp");
-	ev_lightsIn = dseq_lookup("bump.lightsIn");
 	ev_scalerIn = dseq_lookup("bump.scalerIn");
 	ev_fade = dseq_lookup("bump.fade");
 
@@ -770,10 +769,13 @@ static void blitBumpTexWave(int t)
 	}
 }
 
-static void blitBumpTextScript(int t)
+static void blitBumpTextureScript(int t)
 {
-	blitBumpTexDefault(startScrollingBump * t);
-	//blitBumpTexWave(t);
+	if (startWaveBumpAndRGBlights == 0) {
+		blitBumpTexDefault(startScrollingBump * t);
+	} else {
+		blitBumpTexWave(t);
+	}
 }
 
 static void renderLightmapOverlay(int t)
@@ -799,19 +801,12 @@ static void bumpScript()
 
 	numParticlesVisible = dseq_value(ev_electroids);
 	CLAMP(numParticlesVisible, 0, NUM_PARTICLES);
-	//printf("%d\n", numParticlesVisible);
 
 	if (dseq_triggered(ev_scrollUp)) {
 		startScrollingBump = 1;
 	}
-	if ((val1 = dseq_value(ev_lightsIn)) > 0.0f) {
-		if (val1 != prevVal1) {
-			//printf("lightsIn) %d\n", val1);
-			prevVal1 = val1;
-		}
-	}
 	if (dseq_triggered(ev_scalerIn)) {
-		/* printf("scalerIn) %d\n", dseq_value(ev_scalerIn)); */
+		startWaveBumpAndRGBlights = 1;
 	}
 }
 
@@ -820,7 +815,7 @@ static void fadeLightmap(float ft)
 	int x, y, s;
 	uint16_t* src;
 
-	if (ft>0.99f) return;
+	if (ft > 0.99f) return;
 
 	s = (int)(ft * 256);
 	src = lightmap + LMAP_OFFSET_Y * LMAP_WIDTH + LMAP_OFFSET_X;
@@ -840,35 +835,41 @@ static void draw(void)
 {
 	int i;
 	const int t = time_msec - startingTime;
+	const float ft = dseq_value(ev_fade);
 
 	bumpScript();
 
-	eraseLightmapArea(lightMinX, lightMinY, lightMaxX, lightMaxY);
+	if (ft > 0.0f) {
+		eraseLightmapArea(lightMinX, lightMinY, lightMaxX, lightMaxY);
 
-	renderLightmapOverlay(t);
-
-	animateBiggerLight();
-	renderLight(biggerLight, biggerLightEdges, BIGGER_LIGHT_WIDTH, BIGGER_LIGHT_HEIGHT, &biggerLightPoint, 0);
-
-	/*animateBigLights();
-	for (i=0; i<NUM_BIG_LIGHTS; ++i) {
-		const int shouldBlit = (i==0) ? 1 : 0;
-		renderLight(bigLight[i], bigLightEdges, BIG_LIGHT_WIDTH, BIG_LIGHT_HEIGHT, &bigLightPoint[i], shouldBlit);
-	}*/
-
-
-	if (numParticlesVisible > 0) {
-		animateParticleElectroids(t);
-		if (didElectroidsMovedYetOnce != 0) {
-			renderParticles();
+		if (startWaveBumpAndRGBlights == 0) {
+			renderLightmapOverlay(t);
+			animateBiggerLight();
+			renderLight(biggerLight, biggerLightEdges, BIGGER_LIGHT_WIDTH, BIGGER_LIGHT_HEIGHT, &biggerLightPoint, 0);
 		}
+		else {
+			animateBigLights();
+			for (i = 0; i < NUM_BIG_LIGHTS; ++i) {
+				const int shouldBlit = (i == 0) ? 1 : 0;
+				renderLight(bigLight[i], bigLightEdges, BIG_LIGHT_WIDTH, BIG_LIGHT_HEIGHT, &bigLightPoint[i], shouldBlit);
+			}
+		}
+
+		if (numParticlesVisible > 0) {
+			animateParticleElectroids(t);
+			if (didElectroidsMovedYetOnce != 0) {
+				renderParticles();
+			}
+		}
+
+		fadeLightmap(ft);
+
+		blitBumpTextureScript(t);
+
+		renderBump((unsigned short*)fb_pixels);
+	} else {
+		memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
 	}
-
-	fadeLightmap(dseq_value(ev_fade));
-
-	blitBumpTextScript(t);
-
-	renderBump((unsigned short*)fb_pixels);
 
 	swap_buffers(0);
 }

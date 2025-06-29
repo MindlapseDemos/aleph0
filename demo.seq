@@ -139,28 +139,25 @@ demoseq {
 	}
 
 	bump {
-		dur = 16384
-
-		electroids {
-			interp = "linear"
-			key(0) = 0
-			key(8192) = 64
-		}
+		dur = 24576
 
 		scrollUp {
-			wait = 0
+			wait = 6144
 			dur = 0
 		}
 
-		lightsIn {
-			interp = "smoothstep"
-			key(8) = 0
-			key(4) = 1024
+		scalerIn {
+			wait = 6656
+			dur = 0
 		}
 
-		scalerIn {
-			wait = 0
-			dur = 8192
+		electroids {
+			interp = "linear"
+			key(2048) = 0
+			key(10240) = 48
+			interp = "linear"
+			key(12288) = 48
+			key(14336) = 0
 		}
 
 		fade {
@@ -168,11 +165,20 @@ demoseq {
 			key(0) = 0
 			key(2048) = 1
 			interp = "linear"
-			key(8192) = 1
-			key(9215) = 0
+			key(6144) = 1
+			key(8191) = 0
 			interp = "linear"
-			key(9216) = 0
-			key(10240) = 1
+			key(8192) = 0
+			key(9216) = 1
+			interp = "linear"
+			key(14336) = 1
+			key(14847) = 0
+			interp = "linear"
+			key(14848) = 0
+			key(15360) = 1
+			interp = "linear"
+			key(23552) = 1
+			key(24575) = 0
 		}
 	}
 

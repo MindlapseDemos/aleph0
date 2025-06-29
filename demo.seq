@@ -61,6 +61,8 @@ demoseq {
 	}
 
 	hairball {
+		interp = "smoothstep"
+		trans = 1000
 		dur = 15000
 	}
 

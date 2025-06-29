@@ -15,6 +15,7 @@
 #include "anim.h"
 #include "dynarr.h"
 #include "imago2.h"
+#include "gfxutil.h"
 
 #define NUM_TENT		8
 #define TENT_NODES		6
@@ -101,6 +102,9 @@ static int bgscroll_x, bgscroll_y, galscroll_x, galscroll_y;
 static int playanim, record;
 static long anim_start_time;
 static long prev_thing_upd;
+static int value;
+
+static dseq_event *ev_scr;
 
 
 struct screen *hairball_screen(void)
@@ -145,6 +149,8 @@ static int init(void)
 		return -1;
 	}
 	conv_rle_alpha(&galaxyimg);
+
+	ev_scr = dseq_lookup("hairball");
 
 	return 0;
 }
@@ -275,7 +281,6 @@ static void update(void)
 	prev_mx = mouse_x;
 	prev_my = mouse_y;
 
-
 	if(opt.sball && !playanim) {
 		memcpy(thing.xform, sball_matrix, 16 * sizeof(float));
 
@@ -331,6 +336,12 @@ static void update(void)
 		}
 	}
 
+	if(dseq_started()) {
+		value = cround64(dseq_value(ev_scr) * 256.0f);
+	} else {
+		value = 256.0f;
+	}
+
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
 }
 
@@ -345,7 +356,11 @@ static void draw(void)
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
-	g3d_translate(0, 0, -cam_dist);
+	if(value < 250) {
+		g3d_translate(0, 0, -cgm_logerp(80, 8, value / 256.0f));
+	} else {
+		g3d_translate(0, 0, -8);
+	}
 	g3d_rotate(cam_phi, 1, 0, 0);
 	g3d_rotate(cam_theta, 0, 1, 0);
 
@@ -404,14 +419,30 @@ static void draw_thing(void)
 static void draw_backdrop(void)
 {
 	int i, j;
-	uint16_t *dptr, *sptr;
+	unsigned int r, g, b;
+	uint16_t *dptr, *sptr, col;
 
 	dptr = fb_pixels;
 	sptr = bgimg.pixels + (bgscroll_y << bgimg.xshift) + bgscroll_x;
-	for(i=0; i<240; i++) {
-		memcpy64(dptr, sptr, 320 * 2 >> 3);
-		dptr += 320;
-		sptr += BGIMG_WIDTH;
+
+	if(value < 250) {
+		for(i=0; i<240; i++) {
+			for(j=0; j<320; j++) {
+				col = sptr[j];
+				r = (UNPACK_R16(col) * value) >> 8;
+				g = (UNPACK_G16(col) * value) >> 8;
+				b = (UNPACK_B16(col) * value) >> 8;
+				dptr[j] = PACK_RGB16(r, g, b);
+			}
+			dptr += 320;
+			sptr += BGIMG_WIDTH;
+		}
+	} else {
+		for(i=0; i<240; i++) {
+			memcpy64(dptr, sptr, 320 * 2 >> 3);
+			dptr += 320;
+			sptr += BGIMG_WIDTH;
+		}
 	}
 }
 

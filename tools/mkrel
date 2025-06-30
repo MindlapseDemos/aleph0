@@ -77,9 +77,9 @@ echo 'debug = false' >$outdir/demo.cfg
 
 if ! $release; then
 	echo 'PREVIEW BUILD, DO NOT DISTRIBUTE' >$outdir/PREVIEW.txt
-else
-	git archive -o $outdir/alephsrc.zip --prefix=alephsrc/ HEAD
 fi
+
+git archive -o $outdir/alephsrc.zip --prefix=alephsrc/ HEAD
 
 rm -f $archive
 zip -rq $archive $outdir

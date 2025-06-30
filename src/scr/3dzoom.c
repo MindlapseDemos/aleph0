@@ -31,11 +31,13 @@ static struct screen scr = {
 	keypress
 };
 
+extern struct image infcube_envmap;	/* defined & loaded in infcubes.c */
+
 static float cam_theta, cam_phi;
 static float cam_dist = 80;
 
 static struct g3d_scene *scn;
-static struct g3d_mesh *poolmesh;
+static struct g3d_mesh *poolmesh, *cubemesh;
 
 static struct curve campath;
 
@@ -68,6 +70,13 @@ static int init(void)
 		poolmesh->varr[i].nx = poolmesh->varr[i].u;
 		poolmesh->varr[i].ny = poolmesh->varr[i].v;
 	}
+
+	cubemesh = scn_find_mesh(scn, "5-cube");
+
+	if(!infcube_envmap.pixels && load_image(&infcube_envmap, "data/refmap1.jpg") == -1) {
+		return -1;
+	}
+	cubemesh->mtl->envmap = &infcube_envmap;
 
 	qsort(scn->meshes, scn_mesh_count(scn), sizeof(struct g3d_mesh*), presort_cmp);
 
@@ -133,6 +142,7 @@ static void update(void)
 
 static void draw(void)
 {
+	float tm;
 	unsigned int i, num;
 	float viewmat[16];
 	cgm_vec3 up = {0, 1, 0};
@@ -158,9 +168,16 @@ static void draw(void)
 	g3d_clear(G3D_COLOR_BUFFER_BIT);
 
 	num = scn_mesh_count(scn);
-	for(i=0; i<num; i++) {
+	for(i=0; i<num - 1; i++) {		/* -1 to skip the cube */
 		draw_mesh(scn->meshes[i]);
 	}
+
+	tm = (float)time_msec * 0.1;
+	g3d_translate(0, 8.4, 0);
+	g3d_rotate(tm, 1, 0, 0);
+	g3d_rotate(tm, 0, 1, 0);
+	g3d_translate(0, -8.4, 0);
+	draw_mesh(scn->meshes[i]);
 
 	swap_buffers(0);
 }

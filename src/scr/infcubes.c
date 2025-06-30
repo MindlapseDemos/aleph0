@@ -10,6 +10,7 @@
 #include "imago2.h"
 #include "gfxutil.h"
 #include "mesh.h"
+#include "image.h"
 #include "noise.h"
 
 static int init(void);
@@ -26,6 +27,8 @@ static struct screen scr = {
 	start, 0,
 	draw
 };
+
+struct image infcube_envmap;
 
 /*static float cam_theta = -29, cam_phi = 35;
 static float cam_dist = 6;*/
@@ -54,19 +57,17 @@ static int init(void)
 	*/
 	gen_phong_tex(&tex_inner, PHONG_TEX_SZ, PHONG_TEX_SZ, 5.0f, 0, 0, 10, 50, 92, 192, 192, 192);
 
-	if(!(tex_outer.pixels = img_load_pixels("data/refmap1.jpg", &tex_outer.width,
-					&tex_outer.height, IMG_FMT_RGB24))) {
-		fprintf(stderr, "infcubes: failed to load outer texture\n");
+	if(!infcube_envmap.pixels && load_image(&infcube_envmap, "data/refmap1.jpg") == -1) {
 		return -1;
 	}
-	convimg_rgb24_rgb16(tex_outer.pixels, (unsigned char*)tex_outer.pixels, tex_outer.width, tex_outer.height);
-	/*gen_phong_tex(&tex_outer, PHONG_TEX_SZ, PHONG_TEX_SZ, 5.0f, 50, 50, 50, 255, 255, 255);*/
 
-	/*
-	if(gen_cube_mesh(&mesh_cube, 1.0f, 3) == -1) {
-		return -1;
-	}
-	*/
+	tex_outer.pixels = infcube_envmap.pixels;
+	tex_outer.width = infcube_envmap.width;
+	tex_outer.height = infcube_envmap.height;
+	tex_outer.xmask = infcube_envmap.xmask;
+	tex_outer.xshift = infcube_envmap.xshift;
+	tex_outer.ymask = infcube_envmap.ymask;
+
 	if(load_mesh(&mesh_cube, "data/bevelbox.obj", 0) == -1) {
 		return -1;
 	}

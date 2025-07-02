@@ -135,15 +135,15 @@ demoseq {
 	}
 
 	juliatunnel {
-		dur = 9000
+		dur = 12288
 
 		fade {
 			interp = "linear"
 			key(0) = 0
 			key(1024) = 1
 			interp = "linear"
-			key(8256) = 1
-			key(9000) = 0
+			key(11776) = 1
+			key(12288) = 0
 		}
 	}
 
@@ -171,46 +171,35 @@ demoseq {
 	}
 
 	bump {
-		dur = 24576
-
-		scrollUp {
-			wait = 6144
-			dur = 0
-		}
+		dur = 16384
 
 		scalerIn {
-			wait = 6656
+			wait = 7576
 			dur = 0
 		}
 
 		electroids {
 			interp = "linear"
 			key(2048) = 0
-			key(10240) = 48
+			key(7500) = 48
 			interp = "linear"
-			key(12288) = 48
-			key(14336) = 0
+			key(7500) = 48
+			key(8192) = 0
 		}
 
 		fade {
 			interp = "linear"
 			key(0) = 0
-			key(2048) = 1
+			key(1024) = 1
 			interp = "linear"
-			key(6144) = 1
-			key(8191) = 0
+			key(8192) = 1
+			key(8575) = 0
 			interp = "linear"
-			key(8192) = 0
-			key(9216) = 1
+			key(8576) = 0
+			key(9000) = 1
 			interp = "linear"
-			key(14336) = 1
-			key(14847) = 0
-			interp = "linear"
-			key(14848) = 0
-			key(15360) = 1
-			interp = "linear"
-			key(23552) = 1
-			key(24575) = 0
+			key(16000) = 1
+			key(16384) = 0
 		}
 	}
 

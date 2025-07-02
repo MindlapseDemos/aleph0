@@ -154,11 +154,9 @@ static int lightMaxY = LMAP_HEIGHT-1;
 
 static int numParticlesVisible = 0;
 static int didElectroidsMovedYetOnce = 0;
-static int startScrollingBump = 0;
 static int startWaveBumpAndRGBlights = 0;
 
 static dseq_event *ev_electroids;
-static dseq_event *ev_scrollUp;
 static dseq_event *ev_scalerIn;
 static dseq_event *ev_fade;
 
@@ -373,7 +371,6 @@ static int init(void)
 	initFaintLightmapBackground();
 
 	ev_electroids = dseq_lookup("bump.electroids");
-	ev_scrollUp = dseq_lookup("bump.scrollUp");
 	ev_scalerIn = dseq_lookup("bump.scalerIn");
 	ev_fade = dseq_lookup("bump.fade");
 
@@ -552,7 +549,7 @@ static void animateBigLights()
 	Point2D center;
 	float dt = (float)(time_msec - startingTime) / 1000.0f;
 	float tt = 1.0f - sin(dt);
-	float disperse = tt * 16.0f;
+	float disperse = tt * 8.0f;
 
 	center.x = (FB_WIDTH >> 1) - (BIG_LIGHT_WIDTH / 2);
 	center.y = (FB_HEIGHT >> 1) - (BIG_LIGHT_HEIGHT / 2);
@@ -772,7 +769,7 @@ static void blitBumpTexWave(int t)
 static void blitBumpTextureScript(int t)
 {
 	if (startWaveBumpAndRGBlights == 0) {
-		blitBumpTexDefault(startScrollingBump * t);
+		blitBumpTexDefault(t);
 	} else {
 		blitBumpTexWave(t);
 	}
@@ -802,9 +799,6 @@ static void bumpScript()
 	numParticlesVisible = dseq_value(ev_electroids);
 	CLAMP(numParticlesVisible, 0, NUM_PARTICLES);
 
-	if (dseq_triggered(ev_scrollUp)) {
-		startScrollingBump = 1;
-	}
 	if (dseq_triggered(ev_scalerIn)) {
 		startWaveBumpAndRGBlights = 1;
 	}

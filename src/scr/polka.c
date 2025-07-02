@@ -39,10 +39,10 @@ static void start(long trans_time);
 static void draw(void);
 
 static unsigned short *tempPal;
-static unsigned int *polkaPal32[VOLS_NUM+1];
+static unsigned int *polkaPal32[VOLS_NUM];
 static unsigned char *polkaBuffer[VOLS_NUM];
 
-static unsigned char *psin1, *psin2, *psin3;
+static unsigned char *psin1, *psin2;
 
 static int didPolkaLinesMovedYetOnce = 0;
 
@@ -234,31 +234,6 @@ static void OptGrid3Dfree()
 
 
 
-static void updateDotsVolumeBufferPlasma(int t)
-{
-	unsigned char *dst = volumeData;
-	const int tt = t >> 5;
-
-	int countZ = VERTICES_DEPTH;
-	do {
-		const int p3z = psin3[(3*countZ-tt) & (PSIN_SIZE-1)];
-		int countY = VERTICES_HEIGHT;
-		do {
-			const int p2y = psin2[(2*countY+tt) & (PSIN_SIZE-1)];
-			int countX = VERTICES_WIDTH;
-			do {
-				unsigned char c = psin1[(2*countX+tt) & (PSIN_SIZE-1)] + p2y + p3z;
-				if (c < 192) {
-					c = 0;
-				} else {
-					c = (c - 192) << 2;
-				}
-				*dst++ = c;
-			} while(--countX != 0);
-		} while(--countY != 0);
-	} while(--countZ != 0);
-}
-
 static void updateDotsVolumeBufferRadial(int t)
 {
 	int i;
@@ -301,7 +276,6 @@ static void updateDotsVolumeBufferRadialRays(int t)
 		const int r0 = pData->radius;
 		const int r1 = pData->latitude;
 		const int r2 = pData->longitude;
-		/* const int d = (psin1[(r1 - tt) & (PSIN_SIZE - 1)] + psin2[(r2 + tt) & (PSIN_SIZE - 1)] + psin3[(r1 + r2 + tt) & (PSIN_SIZE - 1)]) & 255; */
 		const int d = (psin1[(r1 - tt) & (PSIN_SIZE - 1)] + psin2[(r2 + tt) & (PSIN_SIZE - 1)]) & 255;
 
 		if (d >= thres) {
@@ -316,7 +290,7 @@ static void updateDotsVolumeBufferRadialRays(int t)
 	}
 }
 
-static void OptGrid3Drun(int objIndex, int sizeIndex, unsigned char* buffer, int ticks)
+static void OptGrid3Drun(int objIndex, unsigned char* buffer, int ticks)
 {
 	ticks >>= 1;
 
@@ -325,11 +299,7 @@ static void OptGrid3Drun(int objIndex, int sizeIndex, unsigned char* buffer, int
 	generateAxesVertices(transformedAxesVertices, objIndex);
 	transformAndProjectAxesBoxDotsEffect(objIndex);
 
-	if (sizeIndex == 0) {
-		drawBlobPointsPolkaSize2(screenPointsGrid.v, screenPointsGrid.num, buffer);
-	} else {
-		drawBlobPointsPolkaSize1(screenPointsGrid.v, screenPointsGrid.num, buffer);
-	}
+	drawBlobPointsPolkaSize2(screenPointsGrid.v, screenPointsGrid.num, buffer);
 }
 
 static void moveBgPoints(int t)
@@ -338,7 +308,7 @@ static void moveBgPoints(int t)
 	const int dt = t - prevT;
 	unsigned char d;
 
-	if (dt < 0 || dt > 40) {
+	if (dt < 0 || dt > 20) {
 		int i;
 
 		for (i = 0; i < NUM_BG_POINTS; ++i) {
@@ -361,7 +331,7 @@ static void moveBgPoints(int t)
 
 
 
-static void backgroundLinesTest(int t)
+static void drawBackgroundDistLines(int t)
 {
 	int i,j;
 	Vertex3D v1, v2;
@@ -382,7 +352,7 @@ static void backgroundLinesTest(int t)
 			const int d = dx * dx + dy * dy;
 
 			if (d > 0 && d < BG_LINE_DIST * BG_LINE_DIST) {
-				const int colorShift = 5 + (3 * d) / (BG_LINE_DIST * BG_LINE_DIST);
+				const int colorShift = 5 + (2 * d) / (BG_LINE_DIST * BG_LINE_DIST);
 				v1.xs = ix;
 				v1.ys = iy;
 				v2.xs = jx;
@@ -399,14 +369,12 @@ static void initPlasma3D()
 
 	psin1 = (unsigned char*)malloc(sizeof(unsigned char) * PSIN_SIZE);
 	psin2 = (unsigned char*)malloc(sizeof(unsigned char) * PSIN_SIZE);
-	psin3 = (unsigned char*)malloc(sizeof(unsigned char) * PSIN_SIZE);
 
 	for (i = 0; i < PSIN_SIZE; i++) {
 		const float s = 0.7f;
 		const float l = 0.9f;
 		psin1[i] = (unsigned char)(sin((l * (double)i) / 7.0) * s*123.0 + s*123.0);
 		psin2[i] = (unsigned char)(sin((l * (double)i) / 11.0) * s*176.0 + s*176.0);
-		psin3[i] = (unsigned char)(sin((l * (double)i) / 9.0) * s*118.0 + s*118.0);
 	}
 }
 
@@ -469,7 +437,7 @@ static void initSphereMap()
 			const int xc = x - SMAP_RANGE / 2;
 			int d = isqrt(xc * xc + yc * yc);
 			CLAMP(d, 1, 255);
-			sphereMap[i++] = 256 - d;
+			sphereMap[i++] = ((256 - d) * 5) >> 3;
 		}
 	}
 }
@@ -512,11 +480,6 @@ static int init(void)
 		polkaPal32[i] = createColMap16to32(tempPal);
 	}
 
-	/* a 3rd palette */
-	setPalGradient(0, 127, 0, 0, 0, 15, 47, 7, tempPal);
-	setPalGradient(128, 255, 15, 47, 7, 47, 56, 63, tempPal);
-	polkaPal32[2] = createColMap16to32(tempPal);
-
 	free(tempPal);
 
 	initPlasma3D();
@@ -534,7 +497,6 @@ static void destroy(void)
 
 	free(psin1);
 	free(psin2);
-	free(psin3);
 
 	free(bgPoints);
 	free(sphereMap);
@@ -543,7 +505,6 @@ static void destroy(void)
 		free(polkaBuffer[i]);
 		free(polkaPal32[i]);
 	}
-	free(polkaPal32[2]);
 }
 
 static void start(long trans_time)
@@ -575,33 +536,24 @@ static void draw(void)
 {
 	const int t = time_msec - startingTime;
 
-	int i, j, pi = 0;
+	int i, j;
 
 	for (i = 0; i < VOLS_NUM; ++i) {
 		int px, py;
-		int si = 0;
 
 		clearBlobBuffer(polkaBuffer[i]);
 
 		if (i == 0) {
 			updateDotsVolumeBufferRadial(t);
-		}
-		else {
-			if (t < 10240) {
-				updateDotsVolumeBufferRadialRays(t);
-			}
-			else {
-				updateDotsVolumeBufferPlasma(t);
-				pi = 1;
-				si = 1;
-			}
+		} else {
+			updateDotsVolumeBufferRadialRays(t);
 		}
 
 		px = sin((3550 * i + (i + 1) * t) / 2277.0f) * 6 * 56;
 		py = sin((4950 * i + (2 - i) * t) / 1567.0f) * 6 * 32;
 		setGridPos(&gridPos[i], px, py, 1024);
 
-		OptGrid3Drun(i, si, polkaBuffer[i], t);
+		OptGrid3Drun(i, polkaBuffer[i], t);
 	}
 
 	j = sin(t / 1100.0f) * 13 - 5;
@@ -617,11 +569,10 @@ static void draw(void)
 		blurBuffer(polkaBuffer[1]);
 	}
 
-	//42-41
 	buffer8bppToVram(polkaBuffer[0], polkaPal32[0]);
-	buffer8bppORwithVram(polkaBuffer[1], polkaPal32[1+pi]);
+	buffer8bppORwithVram(polkaBuffer[1], polkaPal32[1]);
 
-	backgroundLinesTest(t);
+	drawBackgroundDistLines(t);
 
 	swap_buffers(0);
 }

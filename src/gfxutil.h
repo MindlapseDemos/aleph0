@@ -38,6 +38,8 @@ void init_gfxutil(void);
 int clip_line(int *x0, int *y0, int *x1, int *y1, int xmin, int ymin, int xmax, int ymax);
 void draw_line(int x0, int y0, int x1, int y1, unsigned short color);
 
+void draw_rect(uint16_t *fb, int x, int y, int w, int h, uint16_t color);
+
 /* scale in 24.8 fixed point */
 void blur_horiz(uint16_t *dest, uint16_t *src, int xsz, int ysz, int rad, int scale);
 void blur_vert(uint16_t *dest, uint16_t *src, int xsz, int ysz, int rad, int scale);

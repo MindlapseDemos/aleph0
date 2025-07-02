@@ -234,15 +234,35 @@ int scr_change(struct screen *s)
 }
 
 #ifndef NO_ASM
+
+#ifdef _MSC_VER
+#include <io.h>
+#define access	_access
+#define F_OK	0
+#else
+#include <unistd.h>
+#endif
+
 /* loading screen */
 extern uint16_t loading_pixels[];
 static long prev_load_msec;
 static long load_delay;
+static int altbar;
 
 void start_loadscr(void)
 {
 	char *env;
 	void *pixels = loading_pixels;
+
+	if(access("data/alt.bar", F_OK) == 0) {
+		altbar = 1;
+		memset(pixels, 0, 320 * 240 * 2);
+
+		draw_rect(pixels, 60, 105, 2, 30, 0xffff);
+		draw_rect(pixels, 258, 105, 2, 30, 0xffff);
+		draw_rect(pixels, 60, 105, 200, 2, 0xffff);
+		draw_rect(pixels, 60, 133, 200, 2, 0xffff);
+	}
 
 	if((env = getenv("MLAPSE_LOADDELAY"))) {
 		load_delay = atoi(env);
@@ -269,6 +289,8 @@ void end_loadscr(void)
 {
 	void *pixels = loading_pixels;
 
+	if(altbar) return;
+
 	blitfb(loading_pixels + SPLAT_Y * 320 + SPLAT_X, loading_pixels + 320 * 240, 32, 72, 32);
 	blit_key(loading_pixels + FING_Y * 320 + FING_LAST_X, 320, loading_pixels + 247 * 320 + 64, FING_W, FING_H, FING_W, 0);
 	swap_buffers(pixels);
@@ -283,19 +305,25 @@ void end_loadscr(void)
 
 void loadscr(int n, int count)
 {
-	int xoffs = 75 * n / (count - 1);
+	int xoffs;
 	static int prev_xoffs;
 	uint16_t *sptr, *dptr;
 	long delta;
 	void *pixels = loading_pixels;
 
-	sptr = loading_pixels + 247 * 320 + 64;
-	dptr = loading_pixels + FING_Y * 320 + FING_X + prev_xoffs;
+	if(altbar) {
+		xoffs = 192 * n / (count - 1);
+		draw_rect(pixels, 64, 109, xoffs, 22, 0xffff);
+	} else {
+		xoffs = 75 * n / (count - 1);
+		sptr = loading_pixels + 247 * 320 + 64;
+		dptr = loading_pixels + FING_Y * 320 + FING_X + prev_xoffs;
 
-	while(prev_xoffs < xoffs) {
-		blit_key(dptr, 320, sptr, FING_W, FING_H, FING_W, 0);
-		dptr++;
-		prev_xoffs++;
+		while(prev_xoffs < xoffs) {
+			blit_key(dptr, 320, sptr, FING_W, FING_H, FING_W, 0);
+			dptr++;
+			prev_xoffs++;
+		}
 	}
 
 	swap_buffers(pixels);

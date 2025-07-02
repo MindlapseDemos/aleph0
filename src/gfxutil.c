@@ -162,6 +162,15 @@ void draw_line(int x0, int y0, int x1, int y1, unsigned short color)
 	}
 }
 
+void draw_rect(uint16_t *fb, int x, int y, int w, int h, uint16_t color)
+{
+	int i;
+	fb += (y << 8) + (y << 6) + x;
+	for(i=0; i<h; i++) {
+		memset16(fb, color, w);
+		fb += 320;
+	}
+}
 
 #define BLUR(w, h, pstep, sstep) \
 	for(i=0; i<h; i++) { \

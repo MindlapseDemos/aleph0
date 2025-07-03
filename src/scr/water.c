@@ -13,7 +13,6 @@
 #include "opt_3d.h"
 #include "opt_rend.h"
 
-/* #define PAUSE_FOR_PERFORMANCE_TEST */
 
 static int init(void);
 static void destroy(void);
@@ -57,6 +56,8 @@ static struct screen scr = {
 
 static unsigned long startingTime;
 
+static int currentNumRainDrops = 0;
+
 static unsigned short* waterPal[WATER_SHADES];
 
 static unsigned char* waterBuffer1;
@@ -77,6 +78,13 @@ static Object3D objFlower;
 
 static uint16_t *flowerShadesPal;
 
+static dseq_event* ev_fade;
+static dseq_event* ev_clouds;
+static dseq_event* ev_rain;
+static dseq_event* ev_objCome;
+static dseq_event* ev_objDive;
+static dseq_event* ev_objUp;
+static dseq_event* ev_objLeave;
 
 
 static void swapWaterBuffers()
@@ -218,6 +226,14 @@ static int init(void)
 
 	setRenderingMode(OPT_RAST_TEXTURED_GOURAUD_CLIP_Y);
 
+	ev_fade = dseq_lookup("water.fade");
+	ev_clouds = dseq_lookup("water.clouds");
+	ev_rain = dseq_lookup("water.rain");
+	ev_objCome = dseq_lookup("water.objCome");
+	ev_objDive = dseq_lookup("water.objDive");
+	ev_objUp = dseq_lookup("water.objUp");
+	ev_objLeave = dseq_lookup("water.objLeave");
+
 	return 0;
 }
 
@@ -308,14 +324,17 @@ static void makeRipples(unsigned char* buff, int t)
 		++v;
 	}
 
-	renderBlob(16 + (rand() % (WATER_TEX_WIDTH - 32)), 16 + (rand() % (WATER_TEX_HEIGHT - 32)), buff);
+	// Hacky hack
+	for (i = 0; i < currentNumRainDrops >> 6; ++i) {
+		renderBlob(16 + (rand() % (WATER_TEX_WIDTH - 32)), 16 + (rand() % (WATER_TEX_HEIGHT - 32)), buff);
+	}
 }
 
 static void moveRain()
 {
 	int i;
 
-	for (i = 0; i < NUM_RAINDROPS; ++i) {
+	for (i = 0; i < currentNumRainDrops; ++i) {
 		int y = rainDrops[i].y;
 		int x = rainDrops[i].x;
 
@@ -459,7 +478,7 @@ static void drawRain(int zRangeMin, int zRangeMax)
 {
 	int i;
 
-	for (i = 0; i < NUM_RAINDROPS; ++i) {
+	for (i = 0; i < currentNumRainDrops; ++i) {
 		int z = rainDrops[i].z;
 		if (z >= zRangeMin && z < zRangeMax) {
 			Vertex3D v1, v2;
@@ -478,16 +497,13 @@ static void drawRain(int zRangeMin, int zRangeMax)
 
 static void sceneRunFlower(int t)
 {
-	int xp = (int)(sin((float)t / (1.5f * 384.0f)) * 128);
-	int yp = (int)((sin((float)t / (1.5f * 768.0f)) * 64 - 32) * 1.75f);
-	int zp = (int)(sin((float)t / (1.5f * 512.0f)) * 128) - 32;
+	int xp, yp, zp;
 
-#ifdef PAUSE_FOR_PERFORMANCE_TEST
-	t = 0;
-	setObjectPos(0, 16, 256, &objFlower);
-#else
+	xp = (int)(sin((float)t / (1.5f * 384.0f)) * 128);
+	yp = 128;// (int)((sin((float)t / (1.5f * 768.0f)) * 64 - 32) * 1.75f);
+	zp = (int)(sin((float)t / (1.5f * 512.0f)) * 128) - 32;
+
 	setObjectPos(xp, yp, 576 + zp, &objFlower);
-#endif
 	setObjectRot(2 * t, 3 * t, 4 * t, &objFlower);
 
 	transformObject3D(&objFlower);
@@ -499,20 +515,24 @@ static void draw(void)
 	const int t = time_msec - startingTime;
 	const int frontRainZ = objFlower.pos.z;
 
-#ifdef PAUSE_FOR_PERFORMANCE_TEST
-	memset(fb_pixels, 0, FB_WIDTH * FB_HEIGHT * 2);
-	sceneRunFlower(t);
-#else
+	const float ft = dseq_value(ev_fade);
+	const float ftc = dseq_value(ev_clouds);
+	const float ftr = dseq_value(ev_rain);
+
 	runWaterEffect(t);
 
-	blendClouds(t >> 5);
+	blendClouds((int)((t * ftc) / 16.0f));
+
 	testBlitCloudTex();
 	testBlitCloudWater();
+
+	currentNumRainDrops = ftr * (NUM_RAINDROPS - 1);
 
 	drawRain(frontRainZ, 16384);
 	sceneRunFlower(t);
 	drawRain(RAINDROPS_DIST, frontRainZ);
-#endif
+
+	fadeToBlack16bpp(dseq_value(ev_fade), fb_pixels, FB_WIDTH, FB_HEIGHT, FB_WIDTH);
 
 	swap_buffers(0);
 }

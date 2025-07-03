@@ -224,7 +224,52 @@ demoseq {
 	}
 
 	water {
-		dur = 10000
+		dur = 20480
+
+		fade {
+			interp = "linear"
+			key(0) = 0
+			key(1024) = 1
+			interp = "linear"
+			key(19200) = 1
+			key(20480) = 0
+		}
+
+		clouds {
+			interp = "smoothstep"
+			key(1024) = 0
+			key(8192) = 0.5
+		}
+
+		rain {
+			interp = "linear"
+			key(2048) = 0
+			key(4096) = 1
+		}
+
+		objCome {
+			interp = "smoothstep"
+			key(3072) = 0
+			key(4096) = 1
+		}
+
+		objDive {
+			interp = "smoothstep"
+			key(6144) = 0
+			key(7096) = 1
+		}
+
+		objUp {
+			interp = "smoothstep"
+			key(10240) = 0
+			key(11500) = 1
+		}
+
+		objLeave {
+			interp = "smoothstep"
+			key(18432) = 0
+			key(20480) = 1
+		}
 	}
 
 	credits {

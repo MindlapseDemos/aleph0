@@ -37,6 +37,9 @@ void start_loadscr(void);
 void end_loadscr(void);
 void loadscr(int n, int count);
 
+void alt_start_loadscr(void);
+void alt_loadscr(int n, int count);
+
 #define NUM_SCR 32
 static struct screen *scr[NUM_SCR];
 static int num_screens;
@@ -256,12 +259,8 @@ void start_loadscr(void)
 
 	if(access("data/alt.bar", F_OK) == 0) {
 		altbar = 1;
-		memset(pixels, 0, 320 * 240 * 2);
-
-		draw_rect(pixels, 60, 105, 2, 30, 0xffff);
-		draw_rect(pixels, 258, 105, 2, 30, 0xffff);
-		draw_rect(pixels, 60, 105, 200, 2, 0xffff);
-		draw_rect(pixels, 60, 133, 200, 2, 0xffff);
+		alt_start_loadscr();
+		return;
 	}
 
 	if((env = getenv("MLAPSE_LOADDELAY"))) {
@@ -312,18 +311,18 @@ void loadscr(int n, int count)
 	void *pixels = loading_pixels;
 
 	if(altbar) {
-		xoffs = 192 * n / (count - 1);
-		draw_rect(pixels, 64, 109, xoffs, 22, 0xffff);
-	} else {
-		xoffs = 75 * n / (count - 1);
-		sptr = loading_pixels + 247 * 320 + 64;
-		dptr = loading_pixels + FING_Y * 320 + FING_X + prev_xoffs;
+		alt_loadscr(n, count);
+		return;
+	}
 
-		while(prev_xoffs < xoffs) {
-			blit_key(dptr, 320, sptr, FING_W, FING_H, FING_W, 0);
-			dptr++;
-			prev_xoffs++;
-		}
+	xoffs = 75 * n / (count - 1);
+	sptr = loading_pixels + 247 * 320 + 64;
+	dptr = loading_pixels + FING_Y * 320 + FING_X + prev_xoffs;
+
+	while(prev_xoffs < xoffs) {
+		blit_key(dptr, 320, sptr, FING_W, FING_H, FING_W, 0);
+		dptr++;
+		prev_xoffs++;
 	}
 
 	swap_buffers(pixels);
@@ -339,6 +338,7 @@ void loadscr(int n, int count)
 
 void start_loadscr(void)
 {
+	alt_start_loadscr();
 }
 
 void end_loadscr(void)
@@ -347,6 +347,31 @@ void end_loadscr(void)
 
 void loadscr(int n, int count)
 {
+	alt_loadscr(n, count);
 }
 
 #endif
+
+
+void alt_start_loadscr(void)
+{
+	memset(fb_pixels, 0, 320 * 240 * 2);
+
+	swap_buffers(fb_pixels);
+}
+
+void alt_loadscr(int n, int count)
+{
+	int xoffs = 192 * n / (count - 1);
+
+	draw_rect(fb_pixels, 60, 105, 2, 30, 0xffff);
+	draw_rect(fb_pixels, 258, 105, 2, 30, 0xffff);
+	draw_rect(fb_pixels, 60, 105, 200, 2, 0xffff);
+	draw_rect(fb_pixels, 60, 133, 200, 2, 0xffff);
+
+	if(xoffs > 0) {
+		draw_rect(fb_pixels, 64, 109, xoffs, 22, 0xffff);
+	}
+
+	swap_buffers(fb_pixels);
+}

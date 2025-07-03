@@ -20,7 +20,7 @@ CFLAGS = $(arch) $(warn) -MMD $(opt) $(def) -fno-pie -fno-strict-aliasing $(dbg)
 LDFLAGS = $(arch) -no-pie -Llibs/imago -Llibs/anim -Llibs/mikmod -Llibs/goat3d \
 		  -limago -lanim -lmikmod -lgoat3d $(sndlib_$(sys)) -lm
 
-cpu ?= $(shell uname -m | sed 's/i.86/i386/')
+cpu ?= $(shell uname -m | sed 's/i.86/i386/;s/arm.*/arm/;s/aarch.*/arm/')
 
 ifeq ($(cpu), x86_64)
 	arch = -m32
@@ -45,6 +45,12 @@ else
 	endif
 endif
 
+ifeq ($(cpu), arm)
+	obj = $(src:.c=.arm.o)
+	def += -DNO_ASM
+	bin = demopi
+endif
+
 sndlib_Linux = -lasound
 sndlib_IRIX = -laudio
 sndlib_mingw = -ldsound
@@ -64,6 +70,9 @@ $(bin): $(obj) imago anim mikmod goat3d
 	nasm -f coff -o $@ $<
 
 %.w32.o: %.c
+	$(CC) -o $@ $(CFLAGS) -c $<
+
+%.arm.o: %.c
 	$(CC) -o $@ $(CFLAGS) -c $<
 
 src/data.o: src/data.asm $(bindata)
@@ -110,3 +119,7 @@ data:
 .PHONY: crosswin
 crosswin:
 	$(MAKE) CC=i686-w64-mingw32-gcc sys=mingw
+
+.PHONY: crosspi
+crosspi:
+	$(MAKE) CC=arm-linux-gnueabi-gcc cpu=arm

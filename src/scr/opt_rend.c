@@ -222,7 +222,7 @@ static void drawEdgeTexturedGouraudClipY(int ys, int dx)
 			const int cc = FIXED_TO_INT(c, FP_RAST);
 			*vram = texShadePal[cc * TEX_SHADES_NUM + ct];
 		} else {
-			*vram += (1 + ((ct & 31) >> 4));
+			*vram += (1 + ((ct & 31) >> 3));
 		}
 
 		vram++;
@@ -376,8 +376,11 @@ static void drawEdges()
 			l->xs = 0;
 			dsx = xs1;
 		}
-		if (xs1 > FB_WIDTH - 1) {
-			r->xs = FB_WIDTH - 1;
+
+		// Just changed from FB_WIDTH-1 to FB_WIDTH
+		// edge will draw from x0 to x1 minus 1 pixel, so that's ok (else right scanline was not filled against background)
+		if (xs1 > FB_WIDTH) {
+			r->xs = FB_WIDTH;
 		}
 
 		if (l->xs < r->xs) {

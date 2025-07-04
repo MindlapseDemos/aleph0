@@ -261,14 +261,14 @@ demoseq {
 
 		objUp {
 			interp = "smoothstep"
-			key(10240) = 0
-			key(11500) = 1
+			key(10000) = 0
+			key(11000) = 1
 		}
 
 		objLeave {
 			interp = "smoothstep"
-			key(18432) = 0
-			key(20480) = 1
+			key(17880) = 0
+			key(19480) = 1
 		}
 	}
 

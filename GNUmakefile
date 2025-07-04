@@ -17,13 +17,25 @@ warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function -Wno-address
 dbg = -g
 
 CFLAGS = $(arch) $(warn) -MMD $(opt) $(def) -fno-pie -fno-strict-aliasing $(dbg) $(inc)
-LDFLAGS = $(arch) -no-pie -Llibs/imago -Llibs/anim -Llibs/mikmod -Llibs/goat3d \
-		  -limago -lanim -lmikmod -lgoat3d $(sndlib_$(sys)) -lm
+LDFLAGS = $(arch) -static-libgcc -no-pie -Llibs/imago -Llibs/anim -Llibs/mikmod \
+		  -Llibs/goat3d -limago -lanim -lmikmod -lgoat3d $(sndlib_$(sys)) -lm
 
-cpu ?= $(shell uname -m | sed 's/i.86/i386/;s/arm.*/arm/;s/aarch.*/arm/')
+cpu ?= $(shell uname -m | sed 's/i.86/i386/;s/arm.*/arm/')
 
 ifeq ($(cpu), x86_64)
 	arch = -m32
+endif
+
+ifeq ($(cpu), aarch64)
+	cpu := arm
+	CC = arm-linux-gnueabihf-gcc
+	export CC
+endif
+
+ifeq ($(cpu), arm)
+	obj = $(src:.c=.arm.o)
+	def += -DNO_ASM
+	bin = demopi
 endif
 
 sys ?= $(shell uname -s | sed 's/MINGW.*/mingw/; s/IRIX.*/IRIX/')
@@ -32,8 +44,7 @@ ifeq ($(sys), mingw)
 
 	bin = demo_win32.exe
 
-	LDFLAGS += -static-libgcc -lmingw32 -mconsole -lgdi32 -lwinmm \
-			   -lopengl32
+	LDFLAGS += -lmingw32 -mconsole -lgdi32 -lwinmm -lopengl32
 else
 	ifeq ($(sys), Darwin)
 		arch =
@@ -43,12 +54,6 @@ else
 	else
 		LDFLAGS += -lGL -lX11 -lpthread
 	endif
-endif
-
-ifeq ($(cpu), arm)
-	obj = $(src:.c=.arm.o)
-	def += -DNO_ASM
-	bin = demopi
 endif
 
 sndlib_Linux = -lasound
@@ -122,4 +127,4 @@ crosswin:
 
 .PHONY: crosspi
 crosspi:
-	$(MAKE) CC=arm-linux-gnueabi-gcc cpu=arm
+	$(MAKE) CC=arm-linux-gnueabihf-gcc cpu=arm

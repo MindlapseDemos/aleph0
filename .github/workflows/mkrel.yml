@@ -2,9 +2,11 @@ name: Build and package
 
 on:
   push:
+  pull_request:
   workflow_dispatch:
 
 jobs:
+# ---------------------- GNU/Linux x86 32bit ------------------------
   build-linux:
     runs-on: ubuntu-latest
     steps:
@@ -33,6 +35,7 @@ jobs:
         path: |
           demo
 
+# ---------------------- Windows MSVC x86 32bit ------------------------
   build-win-msvc:
     runs-on: windows-latest
 
@@ -66,6 +69,7 @@ jobs:
         path: |
           demo-win32.exe
 
+# ---------------------- DOS DJGPP ------------------------
   build-dos-djgpp:
     runs-on: ubuntu-latest
 
@@ -111,9 +115,39 @@ jobs:
           djdemo.exe
           cwsdpmi.exe
 
+# ---------------------- GNU/Linux ARM 32bit (rpi) ------------------------
+  build-gnulinux-arm:
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: install dependencies
+      run: |
+        sudo dpkg --add-architecture armhf
+        sudo apt-get update
+        sudo apt-get install gcc-arm-linux-gnueabihf libgl-dev:armhf libpng-dev libjpeg-dev libasound2-dev:armhf subversion imagemagick
+
+    - name: prepare datafiles
+      run: |
+        svn export svn://mutantstargoat.com/datadirs/dosdemo data
+        tools/procdata
+        rm -r data/bin data/src
+
+    - name: build demo
+      run: |
+        make
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: demo-gnulinux-arm
+        path: |
+          demopi
+
+
   pack:
     runs-on: ubuntu-latest
-    needs: [build-linux, build-win-msvc, build-dos-djgpp]
+    needs: [build-linux, build-win-msvc, build-dos-djgpp, build-gnulinux-arm]
     steps:
       - uses: actions/checkout@v4
 
@@ -136,6 +170,7 @@ jobs:
           cp builds/demo-gnulinux/* bin
           cp builds/demo-win32/* bin
           cp builds/djdemo/* bin
+          cp builds/demo-gnulinux-arm/* bin
           mv bin/cwsdpmi.exe .
           tools/mkrel
 

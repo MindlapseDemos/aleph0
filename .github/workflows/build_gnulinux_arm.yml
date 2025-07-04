@@ -1,23 +1,21 @@
-name: GNU/Linux build
+name: GNU/Linux ARM build
 
 on:
-  push:
-  pull_request:
   workflow_dispatch:
 
 jobs:
   build:
 
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-22.04-arm
 
     steps:
     - uses: actions/checkout@v4
 
     - name: install dependencies
       run: |
-        sudo dpkg --add-architecture i386
+        sudo dpkg --add-architecture armhf
         sudo apt-get update
-        sudo apt-get install gcc-multilib libgl-dev:i386 libpng-dev libjpeg-dev libasound2-dev:i386 nasm subversion
+        sudo apt-get install gcc-arm-linux-gnueabihf libgl-dev:armhf libpng-dev libjpeg-dev libasound2-dev:armhf subversion imagemagick
 
     - name: prepare datafiles
       run: |
@@ -28,14 +26,13 @@ jobs:
     - name: build demo
       run: |
         make
-        ln demo demo-gnulinux
 
     - uses: actions/upload-artifact@v4
       with:
-        name: demo-gnulinux
+        name: demo-gnulinux-arm
         path: |
           data/
-          demo-gnulinux
+          demopi
           demo.seq
 
 # vi:ts=2 sts=2 sw=2 expandtab:

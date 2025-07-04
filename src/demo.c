@@ -49,6 +49,7 @@ struct font demofont;
 static struct au_module *mod;
 
 float sball_matrix[] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+float sball_view_matrix[] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
 
 static unsigned long last_mouse_move;
 static int prev_mx, prev_my, mouse_dx, mouse_dy;

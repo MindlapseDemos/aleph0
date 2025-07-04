@@ -30,7 +30,7 @@ static void mouse_motion(int x, int y);
 static void sball_motion(int x, int y, int z);
 static void sball_rotate(int x, int y, int z);
 static void sball_button(int bn, int st);
-static void recalc_sball_matrix(float *xform);
+static void recalc_sball_matrix(void);
 static void set_fullscreen(int fs);
 static void set_vsync(int vsync);
 
@@ -77,6 +77,8 @@ static int use_sball;
 cgm_vec3 sball_pos = {0, 0, 0};
 cgm_quat sball_rot = {0, 0, 0, 1};
 
+cgm_vec3 sball_view_pos = {0, 0, 0};
+cgm_quat sball_view_rot = {0, 0, 0, 1};
 
 int main(int argc, char **argv)
 {
@@ -354,7 +356,9 @@ void sleep_msec(unsigned long msec)
 
 static void display(void)
 {
-	recalc_sball_matrix(sball_matrix);
+	if(opt.sball) {
+		recalc_sball_matrix();
+	}
 
 	time_msec = get_msec();
 	demo_draw();
@@ -490,20 +494,27 @@ static void mouse_motion(int x, int y)
 	mouse_y = y;
 }
 
+static cgm_vec3 sb_tmot, sb_rmot;
+
 static void sball_motion(int x, int y, int z)
 {
+	cgm_vcons(&sb_tmot, x, y, -z);
+	/*
 	sball_pos.x += x * 0.001f;
 	sball_pos.y += y * 0.001f;
 	sball_pos.z -= z * 0.001f;
-
+	*/
 }
 
 static void sball_rotate(int rx, int ry, int rz)
 {
+	cgm_vcons(&sb_rmot, -rx, -ry, rz);
+	/*
 	if(rx | ry | rz) {
 		float s = (float)rsqrt(rx * rx + ry * ry + rz * rz);
 		cgm_qrotate(&sball_rot, -0.001f / s, rx * s, ry * s, -rz * s);
 	}
+	*/
 }
 
 static void sball_button(int bn, int st)
@@ -513,13 +524,50 @@ static void sball_button(int bn, int st)
 	sball_rot.w = 1;
 }
 
-static void recalc_sball_matrix(float *xform)
+#define SBALL_RSPEED	0.0002f
+#define SBALL_TSPEED	0.0004f
+
+static void recalc_sball_matrix(void)
 {
-	cgm_mrotation_quat(xform, &sball_rot);
-	cgm_mtranspose(xform);
-	xform[12] = sball_pos.x;
-	xform[13] = sball_pos.y;
-	xform[14] = sball_pos.z;
+	float len;
+	cgm_quat rot;
+	cgm_vec3 vel;
+	cgm_vec3 right, up, fwd;
+	float rmat[16];
+
+	if((len = cgm_vlength(&sb_rmot)) != 0.0f) {
+		cgm_qrotation(&rot, len * SBALL_RSPEED, sb_rmot.x / len,
+				sb_rmot.y / len, sb_rmot.z / len);
+		cgm_qmul(&rot, &sball_rot);
+		sball_rot = rot;
+	}
+
+	cgm_vcscale(&vel, &sb_tmot, SBALL_TSPEED);
+
+	cgm_mrotation_quat(rmat, &sball_rot);
+
+	cgm_vcons(&right, rmat[0], rmat[4], rmat[8]);
+	cgm_vcons(&up, rmat[1], rmat[5], rmat[9]);
+	cgm_vcons(&fwd, -rmat[2], -rmat[6], -rmat[10]);
+
+	sball_view_pos.x += right.x * vel.x + up.x * vel.y - fwd.x * vel.z;
+	sball_view_pos.y += right.y * vel.x + up.y * vel.y - fwd.y * vel.z;
+	sball_view_pos.z += right.z * vel.x + up.z * vel.y - fwd.z * vel.z;
+
+	cgm_vadd(&sball_pos, &vel);
+
+	cgm_mtranslation(sball_view_matrix, -sball_view_pos.x, -sball_view_pos.y, -sball_view_pos.z);
+	cgm_qnormalize(&sball_rot);
+	cgm_mmul(sball_view_matrix, rmat);
+
+	cgm_mrotation_quat(sball_matrix, &sball_rot);
+	cgm_mtranspose(sball_matrix);
+	sball_matrix[12] = sball_pos.x;
+	sball_matrix[13] = sball_pos.y;
+	sball_matrix[14] = sball_pos.z;
+
+	cgm_vcons(&sb_rmot, 0, 0, 0);
+	cgm_vcons(&sb_tmot, 0, 0, 0);
 }
 
 

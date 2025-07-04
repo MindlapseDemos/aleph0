@@ -101,7 +101,7 @@ static void space_draw(void)
 	g3d_rotate(cam_phi, 1, 0, 0);
 	g3d_rotate(cam_theta, 0, 1, 0);
 	if(opt.sball) {
-		g3d_mult_matrix(sball_matrix);
+		g3d_mult_matrix(sball_view_matrix);
 	}
 
 	g3d_light_dir(0, 1, 0.5, 0.5);

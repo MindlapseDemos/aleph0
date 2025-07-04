@@ -60,7 +60,7 @@ enum {
 #endif
 
 
-extern float sball_matrix[16];
+extern float sball_matrix[16], sball_view_matrix[16];
 extern cgm_vec3 sball_pos;
 extern cgm_quat sball_rot;
 

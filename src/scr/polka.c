@@ -29,7 +29,7 @@
 #define VOLS_NUM 2
 
 #define NUM_BG_POINTS 64
-#define BG_LINE_DIST 48
+#define BG_LINE_DIST 32
 #define SMAP_RANGE 256
 
 
@@ -75,6 +75,7 @@ static Vector3D gridPos[2];
 static Vertex3D *bgPoints;
 static Vector3D *vel;
 
+static int activeDistPoints = 0;
 
 static struct screen scr = {
 	"polka",
@@ -86,6 +87,13 @@ static struct screen scr = {
 };
 
 static unsigned long startingTime;
+
+static dseq_event* ev_radBlurIn;
+static dseq_event* ev_distanceoids;
+static dseq_event* ev_objLeft;
+static dseq_event* ev_objRight;
+static dseq_event* ev_closeIn;
+
 
 struct screen *polka_screen(void)
 {
@@ -311,7 +319,7 @@ static void moveBgPoints(int t)
 	if (dt < 0 || dt > 20) {
 		int i;
 
-		for (i = 0; i < NUM_BG_POINTS; ++i) {
+		for (i = 0; i < activeDistPoints; ++i) {
 			bgPoints[i].x = (bgPoints[i].x + vel[i].x) & (SMAP_RANGE - 1);
 			bgPoints[i].y = (bgPoints[i].y + vel[i].y) & (SMAP_RANGE - 1);
 
@@ -336,15 +344,17 @@ static void drawBackgroundDistLines(int t)
 	int i,j;
 	Vertex3D v1, v2;
 
+	activeDistPoints = (dseq_value(ev_distanceoids) - dseq_value(ev_closeIn)) * NUM_BG_POINTS;
+
 	moveBgPoints(t);
 
 	// Just to be sure we don't get junk values early on
 	if (didPolkaLinesMovedYetOnce==0) return;
 
-	for (i = 0; i < NUM_BG_POINTS-1; ++i) {
+	for (i = 0; i < activeDistPoints - 1; ++i) {
 		const int ix = bgPoints[i].xs;
 		const int iy = bgPoints[i].ys;
-		for (j = i+1; j < NUM_BG_POINTS; ++j) {
+		for (j = i+1; j < activeDistPoints; ++j) {
 			const int jx = bgPoints[j].xs;
 			const int jy = bgPoints[j].ys;
 			const int dx = jx - ix;
@@ -437,7 +447,7 @@ static void initSphereMap()
 			const int xc = x - SMAP_RANGE / 2;
 			int d = isqrt(xc * xc + yc * yc);
 			CLAMP(d, 1, 255);
-			sphereMap[i++] = ((256 - d) * 5) >> 3;
+			sphereMap[i++] = ((256 - d) * 16) >> 3;
 		}
 	}
 }
@@ -484,6 +494,12 @@ static int init(void)
 
 	initPlasma3D();
 	initRadialEffects();
+
+	ev_radBlurIn = dseq_lookup("polka.radBlurIn");
+	ev_distanceoids = dseq_lookup("polka.distanceoids");
+	ev_objLeft = dseq_lookup("polka.objLeft");
+	ev_objRight = dseq_lookup("polka.objRight");
+	ev_closeIn = dseq_lookup("polka.closeIn");
 
 	return 0;
 }
@@ -535,8 +551,14 @@ static void blurBuffer(unsigned char *buffer)
 static void draw(void)
 {
 	const int t = time_msec - startingTime;
+	const int tt = 256 + t - dseq_start_time(ev_radBlurIn);
 
 	int i, j;
+
+	static float objF[VOLS_NUM] = { 0,0 };
+
+	objF[0] = -(1 - (dseq_value(ev_objLeft) - dseq_value(ev_closeIn))) * 1512;
+	objF[1] = (1 - (dseq_value(ev_objRight) - dseq_value(ev_closeIn))) * 1512;
 
 	for (i = 0; i < VOLS_NUM; ++i) {
 		int px, py;
@@ -549,24 +571,26 @@ static void draw(void)
 			updateDotsVolumeBufferRadialRays(t);
 		}
 
-		px = sin((3550 * i + (i + 1) * t) / 2277.0f) * 6 * 56;
+		px = sin((3550 * i + (i + 1) * t) / 2277.0f) * 6 * 56 + objF[i];
 		py = sin((4950 * i + (2 - i) * t) / 1567.0f) * 6 * 32;
 		setGridPos(&gridPos[i], px, py, 1024);
 
 		OptGrid3Drun(i, polkaBuffer[i], t);
 	}
 
-	j = sin(t / 1100.0f) * 13 - 5;
-	if (j < 0) j = 0;
-	if (j > 3) j = 3;
-	for (i = 0; i < j; ++i) {
-		blurBuffer(polkaBuffer[0]);
-	}
-	j = sin(t / 900.0f) * 11 - 5;
-	if (j < 0) j = 0;
-	if (j > 3) j = 3;
-	for (i = 0; i < j; ++i) {
-		blurBuffer(polkaBuffer[1]);
+	if (dseq_value(ev_radBlurIn)) {
+		j = sin(tt / 550.0f) * 13 - 5;
+		if (j < 0) j = 0;
+		if (j > 3) j = 3;
+		for (i = 0; i < j; ++i) {
+			blurBuffer(polkaBuffer[0]);
+		}
+		j = sin(tt / 750.0f) * 11 - 5;
+		if (j < 0) j = 0;
+		if (j > 3) j = 3;
+		for (i = 0; i < j; ++i) {
+			blurBuffer(polkaBuffer[1]);
+		}
 	}
 
 	buffer8bppToVram(polkaBuffer[0], polkaPal32[0]);

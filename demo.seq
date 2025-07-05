@@ -172,7 +172,36 @@ demoseq {
 	}
 
 	polka {
-		dur = 10000
+		dur = 12288
+
+		radBlurIn {
+			wait = 2048
+			dur = 14336
+		}
+
+		distanceoids {
+			interp = "linear"
+			key(0) = 0
+			key(6144) = 1
+		}
+
+		objLeft {
+			interp = "smoothstep"
+			key(0) = 0
+			key(1280) = 1
+		}
+
+		objRight {
+			interp = "smoothstep"
+			key(768) = 0
+			key(1448) = 1
+		}
+
+		closeIn {
+			interp = "smoothstep"
+			key(10240) = 0
+			key(12288) = 1
+		}
 	}
 
 	bump {

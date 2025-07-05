@@ -86,7 +86,12 @@ demoseq {
 	}
 
 	space {
-		dur = 8000
+		ship {
+			wait = 0
+			trans = 0
+			dur = 18000
+			interp = "linear"
+		}
 	}
 
 	hexfloor {

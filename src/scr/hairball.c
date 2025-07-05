@@ -68,9 +68,9 @@ static void draw_backdrop(void);
 static void update_thing(void);
 static void update_tentacle(struct g3d_mesh *mesh, int tidx);
 
-static void clear_anim(struct anm_animation *anm);
-static int load_anim(struct anm_animation *anm, const char *fname);
-static int save_anim(struct anm_animation *anm, const char *fname);
+void clear_anim(struct anm_animation *anm);
+int load_anim(struct anm_animation *anm, const char *fname);
+int save_anim(struct anm_animation *anm, const char *fname);
 
 
 static struct screen scr = {
@@ -538,7 +538,7 @@ static void update_tentacle(struct g3d_mesh *mesh, int tidx)
 	vptr->z = cent.z + vk.z * 0.5f;
 }
 
-static void clear_anim(struct anm_animation *anm)
+void clear_anim(struct anm_animation *anm)
 {
 	int i;
 	for(i=0; i<ANM_NUM_TRACKS; i++) {
@@ -547,7 +547,7 @@ static void clear_anim(struct anm_animation *anm)
 	}
 }
 
-static int load_anim(struct anm_animation *anm, const char *fname)
+int load_anim(struct anm_animation *anm, const char *fname)
 {
 	FILE *fp;
 	int nposkeys, nrotkeys;
@@ -632,7 +632,7 @@ inval:
 	return -1;
 }
 
-static int save_anim(struct anm_animation *anm, const char *fname)
+int save_anim(struct anm_animation *anm, const char *fname)
 {
 	FILE *fp;
 	int i, nposkeys, nrotkeys;

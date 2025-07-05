@@ -61,8 +61,8 @@ enum {
 
 
 extern float sball_matrix[16], sball_view_matrix[16];
-extern cgm_vec3 sball_pos;
-extern cgm_quat sball_rot;
+extern cgm_vec3 sball_pos, sball_view_pos;
+extern cgm_quat sball_rot, sball_view_rot;
 
 /* initialize options (arguments & config file)
  * this should be called before entering graphics mode

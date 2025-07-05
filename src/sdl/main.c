@@ -52,6 +52,9 @@ static int use_sball;
 cgm_vec3 sball_pos = {0, 0, 0};
 cgm_quat sball_rot = {0, 0, 0, 1};
 
+cgm_vec3 sball_view_pos = {0, 0, 0};
+cgm_quat sball_view_rot = {0, 0, 0, 1};
+
 
 int main(int argc, char **argv)
 {

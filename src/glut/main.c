@@ -34,9 +34,6 @@ static void recalc_sball_matrix(void);
 static void set_fullscreen(int fs);
 static void set_vsync(int vsync);
 
-int have_joy;
-unsigned int joy_bnstate, joy_bndiff, joy_bnpress;
-
 #define MODE(w, h)	\
 	{0, w, h, 16, w * 2, 5, 6, 5, 11, 5, 0, 0xf800, 0x7e0, 0x1f, 0xbadf00d, 2, 0}
 static struct video_mode vmodes[] = {
@@ -543,22 +540,17 @@ static void recalc_sball_matrix(void)
 	}
 
 	cgm_vcscale(&vel, &sb_tmot, SBALL_TSPEED);
+	cgm_vadd(&sball_pos, &vel);
 
 	cgm_mrotation_quat(rmat, &sball_rot);
 
-	cgm_vcons(&right, rmat[0], rmat[4], rmat[8]);
-	cgm_vcons(&up, rmat[1], rmat[5], rmat[9]);
-	cgm_vcons(&fwd, -rmat[2], -rmat[6], -rmat[10]);
-
-	sball_view_pos.x += right.x * vel.x + up.x * vel.y - fwd.x * vel.z;
-	sball_view_pos.y += right.y * vel.x + up.y * vel.y - fwd.y * vel.z;
-	sball_view_pos.z += right.z * vel.x + up.z * vel.y - fwd.z * vel.z;
-
-	cgm_vadd(&sball_pos, &vel);
+	cgm_vmul_v3m3(&vel, rmat);
+	cgm_vadd(&sball_view_pos, &vel);
 
 	cgm_mtranslation(sball_view_matrix, -sball_view_pos.x, -sball_view_pos.y, -sball_view_pos.z);
 	cgm_qnormalize(&sball_rot);
 	cgm_mmul(sball_view_matrix, rmat);
+	sball_view_rot = sball_rot;
 
 	cgm_mrotation_quat(sball_matrix, &sball_rot);
 	cgm_mtranspose(sball_matrix);

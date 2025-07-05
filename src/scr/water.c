@@ -175,11 +175,15 @@ static void initFlowerShadesPal()
 	flowerShadesPal = (uint16_t*)malloc(TEX_SHADES_NUM * 256 * sizeof(uint16_t));
 
 	for (j = 0; j < TEX_SHADES_NUM; ++j) {
+		const int k = j << (8 - TEX_SHADES_SHIFT);
 		for (i = 0; i < 256; ++i) {
-			const int r = 7 + ((i * j) >> (8 + 2));
-			const int g = (i * j) >> (8 + 1);
-			const int b = (i * j) >> (8 + 4);
-			flowerShadesPal[j * TEX_SHADES_NUM + i] = (r << 11) | (g << 5) | b;
+			int r = (8 + ((i * k) >> (8 + 2)));
+			int g = (0 + ((i * k) >> (8 + 1)));
+			int b = (0 + ((i * k) >> (8 + 4)));
+			CLAMP(r, 0, 31);
+			CLAMP(g, 0, 63);
+			CLAMP(b, 0, 31);
+			flowerShadesPal[j * 256 + i] = (r << 11) | (g << 5) | b;
 		}
 	}
 

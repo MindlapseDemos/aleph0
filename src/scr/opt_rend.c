@@ -220,7 +220,7 @@ static void drawEdgeTexturedGouraudClipY(int ys, int dx)
 
 		if (y >= clipValY) {
 			const int cc = FIXED_TO_INT(c, FP_RAST);
-			*vram = texShadePal[cc * TEX_SHADES_NUM + ct];
+			*vram = texShadePal[cc * 256 + ct];
 		} else {
 			*vram += (1 + ((ct & 31) >> 4));
 		}

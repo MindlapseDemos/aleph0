@@ -7,7 +7,8 @@
 #define CLAMP(v,a,b) if (v < a) v = a; if (v > b) v = b;
 #define CLAMP01(v) if (v < 0.0f) v = 0.0f; if (v > 1.0f) v = 1.0f;
 
-#define TEX_SHADES_NUM 256
+#define TEX_SHADES_SHIFT 4
+#define TEX_SHADES_NUM (1 << TEX_SHADES_SHIFT)
 
 #define FP_SCALE 16
 

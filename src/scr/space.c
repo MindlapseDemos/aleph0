@@ -41,6 +41,10 @@ static float cam_dist;
 static struct g3d_scene *scn;
 static struct g3d_mesh *mesh_hull, *mesh_lit;
 
+#define NUM_STARS	256
+static cgm_vec3 stars[NUM_STARS];
+static unsigned char starsize[NUM_STARS];
+
 static struct anm_node anmnode;
 static struct anm_animation *anim;
 static int playanim, recording;
@@ -85,6 +89,11 @@ static int space_init(void)
 	anim = anm_get_animation(&anmnode, 0);
 	if(load_anim(anim, "data/space.anm") != -1 && HAVE_ANIM) {
 		anim_dur = anim->tracks[0].keys[anim->tracks[0].count - 1].time;
+	}
+
+	for(i=0; i<NUM_STARS; i++) {
+		cgm_sphrand(stars + i, 128.0f);
+		starsize[i] = (rand() & 0x7f) + 0x7f;
 	}
 
 	ev_space = dseq_lookup("space");
@@ -160,7 +169,9 @@ static void update(void)
 
 static void space_draw(void)
 {
+	int i;
 	float xform[16];
+	cgm_vec4 pt;
 
 	update();
 
@@ -174,6 +185,16 @@ static void space_draw(void)
 	g3d_light_dir(0, 1, 0.5, 0.5);
 
 	g3d_clear(G3D_COLOR_BUFFER_BIT | G3D_DEPTH_BUFFER_BIT);
+
+	for(i=0; i<NUM_STARS; i++) {
+		cgm_wcons(&pt, stars[i].x, stars[i].y, stars[i].z, 1);
+		if(g3d_xform_point(&pt.x)) {
+			int x = cround64(pt.x);
+			int y = cround64(pt.y);
+			uint16_t col = PACK_RGB16(starsize[i], starsize[i], starsize[i]);
+			fb_pixels[(y << 8) + (y << 6) + x] = col;
+		}
+	}
 
 	g3d_rotate(180, 0, 1, 0);
 	g3d_translate(0, 0, 3);

@@ -11,6 +11,7 @@
 #include "dynarr.h"
 #include "curve.h"
 #include "anim.h"
+#include "tinymt32.h"
 
 #define VFOV	60.0f
 
@@ -23,6 +24,8 @@ static void space_destroy(void);
 static void space_start(long trans_time);
 static void space_draw(void);
 static void space_keypress(int key);
+
+static void sphrand(cgm_vec3 *pt, float rad, tinymt32_t *rnd);
 
 
 static struct screen scr = {
@@ -67,6 +70,7 @@ static int space_init(void)
 {
 	int i, num_cp;
 	struct goat3d *g;
+	tinymt32_t rnd;
 
 	if(!(g = goat3d_create()) || goat3d_load(g, "data/frig8.g3d") == -1) {
 		goat3d_free(g);
@@ -91,15 +95,17 @@ static int space_init(void)
 		anim_dur = anim->tracks[0].keys[anim->tracks[0].count - 1].time;
 	}
 
+	tinymt32_init(&rnd, 0xbadf00d);
 	for(i=0; i<NUM_STARS; i++) {
-		cgm_sphrand(stars + i, 128.0f);
-		starsize[i] = (rand() & 0x7f) + 0x7f;
+		sphrand(stars + i, 128.0f, &rnd);
+		starsize[i] = (tinymt32_generate_uint32(&rnd) & 0x7f) + 0x80;
 	}
 
 	ev_space = dseq_lookup("space");
 	ev_ship = dseq_lookup("space.ship");
 	return 0;
 }
+
 
 static void space_destroy(void)
 {
@@ -254,4 +260,19 @@ static void space_keypress(int key)
 		}
 		break;
 	}
+}
+
+static void sphrand(cgm_vec3 *pt, float rad, tinymt32_t *rnd)
+{
+	float u, v, theta, phi;
+
+	u = tinymt32_generate_float(rnd);
+	v = tinymt32_generate_float(rnd);
+
+	theta = 2.0f * CGM_PI * u;
+	phi = acos(2.0f * v - 1.0f);
+
+	pt->x = cos(theta) * sin(phi) * rad;
+	pt->y = sin(theta) * sin(phi) * rad;
+	pt->z = cos(phi) * rad;
 }

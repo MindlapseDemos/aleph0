@@ -120,7 +120,7 @@ void draw_text(struct font *fnt, uint16_t *fb, int x, int y, const char *str)
 			continue;
 		}
 		g = fnt->glyphs + c - fnt->gmin;
-		blendfb_rle(fb, x, y, &g->img);
+		blendfb_rle(fb, x, y - g->orgy, &g->img);
 		x += g->adv;
 	}
 }

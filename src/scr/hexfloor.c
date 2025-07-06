@@ -77,13 +77,22 @@ static dseq_event *ev_hexfloor;
 static float prev_tm;
 
 static const char *greetstr[] = {
-	"GREET@A", "GREET@B", "GREET@C", "GREET@D", "GREET@E", "GREET@F"
+	"ASD",
+	"BYTERAPERS",
+	"DISASTER",
+	"[MLA[T",
+	"HEDELMAE",
+	"TITAN",
+	0
+};
+static const char *greetunder[] = {
+	0, 0, "AREA", "DESIGN", 0, 0
 };
 #define NUM_GREETS	(sizeof greetstr / sizeof *greetstr)
 static dseq_event *ev_greets[NUM_GREETS];
 static int cur_greet;
 static struct {int x, y;} gpos[NUM_GREETS] = {
-	{-100, -50}, {20, 30}, {35, -120}, {-20, 50}, {12, 45}, {-80, -40}
+	{-80, -80}, {100, 30}, {100, -120}, {-20, 50}, {100, 45}, {-60, -40}
 };
 #define LINECOLOR	PACK_RGB16(240, 212, 184)
 
@@ -111,7 +120,6 @@ static int hex_init(void)
 	if(load_image(&star, "data/psys03.png") == -1) {
 		return -1;
 	}
-	save_image(&star, "foo.ppm");
 	/*conv_rle_alpha(&star);*/
 
 	for(i=0; i<6; i++) {
@@ -385,6 +393,9 @@ static void hex_draw(void)
 
 		if(tt > 768) {
 			draw_text(&demofont, fb_pixels, x0, y0, greetstr[cur_greet]);
+			if(greetunder[cur_greet]) {
+				draw_text(&demofont, fb_pixels, x0, y0 + 16, greetunder[cur_greet]);
+			}
 		}
 
 		if(dx >= 0) {

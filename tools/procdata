@@ -34,11 +34,14 @@ if [ ! -f cspr/confont.asm -o data/console.fnt -nt cspr/confont.asm ]; then
 	csprite -n cs_confont -s 6x7 -pad 1 -conv565 -nasm data/console.fnt >cspr/confont.asm || exit 1
 fi
 
+# XXX if you uncomment the font baking, remember to change advance: 12 and
+# for glyph 91, o:0,4
+
 # convert ttf font to glyphmaps
-if [ ! -f data/aleph0.gmp -o data/src/aleph0.ttf -nt data/aleph0.gmp -o $0 -nt data/aleph0.gmp ]; then
-	echo 'font2glyphmap: aleph0.ttf'
-	font2glyphmap -o data/aleph0.gmp -size 12 -range 64-91 data/src/aleph0.ttf
-fi
+#if [ ! -f data/aleph0.gmp -o data/src/aleph0.ttf -nt data/aleph0.gmp -o $0 -nt data/aleph0.gmp ]; then
+#	echo 'font2glyphmap: aleph0.ttf'
+#	font2glyphmap -o data/aleph0.gmp -size 12 -padding 0 -range 64-92 data/src/aleph0.ttf
+#fi
 
 # convert goat3d scenes
 srcdir=data/src/3dzoom

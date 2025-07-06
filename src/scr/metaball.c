@@ -18,7 +18,6 @@ static int init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
-static void keyb(int key);
 static void shade_blobs(void);
 
 static struct screen scr = {
@@ -26,8 +25,7 @@ static struct screen scr = {
 	init,
 	destroy,
 	start, 0,
-	draw,
-	keyb
+	draw
 };
 
 static float cam_theta, cam_phi;
@@ -35,7 +33,6 @@ static float cam_dist = 8;
 static struct g3d_mesh mmesh;
 static uint16_t *bgimage, *envmap;
 static int envmap_xsz, envmap_ysz;
-static int use_envmap = 1, opt_shade = 1;
 
 #define NUM_SPR		4
 static struct image spr[NUM_SPR];
@@ -198,28 +195,20 @@ static void draw(void)
 	g3d_light_pos(0, -10, 10, 20);
 
 	/*zsort_mesh(&mmesh);*/
-	if(opt_shade) {
-		shade_blobs();
-		g3d_texture_mode(G3D_TEX_ADD);
-	} else {
-		g3d_texture_mode(G3D_TEX_MODULATE);
-	}
+	shade_blobs();
+	g3d_texture_mode(G3D_TEX_ADD);
 
 	g3d_mtl_diffuse(0.6, 0.6, 0.6);
 
 	g3d_translate(-VOL_HALF_XSCALE, -VOL_HALF_YSCALE, -VOL_HALF_ZSCALE);
 
-	if(use_envmap) {
-		g3d_enable(G3D_TEXTURE_2D);
-		g3d_enable(G3D_TEXTURE_GEN);
-		g3d_set_texture(envmap_xsz, envmap_ysz, envmap);
-		draw_mesh(&mmesh);
-		g3d_texture_mode(G3D_TEX_MODULATE);
-		g3d_disable(G3D_TEXTURE_GEN);
-		g3d_disable(G3D_TEXTURE_2D);
-	} else {
-		draw_mesh(&mmesh);
-	}
+	g3d_enable(G3D_TEXTURE_2D);
+	g3d_enable(G3D_TEXTURE_GEN);
+	g3d_set_texture(envmap_xsz, envmap_ysz, envmap);
+	draw_mesh(&mmesh);
+	g3d_texture_mode(G3D_TEX_MODULATE);
+	g3d_disable(G3D_TEXTURE_GEN);
+	g3d_disable(G3D_TEXTURE_2D);
 
 	if(opt.dbgmode) {
 		sprintf(buf, "%d tris", mmesh.vcount / 3);
@@ -227,19 +216,6 @@ static void draw(void)
 	}
 
 	swap_buffers(fb_pixels);
-}
-
-static void keyb(int key)
-{
-	switch(key) {
-	case 'e':
-		use_envmap ^= 1;
-		break;
-
-	case 's':
-		opt_shade ^= 1;
-		break;
-	}
 }
 
 static cgm_vec3 blobcol[2] = {

@@ -16,6 +16,7 @@
 static int init(void);
 static void destroy(void);
 static void start(long trans_time);
+static void stop(long trans_time);
 static void draw(void);
 static void keypress(int key);
 static int presort_cmp(const void *a, const void *b);
@@ -26,7 +27,7 @@ static struct screen scr = {
 	init,
 	destroy,
 	start,
-	0,
+	stop,
 	draw,
 	keypress
 };

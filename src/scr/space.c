@@ -44,9 +44,10 @@ static float cam_dist;
 static struct g3d_scene *scn;
 static struct g3d_mesh *mesh_hull, *mesh_lit;
 
-#define NUM_STARS	256
+#define NUM_STARS	300
 static cgm_vec3 stars[NUM_STARS];
 static unsigned char starsize[NUM_STARS];
+static struct image starimg[2];
 
 static struct anm_node anmnode;
 static struct anm_animation *anim;
@@ -71,6 +72,7 @@ static int space_init(void)
 	int i, num_cp;
 	struct goat3d *g;
 	tinymt32_t rnd;
+	const char *starimg_name[] = {"data/star_04.png", "data/star_07.png"};
 
 	if(!(g = goat3d_create()) || goat3d_load(g, "data/frig8.g3d") == -1) {
 		goat3d_free(g);
@@ -99,6 +101,14 @@ static int space_init(void)
 	for(i=0; i<NUM_STARS; i++) {
 		sphrand(stars + i, 128.0f, &rnd);
 		starsize[i] = (tinymt32_generate_uint32(&rnd) & 0x7f) + 0x80;
+	}
+
+	for(i=0; i<2; i++) {
+		if(load_image(starimg + i, starimg_name[i]) == -1) {
+			fprintf(stderr, "failed to load: %s\n", starimg_name[i]);
+			return -1;
+		}
+		conv_rle_alpha(starimg + i);
 	}
 
 	ev_space = dseq_lookup("space");
@@ -197,8 +207,16 @@ static void space_draw(void)
 		if(g3d_xform_point(&pt.x)) {
 			int x = cround64(pt.x);
 			int y = cround64(pt.y);
-			uint16_t col = PACK_RGB16(starsize[i], starsize[i], starsize[i]);
-			fb_pixels[(y << 8) + (y << 6) + x] = col;
+			int sz = starsize[i];
+
+			if(sz > 251) {
+				blendfb_rle(fb_pixels, x - starimg[1].width / 2, y - starimg[1].height / 2, starimg + 1);
+			} else if(sz > 220) {
+				blendfb_rle(fb_pixels, x - starimg[0].width / 2, y - starimg[0].height / 2, starimg);
+			} else {
+				uint16_t col = PACK_RGB16(sz, sz, sz);
+				fb_pixels[(y << 8) + (y << 6) + x] = col;
+			}
 		}
 	}
 

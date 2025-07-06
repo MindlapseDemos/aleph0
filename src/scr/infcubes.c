@@ -16,6 +16,7 @@
 static int init(void);
 static void destroy(void);
 static void start(long trans_time);
+static void stop(long trans_time);
 static void draw(void);
 static int gen_phong_tex(struct pimage *img, int xsz, int ysz, float sexp,
 		float offx, float offy,	int dr, int dg, int db, int sr, int sg, int sb);
@@ -24,7 +25,7 @@ static struct screen scr = {
 	"infcubes",
 	init,
 	destroy,
-	start, 0,
+	start, stop,
 	draw
 };
 
@@ -92,6 +93,12 @@ static void start(long trans_time)
 	g3d_disable(G3D_LIGHTING);
 	g3d_enable(G3D_LIGHT0);
 	g3d_disable(G3D_DEPTH_TEST);
+	g3d_texture_mode(G3D_TEX_REPLACE);
+}
+
+static void stop(long trans_time)
+{
+	g3d_texture_mode(G3D_TEX_MODULATE);
 }
 
 static void draw(void)

@@ -111,6 +111,7 @@ static void start(long trans_time)
 	g3d_disable(G3D_LIGHTING);
 	g3d_enable(G3D_LIGHT0);
 	g3d_polygon_mode(G3D_FLAT);
+	g3d_texture_mode(G3D_TEX_REPLACE);
 
 	g3d_clear_color(0, 0, 0);
 }
@@ -118,6 +119,7 @@ static void start(long trans_time)
 static void stop(long trans_time)
 {
 	g3d_framebuffer(320, 240, fb_pixels, 320);
+	g3d_texture_mode(G3D_TEX_MODULATE);
 }
 
 static cgm_vec3 campos, camtarg = {0};

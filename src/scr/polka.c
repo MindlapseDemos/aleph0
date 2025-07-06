@@ -28,8 +28,8 @@
 #define DOT_COLOR 0xFFFF
 #define VOLS_NUM 2
 
-#define NUM_BG_POINTS 64
-#define BG_LINE_DIST 32
+#define NUM_BG_POINTS 96
+#define BG_LINE_DIST 48
 #define SMAP_RANGE 256
 
 
@@ -325,8 +325,8 @@ static void moveBgPoints(int t)
 
 			d = sphereMap[bgPoints[i].y * SMAP_RANGE + bgPoints[i].x];
 
-			bgPoints[i].xs = ((((bgPoints[i].x - SMAP_RANGE / 2) * d) >> 6) + FB_WIDTH / 2) % FB_WIDTH;
-			bgPoints[i].ys = ((((bgPoints[i].y - SMAP_RANGE / 2) * d) >> 6) + FB_HEIGHT / 2) % FB_HEIGHT;
+			bgPoints[i].xs = ((((bgPoints[i].x - SMAP_RANGE / 2) * d) >> 7) + FB_WIDTH / 2) % FB_WIDTH;
+			bgPoints[i].ys = ((((bgPoints[i].y - SMAP_RANGE / 2) * d) >> 7) + FB_HEIGHT / 2) % FB_HEIGHT;
 
 			if (bgPoints[i].xs < 0) bgPoints[i].xs = FB_WIDTH - 1;
 			if (bgPoints[i].ys < 0) bgPoints[i].ys = FB_HEIGHT - 1;
@@ -362,7 +362,7 @@ static void drawBackgroundDistLines(int t)
 			const int d = dx * dx + dy * dy;
 
 			if (d > 0 && d < BG_LINE_DIST * BG_LINE_DIST) {
-				const int colorShift = 5 + (2 * d) / (BG_LINE_DIST * BG_LINE_DIST);
+				const int colorShift = 5 + (3 * d) / (BG_LINE_DIST * BG_LINE_DIST);
 				v1.xs = ix;
 				v1.ys = iy;
 				v2.xs = jx;
@@ -445,9 +445,9 @@ static void initSphereMap()
 		const int yc = y - SMAP_RANGE / 2;
 		for (x = 0; x < SMAP_RANGE; ++x) {
 			const int xc = x - SMAP_RANGE / 2;
-			int d = isqrt(xc * xc + yc * yc);
-			CLAMP(d, 1, 255);
-			sphereMap[i++] = ((256 - d) * 16) >> 3;
+			int d = ((256 - isqrt(xc * xc + yc * yc)) * 20) >> 4;
+			CLAMP(d, 1, 160);
+			sphereMap[i++] = d;
 		}
 	}
 }

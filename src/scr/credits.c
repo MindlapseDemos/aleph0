@@ -157,8 +157,9 @@ static void credits_start(long trans_time)
 
 	g3d_enable(G3D_DEPTH_TEST);
 	g3d_enable(G3D_CULL_FACE);
-	g3d_enable(G3D_LIGHTING);
-	g3d_enable(G3D_LIGHT0);
+	g3d_disable(G3D_LIGHTING);
+
+	g3d_texture_mode(G3D_TEX_MODULATE);
 
 	g3d_polygon_mode(G3D_GOURAUD);
 	g3d_light_ambient(0, 0, 0);
@@ -175,8 +176,6 @@ static void credits_update(void)
 #define NUM_TENT	1
 #define TENT_NODES	12
 #define TENT_DIST	0.7
-
-static char dbgtext[TENT_NODES][64];
 
 static void credits_draw(void)
 {
@@ -203,7 +202,6 @@ static void credits_draw(void)
 
 	g3d_clip_plane(0, clip_plane);
 	g3d_enable(G3D_CLIP_PLANE0);
-	g3d_disable(G3D_LIGHTING);
 	g3d_polygon_mode(G3D_FLAT);
 
 	left_side(1);
@@ -218,11 +216,6 @@ static void credits_draw(void)
 	g3d_front_face(G3D_CCW);
 
 	g3d_disable(G3D_CLIP_PLANE0);
-
-	for(i=0; i<TENT_NODES; i++) {
-		if(!*dbgtext[i]) continue;
-		cs_cputs(fb_pixels, 100, 10 + i * 10, dbgtext[i]);
-	}
 
 	swap_buffers(fb_pixels);
 }
@@ -267,7 +260,6 @@ static void left_side(float tint)
 		}
 
 
-		g3d_disable(G3D_LIGHTING);
 		g3d_enable(G3D_TEXTURE_2D);
 		g3d_set_texture(envmap.width, envmap.height, envmap.pixels);
 		g3d_enable(G3D_TEXTURE_GEN);
@@ -345,7 +337,6 @@ static void right_side(float tint)
 	g3d_translate(0, 2, 0);
 
 	g3d_polygon_mode(G3D_FLAT);
-	g3d_disable(G3D_LIGHTING);
 	g3d_enable(G3D_TEXTURE_2D);
 	g3d_enable(G3D_ADD_BLEND);
 	g3d_set_texture(ctex.width, ctex.height, ctex.pixels);

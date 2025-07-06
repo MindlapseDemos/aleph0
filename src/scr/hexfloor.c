@@ -367,7 +367,7 @@ static void hex_draw(void)
 		int x0, x1, y0, y1, endx, endy, tt;
 		int dx = gpos[cur_greet].x;
 		int dy = gpos[cur_greet].y;
-		int len = calc_text_len(&demofont, greetstr[cur_greet]) + 8;
+		int len = calc_text_len(&demofont, greetstr[cur_greet]);
 
 		cgm_wcons(&pt, pos.x, pos.y, pos.z, 1);
 		g3d_xform_point(&pt.x);
@@ -394,7 +394,7 @@ static void hex_draw(void)
 		if(tt > 768) {
 			draw_text(&demofont, fb_pixels, x0, y0, greetstr[cur_greet]);
 			if(greetunder[cur_greet]) {
-				draw_text(&demofont, fb_pixels, x0, y0 + 16, greetunder[cur_greet]);
+				draw_text(&demofont, fb_pixels, x0, y0 + 14, greetunder[cur_greet]);
 			}
 		}
 

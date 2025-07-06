@@ -137,6 +137,13 @@ static float remainingThunderDuration = THUNDER_SECONDS;
 static float remainingBlurDuration = BLUR_SECONDS;
 static int thunderPattern = 0;
 
+static float zoom = 0.0f;
+
+void setThunderZoom(float t)
+{
+	zoom = t;
+}
+
 static void draw(void)
 {
 	lastFrameDuration = (time_msec - lastFrameTime) / 1000.0f;
@@ -354,7 +361,7 @@ static void animateMesh() {
 		v2.y = v1.x * bx.y + v1.y * by.y + v1.z * bz.y;
 		v2.z = v1.x * bx.z + v1.y * by.z + v1.z * bz.z;
 
-		v2.z += CAMERA_DISTANCE;
+		v2.z += CAMERA_DISTANCE + (1.0f - zoom) * 2.0f;
 
 		vertexBufferAnimated[i] = v2;
 	}

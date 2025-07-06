@@ -57,7 +57,19 @@ demoseq {
 	}
 
 	blobgrid {
-		dur = 8000
+		dur = 10240
+
+		thingsIn {
+			interp = "linear"
+			key(0) = 0
+			key(1024) = 1
+		}
+
+		thingsOut {
+			interp = "linear"
+			key(9216) = 0
+			key(10240) = 1
+		}
 	}
 
 	hairball {

@@ -36,6 +36,8 @@ static unsigned char* faintBgTex;
 
 BlobGridParams bgParamsStars = { NUM_STARS, 5, 2*4096, 16};
 
+static int currentVisibleStarsNum = 0;
+
 
 typedef struct Pos3D
 {
@@ -54,6 +56,9 @@ static unsigned char *blobBuffer;
 struct screen* thunderScreen = NULL;
 static unsigned short* thunderPal;
 static unsigned int* thunderPal32;
+
+static dseq_event* ev_thingsIn;
+static dseq_event* ev_thingsOut;
 
 
 static int init(void);
@@ -132,6 +137,9 @@ static int init(void)
 
 	initFaintBackground();
 
+	ev_thingsIn = dseq_lookup("blobgrid.thingsIn");
+	ev_thingsOut = dseq_lookup("blobgrid.thingsOut");
+
 	return 0;
 }
 
@@ -154,12 +162,15 @@ static void start(long trans_time)
 static void drawConnections(BlobGridParams *params)
 {
 	int i,j,k;
-	const int numPoints = params->numPoints;
+	int numPoints = currentVisibleStarsNum;
 	const int connectionDist = params->connectionDist;
 	const int connectionBreaks = params->connectionBreaks;
 	const int blobSizesNum = params->blobSizesNum;
 
 	const int bp = connectionDist / connectionBreaks;
+
+	if (numPoints <= 0) return;
+	if (numPoints > NUM_STARS) numPoints = NUM_STARS;
 
 	for (j=0; j<numPoints; ++j) {
 		const int xpj = screenPos[j].x;
@@ -196,12 +207,15 @@ static void drawConnections(BlobGridParams *params)
 static void drawConnections3D(BlobGridParams *params)
 {
 	int i,j,k;
-	const int numPoints = params->numPoints;
+	int numPoints = currentVisibleStarsNum;
 	const int connectionDist = params->connectionDist;
 	const int connectionBreaks = params->connectionBreaks;
 	const int blobSizesNum = params->blobSizesNum;
 
 	const int bp = connectionDist / connectionBreaks;
+
+	if (numPoints <= 0) return;
+	if (numPoints > NUM_STARS) numPoints = NUM_STARS;
 
 	for (j=0; j<numPoints; ++j) {
 		const int xpj = origPos[j].x;
@@ -259,9 +273,12 @@ static void drawStars(BlobGridParams *params)
 {
 	const int blobSizesNum = params->blobSizesNum;
 
-	int count = params->numPoints;
+	int count = currentVisibleStarsNum;
 	Pos3D *src = origPos;
 	Pos3D *dst = screenPos;
+
+	if (count <= 0) return;
+	if (count > NUM_STARS) count = NUM_STARS;
 
 	do {
 		const int x = src->x;
@@ -290,8 +307,11 @@ static void drawStars(BlobGridParams *params)
 
 static void moveStars()
 {
-	int count = NUM_STARS;
+	int count = currentVisibleStarsNum;
 	Pos3D *src = origPos;
+
+	if (count <= 0) return;
+	if (count > NUM_STARS) count = NUM_STARS;
 
 	do {
 		#ifndef STARS_NORMAL
@@ -308,7 +328,6 @@ static void moveStars()
 
 static void drawEffect(BlobGridParams *params, int t)
 {
-	/* int i, s; */
 	static int prevT = 0;
 	const int dt = t - prevT;
 	if (dt < 0 || dt > 20) {
@@ -317,12 +336,6 @@ static void drawEffect(BlobGridParams *params, int t)
 		clearBlobBuffer(blobBuffer);
 		drawStars(params);
 		drawConnections3D(params);
-
-		/*for (s = 0; s < 16; ++s) {
-			for (i = 0; i < 4; ++i) {
-				drawBlob(16 * (s+1) + i, 16 + i * 2 * (s + 1), s, 0, blobBuffer);
-			}
-		}*/
 
 		prevT = t;
 	}
@@ -346,6 +359,8 @@ static void mergeThunderScreen()
 	if (!thunderScreen) {
 		thunderScreen = scr_lookup("thunder");
 	}
+
+	setThunderZoom(dseq_value(ev_thingsIn) - dseq_value(ev_thingsOut));
 
 	thunderScreen->draw();
 
@@ -374,6 +389,9 @@ static void renderFaintBackground(int t)
 static void draw(void)
 {
 	int t = time_msec - startingTime;
+	const float ft = dseq_value(ev_thingsIn) - dseq_value(ev_thingsOut);
+
+	currentVisibleStarsNum = ft * NUM_STARS;
 
 	drawEffect(&bgParamsStars, t);
 
@@ -382,6 +400,8 @@ static void draw(void)
 	renderFaintBackground(t);
 
 	mergeThunderScreen();
+
+	fadeToBlack16bpp(ft, fb_pixels, FB_WIDTH, FB_HEIGHT, FB_WIDTH);
 
 	swap_buffers(0);
 }

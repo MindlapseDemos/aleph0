@@ -18,7 +18,7 @@ bin = demo
 inc = -I/usr/local/include -Isrc -Isrc/3dgfx -Isrc/rt -Isrc/scr -Isrc/utils \
 	  -Isrc/glut -Ilibs -Ilibs/imago/src -Ilibs/anim/src -Ilibs/mikmod/include \
 	  -Ilibs/goat3d/include
-def = -DMIKMOD_STATIC -DNO_ASM
+def = -DMIKMOD_STATIC -DNO_ASM -DMINIGLUT_USE_LIBC
 opt = -O3
 #dbg = -g
 

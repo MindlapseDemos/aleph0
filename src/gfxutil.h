@@ -17,11 +17,11 @@
 #ifdef BUILD_BIGENDIAN
 
 #define PACK_RGB32(r, g, b) \
-	((((b) & 0xff) << 16) | (((g) & 0xff) << 8) | ((r) & 0xff) | 0xff000000)
+	((((b) & 0xff) << 24) | (((g) & 0xff) << 16) | (((r) & 0xff) << 8) | 0xff)
 
-#define UNPACK_B32(c)	(((c) >> 16) & 0xff)
-#define UNPACK_G32(c)	(((c) >> 8) & 0xff)
-#define UNPACK_R32(c)	((c) & 0xff)
+#define UNPACK_R32(c)	(((c) >> 24) & 0xff)
+#define UNPACK_G32(c)	(((c) >> 16) & 0xff)
+#define UNPACK_B32(c)	(((c) >> 8) & 0xff)
 
 #else	/* LITTLE_ENDIAN */
 

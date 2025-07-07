@@ -10,7 +10,6 @@ The 3-clause BSD License
 #ifndef TINYMT32_H_
 #define TINYMT32_H_
 
-#include <stdint.h>
 #include "util.h"
 
 #define TINYMT32_MEXP 127

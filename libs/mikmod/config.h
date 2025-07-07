@@ -40,7 +40,7 @@
 #define DRV_OSS		1
 #endif
 
-#ifdef __sgi__
+#ifdef __sgi
 #define DRV_SGI		1
 #endif
 

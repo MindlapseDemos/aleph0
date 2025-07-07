@@ -56,10 +56,10 @@ static unsigned int tex;
 static int tex_xsz, tex_ysz;
 #endif
 
-#ifdef __unix__
+#if defined(__unix__) || defined(unix)
 #include <GL/glx.h>
-static Display *xdpy;
-static Window xwin;
+extern Display *miniglut_dpy;
+extern Window miniglut_win;
 
 typedef void (*swapint_ext_t)(Display*, Window, int);
 typedef void (*swapint_mesa_t)(int);
@@ -128,10 +128,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-#ifdef __unix__
-	xdpy = glXGetCurrentDisplay();
-	xwin = glXGetCurrentDrawable();
-
+#if (defined(__unix__) || defined(unix)) && GLX_VERSION_1_4
 	glx_swap_interval_ext = (swapint_ext_t)glXGetProcAddress((unsigned char*)"glXSwapIntervalEXT");
 	glx_swap_interval_mesa = (swapint_mesa_t)glXGetProcAddress((unsigned char*)"glXSwapIntervalMESA");
 #endif
@@ -596,11 +593,11 @@ static void set_fullscreen(int fs)
 	}
 }
 
-#ifdef __unix__
+#if defined(__unix__) || defined(unix)
 static void set_vsync(int vsync)
 {
 	if(glx_swap_interval_ext) {
-		glx_swap_interval_ext(xdpy, xwin, vsync);
+		glx_swap_interval_ext(miniglut_dpy, miniglut_win, vsync);
 	} else if(glx_swap_interval_mesa) {
 		glx_swap_interval_mesa(vsync);
 	}

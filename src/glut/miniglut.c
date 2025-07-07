@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #ifndef __APPLE__
-#if defined(__unix__)
+#if defined(__unix__) || defined(unix)
 
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
@@ -32,8 +32,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define GLX_FRAMEBUFFER_SRGB_CAPABLE_ARB	0x20b2
 #endif
 
-static Display *dpy;
-static Window win, root;
+Display *miniglut_dpy;
+Window miniglut_win;
+
+#define dpy	miniglut_dpy
+#define win miniglut_win
+
+static Window root;
 static int scr;
 static GLXContext ctx;
 static Atom xa_wm_proto, xa_wm_del_win;
@@ -1729,7 +1734,7 @@ static void get_screen_size(int *scrw, int *scrh)
 }
 #endif	/* BUILD_WIN32 */
 
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(unix) || defined(__APPLE__)
 #include <sys/time.h>
 
 #ifdef MINIGLUT_USE_LIBC

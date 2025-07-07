@@ -12,6 +12,7 @@
 #include "curve.h"
 #include "anim.h"
 #include "tinymt32.h"
+#include "polyfill.h"
 
 #define VFOV	60.0f
 
@@ -23,6 +24,7 @@ static int space_init(void);
 static void space_destroy(void);
 static void space_start(long trans_time);
 static void space_draw(void);
+static void draw_lensflare(void);
 static void space_keypress(int key);
 
 static void sphrand(cgm_vec3 *pt, float rad, tinymt32_t *rnd);
@@ -44,10 +46,13 @@ static float cam_dist;
 static struct g3d_scene *scn;
 static struct g3d_mesh *mesh_hull, *mesh_lit;
 
+#define STARS_RAD	256.0f
 #define NUM_STARS	300
 static cgm_vec3 stars[NUM_STARS];
 static unsigned char starsize[NUM_STARS];
 static struct image starimg[2];
+
+static struct image sunimg, flareimg, flareimg2, flarebig;
 
 static struct anm_node anmnode;
 static struct anm_animation *anim;
@@ -71,7 +76,7 @@ static int space_init(void)
 {
 	int i, num_cp;
 	struct goat3d *g;
-	tinymt32_t rnd;
+	tinymt32_t rnd = {0};
 	const char *starimg_name[] = {"data/star_04.png", "data/star_07.png"};
 
 	if(!(g = goat3d_create()) || goat3d_load(g, "data/frig8.g3d") == -1) {
@@ -99,7 +104,7 @@ static int space_init(void)
 
 	tinymt32_init(&rnd, 0xbadf00d);
 	for(i=0; i<NUM_STARS; i++) {
-		sphrand(stars + i, 128.0f, &rnd);
+		sphrand(stars + i, STARS_RAD, &rnd);
 		starsize[i] = (tinymt32_generate_uint32(&rnd) & 0x7f) + 0x80;
 	}
 
@@ -110,6 +115,30 @@ static int space_init(void)
 		}
 		conv_rle_alpha(starimg + i);
 	}
+
+	if(load_image(&sunimg, "data/sunflare.png") == -1) {
+		fprintf(stderr, "failed to load sun image\n");
+		return -1;
+	}
+	conv_rle_alpha(&sunimg);
+
+	if(load_image(&flareimg, "data/flare1.png") == -1) {
+		fprintf(stderr, "failed to load flare image\n");
+		return -1;
+	}
+	conv_rle_alpha(&flareimg);
+
+	if(load_image(&flareimg2, "data/flare2.png") == -1) {
+		fprintf(stderr, "failed to load flare image\n");
+		return -1;
+	}
+	conv_rle_alpha(&flareimg2);
+
+	if(load_image(&flarebig, "data/flare3.png") == -1) {
+		fprintf(stderr, "failed to load flare image\n");
+		return -1;
+	}
+	conv_rle_alpha(&flarebig);
 
 	ev_space = dseq_lookup("space");
 	ev_ship = dseq_lookup("space.ship");
@@ -220,6 +249,7 @@ static void space_draw(void)
 		}
 	}
 
+	g3d_push_matrix();
 	g3d_rotate(180, 0, 1, 0);
 	g3d_translate(0, 0, 3);
 
@@ -227,6 +257,9 @@ static void space_draw(void)
 	draw_mesh(mesh_hull);
 	g3d_disable(G3D_LIGHTING);
 	draw_mesh(mesh_lit);
+	g3d_pop_matrix();
+
+	draw_lensflare();
 
 	if(opt.dbgmode) {
 		unsigned int i;
@@ -244,6 +277,37 @@ static void space_draw(void)
 	}
 
 	swap_buffers(0);
+}
+
+static void draw_lensflare(void)
+{
+	int px, py, px2, py2;
+	uint32_t zval;
+	cgm_vec4 pt = {209, 104, 104, 1};
+
+	if(!g3d_xform_point(&pt.x)) return;
+
+	px = cround64(pt.x);
+	py = cround64(pt.y);
+
+	zval = pfill_zbuf[(py << 8) + (py << 6) + px];
+	if(zval < 0xffffff) {
+		return;
+	}
+
+	blendfb_rle(fb_pixels, px - sunimg.width / 2, py - sunimg.height / 2, &sunimg);
+
+	px = 320 - px;
+	py = 240 - py;
+	blendfb_rle(fb_pixels, px - flareimg.width / 2, py - flareimg.height / 2, &flareimg);
+
+	px2 = (px - 160) * 5 / 8 + 160;
+	py2 = (py - 120) * 5 / 8 + 120;
+	blendfb_rle(fb_pixels, px2 - flareimg2.width / 2, py2 - flareimg2.height / 2, &flareimg2);
+
+	px = (px - 160) * 6 / 4 + 160;
+	py = (py - 120) * 6 / 4 + 120;
+	blendfb_rle(fb_pixels, px - flarebig.width / 2, py - flarebig.height / 2, &flarebig);
 }
 
 static void space_keypress(int key)

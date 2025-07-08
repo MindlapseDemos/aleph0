@@ -16,6 +16,8 @@
 
 #include "dos/keyb.h"
 
+// Comment out if you wanted to move by input instead of animated path for the demo
+#define MOVE_DEMO_PATH_ON
 
 #define FP_VIEWER 8
 #define FP_BASE 12
@@ -906,7 +908,7 @@ static void moveThroughPath2()
 	PathVals* pv3;
 
 	float ft = dseq_value(ev_flypath);
-	float tp = ft * 52;
+	float tp = ft * 50;
 
 	float t = (float)fmod(tp, 1.0f);
 
@@ -1125,12 +1127,16 @@ static void draw(void)
 {
 	const int dt = time_msec - prevTime;
 	const int petrT = time_msec >> 6;
+	float fade;
 
-	if (dseq_started()) {
-		moveThroughPath2();
-	} else {
-		move(dt);
-	}
+#ifdef MOVE_DEMO_PATH_ON
+	moveThroughPath2();
+	fade = dseq_value(ev_fade);
+#else
+	move(dt);
+	fade = 1.0f;
+#endif
+
 	updateRaySamplePosAndStep();
 
 	renderSky();
@@ -1141,9 +1147,7 @@ static void draw(void)
 
 	moveClouds(dt);
 
-	if (dseq_started()) {
-		fadeToBlack16bpp(dseq_value(ev_fade), fb_pixels, FB_WIDTH, FB_HEIGHT, FB_WIDTH);
-	}
+	fadeToBlack16bpp(fade, fb_pixels, FB_WIDTH, FB_HEIGHT, FB_WIDTH);
 
 	swap_buffers(0);
 }

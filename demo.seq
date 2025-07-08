@@ -200,21 +200,21 @@ demoseq {
 	}
 
 	voxelscape {
-		dur = 28672
+		dur = 24576
 
 		fade {
 			interp = "linear"
 			key(0) = 0
 			key(2048) = 1
 			interp = "linear"
-			key(26624) = 1
-			key(28672) = 0
+			key(23040) = 1
+			key(24576) = 0
 		}
 
 		flypath {
 			interp = "linear"
 			key(0) = 0
-			key(28672) = 1
+			key(24576) = 1
 		}
 	}
 
@@ -305,51 +305,51 @@ demoseq {
 	}
 
 	water {
-		dur = 20480
+		dur = 18432
 
 		fade {
 			interp = "linear"
 			key(0) = 0
-			key(1024) = 1
+			key(512) = 1
 			interp = "linear"
-			key(19200) = 1
-			key(20480) = 0
+			key(17920) = 1
+			key(18432) = 0
 		}
 
 		clouds {
 			interp = "smoothstep"
-			key(1024) = 0
-			key(8192) = 0.5
+			key(0) = 0.25
+			key(4096) = 0.75
 		}
 
 		rain {
 			interp = "linear"
-			key(2048) = 0
-			key(4096) = 1
+			key(256) = 0
+			key(2048) = 1
 		}
 
 		objCome {
 			interp = "smoothstep"
-			key(3072) = 0
-			key(4096) = 1
+			key(1024) = 0
+			key(2048) = 1
 		}
 
 		objDive {
 			interp = "smoothstep"
-			key(6144) = 0
-			key(7096) = 1
+			key(4096) = 0
+			key(5120) = 1
 		}
 
 		objUp {
 			interp = "smoothstep"
-			key(10000) = 0
-			key(11000) = 1
+			key(10240) = 0
+			key(11264) = 1
 		}
 
 		objLeave {
 			interp = "smoothstep"
-			key(17880) = 0
-			key(19480) = 1
+			key(17408) = 0
+			key(18432) = 1
 		}
 	}
 

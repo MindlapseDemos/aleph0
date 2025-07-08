@@ -61,6 +61,14 @@ static unsigned int lastFrameTime = 0;
 static float lastFrameDuration = 0.0f;
 
 static struct image logo[5];
+static struct image parallax[4];
+static const char *parfiles[] = {
+	"data/grclouds.png"/*,
+	"data/grmnt1.png",
+	"data/grmnt2.png",
+	"data/grmnt3.png"*/
+};
+#define NUM_PAR_LAYERS		(sizeof parfiles / sizeof *parfiles)
 static dseq_event *ev_grise, *ev_logo, *ev_fadeout;
 
 
@@ -77,13 +85,9 @@ struct screen *grise_screen(void) {
 	return &scr;
 }
 
-#ifdef _WIN32
-#define INIT_ERROR exit(0); return 1
-#else
-#define INIT_ERROR return 1
-#endif /* WIN32 */
 
-static int init(void) {
+static int init(void)
+{
 	char *propsFile = "data/grise/props.txt";
 	struct ts_node *node = 0;
 	struct ts_node *props = 0;
@@ -98,7 +102,7 @@ static int init(void) {
 	props = ts_load(propsFile);
 	if (!props) {
 		printf("Failed to load props file: %s\n", propsFile);
-		INIT_ERROR;
+		return -1;
 	}
 
 	/* Keep all bitmaps to be loaded */
@@ -110,7 +114,7 @@ static int init(void) {
 			attr = ts_lookup(node, "image.file");
 			if (!attr) {
 				printf("Cannot find attribute 'file' for %s node\n", node->name);
-				INIT_ERROR;
+				return -1;
 			}
 			printf("\tFile: %s\n", attr->val.str);
 			rb_insert(bitmap_props, attr->val.str, attr->val.str);
@@ -136,19 +140,19 @@ static int init(void) {
 
 	if (!(artBuffer = img_load_pixels(ART_FILENAME, &artW, &artH, IMG_FMT_RGB565))) {
 		fprintf(stderr, "failed to load image " ART_FILENAME "\n");
-		INIT_ERROR;
+		return -1;
 	}
 
 
 	initScrollTables();
 	if (loadAndProcessNormal()) {
 		fprintf(stderr, "failed to process normalmap\n");
-		INIT_ERROR;
+		return -1;
 	}
 
 	if(load_image(logo, "data/logo.png") == -1) {
 		fprintf(stderr, "failed to load logo\n");
-		INIT_ERROR;
+		return -1;
 	}
 	for(i=0; i<5; i++) {
 		if(i > 0) {
@@ -157,7 +161,7 @@ static int init(void) {
 			logo[i] = logo[i - 1];
 			if(!(logo[i].pixels = malloc(logo[i].width * 54 * 2))) {
 				fprintf(stderr, "failed to allocate logo pixels\n");
-				INIT_ERROR;
+				return -1;
 			}
 			memcpy(logo[i].pixels, sptr, logo[0].width * 54 * 2);
 			logo[i].alpha = logo[i - 1].alpha + 54 * logo[i].width;
@@ -168,6 +172,14 @@ static int init(void) {
 
 	for(i=0; i<5; i++) {
 		conv_rle_alpha(logo + i);
+	}
+
+	for(i=0; i<NUM_PAR_LAYERS; i++) {
+		if(load_image(parallax + i, parfiles[i]) == -1) {
+			fprintf(stderr, "failed to load parallax layer: %s\n", parfiles[i]);
+			return -1;
+		}
+		conv_rle_alpha(parallax + i);
 	}
 
 	ev_grise = dseq_lookup("galaxyrise");
@@ -308,9 +320,10 @@ float bScale(int scanline, float t)
 	return lerp(0.95f, 1.0f, l);
 }
 
-static void draw(void) {
+static void draw(void)
+{
 	float time_sec = time_msec / 1000.0f;
-	int scroll = 0;
+	int pary, scroll = 0;
 	unsigned short *dst = 0;
 	unsigned short *src = 0;
 	int scanline = 0;
@@ -344,7 +357,11 @@ static void draw(void) {
 	lastFrameTime = time_msec;
 
 	/* Update scroll */
-	anim = cround64(dseq_param(ev_grise) * 320.0f);
+	if(dseq_started()) {
+		anim = cround64(dseq_param(ev_grise) * 320.0f);
+	} else {
+		anim = (time_msec / 20) % 320;
+	}
 	scroll = MIN_SCROLL + (MAX_SCROLL - MIN_SCROLL) * anim / FB_WIDTH;
 
 	/* First, render the horizon */
@@ -419,6 +436,7 @@ static void draw(void) {
 	src = effectBuffer + EFFECT_BUFFER_PADDING;
 	dst = fb_pixels;
 
+	pary = 90;
 	if(!dseq_isactive(ev_fadeout)) {
 		for (scanline = 0; scanline < FB_HEIGHT; scanline++) {
 			memcpy(dst, src, FB_WIDTH * 2);
@@ -436,6 +454,8 @@ static void draw(void) {
 		float val = cgm_logerp(1, 240, t);
 		scanline = cround64(val);
 
+		pary += scanline;
+
 		if(scanline) {
 			memset(fb_pixels, 0, scanline * FB_WIDTH * 2);
 		}
@@ -446,6 +466,13 @@ static void draw(void) {
 			src += EFFECT_BUFFER_W;
 			dst += FB_WIDTH;
 		}
+	}
+
+	for(i=0; i<NUM_PAR_LAYERS; i++) {
+		float speed = (float)(i + 1) * 0.75;
+		int scroll = cround64((float)anim * speed);
+		blendfb_rle(fb_pixels, -scroll, pary, parallax + i);
+		blendfb_rle(fb_pixels, 320 - scroll, pary, parallax + i);
 	}
 
 	if((show_logo = (int)dseq_value(ev_logo))) {

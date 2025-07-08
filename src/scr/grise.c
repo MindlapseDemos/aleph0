@@ -1,5 +1,6 @@
 #include "cgmath/cgmath.h"
 #include "demo.h"
+#include "image.h"
 #include "imago2.h"
 #include "noise.h"
 #include "rbtree.h"
@@ -58,6 +59,9 @@ static int artH = 0;
 
 static unsigned int lastFrameTime = 0;
 static float lastFrameDuration = 0.0f;
+
+static struct image logo[5];
+static dseq_event *ev_grise, *ev_logo, *ev_fadeout;
 
 
 
@@ -142,11 +146,41 @@ static int init(void) {
 		INIT_ERROR;
 	}
 
+	if(load_image(logo, "data/logo.png") == -1) {
+		fprintf(stderr, "failed to load logo\n");
+		INIT_ERROR;
+	}
+	for(i=0; i<5; i++) {
+		if(i > 0) {
+			uint16_t *sptr = logo[0].pixels + i * 54 * logo[0].width;
+
+			logo[i] = logo[i - 1];
+			if(!(logo[i].pixels = malloc(logo[i].width * 54 * 2))) {
+				fprintf(stderr, "failed to allocate logo pixels\n");
+				INIT_ERROR;
+			}
+			memcpy(logo[i].pixels, sptr, logo[0].width * 54 * 2);
+			logo[i].alpha = logo[i - 1].alpha + 54 * logo[i].width;
+		}
+		logo[i].height = 54;
+		logo[i].ymask = 0;
+	}
+
+	for(i=0; i<5; i++) {
+		conv_rle_alpha(logo + i);
+	}
+
+	ev_grise = dseq_lookup("galaxyrise");
+	ev_logo = dseq_lookup("galaxyrise.logo");
+	ev_fadeout = dseq_lookup("galaxyrise.fadeout");
+
 	allSystemsGo = 1;
 	return 0;
 }
 
 static void destroy(void) {
+	int i;
+
 	free(artBuffer);
 	artBuffer = 0;
 
@@ -157,6 +191,11 @@ static void destroy(void) {
 	displacementMap = 0;
 
 	img_free_pixels(artBuffer);
+
+	for(i=1; i<5; i++) {
+		free(logo[i].pixels);
+	}
+	destroy_image(logo);
 }
 
 static void start(long trans_time) { lastFrameTime = time_msec; }
@@ -282,6 +321,7 @@ static void draw(void) {
 	int md, sc;
 	int scrolledIndex;
 	struct rbnode *node, *bitmap_node = 0;
+	int anim, show_logo;
 
 	/*******************************************************************************/
 	if (!allSystemsGo) {
@@ -293,11 +333,19 @@ static void draw(void) {
 	}
 	/*******************************************************************************/
 
+	/*
+	if(dseq_started() && !dseq_value(ev_grise)) {
+		memset16(fb_pixels, 0, 320 * 240);
+		goto draw_logo;
+	}
+	*/
+
 	lastFrameDuration = (time_msec - lastFrameTime) / 1000.0f;
 	lastFrameTime = time_msec;
 
 	/* Update scroll */
-	scroll = MIN_SCROLL + (MAX_SCROLL - MIN_SCROLL) * mouse_x / FB_WIDTH;
+	anim = cround64(dseq_param(ev_grise) * 320.0f);
+	scroll = MIN_SCROLL + (MAX_SCROLL - MIN_SCROLL) * anim / FB_WIDTH;
 
 	/* First, render the horizon */
 	dst = effectBuffer + EFFECT_BUFFER_PADDING;
@@ -370,17 +418,40 @@ static void draw(void) {
 	/* Blit effect to framebuffer */
 	src = effectBuffer + EFFECT_BUFFER_PADDING;
 	dst = fb_pixels;
-	for (scanline = 0; scanline < FB_HEIGHT; scanline++) {
-		memcpy(dst, src, FB_WIDTH * 2);
-		/*
-		oldTv(dst, src,
-			rScale(scanline, time_sec), rShift(scanline, time_sec),
-			gScale(scanline, time_sec), gShift(scanline, time_sec),
-			bScale(scanline, time_sec), bShift(scanline, time_sec));
-			*/
-		src += EFFECT_BUFFER_W;
-		dst += FB_WIDTH;
+
+	if(!dseq_isactive(ev_fadeout)) {
+		for (scanline = 0; scanline < FB_HEIGHT; scanline++) {
+			memcpy(dst, src, FB_WIDTH * 2);
+			/*
+			oldTv(dst, src,
+				rScale(scanline, time_sec), rShift(scanline, time_sec),
+				gScale(scanline, time_sec), gShift(scanline, time_sec),
+				bScale(scanline, time_sec), bShift(scanline, time_sec));
+				*/
+			src += EFFECT_BUFFER_W;
+			dst += FB_WIDTH;
+		}
+	} else {
+		float t = dseq_param(ev_fadeout);
+		float val = cgm_logerp(1, 240, t);
+		scanline = cround64(val);
+
+		if(scanline) {
+			memset(fb_pixels, 0, scanline * FB_WIDTH * 2);
+		}
+
+		dst = fb_pixels + scanline * FB_WIDTH;
+		while(scanline++ < FB_HEIGHT) {
+			memcpy(dst, src, FB_WIDTH * 2);
+			src += EFFECT_BUFFER_W;
+			dst += FB_WIDTH;
+		}
 	}
+
+	if((show_logo = (int)dseq_value(ev_logo))) {
+		blendfb_rle(fb_pixels, 160 - 115, 100, logo + (show_logo - 1));
+	}
+
 	swap_buffers(0);
 	return;
 	/*******************************************************************************/
@@ -412,7 +483,7 @@ static void convert32To16(unsigned int *src32, unsigned short *dst16, unsigned i
 }
 
 /* Normal map loading & preprocessing.
-/* Scale down normalmap scans by depth scale. Maximum scale down around the horizon (e.g. 8x scale down)
+ * Scale down normalmap scans by depth scale. Maximum scale down around the horizon (e.g. 8x scale down)
  * and minimum (1x) at the bottom (closest to the viewer). Rest of the scan set to black.
  * This way close scans appear smoother. Also unpack R (horizontal) component of the normal.
  */

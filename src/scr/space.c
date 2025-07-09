@@ -13,6 +13,7 @@
 #include "anim.h"
 #include "tinymt32.h"
 #include "polyfill.h"
+#include "imago2.h"
 
 #define VFOV	60.0f
 
@@ -54,6 +55,7 @@ static unsigned char starsize[NUM_STARS];
 static struct image starimg[2];
 
 static struct image sunimg, flareimg, flareimg2, flarebig, planet;
+static struct img_pixmap flashimg;
 
 static struct anm_node anmnode;
 static struct anm_animation *anim;
@@ -64,7 +66,7 @@ static long anim_dur;
 
 static float view_matrix[16];
 
-static dseq_event *ev_space, *ev_ship;
+static dseq_event *ev_space, *ev_ship, *ev_warp, *ev_flash, *ev_fadeout;
 
 
 struct screen *space_screen(void)
@@ -148,8 +150,17 @@ static int space_init(void)
 	}
 	conv_rle_alpha(&planet);
 
+	img_init(&flashimg);
+	if(img_load(&flashimg, "data/addflare.png") == -1) {
+		fprintf(stderr, "failed to load flash flare image\n");
+		return -1;
+	}
+
 	ev_space = dseq_lookup("space");
 	ev_ship = dseq_lookup("space.ship");
+	ev_warp = dseq_lookup("space.warp");
+	ev_flash = dseq_lookup("space.flash");
+	ev_fadeout = dseq_lookup("space.fadeout");
 	return 0;
 }
 
@@ -225,6 +236,7 @@ static void space_draw(void)
 	int i;
 	float xform[16];
 	cgm_vec4 pt;
+	float warp;
 
 	update();
 
@@ -259,17 +271,46 @@ static void space_draw(void)
 
 	draw_planet();
 
-	g3d_push_matrix();
-	g3d_rotate(180, 0, 1, 0);
-	g3d_translate(0, 0, 3);
 
-	g3d_enable(G3D_LIGHTING);
-	draw_mesh(mesh_hull);
-	g3d_disable(G3D_LIGHTING);
-	draw_mesh(mesh_lit);
-	g3d_pop_matrix();
+	if(!dseq_started() || dseq_isactive(ev_ship) || dseq_isactive(ev_warp)) {
+		warp = cgm_logerp(3, 300, dseq_param(ev_warp));
+
+		g3d_push_matrix();
+		g3d_rotate(180, 0, 1, 0);
+		g3d_translate(0, 0, warp);
+
+		g3d_enable(G3D_LIGHTING);
+		draw_mesh(mesh_hull);
+		g3d_disable(G3D_LIGHTING);
+		draw_mesh(mesh_lit);
+		g3d_pop_matrix();
+	}
 
 	draw_lensflare();
+
+	if(dseq_isactive(ev_flash)) {
+		unsigned int val = cround64(dseq_value(ev_flash) * 256.0f);
+		struct img_colormap *cmap = img_colormap(&flashimg);
+		unsigned int pal[256 * 4];
+		for(i=0; i<cmap->ncolors; i++) {
+			pal[i * 4] = (cmap->color[i].r * val) >> 8;
+			pal[i * 4 + 1] = (cmap->color[i].g * val) >> 8;
+			pal[i * 4 + 2] = (cmap->color[i].b * val) >> 8;
+		}
+		overlay_add_pal(fb_pixels + 250, flashimg.pixels, flashimg.width, flashimg.height, flashimg.width, pal);
+	}
+
+	if(dseq_isactive(ev_fadeout)) {
+		unsigned int i, r, g, b, val = cround64(dseq_value(ev_fadeout));
+		uint16_t *fbptr = fb_pixels;
+		for(i=0; i<320*240; i++) {
+			uint16_t pcol = *fbptr;
+			r = (UNPACK_R16(pcol) * val) >> 8;
+			g = (UNPACK_G16(pcol) * val) >> 8;
+			b = (UNPACK_B16(pcol) * val) >> 8;
+			*fbptr++ = PACK_RGB16(r, g, b);
+		}
+	}
 
 	if(opt.dbgmode) {
 		unsigned int i;
@@ -323,7 +364,7 @@ static void draw_lensflare(void)
 static void draw_planet(void)
 {
 	int px, py;
-	cgm_vec4 pt = {-200, -20, -100, 1};
+	cgm_vec4 pt = {-190, -25, -120, 1};
 
 	g3d_xform_point(&pt.x);
 

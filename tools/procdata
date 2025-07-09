@@ -84,7 +84,7 @@ fi
 
 convimg $srcdir/frigtex.png data/frigtex.jpg 256x256
 
-convimg data/src/planet.png data/planet.png x100
+convimg data/src/planet.png data/planet.png x125
 
 # generate curved tunnel multi-lut!
 #if [ ! -f tools/tungen ]; then

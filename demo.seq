@@ -139,6 +139,23 @@ demoseq {
 			dur = 18000
 			interp = "linear"
 		}
+		warp {
+			start = 16800
+			dur = 700
+		}
+		flash {
+			#start = 17500
+			#dur = 500
+			interp = "sigmoid"
+			key(17400) = 0
+			key(17500) = 1
+			key(17600) = 0
+		}
+		fadeout {
+			interp = "linear"
+			key(17800) = 255
+			waitkey(200) = 0
+		}
 	}
 
 	hexfloor {

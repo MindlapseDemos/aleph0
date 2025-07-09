@@ -25,6 +25,7 @@ static void space_destroy(void);
 static void space_start(long trans_time);
 static void space_draw(void);
 static void draw_lensflare(void);
+static void draw_planet(void);
 static void space_keypress(int key);
 
 static void sphrand(cgm_vec3 *pt, float rad, tinymt32_t *rnd);
@@ -52,7 +53,7 @@ static cgm_vec3 stars[NUM_STARS];
 static unsigned char starsize[NUM_STARS];
 static struct image starimg[2];
 
-static struct image sunimg, flareimg, flareimg2, flarebig;
+static struct image sunimg, flareimg, flareimg2, flarebig, planet;
 
 static struct anm_node anmnode;
 static struct anm_animation *anim;
@@ -96,6 +97,7 @@ static int space_init(void)
 		fprintf(stderr, "failed to initialize animation node for the space camera\n");
 		return -1;
 	}
+	anm_set_interpolator(&anmnode, ANM_INTERP_CUBIC);
 	anm_set_extrapolator(&anmnode, ANM_EXTRAP_REPEAT);
 	anim = anm_get_animation(&anmnode, 0);
 	if(load_anim(anim, "data/space.anm") != -1 && HAVE_ANIM) {
@@ -139,6 +141,12 @@ static int space_init(void)
 		return -1;
 	}
 	conv_rle_alpha(&flarebig);
+
+	if(load_image(&planet, "data/planet.png") == -1) {
+		fprintf(stderr, "failed to load planet sprite\n");
+		return -1;
+	}
+	conv_rle_alpha(&planet);
 
 	ev_space = dseq_lookup("space");
 	ev_ship = dseq_lookup("space.ship");
@@ -249,6 +257,8 @@ static void space_draw(void)
 		}
 	}
 
+	draw_planet();
+
 	g3d_push_matrix();
 	g3d_rotate(180, 0, 1, 0);
 	g3d_translate(0, 0, 3);
@@ -308,6 +318,21 @@ static void draw_lensflare(void)
 	px = (px - 160) * 6 / 4 + 160;
 	py = (py - 120) * 6 / 4 + 120;
 	blendfb_rle(fb_pixels, px - flarebig.width / 2, py - flarebig.height / 2, &flarebig);
+}
+
+static void draw_planet(void)
+{
+	int px, py;
+	cgm_vec4 pt = {-200, -20, -100, 1};
+
+	g3d_xform_point(&pt.x);
+
+	if(pt.z < -pt.w) return;
+
+	px = cround64(pt.x);
+	py = cround64(pt.y);
+
+	blendfb_rle(fb_pixels, px - planet.width / 2, py - planet.height / 2, &planet);
 }
 
 static void space_keypress(int key)

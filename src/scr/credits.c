@@ -52,7 +52,7 @@ static struct image envmap;
 static float dbg_num;
 static unsigned int dbg_toggle;
 
-#define CRD_LINES	15
+#define CRD_LINES	16
 static const char *crd_text[CRD_LINES] = {
 	"CODE",
 	"  NUCLEAR",
@@ -66,6 +66,7 @@ static const char *crd_text[CRD_LINES] = {
 	"",
 	"MUSIC",
 	"  NO@XS",
+	"  MAZE",
 	"",
 	"ORGANIZER",
 	"  RAMON"
@@ -341,7 +342,7 @@ static void right_side(float tint)
 	g3d_enable(G3D_ADD_BLEND);
 	g3d_set_texture(ctex.width, ctex.height, ctex.pixels);
 
-	y = dseq_param(ev_text) * 20.0f;
+	y = dseq_param(ev_text) * 21.0f;
 	//y = (time_msec & 0x7fff) / 1024.0f - 2.0f;
 	g3d_begin(G3D_QUADS);
 	for(i=0; i<CRD_LINES; i++) {

@@ -1,3 +1,5 @@
+BUILD ?= debug
+
 src = $(wildcard src/*.c) $(wildcard src/3dgfx/*.c) $(wildcard src/rt/*.c) \
 	  $(wildcard src/scr/*.c) $(wildcard src/dos/*.c)
 asmsrc = $(wildcard src/*.asm) $(wildcard src/scr/*.asm) $(wildcard src/dos/*.asm)
@@ -21,11 +23,10 @@ inc = -Isrc -Isrc/3dgfx -Isrc/rt -Isrc/scr -Isrc/dos -Ilibs \
 opt = -O3 -ffast-math -fno-strict-aliasing
 warn = -pedantic -Wall -Wno-unused-function -Wno-unused-variable -Wno-unknown-pragmas
 
-ifdef RELEASE
+ifeq ($(BUILD), release)
 	def = -DNDEBUG
 else
 	dbg = -g
-	#def = -DNO_SOUND
 endif
 #prof = -pg
 

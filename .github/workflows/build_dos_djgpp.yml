@@ -42,7 +42,7 @@ jobs:
     - name: build demo
       run: |
         source djgpp/setenv
-        make -f Makefile.dj
+        make -f Makefile.dj BUILD=release
         cp djgpp/i586-pc-msdosdjgpp/bin/cwsdpmi.exe .
 
     - uses: actions/upload-artifact@v4

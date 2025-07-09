@@ -27,7 +27,7 @@ jobs:
 
     - name: build demo
       run: |
-        make
+        make BUILD=release
         ln demo demo-gnulinux
 
     - uses: actions/upload-artifact@v4

@@ -1,3 +1,5 @@
+BUILD ?= debug
+
 src = $(wildcard src/*.c) $(wildcard src/3dgfx/*.c) $(wildcard src/rt/*.c) \
 	  $(wildcard src/scr/*.c) $(wildcard src/glut/*.c)
 asmsrc = $(wildcard src/*.asm)
@@ -13,8 +15,13 @@ inc = -Isrc -Isrc/3dgfx -Isrc/rt -Isrc/scr -Isrc/utils \
 	  -Ilibs/goat3d/include -I/usr/local/include
 def = -DMINIGLUT_USE_LIBC -DMIKMOD_STATIC
 warn = -pedantic -Wall -Wno-unused-variable -Wno-unused-function -Wno-address
-#opt = -O3 -ffast-math
-dbg = -g
+
+ifeq ($(BUILD), release)
+	opt = -O3 -ffast-math
+	def += -DNDEBUG
+else
+	dbg = -g
+endif
 
 CFLAGS = $(arch) $(warn) -MMD $(opt) $(def) -fno-pie -fno-strict-aliasing $(dbg) $(inc)
 LDFLAGS = $(arch) -static-libgcc -no-pie -Llibs/imago -Llibs/anim -Llibs/mikmod \

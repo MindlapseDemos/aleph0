@@ -25,7 +25,7 @@ jobs:
 
     - name: build demo
       run: |
-        make
+        make BUILD=release
 
     - uses: actions/upload-artifact@v4
       with:

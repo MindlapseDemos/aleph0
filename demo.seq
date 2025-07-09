@@ -144,8 +144,6 @@ demoseq {
 			dur = 700
 		}
 		flash {
-			#start = 17500
-			#dur = 500
 			interp = "sigmoid"
 			key(17400) = 0
 			key(17500) = 1

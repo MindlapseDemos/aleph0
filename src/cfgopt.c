@@ -13,9 +13,19 @@ struct options opt = {
 	1,	/* music */
 	0,	/* mouse */
 	0,	/* sball */
-	0,	/* vsync */
+#ifndef MSDOS
+	1,	/* vsync enabled on modern platforms */
+#else
+	0,	/* vsync disabled on DOS (assuming retro performance) */
+#endif
 	0,	/* dbgmode */
-	0	/* dbgsingle */
+	0,	/* dbgsingle */
+#ifndef MSDOS
+	1,	/* fullscreen */
+	0	/* scaler (nearest) */
+#else
+	0	/* sndsetup (midas) */
+#endif
 };
 #else
 /* debug build default options */
@@ -25,9 +35,19 @@ struct options opt = {
 	0,	/* music */
 	1,	/* mouse */
 	0,	/* sball */
-	0,	/* vsync */
+#ifndef MSDOS
+	1,	/* vsync enabled on modern platforms */
+#else
+	0,	/* vsync disabled on DOS (assuming retro performance) */
+#endif
 	1,	/* dbgmode */
-	0	/* dbgsingle */
+	0,	/* dbgsingle */
+#ifndef MSDOS
+	0,	/* fullscreen */
+	0	/* scaler (nearest) */
+#else
+	0	/* sndsetup (midas) */
+#endif
 };
 #endif
 

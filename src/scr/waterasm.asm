@@ -31,7 +31,7 @@ waterI:
 		and ebx,0x80808080
 
 		mov edx,ebx
-		;shr edx,7
+		shr edx,7
 
 		mov ebp,ebx
 		sub ebp,edx

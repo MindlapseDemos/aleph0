@@ -30,10 +30,10 @@
 
 #define FOV 48
 #define VIS_NEAR 16
-#define VIS_CLOSE 48
+#define VIS_CLOSE 32
 #define VIS_MID 128
-#define VIS_FAR 256
-#define VIS_HAZE (VIS_FAR - 64)
+#define VIS_FAR 240
+#define VIS_HAZE (VIS_FAR - 32)
 
 #define PIXEL_SIZE 1
 #define PIXEL_ABOVE (FB_WIDTH / PIXEL_SIZE)
@@ -821,8 +821,8 @@ static void start(long trans_time)
 	setViewPos(780,V_PLAYER_HEIGHT,675);
 	setViewAngle(0,4*SIN_LENGTH/5,0);
 
-	setViewPos(355870 >> FP_VIEWER, 86880 >> FP_VIEWER, 31745 >> FP_VIEWER);
-	setViewAngle(0, 6275, 0);
+	//setViewPos(355870 >> FP_VIEWER, 86880 >> FP_VIEWER, 31745 >> FP_VIEWER);
+	//setViewAngle(0, 6275, 0);
 
 	//setViewPos(217680 >> FP_VIEWER, 8192 >> FP_VIEWER, 19635 >> FP_VIEWER);
 	//setViewAngle(0, 2352, 0);

@@ -114,6 +114,12 @@ typedef struct PathVals
 	int x, y, z, a;
 } PathVals;
 
+typedef struct Voxel
+{
+	unsigned char height;
+	unsigned char color;
+} Voxel;
+
 static unsigned char* distMap;
 
 static unsigned char* cloudTex;
@@ -129,6 +135,8 @@ static int* yMaxHolder = NULL;
 static unsigned char *hmap = NULL;
 static unsigned char *cmap = NULL;
 static uint16_t *pmap = NULL;
+
+static Voxel* vmap = NULL;
 
 static int *shadeVoxOff;
 static char* petrubTab;
@@ -294,6 +302,23 @@ static int loadAndConvertImgColormapPng()
 	return 0;
 }
 
+static void copyHmapAndCmapToVmap()
+{
+	int i;
+
+	unsigned char* srcH = hmap;
+	unsigned char* srcC = cmap;
+	Voxel* dst = vmap;
+
+	for (i=0; i<HMAP_SIZE; ++i) {
+		const unsigned char h = *srcH++;
+		const unsigned char c = *srcC++;
+		dst->height = h;
+		dst->color = c;
+		++dst;
+	}
+}
+
 static int loadAndConvertImgHeightmapPng()
 {
 	#ifdef SAVE_HEIGHT_MAP
@@ -347,12 +372,19 @@ static int loadAndConvertImgHeightmapPng()
 
 static int initHeightmapAndColormap()
 {
+	if (!vmap) vmap = malloc(HMAP_SIZE * sizeof(Voxel));
 	if (!hmap) hmap = malloc(HMAP_SIZE);
 	if (!cmap) cmap = malloc(HMAP_SIZE + 256 * 3);
 	if (!pmap) pmap = (uint16_t*)malloc(512 * PAL_SHADES);
 
 	if (loadAndConvertImgHeightmapPng() == -1) return -1;
 	if (loadAndConvertImgColormapPng() == -1) return -1;
+
+	copyHmapAndCmapToVmap();
+
+	// No need for these two anymore
+	free(hmap);
+	free(cmap);
 
 	return 0;
 }
@@ -546,8 +578,7 @@ static void destroy(void)
 	free(viewNearPosVec);
 	free(viewNearStepVec);
 	free(yMaxHolder);
-	free(hmap);
-	free(cmap);
+	free(vmap);
 	free(pmap);
 	free(shadeVoxOff);
 	free(cloudTex);
@@ -617,17 +648,18 @@ static uint16_t reflectSample(int px, int py, int dvx, int dvy, int ph, int dh, 
 		if (safeSteps == 0) {
 			return reflectSky(px, py, dvx, dvy, dh, petrubation>>1);
 		} else {
-			int sampleMapOffset, h;
+			int h;
+			Voxel* v;
+
 			vx += safeSteps * dvx;
 			vy += safeSteps * dvy;
-
-			sampleMapOffset = ((vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE)) & (HMAP_SIZE - 1);
 
 			ph += safeSteps * dh;
 			h = ph >> FP_SCALE;
 			if (h > 96) break;	// hack value
-			if (h < hmap[sampleMapOffset]) {
-				return pal[cmap[sampleMapOffset] + (petrubation >> 2) * 256];
+			v = &vmap[((vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE)) & (HMAP_SIZE - 1)];
+			if (h < v->height) {
+				return pal[v->color + (petrubation >> 2) * 256];
 			}
 			i += safeSteps;
 		}
@@ -770,8 +802,8 @@ static void renderScape(int petrT)
 			const int yMax = yMaxHolder[j];
 			if (yMax <= FB_HEIGHT) {
 				const int sampleOffset = (vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE);
-				const int mapOffset = sampleOffset & (HMAP_SIZE - 1);
-				const int hm = hmap[mapOffset];
+				Voxel* v = &vmap[sampleOffset & (HMAP_SIZE - 1)];
+				const int hm = v->height;
 				int h = (((-playerHeight + hm) * heightScale) >> (FP_REC - V_HEIGHT_SCALER_SHIFT)) + HORIZON;
 				if (h > FB_HEIGHT + 1) h = FB_HEIGHT + 1;
 
@@ -779,7 +811,7 @@ static void renderScape(int petrT)
 					uint16_t cv;
 					int yH;
 					if (hm > SEA_LEVEL) {
-						cv = pmapPtr[cmap[mapOffset]];
+						cv = pmapPtr[v->color];
 					} else {
 						const int petrubation = petrubTab[(((petrubTab[j >> 1] + i) >> 1) + petrT) & (PETRUB_SIZE - 1)];
 						const int dh = ((playerHeight + petrubation - hm) << FP_SCALE) / (i + 1);
@@ -838,7 +870,7 @@ static unsigned char getVoxelHeightUnderPlayer()
 	const int sampleOffset = vy * HMAP_WIDTH + vx;
 	const int mapOffset = sampleOffset & (HMAP_SIZE - 1);
 
-	return hmap[mapOffset];
+	return vmap[mapOffset].height;
 }
 
 /*static int interpolate(int v0, int v1, float t)

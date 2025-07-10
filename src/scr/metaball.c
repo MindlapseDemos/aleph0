@@ -31,13 +31,29 @@ static struct screen scr = {
 static float cam_theta, cam_phi;
 static float cam_dist = 8;
 static struct g3d_mesh mmesh;
-static uint16_t *bgimage, *envmap;
+static uint16_t *bgimage[2], *envmap;
 static int envmap_xsz, envmap_ysz;
 
-#define NUM_SPR		4
+enum {
+	SPR_TOP_OFF,
+	SPR_TOP_ON,
+	SPR_BOT_OFF,
+	SPR_BOT_ON,
+	SPR_TERM,
+	SPR_GIRL,
+
+	NUM_SPR
+};
+
 static struct image spr[NUM_SPR];
-static const char *sprfile[NUM_SPR] = {"data/blob_top.png", "data/blob_bot.png",
-	"data/blobterm.png", "data/blobgirl.png"};
+static const char *sprfile[NUM_SPR] = {
+	"data/blobtop0.png",
+	"data/blob_top.png",
+	"data/blobbot0.png",
+	"data/blob_bot.png",
+	"data/blobterm.png",
+	"data/blobgirl.png"
+};
 
 static struct msurf_volume vol;
 
@@ -54,7 +70,7 @@ static struct msurf_volume vol;
 
 #define NUM_MBALLS	3
 
-static dseq_event *ev_faces;
+static dseq_event *ev_faces, *ev_power, *ev_bloboffs;
 
 
 struct screen *metaballs_screen(void)
@@ -66,7 +82,10 @@ static int init(void)
 {
 	int i, xsz, ysz;
 
-	if(!(bgimage = img_load_pixels("data/blob_bg.png", &xsz, &ysz, IMG_FMT_RGB565))) {
+	if(!(bgimage[1] = img_load_pixels("data/blob_bg.png", &xsz, &ysz, IMG_FMT_RGB565))) {
+		return -1;
+	}
+	if(!(bgimage[0] = img_load_pixels("data/blob_bg0.png", &xsz, &ysz, IMG_FMT_RGB565))) {
 		return -1;
 	}
 	for(i=0; i<NUM_SPR; i++) {
@@ -109,14 +128,24 @@ static int init(void)
 	mmesh.iarr = 0;
 	mmesh.vcount = mmesh.icount = 0;
 
+	ev_power = dseq_lookup("metaballs.power");
 	ev_faces = dseq_lookup("metaballs.faces");
+	ev_bloboffs = dseq_lookup("metaballs.bloboffs");
 	return 0;
 }
 
 static void destroy(void)
 {
+	int i;
+
 	msurf_destroy(&vol);
-	img_free_pixels(bgimage);
+
+	img_free_pixels(bgimage[0]);
+	img_free_pixels(bgimage[1]);
+
+	for(i=0; i<NUM_SPR; i++) {
+		destroy_image(spr + i);
+	}
 }
 
 static void start(long trans_time)
@@ -137,25 +166,30 @@ static void start(long trans_time)
 static void update(void)
 {
 	int i, j;
+	float toffs;
 	float tsec = time_msec / 1000.0f;
 	static float phase[] = {0.0, M_PI / 3.0, M_PI * 0.8};
 	static float speed[] = {0.8, 1.4, 1.0};
 	static float scale[][3] = {{1, 2, 0.8}, {0.5, 1.6, 0.6}, {1.5, 0.7, 0.5}};
 	static float offset[][3] = {{0, 0, 0}, {0.25, 0, 0}, {-0.2, 0.15, 0.2}};
+	static float start[] = {-5, -5, 4.5};
 
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
 
+	toffs = (cgm_logerp(1, 129, dseq_value(ev_bloboffs)) - 1.0f) / 128.0f;
+
 	for(i=0; i<NUM_MBALLS; i++) {
 		float t = (tsec + phase[i]) * speed[i];
+		float pos[3];
 
 		for(j=0; j<3; j++) {
 			float x = sin(t + j * M_PI / 2.0);
-			(&vol.mballs[i].pos.x)[j] = offset[i][j] + x * scale[i][j];
+			pos[j] = offset[i][j] + x * scale[i][j];
 		}
 
-		vol.mballs[i].pos.x += VOL_HALF_XSCALE;
-		vol.mballs[i].pos.y += VOL_HALF_YSCALE;
-		vol.mballs[i].pos.z += VOL_HALF_ZSCALE;
+		vol.mballs[i].pos.x = pos[0] + VOL_HALF_XSCALE;
+		vol.mballs[i].pos.y = cgm_lerp(start[i], pos[1], toffs) + VOL_HALF_YSCALE;
+		vol.mballs[i].pos.z = pos[2] + VOL_HALF_ZSCALE;
 	}
 
 	msurf_begin(&vol);
@@ -171,19 +205,22 @@ static void draw(void)
 {
 	char buf[128];
 	float faces;
+	int power;
 
 	update();
 
 	g3d_clear(G3D_DEPTH_BUFFER_BIT);
-	memcpy64(fb_pixels, bgimage, 320 * 240 / 4);
+
+	power = dseq_value(ev_power) != 0.0f;
+	memcpy64(fb_pixels, bgimage[power], 320 * 240 / 4);
 
 	/* sprites */
-	blitfb_rle(fb_pixels, 160 - 121/2, 0, spr);
-	blitfb_rle(fb_pixels, 160 - 197/2, 240 - 45, spr + 1);
+	blitfb_rle(fb_pixels, 160 - 121/2, 0, spr + (SPR_TOP_OFF + power));
+	blitfb_rle(fb_pixels, 160 - 197/2, 240 - 45, spr + (SPR_BOT_OFF + power));
 	if((faces = dseq_value(ev_faces))) {
 		int offs = cround64(faces * 98.0f);
-		blitfb_rle(fb_pixels, offs - 98, 20, spr + 2);
-		blitfb_rle(fb_pixels, 320 - offs, 21, spr + 3);
+		blitfb_rle(fb_pixels, offs - 98, 20, spr + SPR_TERM);
+		blitfb_rle(fb_pixels, 320 - offs, 21, spr + SPR_GIRL);
 	}
 
 	g3d_matrix_mode(G3D_MODELVIEW);

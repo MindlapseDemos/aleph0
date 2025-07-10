@@ -302,10 +302,27 @@ demoseq {
 	metaballs {
 		dur = 10000
 
+		power {
+			key(0) = 0
+			waitkey(600) = 1
+			waitkey(80) = 0
+			waitkey(70) = 1
+			waitkey(100) = 0
+			waitkey(70) = 1
+			waitkey(50) = 0
+			waitkey(50) = 1
+		}
+
+		bloboffs {
+			interp = "linear"
+			waitkey(0) = 0
+			waitkey(1000) = 1
+		}
+
 		faces {
 			interp = "smoothstep"
-			key(0) = 0
-			key(800) = 1
+			waitkey(1000) = 0
+			waitkey(800) = 1
 		}
 	}
 

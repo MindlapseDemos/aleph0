@@ -271,8 +271,8 @@ static void start(long trans_time)
 	startingTime = time_msec;
 }
 
-#ifdef __WATCOMC__
-void updateWaterAsm5(void* buffer1, void* buffer2, void* vramStart);
+#ifndef NO_ASM
+void updateWaterAsm5(void* buffer1, void* buffer2);
 #else
 static void updateWater32(unsigned char* buffer1, unsigned char* buffer2)
 {
@@ -369,8 +369,8 @@ static void runWaterEffect(int t)
 
 		makeRipples(buff1, t);
 
-#ifdef __WATCOMC__
-		updateWaterAsm5(buff1, buff2, vramOffset);
+#ifndef NO_ASM
+		updateWaterAsm5(buff1, buff2);
 #else
 		updateWater32(buff1, buff2);
 #endif

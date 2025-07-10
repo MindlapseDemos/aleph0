@@ -232,6 +232,12 @@
     <None Include="libs\cgmath\cgmray.inl" />
     <None Include="libs\cgmath\cgmvec3.inl" />
     <None Include="libs\cgmath\cgmvec4.inl" />
+    <CustomBuild Include="src\scr\waterasm.asm">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">nasm -o .%(Filename).obj -f win32 %(FullPath)</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.%(Filename).obj</Outputs>
+    </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

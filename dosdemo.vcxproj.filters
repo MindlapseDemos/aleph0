@@ -308,6 +308,9 @@
     <CustomBuild Include="cspr\dbgfont.asm">
       <Filter>compiled_sprites</Filter>
     </CustomBuild>
+    <CustomBuild Include="src\scr\waterasm.asm">
+      <Filter>src\screens</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <None Include="libs\cgmath\cgmmat.inl">

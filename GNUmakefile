@@ -2,7 +2,7 @@ BUILD ?= debug
 
 src = $(wildcard src/*.c) $(wildcard src/3dgfx/*.c) $(wildcard src/rt/*.c) \
 	  $(wildcard src/scr/*.c) $(wildcard src/glut/*.c)
-asmsrc = $(wildcard src/*.asm)
+asmsrc = $(wildcard src/*.asm) $(wildcard src/scr/*.asm)
 obj = $(src:.c=.o) $(asmsrc:.asm=.o)
 dep = $(obj:.o=.d)
 bin = demo

@@ -174,7 +174,7 @@ static void credits_update(void)
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
 }
 
-#define NUM_TENT	1
+#define NUM_TENT	3
 #define TENT_NODES	12
 #define TENT_DIST	0.7
 
@@ -218,7 +218,20 @@ static void credits_draw(void)
 
 	g3d_disable(G3D_CLIP_PLANE0);
 
-	swap_buffers(fb_pixels);
+	if(dseq_isactive(ev_fade)) {
+		unsigned int i, r, g, b, pcol;
+		unsigned int val = cround64(dseq_param(ev_fade) * 256.0f);
+		uint16_t *ptr = fb_pixels;
+		for(i=0; i<320 * 240; i++) {
+			pcol = *ptr;
+			r = (UNPACK_R16(pcol) * val) >> 8;
+			g = (UNPACK_G16(pcol) * val) >> 8;
+			b = (UNPACK_B16(pcol) * val) >> 8;
+			*ptr++ = pcol;
+		}
+	}
+
+	swap_buffers(0);
 }
 
 static void left_side(float tint)
@@ -340,6 +353,7 @@ static void right_side(float tint)
 	g3d_polygon_mode(G3D_FLAT);
 	g3d_enable(G3D_TEXTURE_2D);
 	g3d_enable(G3D_ADD_BLEND);
+	g3d_disable(G3D_DEPTH_TEST);
 	g3d_set_texture(ctex.width, ctex.height, ctex.pixels);
 
 	y = dseq_param(ev_text) * 21.0f;
@@ -380,6 +394,7 @@ static void right_side(float tint)
 
 	g3d_disable(G3D_ADD_BLEND);
 	g3d_disable(G3D_TEXTURE_2D);
+	g3d_enable(G3D_DEPTH_TEST);
 
 	g3d_pop_matrix();
 }

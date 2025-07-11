@@ -296,7 +296,7 @@ static void precalculateBumpInclination()
 			const int ii = yp0 + x;
 			const int iRight = yp0 + ((x + 1) & (HMAP_WIDTH - 1));
 			const int iDown = yp1 +x;
-			const float offsetPower = 0.5f;
+			const float offsetPower = 0.75f;
 
 			const int dx = (int)((heightmap[ii] - heightmap[iRight]) * offsetPower);
 			const int dy = (int)((heightmap[ii] - heightmap[iDown]) * offsetPower);

@@ -991,21 +991,28 @@ void setPalGradient(int c0, int c1, int r0, int g0, int b0, int r1, int g1, int 
 	}
 }
 
+//rrrrr gggggg bbbbb   rrrrr gggggg bbbbb
+
 void fadeToBlack16bpp(float ft, uint16_t* src, int width, int height, int stride)
 {
-	int x, y, s;
+	int x, y;
+	uint32_t s;
+	uint32_t* src32 = (uint32_t*)src;
 
 	if (ft > 0.99f) return;	// if it's 1.0f just don't unecessary do extra stuff. If it's 0.0f we don't care for frame rate as it will be pitch black :)
 
-	s = (int)(ft * 64);
+	stride >>= 1;
+	width >>= 1;
+	s = (uint32_t)(ft * 32);
 	for (y = 0; y < height; ++y) {
 		for (x = 0; x < width; ++x) {
-			uint32_t c = (uint32_t)*src;
-			uint16_t rb = (((c & 0xf81f) * s) >> 6) & 0xf81f;
-			uint16_t g = (((c & 0x7e0) * s) >> 6) & 0x7e0;
-			*src++ = rb | g;
+			uint32_t c = *src32;
+			//uint32_t rb0g1 = (((long long int)(c & 0xf81f07e0) * s) >> 5) & 0xf81f07e0;
+			uint32_t rb0g1 = (((c & 0xf81f07e0) >> 5) * s) & 0xf81f07e0;	// paradoxically this inverted shift/mul works (the other one would 
+			uint32_t g0rb1 = (((c & 0x07e0f81f) * s) >> 5) & 0x07e0f81f;
+			*src32++ = rb0g1 | g0rb1;
 
 		}
-		src += stride - width;
+		src32 += stride - width;
 	}
 }

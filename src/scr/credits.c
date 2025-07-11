@@ -156,7 +156,7 @@ static void credits_start(long trans_time)
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
 
-	g3d_enable(G3D_DEPTH_TEST);
+	g3d_disable(G3D_DEPTH_TEST);
 	g3d_enable(G3D_CULL_FACE);
 	g3d_disable(G3D_LIGHTING);
 
@@ -191,7 +191,7 @@ static void credits_draw(void)
 
 	credits_update();
 
-	g3d_clear(G3D_DEPTH_BUFFER_BIT);
+	/*g3d_clear(G3D_DEPTH_BUFFER_BIT);*/
 
 	backdrop(theta, phi);
 
@@ -220,14 +220,14 @@ static void credits_draw(void)
 
 	if(dseq_isactive(ev_fade)) {
 		unsigned int i, r, g, b, pcol;
-		unsigned int val = cround64(dseq_param(ev_fade) * 256.0f);
+		unsigned int val = 256 - cround64(dseq_param(ev_fade) * 256.0f);
 		uint16_t *ptr = fb_pixels;
 		for(i=0; i<320 * 240; i++) {
 			pcol = *ptr;
 			r = (UNPACK_R16(pcol) * val) >> 8;
 			g = (UNPACK_G16(pcol) * val) >> 8;
 			b = (UNPACK_B16(pcol) * val) >> 8;
-			*ptr++ = pcol;
+			*ptr++ = PACK_RGB16(r, g, b);
 		}
 	}
 
@@ -353,7 +353,7 @@ static void right_side(float tint)
 	g3d_polygon_mode(G3D_FLAT);
 	g3d_enable(G3D_TEXTURE_2D);
 	g3d_enable(G3D_ADD_BLEND);
-	g3d_disable(G3D_DEPTH_TEST);
+	/*g3d_disable(G3D_DEPTH_TEST);*/
 	g3d_set_texture(ctex.width, ctex.height, ctex.pixels);
 
 	y = dseq_param(ev_text) * 21.0f;
@@ -394,7 +394,7 @@ static void right_side(float tint)
 
 	g3d_disable(G3D_ADD_BLEND);
 	g3d_disable(G3D_TEXTURE_2D);
-	g3d_enable(G3D_DEPTH_TEST);
+	/*g3d_enable(G3D_DEPTH_TEST);*/
 
 	g3d_pop_matrix();
 }

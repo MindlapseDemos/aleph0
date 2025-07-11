@@ -406,8 +406,7 @@ demoseq {
 		}
 
 		text {
-			#dur = 20000
-			dur = 20
+			dur = 20000
 		}
 
 		fade {

@@ -70,7 +70,7 @@ static struct msurf_volume vol;
 
 #define NUM_MBALLS	3
 
-static dseq_event *ev_faces, *ev_power, *ev_bloboffs;
+static dseq_event *ev_faces, *ev_power, *ev_bloboffs, *ev_fadeout;
 
 
 struct screen *metaballs_screen(void)
@@ -131,6 +131,7 @@ static int init(void)
 	ev_power = dseq_lookup("metaballs.power");
 	ev_faces = dseq_lookup("metaballs.faces");
 	ev_bloboffs = dseq_lookup("metaballs.bloboffs");
+	ev_fadeout = dseq_lookup("metaballs.fadeout");
 	return 0;
 }
 
@@ -169,7 +170,7 @@ static void update(void)
 	float toffs;
 	float tsec = time_msec / 1000.0f;
 	static float phase[] = {0.0, M_PI / 3.0, M_PI * 0.8};
-	static float speed[] = {0.8, 1.4, 1.0};
+	static float speed[] = {1.2, 2.01, 1.5};
 	static float scale[][3] = {{1, 2, 0.8}, {0.5, 1.6, 0.6}, {1.5, 0.7, 0.5}};
 	static float offset[][3] = {{0, 0, 0}, {0.25, 0, 0}, {-0.2, 0.15, 0.2}};
 	static float start[] = {-5, -5, 4.5};
@@ -212,15 +213,38 @@ static void draw(void)
 	g3d_clear(G3D_DEPTH_BUFFER_BIT);
 
 	power = dseq_value(ev_power) != 0.0f;
-	memcpy64(fb_pixels, bgimage[power], 320 * 240 / 4);
+
+	if(!dseq_isactive(ev_fadeout)) {
+		memcpy64(fb_pixels, bgimage[power], 320 * 240 / 4);
+	} else {
+		unsigned int i, r, g, b, pcol;
+		unsigned int fade = cround64(dseq_value(ev_fadeout) * 256.0f);
+		uint16_t *src = bgimage[0];
+		uint16_t *dst = fb_pixels;
+
+		for(i=0; i<320*240; i++) {
+			pcol = *src++;
+			r = (UNPACK_R16(pcol) * fade) >> 8;
+			g = (UNPACK_G16(pcol) * fade) >> 8;
+			b = (UNPACK_B16(pcol) * fade) >> 8;
+			*dst++ = PACK_RGB16(r, g, b);
+		}
+	}
 
 	/* sprites */
 	blitfb_rle(fb_pixels, 160 - 121/2, 0, spr + (SPR_TOP_OFF + power));
 	blitfb_rle(fb_pixels, 160 - 197/2, 240 - 45, spr + (SPR_BOT_OFF + power));
 	if((faces = dseq_value(ev_faces))) {
+		float t;
 		int offs = cround64(faces * 98.0f);
-		blitfb_rle(fb_pixels, offs - 98, 20, spr + SPR_TERM);
-		blitfb_rle(fb_pixels, 320 - offs, 21, spr + SPR_GIRL);
+		int yoffs = 0;
+
+		if((t = dseq_param(ev_fadeout)) > 0.0f) {
+			yoffs = cround64(cgm_logerp(1, 300, t) - 1.0f);
+		}
+
+		blitfb_rle(fb_pixels, offs - 98, 20 + yoffs, spr + SPR_TERM);
+		blitfb_rle(fb_pixels, 320 - offs, 21 + yoffs, spr + SPR_GIRL);
 	}
 
 	g3d_matrix_mode(G3D_MODELVIEW);

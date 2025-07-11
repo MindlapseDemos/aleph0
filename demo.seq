@@ -300,7 +300,20 @@ demoseq {
 	}
 
 	metaballs {
-		dur = 10000
+		bloboffs {
+			interp = "linear"
+			key(1020) = 0
+			waitkey(1000) = 1
+
+			key(10250) = 1
+			waitkey(300) = 0
+		}
+
+		faces {
+			interp = "smoothstep"
+			key(2000) = 0
+			waitkey(800) = 1
+		}
 
 		power {
 			key(0) = 0
@@ -311,18 +324,18 @@ demoseq {
 			waitkey(70) = 1
 			waitkey(50) = 0
 			waitkey(50) = 1
+
+			key(10000) = 0
+			waitkey(50) = 1
+			waitkey(70) = 0
+			waitkey(100) = 1
+			waitkey(50) = 0
 		}
 
-		bloboffs {
+		fadeout {
 			interp = "linear"
-			waitkey(0) = 0
-			waitkey(1000) = 1
-		}
-
-		faces {
-			interp = "smoothstep"
-			waitkey(1000) = 0
-			waitkey(800) = 1
+			waitkey(0) = 1
+			waitkey(800) = 0
 		}
 	}
 

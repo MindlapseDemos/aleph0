@@ -406,10 +406,12 @@ demoseq {
 		}
 
 		text {
-			dur = 20000
+			#dur = 20000
+			dur = 20
 		}
 
 		fade {
+			interp = "linear"
 			dur = 2000
 		}
 	}

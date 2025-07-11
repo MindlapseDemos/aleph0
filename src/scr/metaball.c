@@ -177,7 +177,11 @@ static void update(void)
 
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
 
-	toffs = (cgm_logerp(1, 129, dseq_value(ev_bloboffs)) - 1.0f) / 128.0f;
+	if(!dseq_started()) {
+		toffs = 1.0f;
+	} else {
+		toffs = (cgm_logerp(1, 129, dseq_value(ev_bloboffs)) - 1.0f) / 128.0f;
+	}
 
 	for(i=0; i<NUM_MBALLS; i++) {
 		float t = (tsec + phase[i]) * speed[i];
@@ -212,7 +216,11 @@ static void draw(void)
 
 	g3d_clear(G3D_DEPTH_BUFFER_BIT);
 
-	power = dseq_value(ev_power) != 0.0f;
+	if(dseq_started()) {
+		power = dseq_value(ev_power) != 0.0f;
+	} else {
+		power = 1;
+	}
 
 	if(!dseq_isactive(ev_fadeout)) {
 		memcpy64(fb_pixels, bgimage[power], 320 * 240 / 4);

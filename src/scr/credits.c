@@ -74,7 +74,7 @@ static const char *crd_text[CRD_LINES] = {
 static float crd_texv[CRD_LINES + 1];
 static struct image ctex;
 
-static dseq_event *ev_zoom, *ev_text, *ev_fade;
+static dseq_event *ev_emerge, *ev_text, *ev_fade, *ev_ampl;
 
 
 struct screen *credits_screen(void)
@@ -135,9 +135,10 @@ static int credits_init(void)
 		return -1;
 	}
 
-	ev_zoom = dseq_lookup("credits.zoom");
+	ev_emerge = dseq_lookup("credits.emerge");
 	ev_text = dseq_lookup("credits.text");
 	ev_fade = dseq_lookup("credits.fade");
+	ev_ampl = dseq_lookup("credits.ampl");
 
 	return 0;
 }
@@ -187,7 +188,7 @@ static void credits_draw(void)
 	float phi = cam_phi + sin(t * 1.2f) * 2.0f;
 	float dist;
 
-	dist = cam_dist + dseq_value(ev_zoom);
+	dist = cam_dist/* + dseq_value(ev_zoom)*/;
 
 	credits_update();
 
@@ -237,14 +238,22 @@ static void credits_draw(void)
 static void left_side(float tint)
 {
 	int i, j, otherm, curm = 0;
-	float mat[2][16], angle, t, f, a;
+	float mat[2][16], angle, t, f, a, tampl, y;
 	cgm_vec3 pos[TENT_NODES], norm[TENT_NODES], pprev, nprev, nvec, pvec;
 	cgm_vec3 tang;
 	float rad[TENT_NODES], sprev;
 
+	if(dseq_started()) {
+		tampl = dseq_value(ev_ampl);
+		y = (cgm_logerp(1, 9, dseq_value(ev_emerge)) - 9);
+	} else {
+		tampl = 1.0f;
+		y = 0;
+	}
+
 	for(j=0; j<NUM_TENT; j++) {
 		g3d_push_matrix();
-		g3d_translate(-3, 0, 0);
+		g3d_translate(-3, y, 0);
 
 		t = (float)time_msec * 0.001 + j * (59.0 + dbg_num);
 
@@ -253,7 +262,7 @@ static void left_side(float tint)
 		for(i=0; i<TENT_NODES; i++) {
 			otherm = (curm + 1) & 1;
 			f = 1.0 + (float)i * 0.4;
-			a = 0.2 + (float)(i + 1) * 0.06;
+			a = cgm_lerp(0.15f, 0.2 + (float)(i + 1) * 0.06, tampl);
 			cgm_midentity(mat[curm]);
 			cgm_mtranslate(mat[curm], 0, tent_dist[j], 0);
 			angle = sin(t + f) * a;

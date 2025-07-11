@@ -997,14 +997,14 @@ void fadeToBlack16bpp(float ft, uint16_t* src, int width, int height, int stride
 
 	if (ft > 0.99f) return;	// if it's 1.0f just don't unecessary do extra stuff. If it's 0.0f we don't care for frame rate as it will be pitch black :)
 
-	s = (int)(ft * 256);
+	s = (int)(ft * 64);
 	for (y = 0; y < height; ++y) {
 		for (x = 0; x < width; ++x) {
-			uint16_t c = *src;
-			int r = (UNPACK_R16(c) * s) >> 8;
-			int g = (UNPACK_G16(c) * s) >> 8;
-			int b = (UNPACK_B16(c) * s) >> 8;
-			*src++ = PACK_RGB16(r, g, b);
+			uint32_t c = (uint32_t)*src;
+			uint16_t rb = (((c & 0xf81f) * s) >> 6) & 0xf81f;
+			uint16_t g = (((c & 0x7e0) * s) >> 6) & 0x7e0;
+			*src++ = rb | g;
+
 		}
 		src += stride - width;
 	}

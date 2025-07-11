@@ -176,7 +176,7 @@ static void credits_update(void)
 
 #define NUM_TENT	3
 #define TENT_NODES	12
-#define TENT_DIST	0.7
+static const float tent_dist[] = {0.9, 0.7, 0.5};
 
 static void credits_draw(void)
 {
@@ -255,7 +255,7 @@ static void left_side(float tint)
 			f = 1.0 + (float)i * 0.4;
 			a = 0.2 + (float)(i + 1) * 0.06;
 			cgm_midentity(mat[curm]);
-			cgm_mtranslate(mat[curm], 0, TENT_DIST, 0);
+			cgm_mtranslate(mat[curm], 0, tent_dist[j], 0);
 			angle = sin(t + f) * a;
 			cgm_mrotate_z(mat[curm], angle);
 			cgm_mmul(mat[curm], mat[otherm]);
@@ -278,7 +278,7 @@ static void left_side(float tint)
 		g3d_set_texture(envmap.width, envmap.height, envmap.pixels);
 		g3d_enable(G3D_TEXTURE_GEN);
 
-		sprev = TENT_DIST * 0.5f;
+		sprev = tent_dist[j] * 0.5f;
 		cgm_vcons(&pprev, 0, 0, 0);
 		cgm_vcons(&nprev, -sprev, 0, 0);
 		pvec = nprev;

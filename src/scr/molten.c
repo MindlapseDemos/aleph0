@@ -140,6 +140,8 @@ static void molten_start(long trans_time)
 	start_time = time_msec;
 	prev_upd = 0;
 	cgm_vcons(&viewtgt, 0, 0, 0);
+
+	g3d_clear(G3D_COLOR_BUFFER_BIT);
 }
 
 static void molten_stop(long trans_time)

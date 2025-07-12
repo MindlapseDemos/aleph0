@@ -150,6 +150,8 @@ static Vector3D viewAngle;
 
 static int prevTime;
 
+static unsigned char hazeMap[VIS_FAR - VIS_HAZE];
+
 static dseq_event* ev_fade;
 static dseq_event* ev_flypath;
 
@@ -183,6 +185,16 @@ static void initSinTab(const int numSines, const int repeats, const int amplitud
 
 	for (i=0; i<numSines; ++i) {
 		isin[i] = (int)(sin((float)i * sMul) * amplitude);
+	}
+}
+
+static void initHazeMap()
+{
+	int i;
+	for (i = VIS_HAZE; i < VIS_FAR; ++i) {
+		float shade = ((float)(i - VIS_HAZE) / (float)(VIS_FAR - VIS_HAZE - 1)) * 1.5f;
+		CLAMP(shade, 0, 1);
+		hazeMap[i - VIS_HAZE] = 255 - (unsigned char)(shade * 255);
 	}
 }
 
@@ -549,6 +561,7 @@ static int init(void)
 	memset(fb_pixels, 0, (FB_WIDTH * FB_HEIGHT * FB_BPP) / 8);
 
 	initSinTab(SIN_LENGTH, 1, 65536);
+	initHazeMap();
 	createHeightScaleTab();
 
 	initSkyAndCloudTextures();
@@ -678,7 +691,8 @@ static void drawColumn(int hCount, uint16_t cv, uint16_t* dst)
 
 static void drawColumnHaze(int hCount, uint16_t cv, uint16_t* dst)
 {
-	const int hi = haze;
+	const int hi1 = haze;
+	const int hi0 = 255 - hi1;
 
 	const int cvR = (cv >> 11) & 31;
 	const int cvG = (cv >> 5) & 63;
@@ -688,9 +702,9 @@ static void drawColumnHaze(int hCount, uint16_t cv, uint16_t* dst)
 		const int bgR = (bg >> 11) & 31;
 		const int bgG = (bg >> 5) & 63;
 		const int bgB = bg & 31;
-		const int r = (bgR * hi + cvR * ((VIS_FAR - VIS_HAZE) - hi)) / (VIS_FAR - VIS_HAZE);
-		const int g = (bgG * hi + cvG * ((VIS_FAR - VIS_HAZE) - hi)) / (VIS_FAR - VIS_HAZE);
-		const int b = (bgB * hi + cvB * ((VIS_FAR - VIS_HAZE) - hi)) / (VIS_FAR - VIS_HAZE);
+		const int r = (bgR * hi0 + cvR * hi1) >> 8;
+		const int g = (bgG * hi0 + cvG * hi1) >> 8;
+		const int b = (bgB * hi0 + cvB * hi1) >> 8;
 		*dst = (r << 11) | (g << 5) | b;
 		dst -= FB_WIDTH;
 	} while (--hCount > 0);
@@ -752,8 +766,7 @@ static int setupPixStepColumn(int i)
 	}
 	else {
 		drawColumnFunc = drawColumnHaze;
-		haze = (3 * (i - VIS_HAZE)) / 2;
-		CLAMP(haze, 0, VIS_FAR - VIS_HAZE - 1)
+		haze = hazeMap[i - VIS_HAZE];
 	}
 	return 1;
 }

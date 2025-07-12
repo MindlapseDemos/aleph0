@@ -251,7 +251,7 @@ static int cmd_start(const char *args)
 		if(isdigit(args[0])) {
 			demo_run(atol(args));
 		} else {
-			demo_runpart(args);
+			demo_runpart(args, 1);
 		}
 	} else {
 		demo_run(0);

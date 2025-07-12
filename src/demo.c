@@ -339,12 +339,16 @@ void demo_keyboard(int key, int press)
 
 		case KB_F1:
 			if(curscr_name) {
-				demo_runpart(curscr_name);
+				demo_runpart(curscr_name, 1);
 			}
 			break;
 
 		case KB_F2:
 			demo_run(0);
+			break;
+
+		case KB_F5:
+			demo_runpart(curscr_name, 0);
 			break;
 
 		case KB_F3:
@@ -404,7 +408,7 @@ void demo_run(long start_time)
 	running = 1;
 }
 
-void demo_runpart(const char *name)
+void demo_runpart(const char *name, int single)
 {
 	int i, nscr;
 	long evstart;
@@ -424,16 +428,18 @@ void demo_runpart(const char *name)
 		curscr = 0;
 	}
 
-	runonlypart = 0;
-	nscr = scr_num_screens();
-	for(i=0; i<nscr; i++) {
-		if(strcmp(scr_screen(i)->name, name) == 0) {
-			runonlypart = scr_screen(i);
-			change_screen(i);
-			break;
+	if(single) {
+		runonlypart = 0;
+		nscr = scr_num_screens();
+		for(i=0; i<nscr; i++) {
+			if(strcmp(scr_screen(i)->name, name) == 0) {
+				runonlypart = scr_screen(i);
+				change_screen(i);
+				break;
+			}
 		}
+		if(!runonlypart) return;
 	}
-	if(!runonlypart) return;
 
 	reset_timer(evstart);
 	dseq_start();

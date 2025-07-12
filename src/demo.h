@@ -81,7 +81,7 @@ void demo_post_draw(void *pixels);
 void demo_keyboard(int key, int press);
 
 void demo_run(long start_time);
-void demo_runpart(const char *name);
+void demo_runpart(const char *name, int single);
 
 /* defined in main.c */
 void demo_quit(void);

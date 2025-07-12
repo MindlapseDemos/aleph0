@@ -311,7 +311,7 @@ demoseq {
 
 		faces {
 			interp = "smoothstep"
-			key(2000) = 0
+			key(4000) = 0
 			waitkey(800) = 1
 		}
 

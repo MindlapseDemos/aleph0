@@ -9,6 +9,7 @@
 #include "gfxutil.h"
 #include "dynarr.h"
 #include "curve.h"
+#include "polyclip.h"
 
 #define VFOV	80.0f
 
@@ -105,7 +106,7 @@ static void start(long trans_time)
 
 	g3d_matrix_mode(G3D_PROJECTION);
 	g3d_load_identity();
-	g3d_perspective(VFOV, 1.3333333, 15.0, 300.0);
+	g3d_perspective(VFOV, 1.3333333, 2.0, 300.0);
 
 	g3d_enable(G3D_CULL_FACE);
 	g3d_disable(G3D_DEPTH_TEST);
@@ -145,6 +146,7 @@ static void update(void)
 
 static void draw(void)
 {
+	static unsigned int frontface = G3D_CCW;
 	float tm;
 	unsigned int i, num;
 	float viewmat[16];
@@ -176,11 +178,21 @@ static void draw(void)
 	}
 
 	tm = (float)time_msec * 0.1;
-	g3d_translate(0, 8.4, 0);
+	g3d_translate(0, 4, 0);
 	g3d_rotate(tm, 1, 0, 0);
 	g3d_rotate(tm, 0, 1, 0);
 	g3d_translate(0, -8.4, 0);
+
+	clipper_flags = 0;
+	g3d_front_face(frontface);
 	draw_mesh(scn->meshes[i]);
+	g3d_front_face(G3D_CCW);
+
+	if(clipper_flags & (1 << CLIP_NEAR)) {
+		frontface = G3D_CW;
+	} else {
+		frontface = G3D_CCW;
+	}
 
 	swap_buffers(0);
 }

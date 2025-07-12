@@ -14,6 +14,8 @@ enum {
 	CLIP_NEAR, CLIP_FAR
 };
 
+extern unsigned int clipper_flags;
+
 /* Generic polygon clipper
  * returns:
  *  1 -> fully inside, not clipped

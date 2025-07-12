@@ -20,6 +20,9 @@ static int intersect(const struct ray *ray, const struct cplane *plane, float *t
 static int inside_frustum_plane(const struct g3d_vertex *v, int fplane);
 
 
+unsigned int clipper_flags;
+
+
 int clip_poly(struct g3d_vertex *vout, int *voutnum,
 		const struct g3d_vertex *vin, int vnum, struct cplane *plane)
 {
@@ -79,6 +82,7 @@ int clip_frustum(struct g3d_vertex *vout, int *voutnum,
 		if(nextidx >= vnum) nextidx = 0;
 		res = clip_edge_frustum(vout, voutnum, vin + i, vin + nextidx, fplane);
 		if(res == 0) {
+			clipper_flags |= 1 << fplane;
 			++edges_clipped;
 		}
 	}

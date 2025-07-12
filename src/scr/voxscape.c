@@ -35,6 +35,9 @@
 #define VIS_FAR 240
 #define VIS_HAZE (VIS_FAR - 32)
 
+#define HAZE_BLEND_SHIFT 6
+#define HAZE_BLEND_STEPS (1 << HAZE_BLEND_SHIFT)
+
 #define PIXEL_SIZE 1
 #define PIXEL_ABOVE (FB_WIDTH / PIXEL_SIZE)
 #define VIS_VER_SKIP 1
@@ -194,7 +197,7 @@ static void initHazeMap()
 	for (i = VIS_HAZE; i < VIS_FAR; ++i) {
 		float shade = ((float)(i - VIS_HAZE) / (float)(VIS_FAR - VIS_HAZE - 1)) * 1.5f;
 		CLAMP(shade, 0, 1);
-		hazeMap[i - VIS_HAZE] = 255 - (unsigned char)(shade * 255);
+		hazeMap[i - VIS_HAZE] = (HAZE_BLEND_STEPS-1) - (unsigned char)(shade * (HAZE_BLEND_STEPS - 1));
 	}
 }
 
@@ -692,20 +695,17 @@ static void drawColumn(int hCount, uint16_t cv, uint16_t* dst)
 static void drawColumnHaze(int hCount, uint16_t cv, uint16_t* dst)
 {
 	const int hi1 = haze;
-	const int hi0 = 255 - hi1;
+	const int hi0 = (HAZE_BLEND_STEPS - 1) - hi1;
 
-	const int cvR = (cv >> 11) & 31;
-	const int cvG = (cv >> 5) & 63;
-	const int cvB = cv & 31;
+	const uint32_t cvRB = cv & 0xf81f;
+	const uint32_t cvG = cv & 0x7e0;
 	do {
-		const uint16_t bg = *dst;
-		const int bgR = (bg >> 11) & 31;
-		const int bgG = (bg >> 5) & 63;
-		const int bgB = bg & 31;
-		const int r = (bgR * hi0 + cvR * hi1) >> 8;
-		const int g = (bgG * hi0 + cvG * hi1) >> 8;
-		const int b = (bgB * hi0 + cvB * hi1) >> 8;
-		*dst = (r << 11) | (g << 5) | b;
+		const uint32_t bg = (uint32_t)*dst;
+		const uint32_t bgRB = bg & 0xf81f;
+		const uint32_t bgG = bg & 0x7e0;
+		const uint32_t cRB = ((bgRB * hi0 + cvRB * hi1) >> HAZE_BLEND_SHIFT) & 0xf81f;
+		const uint32_t cG = ((bgG * hi0 + cvG * hi1) >> HAZE_BLEND_SHIFT) & 0x7e0;
+		*dst = cRB | cG;
 		dst -= FB_WIDTH;
 	} while (--hCount > 0);
 }

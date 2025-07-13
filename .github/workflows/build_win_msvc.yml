@@ -1,7 +1,7 @@
 name: Win32 build (MSVC)
 
 on:
-  push:
+  #push:
   pull_request:
   workflow_dispatch:
 

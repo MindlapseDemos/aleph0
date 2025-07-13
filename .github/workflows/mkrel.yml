@@ -1,7 +1,7 @@
 name: Build and package
 
 on:
-  push:
+  #push:
   pull_request:
   workflow_dispatch:
 

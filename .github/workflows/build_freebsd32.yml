@@ -17,7 +17,7 @@ jobs:
       uses: vmactions/freebsd-vm@v1
       with:
         run: |
-          pkg install -y gmake mesa-libs libX11 ImageMagick7 subversion nasm
+          pkg install -y gmake mesa-libs libX11 jpeg-turbo png ImageMagick7 subversion nasm
           svn export svn://mutantstargoat.com/datadirs/dosdemo data
           tools/procdata
           rm -r data/bin data/src

@@ -1,0 +1,35 @@
+name: FreeBSD build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: FreeBSD build
+      uses: vmactions/freebsd-vm@v1
+      with:
+        run: |
+          pkg install -y gmake mesa-libs libX11 ImageMagick7 subversion nasm
+          svn export svn://mutantstargoat.com/datadirs/dosdemo data
+          tools/procdata
+          rm -r data/bin data/src
+          gmake BUILD=release
+          ln demo demo-freebsd
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: demo-freebsd
+        path: |
+          data/
+          demo-freebsd
+          demo.seq
+
+# vi:ts=2 sts=2 sw=2 expandtab:

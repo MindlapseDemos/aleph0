@@ -244,7 +244,7 @@ static void drawConnections3D(BlobGridParams *params)
 						int px = xsi << FP_PT;
 						int py = ysi << FP_PT;
 
-						int dx, dy, dl, ti;
+						int dx, dy, dl, ti, zi;
 
 						if (length<=1) continue;	/* ==0 crashes, possibly overflow from sqrt giving a NaN? */
 						dl = (1 << FP_PT) / length;
@@ -252,11 +252,16 @@ static void drawConnections3D(BlobGridParams *params)
 						dy = (ysj - ysi) * dl;
 
 						ti = 0;
+						zi = (zpi + zpj) >> 1;
 						for (k=0; k<length-1; ++k) {
 							int size = ((blobSizesNum-1) * 1 * ti) >> FP_PT;
 							/* if (size > blobSizesNum-1) size = blobSizesNum-1 - size; */
-							if (size < 1) size = 1;
+							if (size < 3) size = 3;
 							/* if (size > blobSizesNum-1) size = blobSizesNum-1; */
+
+							size = (size * (STARS_CUBE_DEPTH + STARS_CUBE_DEPTH / 4 - zi)) / STARS_CUBE_DEPTH;
+							if (size > blobSizesNum - 1) size = blobSizesNum - 1;
+
 							px += dx;
 							py += dy;
 							ti += dl;

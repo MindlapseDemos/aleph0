@@ -350,15 +350,15 @@ demoseq {
 	}
 
 	water {
-		dur = 18432
+		dur = 17200
 
 		fade {
 			interp = "linear"
 			key(0) = 0
 			key(512) = 1
 			interp = "linear"
-			key(17920) = 1
-			key(18432) = 0
+			key(16200) = 1
+			key(17200) = 0
 		}
 
 		clouds {
@@ -375,26 +375,26 @@ demoseq {
 
 		objCome {
 			interp = "smoothstep"
-			key(1024) = 0
-			key(2048) = 1
+			key(512) = 0
+			key(1280) = 1
 		}
 
 		objDive {
 			interp = "smoothstep"
-			key(4096) = 0
-			key(5120) = 1
+			key(1600) = 0
+			key(3144) = 1
 		}
 
 		objUp {
 			interp = "smoothstep"
-			key(10240) = 0
-			key(11264) = 1
+			key(8200) = 0
+			key(9200) = 1
 		}
 
 		objLeave {
 			interp = "smoothstep"
-			key(17408) = 0
-			key(18432) = 1
+			key(13200) = 0
+			key(17200) = 1
 		}
 	}
 

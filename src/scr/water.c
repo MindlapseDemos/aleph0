@@ -508,9 +508,9 @@ static void sceneRunFlower(int t)
 	const float ft2 = dseq_value(ev_objUp);
 	const float ft3 = dseq_value(ev_objLeave);
 
-	xp = (int)(sin((float)t / (1.5f * 320.0f)) * 128 * ft0 + (1.0f - ft0) * 576) - (int)(ft3 * 448);
-	yp = (int)((sin((float)t / (1.5f * 288.0f)) * (112*(ft1-ft2)) - 28) * ft1 * 1.5f);
-	zp = 576 + (int)(sin((float)t / (1.5f * 256.0f)) * 128) + (int)(ft3 * 256);
+	xp = (int)(sin((float)t / (1.0f * 336.0f)) * 128 * ft0 + (1.0f - ft0) * 576);
+	yp = (int)((cos((float)t / (1.5f * 288.0f)) * (112*(ft1-ft2)) - 40) * ft1 * 1.5f) - (int)(ft3 * 192);
+	zp = 576 + (int)(sin((float)t / (1.5f * 256.0f)) * 128);
 
 	setObjectPos(xp, yp, zp, &objFlower);
 	setObjectRot((3+ft1) * t, (2+ft2) * t, (1+ft3) * t, &objFlower);

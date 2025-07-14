@@ -393,7 +393,7 @@ demoseq {
 
 		objLeave {
 			interp = "smoothstep"
-			key(13250) = 0
+			key(12750) = 0
 			key(14250) = 1
 		}
 	}

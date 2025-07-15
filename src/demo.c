@@ -64,6 +64,9 @@ extern uint16_t loading_pixels[];	/* data.asm */
 
 static struct screen *scr;
 
+static int showfps;
+
+
 int demo_init_cfgopt(int argc, char **argv)
 {
 	char *env;
@@ -270,7 +273,12 @@ void demo_draw(void)
 void demo_post_draw(void *pixels)
 {
 	/* no consoles, cursors, fps counters and part names in non-debug mode */
-	if(!opt.dbgmode) return;
+	if(!opt.dbgmode) {
+		if(showfps) {
+			drawFps(pixels);
+		}
+		return;
+	}
 
 	drawFps(pixels);
 	if(curscr_name) {
@@ -353,6 +361,10 @@ void demo_keyboard(int key, int press)
 
 		case KB_F3:
 			show_dseq_dbg ^= 1;
+			break;
+
+		case KB_F9:
+			showfps ^= 1;
 			break;
 
 		case '/':

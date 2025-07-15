@@ -5,7 +5,7 @@
 #ifndef __APPLE__
 #include "miniglut.h"
 #else
-#include <GL/glut.h>
+#include <GLUT/glut.h>
 #endif
 #include "demo.h"
 #include "gfx.h"

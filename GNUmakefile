@@ -57,7 +57,9 @@ else
 		arch =
 		asmsrc =
 		def += -DNO_ASM
-		LDFLAGS += -framework OpenGL -framework GLUT
+		LDFLAGS = -Llibs/imago -Llibs/anim -Llibs/mikmod -Llibs/goat3d -limago \
+				  -lanim -lmikmod -lgoat3d $(sndlib_$(sys)) -lm \
+				  -framework OpenGL -framework GLUT
 	else
 		LDFLAGS += -lGL -lX11 -lpthread
 	endif
@@ -66,9 +68,13 @@ endif
 sndlib_Linux = -lasound
 sndlib_IRIX = -laudio
 sndlib_mingw = -ldsound
+sndlib_Darwin = -framework CoreAudio
 
 .PHONY: all
 all: data $(bin)
+
+.PHONY: nodata
+nodata: $(bin)
 
 $(bin): $(obj) imago anim mikmod goat3d
 	$(CC) -o $@ $(obj) $(LDFLAGS)

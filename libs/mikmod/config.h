@@ -58,4 +58,8 @@
 #define DRV_SDL	1
 #endif
 
+#ifdef __APPLE__
+#define DRV_OSX	1
+#endif
+
 #endif	/* MIKMOD_CONFIG_H_ */

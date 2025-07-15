@@ -144,10 +144,37 @@ jobs:
         path: |
           demopi
 
+# ---------------------- MacOS X intel ------------------------
+  build-macosx:
+    runs-on: macos-13
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: install dependencies
+      run: |
+        brew install subversion
+
+    - name: prepare datafiles
+      run: |
+        svn export svn://mutantstargoat.com/datadirs/dosdemo data
+        rm -r data/bin data/src
+
+    - name: build demo
+      run: |
+        make BUILD=release nodata
+        mv demo demo-macosx
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: demo-macosx
+        path: |
+          demo-macosx
+
 
   pack:
     runs-on: ubuntu-latest
-    needs: [build-linux, build-win-msvc, build-dos-djgpp, build-gnulinux-arm]
+    needs: [build-linux, build-win-msvc, build-dos-djgpp, build-gnulinux-arm, build-macosx]
     steps:
       - uses: actions/checkout@v4
 
@@ -171,6 +198,7 @@ jobs:
           cp builds/demo-win32/* bin
           cp builds/djdemo/* bin
           cp builds/demo-gnulinux-arm/* bin
+          cp builds/demo-macosx/* bin
           mv bin/cwsdpmi.exe .
           tools/mkrel
 

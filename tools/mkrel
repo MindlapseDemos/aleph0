@@ -9,6 +9,7 @@ binwin=bin/demo-win32.exe
 binarm=bin/demopi
 binbsd=bin/demobsd
 binsgi=bin/demosgi
+binosx=bin/demo-macosx
 
 if [ ! -f $bindos ]; then
 	echo "DOS build missing (expected: $bindos)"
@@ -33,6 +34,10 @@ fi
 if [ ! -f $binsgi ]; then
 	echo "Warning: SGI IRIX build missing (expected: $binsgi)"
 	binsgi=
+fi
+if [ ! -f $binosx ]; then
+	echo "Warning: MacOS X build missing (expected: $binosx)"
+	binosx=
 fi
 
 if [ ! -f cwsdpmi.exe ]; then
@@ -59,6 +64,7 @@ cp $binwin $outdir/alephwin.exe
 [ -n "$binarm" ] && cp $binarm $outdir/alephpi
 [ -n "$binbsd" ] && cp $binbsd $outdir/alephbsd
 [ -n "$binsgi" ] && cp $binsgi $outdir/alephsgi
+[ -n "$binosx" ] && cp $binosx $outdir/alephosx
 
 chmod 775 $outdir/*
 cp cwsdpmi.exe $outdir/cwsdpmi.exe

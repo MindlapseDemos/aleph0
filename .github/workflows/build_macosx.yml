@@ -1,0 +1,36 @@
+name: MacOS X build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: macos-13
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: install dependencies
+      run: |
+        brew install subversion
+
+    - name: prepare datafiles
+      run: |
+        svn export svn://mutantstargoat.com/datadirs/dosdemo data
+        rm -r data/bin data/src
+
+    - name: build demo
+      run: |
+        make BUILD=release nodata
+        mv demo demo-macosx
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: demo-macosx
+        path: |
+          data/
+          demo-macosx
+          demo.seq
+
+# vi:ts=2 sts=2 sw=2 expandtab:

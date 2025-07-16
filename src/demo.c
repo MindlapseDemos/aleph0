@@ -319,7 +319,7 @@ void cs_puts_font(cs_font_func csfont, int sz, void *fb, int x, int y, const cha
 void change_screen(int idx)
 {
 	struct screen *scr = scr_screen(idx);
-	printf("change screen %d\n", idx);
+	printf("chscr %s\n", scr->name);
 	scr_change(scr);
 }
 
@@ -336,7 +336,7 @@ void demo_keyboard(int key, int press)
 			}
 			return;
 
-#ifndef NO_ASM
+#if !defined(NDEBUG) && !defined(NO_ASM)
 		case 127:
 			debug_break();
 			return;

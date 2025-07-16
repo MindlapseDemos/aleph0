@@ -137,29 +137,33 @@ demoseq {
 		ship {
 			wait = 0
 			trans = 0
-			dur = 18000
+			dur = 19000
 			interp = "linear"
 		}
 		warp {
-			start = 16800
+			start = 17800
 			dur = 700
 		}
 		flash {
 			interp = "sigmoid"
-			key(17400) = 0
-			key(17500) = 1
-			key(17600) = 0
+			key(18400) = 0
+			key(18500) = 1
+			key(18600) = 0
 		}
 		fadeout {
 			interp = "linear"
-			key(17800) = 255
+			key(18800) = 255
 			waitkey(200) = 0
 		}
 	}
 
 	hexfloor {
-		#dur = 18000
+		#dur = 21000
 
+		delaystart {
+			wait = 0
+			dur = 2000
+		}
 		greet0 {
 			interp = "smoothstep"
 			trans = 350
@@ -198,7 +202,7 @@ demoseq {
 		}
 		delayend {
 			wait = 0
-			dur = 2000
+			dur = 3000
 		}
 	}
 
@@ -216,21 +220,21 @@ demoseq {
 	}
 
 	voxelscape {
-		dur = 22850
+		dur = 18850
 
 		fade {
 			interp = "linear"
 			key(0) = 0
 			key(2048) = 1
 			interp = "linear"
-			key(22000) = 1
-			key(22850) = 0
+			key(18000) = 1
+			key(18850) = 0
 		}
 
 		flypath {
 			interp = "linear"
 			key(0) = 0
-			key(22850) = 1
+			key(18850) = 1
 		}
 	}
 

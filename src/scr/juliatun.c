@@ -478,7 +478,7 @@ static void draw(void)
 	/* const int t = 3200; */
 	/* const int layerAdv = 0; */
 
-	const int t = (int)((time_msec - startingTime) * 1.125f);
+	const int t = (int)((time_msec - startingTime) * 1.275f);
 	const int layerAdv = t >> JULIA_ANIM_REPEAT_BITS;
 	const int palAnimOffset = (t >> (JULIA_ANIM_REPEAT_BITS - JULIA_PAL_TRANSITION_BITS)) & (JULIA_PAL_TRANSITIONS - 1);
 

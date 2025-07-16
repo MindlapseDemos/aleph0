@@ -112,10 +112,16 @@ int demo_init(void)
 		return -1;
 	}
 
-	if(dseq_open("demo.seq") == -1) {
-		if(dseq_open("data/demo.seq") == -1) {
-			if(!opt.dbgmode) {
-				return -1;
+	if(opt.seqfile) {
+		if(dseq_open(opt.seqfile) == -1) {
+			return -1;
+		}
+	} else {
+		if(dseq_open("demo.seq") == -1) {
+			if(dseq_open("data/demo.seq") == -1) {
+				if(!opt.dbgmode) {
+					return -1;
+				}
 			}
 		}
 	}

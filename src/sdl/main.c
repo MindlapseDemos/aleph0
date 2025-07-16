@@ -32,7 +32,7 @@ static int sdlkey_to_demokey(int sdlkey, unsigned int mod);
 static int quit;
 static SDL_Surface *fbsurf;
 
-static int fbscale = 3;
+static int fbscale = -1;
 static int xsz, ysz, sdlbpp;
 static unsigned int sdl_flags = SDL_SWSURFACE;
 
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 		printf("SDL 16bpp video mode\n");
 		sdlbpp = 16;
 	}
-	SDL_WM_SetCaption("dosdemo/SDL", 0);
+	SDL_WM_SetCaption("aleph null / mindlapse (SDL)", 0);
 	SDL_ShowCursor(0);
 
 #ifndef NO_ASM
@@ -101,6 +101,10 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	vmem = fb_pixels;
+
+	if(fbscale == -1) {	/* if not overriden by env var */
+		fbscale = opt.scale;
+	}
 
 	if(opt.sball && sball_init() == 0) {
 		use_sball = 1;

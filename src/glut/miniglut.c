@@ -84,7 +84,7 @@ static void sys_exit(int status);
 static int sys_write(int fd, const void *buf, int count);
 
 
-static int init_x = -1, init_y, init_width = 256, init_height = 256;
+static int init_x = -1, init_y, init_width = 300, init_height = 300;
 static unsigned int init_mode;
 
 static struct ctx_info ctx_info;

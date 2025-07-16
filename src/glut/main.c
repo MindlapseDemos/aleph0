@@ -80,17 +80,17 @@ cgm_quat sball_view_rot = {0, 0, 0, 1};
 int main(int argc, char **argv)
 {
 	glutInit(&argc, argv);
+	if(glutGet(GLUT_SCREEN_HEIGHT) <= 960 && opt.scale > 2) {
+		opt.scale = 2;	/* constrain default scale factor on low-res */
+	}
+
 	if(demo_init_cfgopt(argc, argv) == -1) {
 		return 1;
 	}
+	glutInitWindowSize(320 * opt.scale, 240 * opt.scale);
 
-	if(glutGet(GLUT_SCREEN_HEIGHT) <= 1024) {
-		glutInitWindowSize(640, 480);
-	} else {
-		glutInitWindowSize(1280, 960);
-	}
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
-	glutCreateWindow("Mindlapse");
+	glutCreateWindow("aleph null / mindlapse");
 
 	glutDisplayFunc(display);
 	glutIdleFunc(idle);
@@ -99,12 +99,16 @@ int main(int argc, char **argv)
 	glutKeyboardUpFunc(keyup);
 	glutSpecialFunc(skeydown);
 	glutSpecialUpFunc(skeyup);
-	glutMouseFunc(mouse_button);
-	glutMotionFunc(mouse_motion);
-	glutPassiveMotionFunc(mouse_motion);
-	glutSpaceballMotionFunc(sball_motion);
-	glutSpaceballRotateFunc(sball_rotate);
-	glutSpaceballButtonFunc(sball_button);
+	if(opt.mouse) {
+		glutMouseFunc(mouse_button);
+		glutMotionFunc(mouse_motion);
+		glutPassiveMotionFunc(mouse_motion);
+	}
+	if(opt.sball) {
+		glutSpaceballMotionFunc(sball_motion);
+		glutSpaceballRotateFunc(sball_rotate);
+		glutSpaceballButtonFunc(sball_button);
+	}
 
 	glutSetCursor(GLUT_CURSOR_NONE);
 

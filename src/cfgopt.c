@@ -8,6 +8,7 @@
 #ifdef NDEBUG
 /* release build default options */
 struct options opt = {
+	0,	/* demo sequence file */
 	0,	/* start_scr */
 	"demo.log",	/* logfile */
 	1,	/* music */
@@ -22,6 +23,7 @@ struct options opt = {
 	0,	/* dbgsingle */
 #ifndef MSDOS
 	1,	/* fullscreen */
+	4,	/* scale */
 	0	/* scaler (nearest) */
 #else
 	0	/* sndsetup (midas) */
@@ -30,6 +32,7 @@ struct options opt = {
 #else
 /* debug build default options */
 struct options opt = {
+	0,	/* demo sequence file */
 	0,	/* start_scr */
 	"demo.log",	/* logfile */
 	0,	/* music */
@@ -44,6 +47,7 @@ struct options opt = {
 	0,	/* dbgsingle */
 #ifndef MSDOS
 	0,	/* fullscreen */
+	4,	/* scale */
 	0	/* scaler (nearest) */
 #else
 	0	/* sndsetup (midas) */
@@ -65,16 +69,34 @@ int parse_args(int argc, char **argv)
 				opt.music = 1;
 			} else if(strcmp(argv[i], "-nomusic") == 0) {
 				opt.music = 0;
+			} else if(strcmp(argv[i], "-seq") == 0) {
+				if(!argv[++i]) {
+					fprintf(stderr, "-seq must be followed by a filename\n");
+					return -1;
+				}
+				opt.seqfile = argv[i];
 			} else if(strcmp(argv[i], "-scr") == 0 || strcmp(argv[i], "-screen") == 0) {
-				scrname = argv[++i];
+				if(!argv[++i]) {
+					fprintf(stderr, "%s must be followed by a screen name\n", argv[i - 1]);
+					return -1;
+				}
+				scrname = argv[i];
 			} else if(strcmp(argv[i], "-single") == 0) {
-				scrname = argv[++i];
+				if(!argv[++i]) {
+					fprintf(stderr, "%s must be followed by a screen name\n", argv[i - 1]);
+					return -1;
+				}
+				scrname = argv[i];
 				opt.dbgsingle = 1;
 			} else if(strcmp(argv[i], "-list") == 0) {
 				print_screen_list();
 				exit(0);
 			} else if(strcmp(argv[i], "-logfile") == 0) {
-				opt.logfile = argv[++i];
+				if(!argv[++i]) {
+					fprintf(stderr, "-logfile must be followed by a filename\n");
+					return -1;
+				}
+				opt.logfile = argv[i];
 			} else if(strcmp(argv[i], "-mouse") == 0) {
 				opt.mouse = 1;
 			} else if(strcmp(argv[i], "-nomouse") == 0) {
@@ -99,6 +121,11 @@ int parse_args(int argc, char **argv)
 				opt.fullscreen = 1;
 			} else if(strcmp(argv[i], "-win") == 0) {
 				opt.fullscreen = 0;
+			} else if(strcmp(argv[i], "-scale") == 0) {
+				if(!argv[++i] || (opt.scale = atoi(argv[i])) <= 0 || opt.scale > 80) {
+					fprintf(stderr, "-scale must be followed by a scale factor\n");
+					return -1;
+				}
 			} else if(strcmp(argv[i], "-scaler-nearest") == 0) {
 				opt.scaler = SCALER_NEAREST;
 			} else if(strcmp(argv[i], "-scaler-linear") == 0) {
@@ -134,6 +161,7 @@ static void print_usage(const char *argv0)
 	printf("Usage: %s [options] [screen name]\n", argv0);
 	printf("Options:\n");
 	printf(" -music/-nomusic: enable/disable music playback\n");
+	printf(" -seq <path>: demo sequence file (default: demo.seq)\n");
 	printf(" -screen <name>: select starting screen (alias: -scr)\n");
 	printf(" -single <name>: select single screen\n");
 	printf(" -list: list available screens\n");
@@ -236,6 +264,8 @@ int load_config(const char *fname)
 
 		if(strcmp(key, "music") == 0) {
 			opt.music = bool_value(value);
+		} else if(strcmp(key, "seq") == 0) {
+			opt.seqfile = strdup(value);
 		} else if(strcmp(key, "screen") == 0) {
 			opt.start_scr = strdup(value);
 		} else if(strcmp(key, "single") == 0) {
@@ -261,6 +291,10 @@ int load_config(const char *fname)
 #ifndef MSDOS
 		} else if(strcmp(key, "fullscreen") == 0) {
 			opt.fullscreen = bool_value(value);
+		} else if(strcmp(key, "scale") == 0) {
+			if((opt.scale = atoi(value)) < 0 || opt.scale > 80) {
+				fprintf(stderr, "%s:%d invalid scale value: %s\n", fname, nline, line);
+			}
 		} else if(strcmp(key, "scaler") == 0) {
 			if(strcmp(value, "linear") == 0) {
 				opt.scaler = SCALER_LINEAR;

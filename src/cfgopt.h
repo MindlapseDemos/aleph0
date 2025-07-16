@@ -11,6 +11,7 @@ enum {
 #endif
 
 struct options {
+	const char *seqfile;
 	const char *start_scr;
 	const char *logfile;
 	int music;
@@ -19,6 +20,7 @@ struct options {
 	int dbgmode, dbgsingle;
 #ifndef MSDOS
 	int fullscreen;
+	int scale;
 	int scaler;
 #else
 	int sndsetup;

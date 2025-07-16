@@ -35,6 +35,7 @@ demoseq {
 		trans_out = 250
 
 		text {
+			interp = "linear"
 			key(1000) = 1   # mindlapse & desire solid
 			key(2000) = 2   # mindlapse & desire disperse
 			key(4500) = 0

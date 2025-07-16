@@ -307,7 +307,7 @@ samespeed:
 		int fade;
 		update_smktxt(curstx);
 
-		fade = ~cround64(dseq_value(ev_text) * 1024.0f) & 0x3ff;
+		fade = cround64(dseq_value(ev_text) * (text_state == 2 ? 256.0f : 128.0f));
 		if(fade > 256) fade = 256;
 
 		for(i=0; i<256; i++) {

@@ -35,15 +35,15 @@ demoseq {
 		trans_out = 250
 
 		text {
-			key(1000) = 1	# mindlapse & desire solid
-			key(2000) = 2	# mindlapse & desire disperse
+			key(1000) = 1   # mindlapse & desire solid
+			key(2000) = 2   # mindlapse & desire disperse
 			key(4500) = 0
-			key(5500) = 3	# presents solid
-			key(6500) = 4	# presents disperse
+			key(5500) = 3   # presents solid
+			key(6500) = 4   # presents disperse
 			key(9000) = 0
 		}
 		accel {
-			waitkey(1000) = 1
+			waitkey(3500) = 1
 			waitkey(1) = 0
 			waitkey(1100) = 1
 			waitkey(1) = 0
@@ -92,25 +92,25 @@ demoseq {
 	}
 
 	blobgrid {
-		dur = 10240
+		dur = 8000
 
 		thingsIn {
 			interp = "linear"
 			key(0) = 0
-			key(1024) = 1
+			key(500) = 1
 		}
 
 		thingsOut {
 			interp = "linear"
-			key(9216) = 0
-			key(10240) = 1
+			key(7500) = 0
+			key(8000) = 1
 		}
 	}
 
 	hairball {
 		interp = "linear"
 		trans = 600
-		dur = 18000
+		dur = 17000
 	}
 
 	reactor {
@@ -215,30 +215,30 @@ demoseq {
 	}
 
 	voxelscape {
-		dur = 24576
+		dur = 22850
 
 		fade {
 			interp = "linear"
 			key(0) = 0
 			key(2048) = 1
 			interp = "linear"
-			key(23040) = 1
-			key(24576) = 0
+			key(22000) = 1
+			key(22850) = 0
 		}
 
 		flypath {
 			interp = "linear"
 			key(0) = 0
-			key(24576) = 1
+			key(22850) = 1
 		}
 	}
 
 	polka {
-		dur = 12288
+		dur = 15000
 
 		radBlurIn {
 			wait = 2048
-			dur = 14336
+			dur = 15000
 		}
 
 		distanceoids {
@@ -250,7 +250,7 @@ demoseq {
 		objLeft {
 			interp = "smoothstep"
 			key(0) = 0
-			key(1280) = 1
+			key(1024) = 1
 		}
 
 		objRight {
@@ -261,13 +261,13 @@ demoseq {
 
 		closeIn {
 			interp = "smoothstep"
-			key(10240) = 0
-			key(12288) = 1
+			key(13000) = 0
+			key(15000) = 1
 		}
 	}
 
 	bump {
-		dur = 16384
+		dur = 16138
 
 		scalerIn {
 			wait = 7576
@@ -276,7 +276,7 @@ demoseq {
 
 		electroids {
 			interp = "linear"
-			key(2048) = 0
+			key(1024) = 0
 			key(7500) = 48
 			interp = "linear"
 			key(7500) = 48
@@ -286,7 +286,7 @@ demoseq {
 		fade {
 			interp = "linear"
 			key(0) = 0
-			key(1024) = 1
+			key(512) = 1
 			interp = "linear"
 			key(8192) = 1
 			key(8575) = 0
@@ -294,8 +294,8 @@ demoseq {
 			key(8576) = 0
 			key(9000) = 1
 			interp = "linear"
-			key(16000) = 1
-			key(16384) = 0
+			key(15500) = 1
+			key(16138) = 0
 		}
 	}
 
@@ -325,7 +325,7 @@ demoseq {
 			waitkey(50) = 0
 			waitkey(50) = 1
 
-			key(10000) = 0
+			key(9940) = 0
 			waitkey(50) = 1
 			waitkey(70) = 0
 			waitkey(100) = 1
@@ -335,12 +335,12 @@ demoseq {
 		fadeout {
 			interp = "linear"
 			waitkey(0) = 1
-			waitkey(800) = 0
+			waitkey(760) = 0
 		}
 	}
 
 	molten {
-		dur = 12000
+		dur = 11962
 
 		rise {
 			interp = "smoothstep"

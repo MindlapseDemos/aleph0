@@ -6,7 +6,6 @@
 
 #include "demo.h"
 #include "screen.h"
-#include "opt_rend.h"
 #include "gfxutil.h"
 #include "noise.h"
 
@@ -259,6 +258,7 @@ static void destroy(void)
 	free(waterBuffer1);
 	free(waterBuffer2);
 	free(flowerShadesPal);
+	free(rainDrops);
 
 	freeMesh(meshFlower);
 	freeOptEngine();

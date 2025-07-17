@@ -166,12 +166,12 @@ int demo_init(void)
 		return -1;
 	}
 
-	if(!opt.dbgmode) {
-		dseq_start();
-	}
-
 	if(opt.music) {
 		au_play_module(mod);
+	}
+
+	if(!opt.dbgmode) {
+		dseq_start();
 	}
 	return 0;
 }

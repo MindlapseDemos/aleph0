@@ -72,3 +72,5 @@ ucfg.mk
 *.glyphmap
 aleph0
 alephpre
+events*
+data-prev/

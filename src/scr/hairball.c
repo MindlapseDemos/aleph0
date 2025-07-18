@@ -58,6 +58,7 @@ struct thing {
 };
 
 static int init(void);
+static void init_thing(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
@@ -143,6 +144,8 @@ static int init(void)
 		playanim = 1;
 	}
 
+	init_thing();
+
 	/* galaxy sprite */
 	if(load_image(&galaxyimg, "data/galaxy.png") == -1) {
 		fprintf(stderr, "failed to load galaxy sprite\n");
@@ -155,29 +158,12 @@ static int init(void)
 	return 0;
 }
 
-static void destroy(void)
-{
-}
-
-static void start(long trans_time)
+static void init_thing(void)
 {
 	int i, j, k;
 	cgm_vec3 v, dir;
 	struct g3d_vertex *vert;
 	uint16_t *idxptr, vidx;
-
-	if(!trans_time) return;
-
-	g3d_enable(G3D_DEPTH_TEST);
-	g3d_enable(G3D_CULL_FACE);
-	g3d_enable(G3D_LIGHT0);
-	g3d_disable(G3D_LIGHTING);
-
-	g3d_polygon_mode(G3D_GOURAUD);
-
-	g3d_matrix_mode(G3D_PROJECTION);
-	g3d_load_identity();
-	g3d_perspective(50.0, 1.33333, 0.5, 100.0);
 
 	cgm_midentity(thing.xform);
 	cgm_vcons(&thing.pos, 0, 0, 0);
@@ -247,7 +233,33 @@ static void start(long trans_time)
 			idxptr[2] = TENT_NVERTS - 1;
 			idxptr += 3;
 		}
+	}
 
+	printf("thing triangles: %d\n", TENT_NTRIS * NUM_TENT + sphmesh.icount / 4);
+}
+
+static void destroy(void)
+{
+}
+
+static void start(long trans_time)
+{
+	int i;
+
+	if(!trans_time) return;
+
+	g3d_enable(G3D_DEPTH_TEST);
+	g3d_enable(G3D_CULL_FACE);
+	g3d_enable(G3D_LIGHT0);
+	g3d_disable(G3D_LIGHTING);
+
+	g3d_polygon_mode(G3D_GOURAUD);
+
+	g3d_matrix_mode(G3D_PROJECTION);
+	g3d_load_identity();
+	g3d_perspective(50.0, 1.33333, 0.5, 100.0);
+
+	for(i=0; i<NUM_TENT; i++) {
 		if(!playanim) update_tentacle(tentmesh + i, i);
 	}
 
@@ -264,8 +276,6 @@ static void start(long trans_time)
 			update_thing();
 		}
 	}
-
-	printf("thing triangles: %d\n", TENT_NTRIS * NUM_TENT + sphmesh.icount / 4);
 
 	start_time = time_msec;
 	prev_thing_upd = 0;

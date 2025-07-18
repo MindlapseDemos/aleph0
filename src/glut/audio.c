@@ -208,6 +208,13 @@ int au_module_state(struct au_module *mod)
 	return curmod ? AU_PLAYING : AU_STOPPED;
 }
 
+int au_player_pos(void)
+{
+	if(!curmod) return -1;
+
+	return Player_GetOrder() - 1;
+}
+
 int au_volume(int vol)
 {
 	AU_VOLADJ(vol_master, vol);

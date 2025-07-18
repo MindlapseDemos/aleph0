@@ -64,7 +64,7 @@ extern uint16_t loading_pixels[];	/* data.asm */
 
 static struct screen *scr;
 
-static int showfps;
+static int showfps, showpat;
 
 
 int demo_init_cfgopt(int argc, char **argv)
@@ -278,6 +278,12 @@ void demo_draw(void)
 /* called by swap_buffers just before the actual swap */
 void demo_post_draw(void *pixels)
 {
+	if(showpat && opt.music && au_module_state(0) == AU_PLAYING) {
+		char buf[128];
+		sprintf(buf, "modpos: %04d\n", au_player_pos());
+		cs_cputs(pixels, 240, 10, buf);
+	}
+
 	/* no consoles, cursors, fps counters and part names in non-debug mode */
 	if(!opt.dbgmode) {
 		if(showfps) {
@@ -373,6 +379,10 @@ void demo_keyboard(int key, int press)
 			showfps ^= 1;
 			break;
 
+		case KB_F10:
+			showpat ^= 1;
+			break;
+
 		case '/':
 			if(!con_active) {
 				con_start();
@@ -388,6 +398,10 @@ void demo_keyboard(int key, int press)
 					dseq_resume();
 				}
 			}
+			break;
+
+		case '\n':
+			printf("MARK %lu\n", time_msec);
 			break;
 
 		default:

@@ -162,6 +162,16 @@ int au_module_state(struct au_module *mod)
 	return curmod ? AU_PLAYING : AU_STOPPED;
 }
 
+int au_player_pos(void)
+{
+	MIDASplayStatus st;
+
+	if(!curmod) return -1;
+
+	MIDASgetPlayStatus(modplay, &st);
+	return st.pattern;
+}
+
 int au_volume(int vol)
 {
 	AU_VOLADJ(vol_master, vol);

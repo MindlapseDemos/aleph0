@@ -1,4 +1,5 @@
 #!/bin/sh
 
+rm -f ddsrc.zip
 zip -r ddsrc.zip . -i \*.c -i \*.h -i \*.asm -i \*.s -i \*.S -i \*.inl \
 	-i \*akefile\* -i \*.bat -i packsrc -i unpsrc -x *.swp -i \*.mk -i \*.seq

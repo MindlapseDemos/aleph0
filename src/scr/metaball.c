@@ -173,7 +173,7 @@ static void update(void)
 	static float speed[] = {1.2, 2.01, 1.5};
 	static float scale[][3] = {{1, 2, 0.8}, {0.5, 1.6, 0.6}, {1.5, 0.7, 0.5}};
 	static float offset[][3] = {{0, 0, 0}, {0.25, 0, 0}, {-0.2, 0.15, 0.2}};
-	static float start[] = {-5, -5, 4.5};
+	static float start[] = {-5, -5, 4.7};
 
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
 
@@ -305,6 +305,7 @@ static void shade_blobs(void)
 		y = varr->y - VOL_HALF_YSCALE;
 		vgrad = fabs(4.0 * y / VOL_ZSCALE);
 		t = fabs(varr->ny) * vgrad;
+		if(t > 1.0f) t = 1.0f;
 		cgm_vlerp(&col, blobcol, blobcol + 1, t);
 		varr->r = cround64(col.x * 255.0f);
 		varr->g = cround64(col.y * 255.0f);

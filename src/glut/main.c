@@ -51,7 +51,10 @@ static unsigned int modkeys;
 
 static int win_width, win_height;
 static float win_aspect;
+#ifndef NO_GLTEX
 static unsigned int tex;
+static int tex_xsz, tex_ysz;
+#endif
 
 #ifdef __unix__
 #include <GL/glx.h>
@@ -201,7 +204,6 @@ int match_video_mode(int xsz, int ysz, int bpp)
 	return -1;
 }
 
-static int tex_xsz, tex_ysz;
 static uint32_t *convbuf;
 static int convbuf_size;
 
@@ -213,6 +215,9 @@ void *set_video_mode(int idx, int nbuf)
 		return vmem;
 	}
 
+#ifdef NO_GLTEX
+	glPixelZoom(opt.scale, opt.scale);
+#else
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D, tex);
 
@@ -231,6 +236,7 @@ void *set_video_mode(int idx, int nbuf)
 	glMatrixMode(GL_TEXTURE);
 	glLoadIdentity();
 	glScalef((float)vm->xsz / tex_xsz, (float)vm->ysz / tex_ysz, 1);
+#endif
 
 	if(vm->xsz * vm->ysz > convbuf_size) {
 		convbuf_size = vm->xsz * vm->ysz;
@@ -254,7 +260,7 @@ void wait_vsync(void)
 
 void blit_frame(void *pixels, int vsync)
 {
-	int i;
+	unsigned int i, j;
 	uint32_t *dptr = convbuf;
 	uint16_t *sptr = pixels;
 	static int prev_vsync = -1;
@@ -266,14 +272,21 @@ void blit_frame(void *pixels, int vsync)
 
 	demo_post_draw(pixels);
 
-	for(i=0; i<FB_WIDTH * FB_HEIGHT; i++) {
-		int r = UNPACK_R16(*sptr);
-		int g = UNPACK_G16(*sptr);
-		int b = UNPACK_B16(*sptr);
-		*dptr++ = PACK_RGB32(b, g, r);
-		sptr++;
+	sptr = (uint16_t*)pixels + (FB_HEIGHT - 1) * FB_WIDTH;
+	for(i=0; i<FB_HEIGHT; i++) {
+		for(j=0; j<FB_WIDTH; j++) {
+			uint16_t pix = sptr[j];
+			unsigned int r = UNPACK_R16(pix);
+			unsigned int g = UNPACK_G16(pix);
+			unsigned int b = UNPACK_B16(pix);
+			*dptr++ = PACK_RGB32(b, g, r);
+		}
+		sptr -= FB_WIDTH;
 	}
 
+#ifdef NO_GLTEX
+	glDrawPixels(FB_WIDTH, FB_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, convbuf);
+#else
 	glBindTexture(GL_TEXTURE_2D, tex);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, FB_WIDTH, FB_HEIGHT, GL_RGBA,
 			GL_UNSIGNED_BYTE, convbuf);
@@ -289,15 +302,16 @@ void blit_frame(void *pixels, int vsync)
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glBegin(GL_QUADS);
-	glTexCoord2f(0, 1);
-	glVertex2f(-1, -1);
-	glTexCoord2f(1, 1);
-	glVertex2f(1, -1);
-	glTexCoord2f(1, 0);
-	glVertex2f(1, 1);
 	glTexCoord2f(0, 0);
+	glVertex2f(-1, -1);
+	glTexCoord2f(1, 0);
+	glVertex2f(1, -1);
+	glTexCoord2f(1, 1);
+	glVertex2f(1, 1);
+	glTexCoord2f(0, 1);
 	glVertex2f(-1, 1);
 	glEnd();
+#endif
 
 	glutSwapBuffers();
 	assert(glGetError() == GL_NO_ERROR);
@@ -399,6 +413,7 @@ static void keyup(unsigned char key, int x, int y)
 
 static void skeydown(int key, int x, int y)
 {
+#ifndef NO_GLTEX
 	if(key == GLUT_KEY_F5) {
 		opt.scaler = (opt.scaler + 1) % NUM_SCALERS;
 
@@ -410,6 +425,7 @@ static void skeydown(int key, int x, int y)
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		}
 	}
+#endif
 	key = translate_special(key);
 	keystate[key] = 1;
 	demo_keyboard(key, 1);

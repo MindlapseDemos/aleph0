@@ -10,10 +10,10 @@ obj = src/3dgfx/3dgfx.o src/3dgfx/mesh.o src/3dgfx/meshload.o \
 	  src/scr/juliatun.o src/scr/metaball.o src/scr/minifx.o src/scr/molten.o \
 	  src/scr/opt_3d.o src/scr/opt_rend.o src/scr/polka.o src/scr/space.o \
 	  src/scr/smoketxt.o src/scr/thunder.o src/scr/tunnel.o src/scr/voxscape.o \
-	  src/scr/water.o src/sdl/main.o src/sdl/audio.o src/sdl/timer.o src/sdl/sball.o \
+	  src/scr/water.o src/glut/main.o src/glut/audio.o src/glut/miniglut.o \
 	  src/tinyfps.o src/treestor.o src/ts_text.o src/util.o
 
-bin = sdldemo
+bin = demo
 
 inc = -I/usr/local/include -Isrc -Isrc/3dgfx -Isrc/rt -Isrc/scr -Isrc/utils \
 	  -Isrc/glut -Ilibs -Ilibs/imago/src -Ilibs/anim/src -Ilibs/mikmod/include \
@@ -25,7 +25,7 @@ opt = -O3
 CFLAGS = $(inc) $(CFLAGS_sys) $(CFLAGS_extra) $(opt) $(dbg) $(def)
 LDFLAGS = -Llibs/imago -Llibs/anim -Llibs/mikmod -Llibs/goat3d $(LDFLAGS_sys) \
 		  $(LDFLAGS_extra)
-LIBS = -limago -lanim -lmikmod -lgoat3d -lSDL $(LIBS_sys) -lm
+LIBS = -limago -lanim -lmikmod -lgoat3d $(LIBS_sys) -lm
 
 $(bin): $(obj) imago anim mikmod goat3d
 	$(CC) -o $@ $(obj) $(LDFLAGS) $(LIBS)

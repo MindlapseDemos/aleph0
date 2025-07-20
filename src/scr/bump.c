@@ -10,6 +10,7 @@
 #include "imago2.h"
 
 #include "opt_rend.h"
+#include "util.h"
 
 static int init(void);
 static void destroy(void);
@@ -501,7 +502,11 @@ static void renderLight(unsigned short *lightBitmap, Edge *lightEdges, unsigned 
 				dst32 = (uint32_t*)dstIn;
 				count = (xp1 - xp0) >> 1;
 				while (count-- != 0) {
+#ifdef __mips
+					read_unaligned32(dst32++, src32++);
+#else
 					*dst32++ |= *src32++;
+#endif
 				};
 
 				srcIn = (uint16_t*)src32;

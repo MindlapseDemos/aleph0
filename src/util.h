@@ -51,7 +51,13 @@ static INLINE int32_t cround64(double val)
 	return *(int32_t*)&val;
 }
 #else
-#define cround64(x)	((int32_t)(x))
+static INLINE int32_t cround64(double val)
+{
+	if(val < 0.0f) {
+		return (int32_t)(val - 0.5f);
+	}
+	return (int32_t)(val + 0.5f);
+}
 #endif
 
 static INLINE float rsqrt(float x)

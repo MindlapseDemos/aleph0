@@ -50,6 +50,11 @@ static INLINE int32_t cround64(double val)
 	val += 6755399441055744.0;
 	return *(int32_t*)&val;
 }
+
+static INLINE void read_unaligned32(void *dest, void *src)
+{
+	*(uint32_t*)dest = *(uint32_t*)src;
+}
 #else
 static INLINE int32_t cround64(double val)
 {
@@ -57,6 +62,17 @@ static INLINE int32_t cround64(double val)
 		return (int32_t)(val - 0.5f);
 	}
 	return (int32_t)(val + 0.5f);
+}
+
+static INLINE void read_unaligned32(void *dest, void *src)
+{
+	uint32_t *dptr = dest;
+	unsigned char *bsrc = src;
+#ifdef BUILD_BIGENDIAN
+	*dptr = (bsrc[0] << 24) | (bsrc[1] << 16) | (bsrc[2] << 8) | bsrc[3];
+#else
+	*dptr = (bsrc[3] << 24) | (bsrc[2] << 16) | (bsrc[1] << 8) | bsrc[0];
+#endif
 }
 #endif
 

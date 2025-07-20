@@ -400,10 +400,6 @@ void demo_keyboard(int key, int press)
 			}
 			break;
 
-		case '\n':
-			printf("MARK %lu\n", time_msec);
-			break;
-
 		default:
 			if(con_active) {
 				con_active = con_input(key);

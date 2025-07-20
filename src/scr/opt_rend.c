@@ -745,9 +745,21 @@ void drawBlob(int posX, int posY, int size, unsigned char *blobBuffer)
 		unsigned int* src = (unsigned int*)bd->data;
 
 		for (y = 0; y < sizeY; ++y) {
+#ifdef __mips
+			unsigned char *dptr = (unsigned char*)dst;
+			for (x = 0; x < sizeX; ++x) {
+				unsigned int sval = src[x];
+				dptr[0] = sval >> 24;
+				dptr[1] = sval >> 16;
+				dptr[2] = sval >> 8;
+				dptr[3] = sval;
+				dptr += 4;
+			}
+#else
 			for (x = 0; x < sizeX; ++x) {
 				*(dst + x) += *(src + x);
 			}
+#endif
 			src += sizeX;
 			dst += POLKA_BUFFER_WIDTH / 4;
 		}

@@ -9,6 +9,7 @@
 #include "screen.h"
 #include "util.h"
 
+
 /* Render blur in half x half dimenstions. Add one pixel padding in all 
  * directions (2 pixels horizontally, 2 pixels vertically).
  */
@@ -226,8 +227,13 @@ static void blitEffect() {
 			br = (tr + ((*src2 + *(src2 + 1)) >> 1)) >> 1;
 
 			/* Pack 2 pixels in each 32 bit word */
+#ifdef BUILD_BIGENDIAN
+			*dst1 = (palette[tl] << 16) | palette[tr];
+			*dst2 = (palette[bl] << 16) | palette[br];
+#else
 			*dst1 = (palette[tr] << 16) | palette[tl];
 			*dst2 = (palette[br] << 16) | palette[bl];
+#endif
 
 			dst1++;
 			src1++;
@@ -260,8 +266,13 @@ static void blitEffectBackTo8bitBuffer() {
 			br = (tr + ((*src2 + *(src2 + 1)) >> 1)) >> 1;
 
 			/* Pack 2 pixels in each 16 bit word */
+#ifdef BUILD_BIGENDIAN
+			*dst1 = (tl << 8) | tr;
+			*dst2 = (bl << 8) | br;
+#else
 			*dst1 = (tr << 8) | tl;
 			*dst2 = (br << 8) | bl;
+#endif
 
 			dst1++;
 			src1++;

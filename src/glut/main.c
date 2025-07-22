@@ -83,8 +83,12 @@ cgm_quat sball_view_rot = {0, 0, 0, 1};
 int main(int argc, char **argv)
 {
 	glutInit(&argc, argv);
+
+	/* constrain default scale factor on low-res */
 	if(glutGet(GLUT_SCREEN_HEIGHT) <= 960 && opt.scale > 2) {
-		opt.scale = 2;	/* constrain default scale factor on low-res */
+		opt.scale = 2;
+	} else if(glutGet(GLUT_SCREEN_HEIGHT) <= 1024 && opt.scale > 3) {
+		opt.scale = 3;
 	}
 
 	if(demo_init_cfgopt(argc, argv) == -1) {

@@ -44,7 +44,7 @@ static int loadAndProcessNormal(void);
 static void updateScrollTables(float dt);
 
 
-static void updatePropeller(float t);
+/*static void updatePropeller(float t);*/
 
 static int init(void);
 static void destroy(void);
@@ -63,11 +63,13 @@ static float lastFrameDuration = 0.0f;
 static struct image logo[5];
 static struct image parallax[4];
 static const char *parfiles[] = {
-	"data/grclouds.png"/*,
-	"data/grmnt1.png",
+	"data/grclouds.png",
+	/*"data/grmnt.png",
 	"data/grmnt2.png",
 	"data/grmnt3.png"*/
 };
+static int par_ypos[] = {85, 111};
+static float par_speed[] = {0.75f, 1.1f};
 #define NUM_PAR_LAYERS		(sizeof parfiles / sizeof *parfiles)
 static dseq_event *ev_grise, *ev_logo, *ev_fadeout;
 
@@ -388,13 +390,13 @@ static void draw(void)
 	}
 
 	/* Update mini-effects here */
-	updatePropeller(4.0f * time_msec / 1000.0f);
+	/*updatePropeller(4.0f * time_msec / 1000.0f);*/
 
 	/* Blit minifx reflections first, to be  displaced */
-	for (i = 0; i < 5; i++) {
+	/*for (i = 0; i < 5; i++) {
 		rleBlitScale(rlePropeller, effectBuffer + EFFECT_BUFFER_PADDING, FB_WIDTH, FB_HEIGHT, EFFECT_BUFFER_W,
                   134 + (i - 3) * 60, 200, 1.0f, -1.8f);
-	}
+	}*/
 
 	/* Perform displacement */
 	dst = effectBuffer + HORIZON_HEIGHT * EFFECT_BUFFER_W + EFFECT_BUFFER_PADDING;
@@ -426,18 +428,18 @@ static void draw(void)
 	}
 
 	/* Then after displacement, blit the objects */
-	for (i = 0; i < 5; i++) {
+	/*for (i = 0; i < 5; i++) {
 		rleBlitScale(rlePropeller, effectBuffer + EFFECT_BUFFER_PADDING, FB_WIDTH, FB_HEIGHT, EFFECT_BUFFER_W,
                   134 + (i - 3) * 60, 150, 1.0f, 1.0f);
-	}
+	}*/
 
 	/*******************************************************************************/
 	/* Blit effect to framebuffer */
 	src = effectBuffer + EFFECT_BUFFER_PADDING;
 	dst = fb_pixels;
 
-	pary = 90;
 	if(!dseq_isactive(ev_fadeout)) {
+		pary = 0;
 		for (scanline = 0; scanline < FB_HEIGHT; scanline++) {
 			memcpy(dst, src, FB_WIDTH * 2);
 			/*
@@ -454,7 +456,7 @@ static void draw(void)
 		float val = cgm_logerp(1, 240, t);
 		scanline = cround64(val);
 
-		pary += scanline;
+		pary = scanline;
 
 		if(scanline) {
 			memset(fb_pixels, 0, scanline * FB_WIDTH * 2);
@@ -469,10 +471,16 @@ static void draw(void)
 	}
 
 	for(i=0; i<NUM_PAR_LAYERS; i++) {
-		float speed = (float)(i + 1) * 0.75;
-		int scroll = cround64((float)anim * speed);
-		blendfb_rle(fb_pixels, -scroll, pary, parallax + i);
-		blendfb_rle(fb_pixels, 320 - scroll, pary, parallax + i);
+		int scroll = cround64((float)anim * par_speed[i]);
+		int endx, xpos = -scroll;
+
+		while(xpos < 320) {
+			endx = xpos + parallax[i].width;
+			if(endx >= 0) {
+				blendfb_rle(fb_pixels, xpos, pary + par_ypos[i], parallax + i);
+			}
+			xpos = endx;
+		}
 	}
 
 	if((show_logo = (int)dseq_value(ev_logo))) {
@@ -634,6 +642,7 @@ static void updateScrollTables(float dt) {
  *                                   PROPELLER STUFF
  * -------------------------------------------------------------------------------------------------
  */
+#if 0
 
 #define PROPELLER_CIRCLE_RADIUS 18
 #define PROPELLER_CIRCLE_RADIUS_SQ (PROPELLER_CIRCLE_RADIUS * PROPELLER_CIRCLE_RADIUS)
@@ -712,3 +721,5 @@ static void updatePropeller(float t) {
 	rlePropeller = rleEncode(rlePropeller, miniFXBuffer, 32, 32);
 
 }
+
+#endif

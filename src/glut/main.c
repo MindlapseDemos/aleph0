@@ -54,6 +54,8 @@ static float win_aspect;
 #ifndef NO_GLTEX
 static unsigned int tex;
 static int tex_xsz, tex_ysz;
+#else
+static int xoffs, yoffs;
 #endif
 
 #if defined(__unix__) || defined(unix)
@@ -216,9 +218,7 @@ void *set_video_mode(int idx, int nbuf)
 		return vmem;
 	}
 
-#ifdef NO_GLTEX
-	glPixelZoom(opt.scale, opt.scale);
-#else
+#ifndef NO_GLTEX
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D, tex);
 
@@ -387,6 +387,20 @@ static void idle(void)
 
 static void reshape(int x, int y)
 {
+#ifdef NO_GLTEX
+	float xzoom = (float)x / FB_WIDTH;
+	float yzoom = (float)y / FB_HEIGHT;
+	if(yzoom < xzoom) {
+		xzoom = yzoom;
+		xoffs = (x - (int)(FB_WIDTH * yzoom)) >> 1;
+		yoffs = 0;
+	} else {
+		xoffs = 0;
+		yoffs = (y - (int)(FB_HEIGHT * xzoom)) >> 1;
+	}
+	glPixelZoom(xzoom, xzoom);
+#endif
+
 	win_width = x;
 	win_height = y;
 	win_aspect = (float)x / (float)y;

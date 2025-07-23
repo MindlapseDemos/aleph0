@@ -121,8 +121,11 @@ int main(int argc, char **argv)
 
 	glutSetCursor(GLUT_CURSOR_NONE);
 
+	glDisable(GL_DITHER);
+#ifndef NO_GLTEX
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_CULL_FACE);
+#endif
 
 #ifndef NO_ASM
 	if(read_cpuid(&cpuid) == 0) {
@@ -286,6 +289,9 @@ void blit_frame(void *pixels, int vsync)
 	}
 
 #ifdef NO_GLTEX
+	if(xoffs | yoffs) {
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
 	glDrawPixels(FB_WIDTH, FB_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, convbuf);
 #else
 	glBindTexture(GL_TEXTURE_2D, tex);
@@ -390,6 +396,14 @@ static void reshape(int x, int y)
 #ifdef NO_GLTEX
 	float xzoom = (float)x / FB_WIDTH;
 	float yzoom = (float)y / FB_HEIGHT;
+#endif
+
+	win_width = x;
+	win_height = y;
+	win_aspect = (float)x / (float)y;
+	glViewport(0, 0, x, y);
+
+#ifdef NO_GLTEX
 	if(yzoom < xzoom) {
 		xzoom = yzoom;
 		xoffs = (x - (int)(FB_WIDTH * yzoom)) >> 1;
@@ -399,12 +413,12 @@ static void reshape(int x, int y)
 		yoffs = (y - (int)(FB_HEIGHT * xzoom)) >> 1;
 	}
 	glPixelZoom(xzoom, xzoom);
-#endif
 
-	win_width = x;
-	win_height = y;
-	win_aspect = (float)x / (float)y;
-	glViewport(0, 0, x, y);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, x, 0, y, -1, 1);
+	glRasterPos2i(xoffs, yoffs);
+#endif
 }
 
 static void keydown(unsigned char key, int x, int y)

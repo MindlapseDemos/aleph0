@@ -348,13 +348,6 @@ static void draw(void)
 	}
 	/*******************************************************************************/
 
-	/*
-	if(dseq_started() && !dseq_value(ev_grise)) {
-		memset16(fb_pixels, 0, 320 * 240);
-		goto draw_logo;
-	}
-	*/
-
 	lastFrameDuration = (time_msec - lastFrameTime) / 1000.0f;
 	lastFrameTime = time_msec;
 
@@ -487,12 +480,8 @@ static void draw(void)
 		blendfb_rle(fb_pixels, 160 - 115, 100, logo + (show_logo - 1));
 	}
 
-	swap_buffers(0);
-	return;
 	/*******************************************************************************/
-
-
-
+	/*
 	rb_begin(bitmap_props);
 	node = rb_next(bitmap_props);
 	while (node) {
@@ -501,6 +490,7 @@ static void draw(void)
 			100, 120, 2, 2);
 		node = rb_next(bitmap_props);
 	}
+	*/
 
 	swap_buffers(0);
 }

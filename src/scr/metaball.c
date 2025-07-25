@@ -244,7 +244,7 @@ static void draw(void)
 	blitfb_rle(fb_pixels, 160 - 197/2, 240 - 45, spr + (SPR_BOT_OFF + power));
 	if((faces = dseq_value(ev_faces))) {
 		float t;
-		int offs = cround64(faces * 98.0f);
+		int offs = cround64(faces * 88.0f);
 		int yoffs = 0;
 
 		if((t = dseq_param(ev_fadeout)) > 0.0f) {

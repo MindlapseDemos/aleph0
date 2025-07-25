@@ -138,7 +138,8 @@ static int init(void)
 		fprintf(stderr, "failed to initialize thing animation node\n");
 		return -1;
 	}
-	anm_set_extrapolator(&thing.node, ANM_EXTRAP_REPEAT);
+	anm_set_extrapolator(&thing.node, ANM_EXTRAP_CLAMP);
+	anm_set_interpolator(&thing.node, ANM_INTERP_CUBIC);
 	thing.anim = anm_get_animation(&thing.node, 0);
 	if(load_anim(thing.anim, "data/thing.anm") != -1) {
 		playanim = 1;

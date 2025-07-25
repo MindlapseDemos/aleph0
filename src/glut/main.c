@@ -17,6 +17,8 @@
 #include "util.h"
 #include "cpuid.h"
 
+#undef SBALL_CAMERA
+
 static void display(void);
 static void idle(void);
 static void reshape(int x, int y);
@@ -544,23 +546,25 @@ static cgm_vec3 sb_tmot, sb_rmot;
 
 static void sball_motion(int x, int y, int z)
 {
+#ifdef SBALL_CAMERA
 	cgm_vcons(&sb_tmot, x, y, -z);
-	/*
+#else
 	sball_pos.x += x * 0.001f;
 	sball_pos.y += y * 0.001f;
 	sball_pos.z -= z * 0.001f;
-	*/
+#endif
 }
 
 static void sball_rotate(int rx, int ry, int rz)
 {
+#ifdef SBALL_CAMERA
 	cgm_vcons(&sb_rmot, -rx, -ry, rz);
-	/*
+#else
 	if(rx | ry | rz) {
 		float s = (float)rsqrt(rx * rx + ry * ry + rz * rz);
 		cgm_qrotate(&sball_rot, -0.001f / s, rx * s, ry * s, -rz * s);
 	}
-	*/
+#endif
 }
 
 static void sball_button(int bn, int st)
@@ -570,6 +574,7 @@ static void sball_button(int bn, int st)
 	sball_rot.w = 1;
 }
 
+#ifdef SBALL_CAMERA
 #define SBALL_RSPEED	0.0002f
 #define SBALL_TSPEED	0.0004f
 
@@ -610,6 +615,16 @@ static void recalc_sball_matrix(void)
 	cgm_vcons(&sb_rmot, 0, 0, 0);
 	cgm_vcons(&sb_tmot, 0, 0, 0);
 }
+#else
+static void recalc_sball_matrix(void)
+{
+	cgm_mrotation_quat(sball_matrix, &sball_rot);
+	cgm_mtranspose(sball_matrix);
+	sball_matrix[12] = sball_pos.x;
+	sball_matrix[13] = sball_pos.y;
+	sball_matrix[14] = sball_pos.z;
+}
+#endif
 
 
 static void set_fullscreen(int fs)

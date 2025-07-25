@@ -11,6 +11,8 @@
 #include "gfxutil.h"
 #include "curve.h"
 
+#define LOAD_COLORS
+
 #define VFOV	50.0f
 #define HFOV	(VFOV * 1.333333f)
 
@@ -97,6 +99,12 @@ static struct {int x, y;} gpos[NUM_GREETS] = {
 #define LINECOLOR	PACK_RGB16(240, 212, 184)
 
 static struct image star;
+
+#ifdef LOAD_COLORS
+unsigned int hexcol_r[2], hexcol_g[2], hexcol_b[2];
+
+static int load_colors(void);
+#endif
 
 
 struct screen *hexfloor_screen(void)
@@ -207,6 +215,12 @@ static int hex_init(void)
 			fprintf(stderr, "Warning: missing event for greet %d: %s\n", i, greetstr[i]);
 		}
 	}
+
+#ifdef LOAD_COLORS
+	if(load_colors() == -1) {
+		return -1;
+	}
+#endif
 
 	return 0;
 }
@@ -426,6 +440,46 @@ static void hex_draw(void)
 #define HG		128
 #define HB		255
 
+#ifdef LOAD_COLORS
+static int load_colors(void)
+{
+	FILE *fp;
+	char buf[128];
+	int i;
+
+	if(!(fp = fopen("hexcol.txt", "rb"))) {
+		fprintf(stderr, "failed to load hexcol.txt\n");
+		hexcol_r[0] = LR;
+		hexcol_g[0] = LG;
+		hexcol_b[0] = LB;
+		hexcol_r[1] = HR;
+		hexcol_g[1] = HG;
+		hexcol_b[1] = HB;
+		return 0;
+	}
+
+	for(i=0; i<2; i++) {
+		if(!fgets(buf, sizeof buf, fp)) {
+			fprintf(stderr, "invalid hexcol.txt, needs to have to lines of colors\n");
+			return -1;
+		}
+		if(buf[0] == '#') {
+			if(sscanf(buf + 1, "%2x%2x%2x", hexcol_r + i, hexcol_g + i, hexcol_b + i) != 3) {
+				fprintf(stderr, "hexcol.txt: failed to parse html color: %s\n", buf);
+				return -1;
+			}
+		} else {
+			if(sscanf(buf, "%u %u %u", hexcol_r + i, hexcol_g + i, hexcol_b + i) != 3) {
+				fprintf(stderr, "hexcol.txt: failed to parse color triplet: %s\n", buf);
+				return -1;
+			}
+		}
+	}
+	fclose(fp);
+	return 0;
+}
+#endif
+
 static void draw_hextile(struct hextile *tile, float t)
 {
 	int i, r, g, b;
@@ -433,9 +487,15 @@ static void draw_hextile(struct hextile *tile, float t)
 	struct g3d_vertex cv;
 	struct g3d_vertex *vptr;
 
+#ifndef LOAD_COLORS
 	r = LR + (((HR - LR) * tt) >> 8);
 	g = LG + (((HG - LG) * tt) >> 8);
 	b = LB + (((HB - LB) * tt) >> 8);
+#else
+	r = hexcol_r[0] + (((hexcol_r[1] - hexcol_r[0]) * tt) >> 8);
+	g = hexcol_g[0] + (((hexcol_g[1] - hexcol_g[0]) * tt) >> 8);
+	b = hexcol_b[0] + (((hexcol_b[1] - hexcol_b[0]) * tt) >> 8);
+#endif
 
 	cv.x = tile->x;
 	cv.z = tile->y;

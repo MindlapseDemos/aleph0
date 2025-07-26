@@ -72,7 +72,7 @@ done
 convimg $srcdir/pool.png $dstdir/pool.jpg 64x64
 convimg $srcdir/base.png $dstdir/base.jpg 256x128
 convimg $srcdir/floor.png $dstdir/floor.jpg 128x256
-convimg $srcdir/columns.png $dstdir/columns.jpg 32x256
+#convimg $srcdir/columns.png $dstdir/columns.jpg 32x256
 
 # -- space scene
 srcdir=data/src/space

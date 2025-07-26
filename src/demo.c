@@ -330,6 +330,23 @@ void change_screen(int idx)
 
 void demo_keyboard(int key, int press)
 {
+#ifdef NDEBUG
+	if(!press) return;
+	switch(key) {
+	case 27:
+		demo_quit();
+		break;
+
+	case KB_F9:
+		showfps ^= 1;
+		break;
+
+	default:
+		break;
+	}
+
+#else	/* debug build */
+
 	if(press) {
 		switch(key) {
 		case 27:
@@ -416,6 +433,7 @@ void demo_keyboard(int key, int press)
 
 		scr_keypress(key);
 	}
+#endif	/* !def NDEBUG */
 }
 
 void demo_run(long start_time)

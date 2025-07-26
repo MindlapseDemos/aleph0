@@ -11,7 +11,7 @@
 #include "gfxutil.h"
 #include "curve.h"
 
-#define LOAD_COLORS
+#undef LOAD_COLORS
 
 #define VFOV	50.0f
 #define HFOV	(VFOV * 1.333333f)

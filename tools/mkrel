@@ -1,7 +1,6 @@
 #!/bin/sh
 
-# XXX change this before release
-release=false
+release=true
 
 bindos=bin/djdemo.exe
 binlnx=bin/demo

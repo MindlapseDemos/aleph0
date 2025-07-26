@@ -1,4 +1,4 @@
-BUILD ?= debug
+BUILD ?= release
 
 src = $(wildcard src/*.c) $(wildcard src/3dgfx/*.c) $(wildcard src/rt/*.c) \
 	  $(wildcard src/scr/*.c) $(wildcard src/glut/*.c)
@@ -70,11 +70,11 @@ sndlib_IRIX = -laudio
 sndlib_mingw = -ldsound
 sndlib_Darwin = -framework CoreAudio
 
-.PHONY: all
-all: data $(bin)
-
 .PHONY: nodata
 nodata: $(bin)
+
+.PHONY: all
+all: data $(bin)
 
 $(bin): $(obj) imago anim mikmod goat3d
 	$(CC) -o $@ $(obj) $(LDFLAGS)

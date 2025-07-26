@@ -1,4 +1,4 @@
-BUILD ?= debug
+BUILD ?= release
 
 src = $(wildcard src/*.c) $(wildcard src/3dgfx/*.c) $(wildcard src/rt/*.c) \
 	  $(wildcard src/scr/*.c) $(wildcard src/dos/*.c)

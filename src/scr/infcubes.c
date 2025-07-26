@@ -9,6 +9,7 @@
 #include "polyfill.h"
 #include "imago2.h"
 #include "gfxutil.h"
+#include "util.h"
 #include "mesh.h"
 #include "image.h"
 #include "noise.h"
@@ -36,7 +37,7 @@ static float cam_dist = 6;*/
 static struct pimage tex_inner, tex_outer;
 static struct g3d_mesh mesh_cube, mesh_cube2;
 
-static dseq_event *ev_zoom;
+static dseq_event *ev_zoom, *ev_fade;
 
 struct screen *infcubes_screen(void)
 {
@@ -79,6 +80,7 @@ static int init(void)
 	normalize_mesh_normals(&mesh_cube2);
 
 	ev_zoom = dseq_lookup("infcubes.zoom");
+	ev_fade = dseq_lookup("infcubes.fade");
 	return 0;
 }
 
@@ -105,8 +107,10 @@ static void draw(void)
 {
 	float t = (float)time_msec / 16.0f;
 	float zoom;
+	unsigned int fade;
 
 	zoom = dseq_value(ev_zoom);
+	fade = cround64(dseq_param(ev_fade) * 256.0f);
 
 	g3d_matrix_mode(G3D_PROJECTION);
 	g3d_load_identity();
@@ -135,7 +139,20 @@ static void draw(void)
 	draw_mesh(&mesh_cube);
 	g3d_disable(G3D_TEXTURE_GEN);
 
-	swap_buffers(fb_pixels);
+	if(fade > 0) {
+		unsigned int i, r, g, b, pix;
+		uint16_t *fbptr = fb_pixels;
+		fade = 256 - fade;
+		for(i=0; i<320*240; i++) {
+			pix = *fbptr;
+			r = 255u + ((((unsigned int)UNPACK_R16(pix) - 255u) * fade) >> 8);
+			g = 255u + ((((unsigned int)UNPACK_G16(pix) - 255u) * fade) >> 8);
+			b = 255u + ((((unsigned int)UNPACK_B16(pix) - 255u) * fade) >> 8);
+			*fbptr++ = PACK_RGB16(r, g, b);
+		}
+	}
+
+	swap_buffers(0);
 }
 
 static int gen_phong_tex(struct pimage *img, int xsz, int ysz, float sexp,

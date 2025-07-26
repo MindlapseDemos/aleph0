@@ -66,7 +66,7 @@ static long anim_dur;
 
 static float view_matrix[16];
 
-static dseq_event *ev_space, *ev_ship, *ev_warp, *ev_flash, *ev_fadeout;
+static dseq_event *ev_space, *ev_ship, *ev_warp, *ev_flash, *ev_fadeout, *ev_fadein;
 
 
 struct screen *space_screen(void)
@@ -161,6 +161,7 @@ static int space_init(void)
 	ev_warp = dseq_lookup("space.warp");
 	ev_flash = dseq_lookup("space.flash");
 	ev_fadeout = dseq_lookup("space.fadeout");
+	ev_fadein = dseq_lookup("space.fadein");
 	return 0;
 }
 
@@ -298,6 +299,19 @@ static void space_draw(void)
 			pal[i * 4 + 2] = (cmap->color[i].b * val) >> 8;
 		}
 		overlay_add_pal(fb_pixels + 250, flashimg.pixels, flashimg.width, flashimg.height, flashimg.width, pal);
+	}
+
+	if(dseq_isactive(ev_fadein)) {
+		unsigned int i, r, g, b, pix;
+		uint16_t *fbptr = fb_pixels;
+		unsigned int fade = cround64(dseq_value(ev_fadein));
+		for(i=0; i<320*240; i++) {
+			pix = *fbptr;
+			r = 255u + ((((unsigned int)UNPACK_R16(pix) - 255u) * fade) >> 8);
+			g = 255u + ((((unsigned int)UNPACK_G16(pix) - 255u) * fade) >> 8);
+			b = 255u + ((((unsigned int)UNPACK_B16(pix) - 255u) * fade) >> 8);
+			*fbptr++ = PACK_RGB16(r, g, b);
+		}
 	}
 
 	if(dseq_isactive(ev_fadeout)) {

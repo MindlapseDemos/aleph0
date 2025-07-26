@@ -49,7 +49,7 @@ static struct g3d_scene *scn;
 static struct g3d_mesh *mesh_hull, *mesh_lit;
 
 #define STARS_RAD	256.0f
-#define NUM_STARS	300
+#define NUM_STARS	600
 static cgm_vec3 stars[NUM_STARS];
 static unsigned char starsize[NUM_STARS];
 static struct image starimg[2];
@@ -106,10 +106,10 @@ static int space_init(void)
 		anim_dur = anim->tracks[0].keys[anim->tracks[0].count - 1].time;
 	}
 
-	tinymt32_init(&rnd, 0xbadf00d);
+	tinymt32_init(&rnd, 7296824);
 	for(i=0; i<NUM_STARS; i++) {
 		sphrand(stars + i, STARS_RAD, &rnd);
-		starsize[i] = (tinymt32_generate_uint32(&rnd) & 0x7f) + 0x80;
+		starsize[i] = tinymt32_generate_uint32(&rnd) & 0xff;
 	}
 
 	for(i=0; i<2; i++) {
@@ -232,6 +232,17 @@ static void update(void)
 	mouse_orbit_update(&cam_theta, &cam_phi, &cam_dist);
 }
 
+static const uint16_t star_coltab[] = {
+	PACK_RGB16(26, 26, 26),
+	PACK_RGB16(64, 64, 64),
+	PACK_RGB16(64, 64, 64),
+	PACK_RGB16(128, 128, 128),
+	PACK_RGB16(128, 128, 128),
+	PACK_RGB16(190, 190, 190),
+	PACK_RGB16(190, 190, 190),
+	PACK_RGB16(255, 255, 255)
+};
+
 static void space_draw(void)
 {
 	int i;
@@ -257,15 +268,15 @@ static void space_draw(void)
 		if(g3d_xform_point(&pt.x)) {
 			int x = cround64(pt.x);
 			int y = cround64(pt.y);
-			int sz = starsize[i];
+			unsigned int sz = starsize[i];
 
 			if(sz > 251) {
 				blendfb_rle(fb_pixels, x - starimg[1].width / 2, y - starimg[1].height / 2, starimg + 1);
-			} else if(sz > 220) {
+			} else if(sz > 230) {
 				blendfb_rle(fb_pixels, x - starimg[0].width / 2, y - starimg[0].height / 2, starimg);
 			} else {
-				uint16_t col = PACK_RGB16(sz, sz, sz);
-				fb_pixels[(y << 8) + (y << 6) + x] = col;
+				unsigned int idx = sz >> 5;
+				fb_pixels[(y << 8) + (y << 6) + x] = star_coltab[idx];
 			}
 		}
 	}

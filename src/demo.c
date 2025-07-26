@@ -325,7 +325,6 @@ void cs_puts_font(cs_font_func csfont, int sz, void *fb, int x, int y, const cha
 void change_screen(int idx)
 {
 	struct screen *scr = scr_screen(idx);
-	printf("chscr %s\n", scr->name);
 	scr_change(scr);
 }
 

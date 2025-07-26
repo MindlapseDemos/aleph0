@@ -50,6 +50,7 @@ static void dump_event(FILE *fp, dseq_event *ev);
 
 int dseq_open(const char *fname)
 {
+	char *env;
 	struct ts_node *ts, *tsn;
 	dseq_event *ev = 0;
 
@@ -85,9 +86,9 @@ int dseq_open(const char *fname)
 
 	printf("dseq_load: loaded %d events from %s\n", num_events, fname);
 
-	{
+	if((env = getenv("EVENT_LOG"))) {
 		int i;
-		FILE *fp = fopen("events", "wb");
+		FILE *fp = fopen(env, "wb");
 		if(fp) {
 			for(i=0; i<num_events; i++) {
 				dump_event(fp, events + i);
@@ -331,7 +332,7 @@ next:	attr = attr->next;
 		} else if(ev->trans_in | ev->trans_out) {
 			/* ... if there's no keyframes, make it the sum of transition times */
 			ev->dur = ev->trans_in + ev->trans_out;
-		} else {
+		} else if(max_subend == -1) {
 			ev->dur = 1000;
 			fprintf(stderr, "warning: can't determine duration for event %s\n", ev->name);
 		}

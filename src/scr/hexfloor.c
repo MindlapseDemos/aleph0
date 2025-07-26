@@ -90,7 +90,7 @@ static const char *greetstr[] = {
 static const char *greetunder[] = {
 	0, 0, "AREA", "DESIGN", 0, 0
 };
-#define NUM_GREETS	(sizeof greetstr / sizeof *greetstr)
+#define NUM_GREETS	6
 static dseq_event *ev_greets[NUM_GREETS];
 static int cur_greet;
 static struct {int x, y;} gpos[NUM_GREETS] = {
@@ -209,7 +209,6 @@ static int hex_init(void)
 	for(i=0; i<NUM_GREETS; i++) {
 		sprintf(name, "hexfloor.greet%d", i);
 		if((ev_greets[i] = dseq_lookup(name))) {
-			printf("set trigger\n");
 			dseq_set_trigger(ev_greets[i], DSEQ_TRIG_START | DSEQ_TRIG_END, greet_trig, (void*)i);
 		} else {
 			fprintf(stderr, "Warning: missing event for greet %d: %s\n", i, greetstr[i]);

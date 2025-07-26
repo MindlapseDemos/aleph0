@@ -156,9 +156,10 @@ demoseq {
 			dur = 700
 		}
 		flash {
-			interp = "sigmoid"
+			interp = "smoothstep"
 			key(18150) = 0
-			key(18250) = 1
+			key(18230) = 1
+			key(18270) = 1
 			key(18350) = 0
 		}
 		fadeout {

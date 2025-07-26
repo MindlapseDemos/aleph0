@@ -6,6 +6,7 @@
 #include <assert.h>
 #include "demo.h"
 #include "3dgfx.h"
+#include "dseq.h"
 #include "vmath.h"
 #include "screen.h"
 #include "util.h"
@@ -374,7 +375,7 @@ static void draw(void)
 
 	g3d_matrix_mode(G3D_MODELVIEW);
 	g3d_load_identity();
-	if(value < 250) {
+	if(value < 250 && dseq_param(ev_scr) < 0.5f) {
 		g3d_translate(0, 0, -cgm_logerp(80, 8, value / 256.0f));
 	} else {
 		g3d_translate(0, 0, -8);

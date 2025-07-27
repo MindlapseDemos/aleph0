@@ -210,9 +210,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: aleph0-pack-${{ env.COMMIT_ID }}
-          path: aleph-preview.zip
-
-# XXX after release:
-#         path: aleph0.zip
+          path: aleph0.zip
 
 # vi:ts=2 sts=2 sw=2 expandtab:

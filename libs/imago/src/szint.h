@@ -32,8 +32,10 @@ typedef __int32 intptr_t;
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199900
 #include <stdint.h>
-#else
+#elif defined(__sgi)
 #include <sys/types.h>
+#else
+#include <inttypes.h>
 #endif
 
 #endif	/* end !msvc */

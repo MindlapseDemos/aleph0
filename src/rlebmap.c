@@ -67,10 +67,10 @@ static INLINE int overlap(RleStreak *a, RleStreak *b)
     int aEnd = a->start + a->length;
     int bEnd = b->start + b->length;
 
-    // Maximum of starts
+    /* Maximum of starts */
     maxStart = a->start > b->start ? a->start : b->start;
 
-    // minimum of ends
+    /* minimum of ends */
     minEnd = aEnd < bEnd ? aEnd : bEnd;
 
     return maxStart <= minEnd;
@@ -122,7 +122,7 @@ RleBitmap *rleEncode(RleBitmap *rle, unsigned char *pixels, int pixelsW, int pix
         rleClear(rle); /* The following code assumes cleared array */
 
     if (pixelsH > rle->h) {
-        return rle; // break hard
+        return rle; /* break hard */
     }
 
     for (y = 0; y < (int)pixelsH; y++) {
@@ -326,7 +326,7 @@ void rleInterpolate(RleBitmap *a, RleBitmap *b, float t, RleBitmap *result)
 
         for (j=0; j<RLE_STREAKS_PER_SCANLINE; j++) {
             if (streakA->length <= 0 && streakB->length <= 0) {
-                break; // no more streaks
+                break; /* no more streaks */
             }
 
             if (streakA->length > 0 && streakB->length > 0) {
@@ -335,16 +335,16 @@ void rleInterpolate(RleBitmap *a, RleBitmap *b, float t, RleBitmap *result)
                 center = omt * centerA + t * centerB;
                 length = omt * streakA->length + t * streakB->length;
             } else if (streakA->length > 0) {
-                // StreakA only - fade out
+                /* StreakA only - fade out */
                 center = streakA->start + 0.5f * streakA->length;
                 length = omt * streakA->length;
             } else {
-                // StreakB only - fade in
+                /* StreakB only - fade in */
                 center = streakB->start + 0.5f * streakB->length;
                 length = t * streakB->length;
             }
 
-            // Write interpolated streak
+            /* Write interpolated streak */
             streakResult->start = (int) (center - 0.5f * length + 0.5f);
             streakResult->length = (int) (length + 0.5f);
 

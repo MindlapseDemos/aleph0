@@ -74,4 +74,4 @@ void rleInterpolate(RleBitmap *a, RleBitmap *b, float t, RleBitmap *result);
 /* Loads bitmap from file and encodes rle from it. */
 RleBitmap *rleFromFile(char *filename);
 
-#endif // __RLE_BITMAP_H__
+#endif /* __RLE_BITMAP_H__ */

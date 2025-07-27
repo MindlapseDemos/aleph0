@@ -84,7 +84,7 @@ static void draw(void) {
 		backBuffer[i] = clearColor16;
 	}
 
-	// Update bitmaps
+	/* Update bitmaps */
 	updatePropeller(time_msec / 1000.0f, state.rlePropeller);
 	updateBlob(time_msec / 1000.0f, state.rleBlob);
 	lerpFactor = 0.5f * sin(time_msec / 5000.0f) + 0.5f;
@@ -92,19 +92,19 @@ static void draw(void) {
 
 	stride = FB_WIDTH;
 	
-	// Render propeller
+	/* Render propeller */
 	rleBlitScale(state.rlePropeller, backBuffer, FB_WIDTH, FB_HEIGHT, stride, 
 		50, 120, 2.0, 2.0);
 	rleBlitScale(state.rlePropeller, backBuffer, FB_WIDTH, FB_HEIGHT, stride, 
 		50, 184, 2.0, -2.0);
 
-	// Render blob
+	/* Render blob */
 	rleBlitScale(state.rleBlob, backBuffer, FB_WIDTH, FB_HEIGHT, stride, 
 		270, 120, 2.0, 2.0);
 	rleBlitScale(state.rleBlob, backBuffer, FB_WIDTH, FB_HEIGHT, stride, 
 		270, 184, 2.0, -2.0);
 
-	// Render interpolated
+	/* Render interpolated */
 	rleBlitScale(state.rleInterpolated, backBuffer, FB_WIDTH, FB_HEIGHT, stride, 
 		160, 120, 2.0, 2.0);
 	rleBlitScale(state.rleInterpolated, backBuffer, FB_WIDTH, FB_HEIGHT, stride, 

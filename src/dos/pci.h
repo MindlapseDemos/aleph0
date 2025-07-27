@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef PCI_H_
 #define PCI_H_
 
-#include "inttypes.h"
+#include "szint.h"
 #include "util.h"
 
 #pragma pack (push, 1)

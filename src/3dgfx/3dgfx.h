@@ -1,7 +1,7 @@
 #ifndef THREEDGFX_H_
 #define THREEDGFX_H_
 
-#include "inttypes.h"
+#include "szint.h"
 #include "gfxutil.h"
 
 #define G3D_PIXFMT16

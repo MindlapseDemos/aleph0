@@ -15,7 +15,7 @@
 #endif
 
 #include "sball.h"
-#include "inttypes.h"
+#include "szint.h"
 #include "dosutil.h"
 
 struct motion {

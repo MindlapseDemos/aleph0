@@ -1,7 +1,7 @@
 #ifndef CONSOLE_H_
 #define CONSOLE_H_
 
-#include "inttypes.h"
+#include "szint.h"
 
 int con_init(void);
 void con_start(void);

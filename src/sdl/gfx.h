@@ -1,7 +1,7 @@
 #ifndef GFX_H_
 #define GFX_H_
 
-#include "inttypes.h"
+#include "szint.h"
 
 struct video_mode {
 	uint16_t mode;

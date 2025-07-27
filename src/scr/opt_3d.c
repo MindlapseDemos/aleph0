@@ -7,7 +7,7 @@
 #include "demo.h"
 #include "screen.h"
 #include "util.h"
-#include "inttypes.h"
+#include "szint.h"
 
 
 static int rotMat[9];

@@ -5,7 +5,7 @@
 #include <assert.h>
 #include "bsptree.h"
 #include "dynarr.h"
-#include "inttypes.h"
+#include "szint.h"
 #include "polyclip.h"
 #include "vmath.h"
 #include "util.h"

@@ -2,7 +2,7 @@
 #define VBE_H_
 
 #include <stdio.h>
-#include "inttypes.h"
+#include "szint.h"
 #include "util.h"
 
 #pragma pack (push, 1)

@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define S3REGS_H_
 
 #include "dosutil.h"
-#include "inttypes.h"
+#include "szint.h"
 
 #define PCI_VENDOR_S3		0x5333
 #define PCI_DEVICE_VIRGE	0x5631

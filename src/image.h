@@ -1,7 +1,7 @@
 #ifndef IMAGE_H_
 #define IMAGE_H_
 
-#include "inttypes.h"
+#include "szint.h"
 
 #define IMG_NOANIM
 

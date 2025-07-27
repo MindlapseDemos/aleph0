@@ -1,7 +1,7 @@
 #ifndef CPUID_H_
 #define CPUID_H_
 
-#include "inttypes.h"
+#include "szint.h"
 
 struct cpuid_info {
 	uint32_t maxidx;	/* 0: eax */

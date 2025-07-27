@@ -35,7 +35,7 @@ along with the program. If not, see <http://www.gnu.org/licenses/>
 
 #include "keyb.h"
 #include "scancode.h"
-#include "inttypes.h"
+#include "szint.h"
 #include "dosutil.h"
 
 #define KB_INTR		0x9

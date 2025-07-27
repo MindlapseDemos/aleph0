@@ -1,7 +1,7 @@
 #ifndef SMOKE_TEXT_H_
 #define SMOKE_TEXT_H_
 
-#include "inttypes.h"
+#include "szint.h"
 
 struct ivec2 { int32_t x, y; };
 

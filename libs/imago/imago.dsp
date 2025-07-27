@@ -541,7 +541,7 @@ SOURCE=.\src\imago_gl.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\inttypes.h
+SOURCE=.\src\szint.h
 # End Source File
 # Begin Source File
 

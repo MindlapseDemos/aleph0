@@ -20,7 +20,7 @@
 #endif
 
 #include "pit8254.h"
-#include "inttypes.h"
+#include "szint.h"
 #include "util.h"
 #include "dosutil.h"
 

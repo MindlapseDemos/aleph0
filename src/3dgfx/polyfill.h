@@ -1,7 +1,7 @@
 #ifndef POLYFILL_H_
 #define POLYFILL_H_
 
-#include "inttypes.h"
+#include "szint.h"
 #include "3dgfx.h"
 
 #define POLYFILL_MODE_MASK	0x03

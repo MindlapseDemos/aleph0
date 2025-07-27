@@ -3,7 +3,7 @@
 
 #include "3dgfx.h"
 #include "image.h"
-#include "inttypes.h"
+#include "szint.h"
 
 struct g3d_material {
 	float r, g, b, a;

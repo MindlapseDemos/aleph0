@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <string.h>
 #include <conio.h>
 #include "dosutil.h"
-#include "inttypes.h"
+#include "szint.h"
 #include "pci.h"
 #include "cdpmi.h"
 #include "demo.h"

@@ -2,7 +2,7 @@
 #include <dpmi.h>
 #include <sys/nearptr.h>
 #include "cdpmi.h"
-#include "inttypes.h"
+#include "szint.h"
 
 uint16_t dpmi_alloc(unsigned int par, uint16_t *sel)
 {

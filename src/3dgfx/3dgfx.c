@@ -8,7 +8,7 @@
 #include "gfxutil.h"
 #include "polyfill.h"
 #include "polyclip.h"
-#include "inttypes.h"
+#include "szint.h"
 #include "demo.h"
 #include "util.h"
 

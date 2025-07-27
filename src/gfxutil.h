@@ -1,7 +1,7 @@
 #ifndef GFXUTIL_H_
 #define GFXUTIL_H_
 
-#include "inttypes.h"
+#include "szint.h"
 #include "image.h"
 
 #define PACK_RGB16(r, g, b) \

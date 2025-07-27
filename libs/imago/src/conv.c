@@ -24,7 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #endif
 #endif
 #include "imago2.h"
-#include "inttypes.h"
+#include "szint.h"
 
 /* pixel-format conversions are sub-optimal at the moment to avoid
  * writing a lot of code. optimize at some point ?

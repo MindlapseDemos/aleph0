@@ -7,8 +7,8 @@ the terms of the 3-clause BSD license. See COPYING for details.
  */
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttypes.h>
 #include <string.h>
+#include "szint.h"
 #include "rbtree.h"
 
 #define INT2PTR(x)	((void*)(intptr_t)(x))

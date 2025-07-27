@@ -1,7 +1,7 @@
 #ifndef DEMO_H_
 #define DEMO_H_
 
-#include "inttypes.h"
+#include "szint.h"
 #include "gfx.h"
 #include "dseq.h"
 #include "image.h"

@@ -1,7 +1,7 @@
 #ifndef VGA_H_
 #define VGA_H_
 
-#include "inttypes.h"
+#include "szint.h"
 #include "dosutil.h"
 #include "cdpmi.h"
 #include "vgaregs.h"

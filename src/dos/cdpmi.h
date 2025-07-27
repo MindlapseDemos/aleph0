@@ -15,7 +15,7 @@
 
 #endif	/* __DJGPP__ */
 
-#include "inttypes.h"
+#include "szint.h"
 #include "util.h"
 
 #pragma pack (push, 1)

@@ -12,4 +12,8 @@ if [ "$sys" = IRIX ]; then
 elif [ "$sys" = Linux ]; then
 	echo "Generating GNU/Linux makefile config: $cfgfile"
 	echo 'LIBS_sys = -lX11 -lGL -lasound -lpthread' >$cfgfile
+
+elif [ "$sys" = FreeBSD ]; then
+	echo "Generating FreeBSD makefile config: $cfgfile"
+	echo 'LIBS_sys = -lX11 -lGL -lpthread' >>$cfgfile
 fi

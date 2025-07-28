@@ -38,6 +38,7 @@
 
 #ifdef __FreeBSD__
 #define DRV_OSS		1
+#define HAVE_SYS_SOUNDCARD_H
 #endif
 
 #ifdef __sgi

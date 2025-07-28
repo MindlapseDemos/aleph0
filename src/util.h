@@ -7,7 +7,7 @@
 
 #if defined(__WATCOMC__) || defined(_WIN32) || defined(__DJGPP__)
 #include <malloc.h>
-#else
+#elif !defined(__FreeBSD__)
 #include <alloca.h>
 #endif
 

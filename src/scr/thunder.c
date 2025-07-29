@@ -74,7 +74,7 @@ static void sortPointSprites();
 
 unsigned char* getThunderBlurBuffer();
 
-static int init(void);
+static int init_thunder(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
@@ -83,7 +83,7 @@ static unsigned int lastFrameTime = 0;
 static float lastFrameDuration = 0.0f;
 static struct screen scr = {
 	"thunder",
-	init,
+	init_thunder,
 	destroy,
 	start,
 	0,
@@ -95,7 +95,7 @@ struct screen *thunder_screen(void)
 	return &scr;
 }
 
-static int init(void)
+static int init_thunder(void)
 {
 	int i = 0;
 

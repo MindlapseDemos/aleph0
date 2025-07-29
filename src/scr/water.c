@@ -14,7 +14,7 @@
 #include "opt_rend.h"
 
 
-static int init(void);
+static int init_water(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
@@ -23,7 +23,7 @@ static void draw(void);
 
 static struct screen scr = {
 	"water",
-	init,
+	init_water,
 	destroy,
 	start,
 	0,
@@ -201,7 +201,7 @@ static void initObjects()
 	setClipValY(CLIP_VAL_Y);
 }
 
-static int init(void)
+static int init_water(void)
 {
 	int i;
 	const int size = WATER_TEX_WIDTH * WATER_TEX_HEIGHT;

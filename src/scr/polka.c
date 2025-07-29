@@ -33,7 +33,7 @@
 #define SMAP_RANGE 256
 
 
-static int init(void);
+static int polka_init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
@@ -79,7 +79,7 @@ static int activeDistPoints = 0;
 
 static struct screen scr = {
 	"polka",
-	init,
+	polka_init,
 	destroy,
 	start,
 	0,
@@ -459,7 +459,7 @@ static void setGridPos(Vector3D* pos, int x, int y, int z)
 	pos->z = z;
 }
 
-static int init(void)
+static int polka_init(void)
 {
 	int i;
 

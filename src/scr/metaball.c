@@ -14,7 +14,7 @@
 
 #undef DBG_VISIT
 
-static int init(void);
+static int mballs_init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
@@ -22,7 +22,7 @@ static void shade_blobs(void);
 
 static struct screen scr = {
 	"metaballs",
-	init,
+	mballs_init,
 	destroy,
 	start, 0,
 	draw
@@ -78,7 +78,7 @@ struct screen *metaballs_screen(void)
 	return &scr;
 }
 
-static int init(void)
+static int mballs_init(void)
 {
 	int i, xsz, ysz;
 

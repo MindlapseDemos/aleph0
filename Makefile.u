@@ -15,9 +15,9 @@ obj = src/3dgfx/3dgfx.o src/3dgfx/mesh.o src/3dgfx/meshload.o \
 
 bin = demo
 
-inc = -I/usr/local/include -Isrc -Isrc/3dgfx -Isrc/rt -Isrc/scr -Isrc/utils \
-	  -Isrc/glut -Ilibs -Ilibs/imago/src -Ilibs/anim/src -Ilibs/mikmod/include \
-	  -Ilibs/goat3d/include
+inc = -Isrc -Isrc/3dgfx -Isrc/rt -Isrc/scr -Isrc/utils -Isrc/glut -Ilibs \
+	  -Ilibs/imago/src -Ilibs/anim/src -Ilibs/mikmod/include \
+	  -Ilibs/goat3d/include -I/usr/local/include 
 def = -DMIKMOD_STATIC -DNO_ASM -DMINIGLUT_USE_LIBC -DNDEBUG
 opt = $(OPT_sys)
 #dbg = -g

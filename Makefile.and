@@ -1,0 +1,172 @@
+# ---- set these as environment variables if different ----
+SDK ?= /usr/lib/android-sdk
+NDK ?= /usr/lib/android-ndk
+AVER ?= 23
+# ---------------------------------------------------------
+
+sys = $(shell uname -s | sed 's/MINGW.*/mingw/')
+ifeq ($(sys), Linux)
+	host = linux-x86_64
+endif
+ifeq ($(sys), mingw)
+	host = windows-x86_64
+endif
+
+CCSYSROOT = --sysroot=$(NDK)/sysroot
+LDSYSROOT64 = --sysroot=$(NDK)/platforms/android-$(AVER)/arch-arm64
+LDSYSROOT32 = --sysroot=$(NDK)/platforms/android-$(AVER)/arch-arm
+PLATFORM_JAR = $(SDK)/platforms/android-$(AVER)/android.jar
+TCPATH = $(NDK)/toolchains/llvm/prebuilt/$(host)/bin
+TC64 = $(TCPATH)/aarch64-linux-android$(AVER)-
+TC32 = $(TCPATH)/armv7a-linux-androideabi$(AVER)-
+
+src = $(wildcard src/*.c) $(wildcard src/3dgfx/*.c) $(wildcard src/rt/*.c) \
+	  $(wildcard src/scr/*.c) $(wildcard src/android/*.c) src/glut/audio.c
+
+obj64 = $(src:.c=.arm64.o)
+obj32 = $(src:.c=.arm32.o)
+dep = $(src:.c=.d)
+name = alephnull
+lib_so = lib$(name).so
+so64 = lib$(name)64.so
+so32 = lib$(name)32.so
+
+pkgprefix = com.mutantstargoat
+pkg = $(pkgprefix).$(name)
+act = android.app.NativeActivity
+
+warn = -pedantic -Wall
+dbg = -g
+opt = -O3 -ffast-math -fno-strict-aliasing
+def = -DMIKMOD_STATIC -DNO_ASM -DNDEBUG
+incdir = -Isrc -Isrc/3dgfx -Isrc/rt -Isrc/scr -Isrc/utils -Isrc/glut -Ilibs \
+		 -Ilibs/imago/src -Ilibs/anim/src -Ilibs/mikmod/include \
+		 -Ilibs/goat3d/include -I/usr/local/include
+libdir64 = -Llibs/android64
+libdir32 = -Llibs/android32
+
+CFLAGS = $(CCSYSROOT) $(ISYS) $(warn) $(dbg) $(opt) $(def) $(incdir) -fPIC -MMD
+LIBS = -limago -lanim -lmikmod -lgoat3d -lm
+LDFLAGS = $(LDSYSROOT) $(LIBS) -pthread -landroid -llog -lEGL -lGLESv2 -lOpenSLES
+
+$(name).apk: $(name).aligned.apk keystore.jks
+	apksigner sign --ks keystore.jks --ks-key-alias androidkey --ks-pass pass:android --key-pass pass:android --out $@ $<
+
+keystore.jks:
+	keytool -genkeypair -keystore $@ -alias androidkey -validity 10000 \
+		-keyalg RSA -keysize 2048 -storepass android -keypass android \
+		-dname "cn=John Tsiombikas, o=Mindlapse, c=GR"
+
+$(name).aligned.apk: $(name).unsigned.apk
+	zipalign -f 4 $< $@
+
+$(name).unsigned.apk: $(so64) $(so32) AndroidManifest.xml $(icons)
+	rm -f apkbuild/lib/arm64-v8a/* apkbuild/lib/armeabi-v7a/* apkbuild/lib/armeabi/*
+	rm -rf apkbuild/assets/data
+	mkdir -p apkbuild/lib/arm64-v8a apkbuild/lib/armeabi-v7a apkbuild/lib/armeabi
+	cp $(so64) apkbuild/lib/arm64-v8a/$(lib_so)
+	cp $(so32) apkbuild/lib/armeabi-v7a/$(lib_so)
+	cp $(so32) apkbuild/lib/armeabi/$(lib_so)
+	mkdir -p apkbuild/assets/data
+	cp -r data apkbuild/assets
+	cp demo.seq apkbuild/assets/data
+	rm -rf apkbuild/assets/data/bin apkbuild/assets/data/src
+	[ -f demo.cfg ] && cp demo.cfg apkbuild/assets || rm -f apkbuild/assets/demo.cfg
+	mkdir -p apkbuild/res/drawable-xxhdpi apkbuild/res/drawable-xxxhdpi
+	mkdir -p apkbuild/res/drawable-xhdpi apkbuild/res/drawable-hdpi
+	mkdir -p apkbuild/res/drawable-mdpi apkbuild/res/drawable-ldpi
+	cp data/droid/icon192.png apkbuild/res/drawable-xxxhdpi/ic_launcher.png
+	cp data/droid/icon144.png apkbuild/res/drawable-xxhdpi/ic_launcher.png
+	cp data/droid/icon96.png apkbuild/res/drawable-xhdpi/ic_launcher.png
+	cp data/droid/icon72.png apkbuild/res/drawable-hdpi/ic_launcher.png
+	cp data/droid/icon48.png apkbuild/res/drawable-mdpi/ic_launcher.png
+	cp data/droid/icon36.png apkbuild/res/drawable-ldpi/ic_launcher.png
+	aapt package -f -F $@ -I $(PLATFORM_JAR) -M AndroidManifest.xml -S apkbuild/res apkbuild
+
+$(so64): $(obj64) Makefile.and libs
+	$(TC64)clang -o $@ -shared -Wl,-soname,$(lib_so),--no-undefined $(obj64) $(libdir64) $(LDFLAGS)
+
+$(so32): $(obj32) Makefile.and libs
+	$(TC32)clang -o $@ -shared -Wl,-soname,$(lib_so),--no-undefined $(obj32) $(libdir32) $(LDFLAGS)
+
+-include $(dep)
+
+%.arm64.o: %.c
+	$(TC64)clang -o $@ $(CFLAGS) -c $<
+
+%.arm32.o: %.c
+	$(TC32)clang -o $@ $(CFLAGS) -c $<
+
+.PHONY: clean
+clean:
+	rm -f $(obj64) $(obj32) $(lib_so)
+
+.PHONY: cleandep
+cleandep:
+	rm -f $(dep)
+
+.PHONY: libs
+libs: libs64 libs32
+
+libs/android64/libimago.a:
+	$(MAKE) CC=$(TC64)clang sys=android-arm64 -C libs/imago
+libs/android64/libanim.a:
+	$(MAKE) CC=$(TC64)clang sys=android-arm64 -C libs/anim
+libs/android64/libmikmod.a:
+	$(MAKE) CC=$(TC64)clang sys=android-arm64 -C libs/mikmod
+libs/android64/libgoat3d.a:
+	$(MAKE) CC=$(TC64)clang sys=android-arm64 -C libs/goat3d
+
+libs/android32/libimago.a:
+	$(MAKE) CC=$(TC32)clang sys=android-arm32 -C libs/imago
+libs/android32/libanim.a:
+	$(MAKE) CC=$(TC32)clang sys=android-arm32 -C libs/anim
+libs/android32/libmikmod.a:
+	$(MAKE) CC=$(TC32)clang sys=android-arm32 -C libs/mikmod
+libs/android32/libgoat3d.a:
+	$(MAKE) CC=$(TC32)clang sys=android-arm32 -C libs/goat3d
+
+.PHONY: libs64
+libs64: libs/android64/libimago.a libs/android64/libanim.a libs/android64/libmikmod.a \
+	libs/android64/libgoat3d.a
+
+.PHONY: libs32
+libs32: libs/android32/libimago.a libs/android32/libanim.a libs/android32/libmikmod.a \
+	libs/android32/libgoat3d.a
+
+.PHONY: clean-libs
+clean-libs: clean-libs64 clean-libs32
+
+.PHONY: clean-libs64
+clean-libs64:
+	$(MAKE) sys=android-arm64 -C libs/imago clean
+	$(MAKE) sys=android-arm64 -C libs/anim clean
+	$(MAKE) sys=android-arm64 -C libs/mikmod clean
+	$(MAKE) sys=android-arm64 -C libs/goat3d clean
+
+.PHONY: clean-libs32
+clean-libs32:
+	$(MAKE) sys=android-arm32 -C libs/imago clean
+	$(MAKE) sys=android-arm32 -C libs/anim clean
+	$(MAKE) sys=android-arm32 -C libs/mikmod clean
+	$(MAKE) sys=android-arm32 -C libs/goat3d clean
+
+.PHONY: install
+install: $(name).apk
+	adb install -r $(name).apk
+
+.PHONY: uninstall
+uninstall:
+	adb uninstall $(pkg)
+
+.PHONY: run
+run:
+	adb shell am start -n $(pkg)/$(act)
+
+.PHONY: stop
+stop:
+	adb shell am force-stop $(pkg)
+
+.PHONY: logcat
+logcat:
+	adb logcat $(name):V AndroidRuntime:V DEBUG:V '*:S'

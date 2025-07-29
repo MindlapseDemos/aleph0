@@ -158,14 +158,14 @@ static dseq_event* ev_fade;
 static dseq_event* ev_flypath;
 
 
-static int init(void);
+static int init_vox(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
 
 static struct screen scr = {
 	"voxelscape",
-	init,
+	init_vox,
 	destroy,
 	start,
 	0,
@@ -558,7 +558,7 @@ static void initSkyAndCloudTextures()
 }
 
 
-static int init(void)
+static int init_vox(void)
 {
 	memset(fb_pixels, 0, (FB_WIDTH * FB_HEIGHT * FB_BPP) / 8);
 

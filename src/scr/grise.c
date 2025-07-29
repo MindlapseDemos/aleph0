@@ -46,7 +46,7 @@ static void updateScrollTables(float dt);
 
 /*static void updatePropeller(float t);*/
 
-static int init(void);
+static int grise_init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void stop(long trans_time);
@@ -79,7 +79,7 @@ static unsigned char miniFXBuffer[1024];
 
 static RleBitmap *rlePropeller = 0;
 
-static struct screen scr = {"galaxyrise", init, destroy, start, 0, draw};
+static struct screen scr = {"galaxyrise", grise_init, destroy, start, 0, draw};
 
 struct rbtree *bitmap_props = 0;
 
@@ -88,7 +88,7 @@ struct screen *grise_screen(void) {
 }
 
 
-static int init(void)
+static int grise_init(void)
 {
 	char *propsFile = "data/grise/props.txt";
 	struct ts_node *node = 0;

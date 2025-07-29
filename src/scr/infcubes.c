@@ -14,7 +14,7 @@
 #include "image.h"
 #include "noise.h"
 
-static int init(void);
+static int inf_init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void stop(long trans_time);
@@ -24,7 +24,7 @@ static int gen_phong_tex(struct pimage *img, int xsz, int ysz, float sexp,
 
 static struct screen scr = {
 	"infcubes",
-	init,
+	inf_init,
 	destroy,
 	start, stop,
 	draw
@@ -46,7 +46,7 @@ struct screen *infcubes_screen(void)
 
 #define PHONG_TEX_SZ	128
 
-static int init(void)
+static int inf_init(void)
 {
 	static const float scalemat[16] = {-6, 0, 0, 0, 0, -6, 0, 0, 0, 0, -6, 0, 0, 0, 0, 1};
 	/*

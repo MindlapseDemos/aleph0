@@ -37,7 +37,7 @@ int au_init(void)
 
 	if(!opt.music) return 0;
 
-#if defined(__linux__)
+#if defined(__linux__) && !defined(__ANDROID__)
 	MikMod_RegisterDriver(&drv_alsa);
 #elif defined(__FreeBSD__)
 	MikMod_RegisterDriver(&drv_oss);
@@ -49,17 +49,19 @@ int au_init(void)
 	MikMod_RegisterDriver(&drv_ds);
 #elif defined(__APPLE__)
 	MikMod_RegisterDriver(&drv_osx);
+#elif defined(__ANDROID__)
+	MikMod_RegisterDriver(&drv_osles);
 #else
 	MikMod_RegisterDriver(&drv_nos);
 #endif
 
-	MikMod_RegisterLoader(&load_it);
+	/*MikMod_RegisterLoader(&load_it);
 	MikMod_RegisterLoader(&load_mod);
-	MikMod_RegisterLoader(&load_s3m);
+	MikMod_RegisterLoader(&load_s3m);*/
 	MikMod_RegisterLoader(&load_xm);
 
 	if(MikMod_Init("")) {
-		fprintf(stderr, "failed ot initialize mikmod: %s\n", MikMod_strerror(MikMod_errno));
+		fprintf(stderr, "failed to initialize mikmod: %s\n", MikMod_strerror(MikMod_errno));
 		return -1;
 	}
 	MikMod_InitThreads();

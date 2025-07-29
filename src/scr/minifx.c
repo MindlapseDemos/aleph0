@@ -11,7 +11,7 @@
 
 /* APPROX. 170 FPS Minimum */
 
-static int init(void);
+static int minifx_init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void stop(long trans_time);
@@ -28,7 +28,7 @@ static unsigned char miniFXBuffer[1024];
 
 static long lastFrameTime = 0;
 
-static struct screen scr = {"minifx", init, destroy, start, 0, draw};
+static struct screen scr = {"minifx", minifx_init, destroy, start, 0, draw};
 
 struct screen *minifx_screen(void) {
 	return &scr;
@@ -40,7 +40,7 @@ struct {
 	RleBitmap *rleInterpolated;
 } state;
 
-static int init(void) {
+static int minifx_init(void) {
 	/* Allocate back buffer */
 	backBuffer = calloc(FB_WIDTH * FB_HEIGHT, sizeof(unsigned short));
 

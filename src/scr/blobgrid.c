@@ -61,14 +61,14 @@ static dseq_event* ev_thingsIn;
 static dseq_event* ev_thingsOut;
 
 
-static int init(void);
+static int blobg_init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
 
 static struct screen scr = {
 	"blobgrid",
-	init,
+	blobg_init,
 	destroy,
 	start,
 	0,
@@ -113,7 +113,7 @@ static void initStars(void)
 	}
 }
 
-static int init(void)
+static int blobg_init(void)
 {
 	origPos = (Pos3D*)malloc(sizeof(Pos3D) * MAX_NUM_POINTS);
 	screenPos = (Pos3D*)malloc(sizeof(Pos3D) * MAX_NUM_POINTS);

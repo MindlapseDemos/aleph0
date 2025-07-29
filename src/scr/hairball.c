@@ -58,7 +58,7 @@ struct thing {
 	struct anm_animation *anim;
 };
 
-static int init(void);
+static int hball_init(void);
 static void init_thing(void);
 static void destroy(void);
 static void start(long trans_time);
@@ -77,7 +77,7 @@ int save_anim(struct anm_animation *anm, const char *fname);
 
 static struct screen scr = {
 	"hairball",
-	init,
+	hball_init,
 	destroy,
 	start, 0,
 	draw,
@@ -114,7 +114,7 @@ struct screen *hairball_screen(void)
 	return &scr;
 }
 
-static int init(void)
+static int hball_init(void)
 {
 	if(load_image(&envmap, "data/myenvmap.jpg") == -1) {
 		fprintf(stderr, "hairball: failed to load envmap\n");

@@ -32,7 +32,7 @@
 
 #define STDC_HEADERS 1
 
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
 #define DRV_ALSA	1
 #endif
 
@@ -65,6 +65,10 @@
 
 #ifdef __APPLE__
 #define DRV_OSX	1
+#endif
+
+#ifdef __ANDROID__
+#define DRV_OSLES 1
 #endif
 
 #endif	/* MIKMOD_CONFIG_H_ */

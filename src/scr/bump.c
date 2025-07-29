@@ -12,14 +12,14 @@
 #include "opt_rend.h"
 #include "util.h"
 
-static int init(void);
+static int bump_init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
 
 static struct screen scr = {
 	"bump",
-	init,
+	bump_init,
 	destroy,
 	start,
 	0,
@@ -328,7 +328,7 @@ static void initFaintLightmapBackground()
 	}
 }
 
-static int init(void)
+static int bump_init(void)
 {
 	int i;
 

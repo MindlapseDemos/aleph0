@@ -14,7 +14,7 @@
 #define VFOV	80.0f
 
 
-static int init(void);
+static int init_3dzoom(void);
 static void destroy(void);
 static void start(long trans_time);
 static void stop(long trans_time);
@@ -25,7 +25,7 @@ static int presort_cmp(const void *a, const void *b);
 
 static struct screen scr = {
 	"reactor",
-	init,
+	init_3dzoom,
 	destroy,
 	start,
 	stop,
@@ -54,7 +54,7 @@ struct screen *zoom3d_screen(void)
 /* defined in space.c */
 int g3dass_load(struct goat3d *g, const char *fname);
 
-static int init(void)
+static int init_3dzoom(void)
 {
 	int i, num_cp;
 	struct goat3d *g;

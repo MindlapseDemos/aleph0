@@ -60,14 +60,14 @@
 #define FRAC_ITER_TIMES_14 FRAC_ITER_TIMES_12 FRAC_ITER_TIMES_2
 #define FRAC_ITER_TIMES_16 FRAC_ITER_TIMES_8 FRAC_ITER_TIMES_8
 
-static int init(void);
+static int jultun_init(void);
 static void destroy(void);
 static void start(long trans_time);
 static void draw(void);
 
 static struct screen scr = {
 	"juliatunnel",
-	init,
+	jultun_init,
 	destroy,
 	start,
 	0,
@@ -92,7 +92,7 @@ struct screen *juliatunnel_screen(void)
 	return &scr;
 }
 
-static int init(void)
+static int jultun_init(void)
 {
 	int i,j,k,n=0;
 

@@ -97,7 +97,9 @@ int demo_init(void)
 		init_mmx_routines();
 	}
 
+#ifndef __ANDROID__
 	ass_add_archive("data", "demo.dat");
+#endif
 
 	if(g3d_init() == -1) {
 		return -1;

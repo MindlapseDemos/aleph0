@@ -30,7 +30,7 @@
 #include "config.h"
 #endif
 
-#ifdef HAVE_POSIX_MEMALIGN
+#if defined(HAVE_POSIX_MEMALIGN) && !defined(__sun)
 #define _XOPEN_SOURCE 600 /* for posix_memalign */
 #endif
 

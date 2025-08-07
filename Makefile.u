@@ -19,10 +19,9 @@ inc = -I/usr/local/include -Isrc -Isrc/3dgfx -Isrc/rt -Isrc/scr -Isrc/utils \
 	  -Isrc/glut -Ilibs -Ilibs/imago/src -Ilibs/anim/src -Ilibs/mikmod/include \
 	  -Ilibs/goat3d/include
 def = -DMIKMOD_STATIC -DNO_ASM -DMINIGLUT_USE_LIBC -DNDEBUG
-opt = -O3
 #dbg = -g
 
-CFLAGS = $(inc) $(CFLAGS_sys) $(CFLAGS_extra) $(opt) $(dbg) $(def)
+CFLAGS = $(inc) $(CFLAGS_sys) $(CFLAGS_extra) $(OPT_sys) $(dbg) $(def)
 LDFLAGS = -Llibs/imago -Llibs/anim -Llibs/mikmod -Llibs/goat3d -L/usr/local/lib \
 		  $(LDFLAGS_sys) $(LDFLAGS_extra)
 LIBS = -limago -lanim -lmikmod -lgoat3d $(LIBS_sys) -lm

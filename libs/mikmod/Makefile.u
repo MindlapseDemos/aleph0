@@ -9,13 +9,13 @@ obj = depackers/mmcmp.o depackers/pp20.o depackers/s404.o depackers/xpk.o \
 	  playercode/mplayer.o playercode/munitrk.o playercode/mwav.o \
 	  playercode/npertab.o playercode/sloader.o playercode/virtch2.o \
 	  playercode/virtch.o playercode/virtch_common.o posix/memcmp.o \
-	  posix/strccmp.o posix/strstr.o
+	  posix/strccmp.o posix/strstr.o drivers/drv_sun.o
 
 alib = libmikmod.a
 
 def = -DHAVE_CONFIG_H -DMIKMOD_BUILD
 inc = -I. -Iinclude
-CFLAGS = $(CFLAGS_sys) $(CFLAGS_extra) -O2 $(def) $(inc)
+CFLAGS = $(CFLAGS_sys) $(CFLAGS_extra) $(OPT_sys) $(def) $(inc)
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

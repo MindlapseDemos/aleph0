@@ -65,7 +65,7 @@ typedef enum cgm_euler_mode {
 extern "C" {
 #else
 
-#if (__STDC_VERSION__ >= 199901) || defined(__GNUC__)
+#if (__STDC_VERSION__ >= 199901) || defined(__GNUC__) || defined(__SUNPRO_C)
 #define CGM_INLINE inline
 #else
 #define CGM_INLINE __inline

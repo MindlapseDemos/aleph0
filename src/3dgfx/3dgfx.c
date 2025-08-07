@@ -12,6 +12,9 @@
 #include "demo.h"
 #include "util.h"
 
+#if defined(__SUNPRO_C)
+#define __inline inline
+#endif
 
 #undef CORRECT_NORMAL_MATRIX
 #ifdef CORRECT_NORMAL_MATRIX

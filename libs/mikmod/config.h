@@ -18,7 +18,7 @@
 #define HAVE_SNPRINTF 1
 #endif
 
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(unix) || defined(__APPLE__)
 #define HAVE_DLFCN_H 1
 #define HAVE_RTLD_GLOBAL 1
 #define HAVE_FCNTL_H 1
@@ -43,6 +43,10 @@
 
 #ifdef __sgi
 #define DRV_SGI		1
+#endif
+
+#ifdef __sun
+#define DRV_SUN		1
 #endif
 
 #ifdef _WIN32

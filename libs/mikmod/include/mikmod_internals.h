@@ -37,6 +37,10 @@ extern "C" {
 #define inline __inline
 #endif
 
+#if defined(__SUNPRO_C)
+#define __inline inline
+#endif
+
 #ifndef MIKMOD_UNIX
 #if (defined(unix) || defined(__unix__) || defined(__unix) || \
         (defined(__APPLE__) && defined(__MACH__))) && \

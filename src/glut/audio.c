@@ -6,6 +6,7 @@
 #include "audio.h"
 #include "util.h"
 #include "cfgopt.h"
+#include "assfile/assfile.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -92,18 +93,44 @@ struct au_module *au_load_module(const char *fname)
 	struct au_module *mod;
 	MODULE *mikmod;
 	char *name = 0, *end;
+	char *filebuf;
+	ass_file *fp;
+	long filesz;
+
+	if(!(fp = ass_fopen(fname, "rb"))) {
+		fprintf(stderr, "au_load_module: failed to open: %s\n", fname);
+		return 0;
+	}
+	filesz = ass_fseek(fp, 0, SEEK_END);
+	ass_fseek(fp, 0, SEEK_SET);
+
+	if(!(filebuf = malloc(filesz))) {
+		fprintf(stderr, "au_load_module: failed to allocate file buffer\n");
+		ass_fclose(fp);
+		return 0;
+	}
+	if(ass_fread(filebuf, 1, filesz, fp) != filesz) {
+		fprintf(stderr, "au_load_module: unexpected EOF while reading: %s\n", fname);
+		free(filebuf);
+		ass_fclose(fp);
+		return 0;
+	}
+	ass_fclose(fp);
 
 	if(!(mod = malloc(sizeof *mod))) {
 		fprintf(stderr, "au_load_module: failed to allocate module\n");
+		free(filebuf);
 		return 0;
 	}
 
-	if(!(mikmod = Player_Load(fname, 128, 0))) {
+	if(!(mikmod = Player_LoadMem(filebuf, filesz, 128, 0))) {
 		fprintf(stderr, "au_load_module: failed to load module: %s: %s\n",
 				fname, MikMod_strerror(MikMod_errno));
 		free(mod);
+		free(filebuf);
 		return 0;
 	}
+	free(filebuf);
 	mod->impl = mikmod;
 
 	if(mikmod->songname && *mikmod->songname) {

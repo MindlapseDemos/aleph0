@@ -20,7 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <string.h>
 #include <errno.h>
 #include "tar.h"
-#include "demalloc.h"
 
 #define MAX_NAME_LEN	100
 #define MAX_PREFIX_LEN	131
@@ -84,7 +83,7 @@ int load_tar(struct tar *tar, const char *fname)
 		if(memcmp(hdr->magic, "ustar", 5) == 0) {
 			int nlen = strnlen(hdr->name, MAX_NAME_LEN);
 			int plen = strnlen(hdr->prefix, MAX_PREFIX_LEN);
-			if(!(path = demo_malloc(nlen + plen + 1))) {
+			if(!(path = malloc(nlen + plen + 1))) {
 				perror("failed to allocate file path string");
 				goto end;
 			}
@@ -93,7 +92,7 @@ int load_tar(struct tar *tar, const char *fname)
 			path[nlen + plen] = 0;
 		} else {
 			int nlen = strnlen(hdr->name, MAX_NAME_LEN);
-			if(!(path = demo_malloc(nlen + 1))) {
+			if(!(path = malloc(nlen + 1))) {
 				perror("failed to allocate file path string");
 				goto end;
 			}
@@ -101,7 +100,7 @@ int load_tar(struct tar *tar, const char *fname)
 			path[nlen] = 0;
 		}
 
-		if(!(node = demo_malloc(sizeof *node))) {
+		if(!(node = malloc(sizeof *node))) {
 			perror("failed to allocate file list node");
 			goto end;
 		}
@@ -122,7 +121,7 @@ int load_tar(struct tar *tar, const char *fname)
 		offset += blksize;
 	}
 
-	if(!(tar->files = demo_malloc(tar->num_files * sizeof *tar->files))) {
+	if(!(tar->files = malloc(tar->num_files * sizeof *tar->files))) {
 		perror("failed to allocate file list");
 		goto end;
 	}
@@ -143,9 +142,9 @@ end:
 		head = head->next;
 		if(node) {
 			if(res == -1) {
-				demo_free(node->file.path);
+				free(node->file.path);
 			}
-			demo_free(node);
+			free(node);
 		}
 	}
 	return res;
@@ -163,9 +162,9 @@ void close_tar(struct tar *tar)
 	if(tar->files && tar->num_files > 0) {
 		int i;
 		for(i=0; i<tar->num_files; i++) {
-			demo_free(tar->files[i].path);
+			free(tar->files[i].path);
 		}
-		demo_free(tar->files);
+		free(tar->files);
 		tar->files = 0;
 		tar->num_files = 0;
 	}

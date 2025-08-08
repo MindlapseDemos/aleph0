@@ -8,6 +8,7 @@
 #include "rbtree.h"
 #include "3dgfx.h"
 #include "util.h"
+#include "assfile/assfile.h"
 
 typedef struct { float x, y; } vec2_t;
 typedef struct { float x, y, z; } vec3_t;
@@ -86,7 +87,7 @@ int load_meshes_impl(struct g3d_mesh **meshes, const char *fname)
 {
 	int i, line_num = 0, result = -1;
 	int found_quad = 0;
-	FILE *fp = 0;
+	ass_file *fp = 0;
 	char buf[256];
 	struct vertex_pos_color *varr = 0;
 	vec3_t *narr = 0;
@@ -94,7 +95,7 @@ int load_meshes_impl(struct g3d_mesh **meshes, const char *fname)
 	struct rbtree *rbtree = 0;
 	struct g3d_mesh mesh;
 
-	if(!(fp = fopen(fname, "rb"))) {
+	if(!(fp = ass_fopen(fname, "rb"))) {
 		fprintf(stderr, "load_mesh: failed to open file: %s\n", fname);
 		goto err;
 	}
@@ -115,7 +116,7 @@ int load_meshes_impl(struct g3d_mesh **meshes, const char *fname)
 		goto err;
 	}
 
-	while(fgets(buf, sizeof buf, fp)) {
+	while(ass_fgets(buf, sizeof buf, fp)) {
 		char *line = clean_line(buf);
 		++line_num;
 
@@ -272,7 +273,7 @@ int load_meshes_impl(struct g3d_mesh **meshes, const char *fname)
 
 
 err:
-	if(fp) fclose(fp);
+	if(fp) ass_fclose(fp);
 	dynarr_free(varr);
 	dynarr_free(narr);
 	dynarr_free(tarr);

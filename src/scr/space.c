@@ -74,6 +74,31 @@ struct screen *space_screen(void)
 	return &scr;
 }
 
+static long ioread(void *buf, size_t bytes, void *uptr)
+{
+	return ass_fread(buf, 1, bytes, uptr);
+}
+
+static long ioseek(long offs, int whence, void *uptr)
+{
+	return ass_fseek(uptr, offs, whence);
+}
+
+int g3dass_load(struct goat3d *g, const char *fname)
+{
+	int res;
+	ass_file *fp;
+	struct goat3d_io io = {0, ioread, 0, ioseek};
+
+	if(!(fp = ass_fopen(fname, "rb"))) {
+		fprintf(stderr, "goat3d: failed to open: %s\n", fname);
+		return -1;
+	}
+	io.cls = fp;
+	res = goat3d_load_io(g, &io);
+	ass_fclose(fp);
+	return res;
+}
 
 static int space_init(void)
 {
@@ -82,7 +107,7 @@ static int space_init(void)
 	tinymt32_t rnd = {0};
 	const char *starimg_name[] = {"data/star_04.png", "data/star_07.png"};
 
-	if(!(g = goat3d_create()) || goat3d_load(g, "data/frig8.g3d") == -1) {
+	if(!(g = goat3d_create()) || g3dass_load(g, "data/frig8.g3d") == -1) {
 		goat3d_free(g);
 		return -1;
 	}
@@ -151,7 +176,7 @@ static int space_init(void)
 	conv_rle_alpha(&planet);
 
 	img_init(&flashimg);
-	if(img_load(&flashimg, "data/addflare.png") == -1) {
+	if(imgass_load(&flashimg, "data/addflare.png") == -1) {
 		fprintf(stderr, "failed to load flash flare image\n");
 		return -1;
 	}

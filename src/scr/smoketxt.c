@@ -39,7 +39,7 @@ struct smktxt *create_smktxt(const char *imgname, const char *vfieldname)
 	if(!(stx = calloc(sizeof *stx, 1))) {
 		return 0;
 	}
-	if(!(stx->img_pixels = img_load_pixels(imgname, &stx->img_xsz, &stx->img_ysz, IMG_FMT_GREY8))) {
+	if(!(stx->img_pixels = imgass_load_pixels(imgname, &stx->img_xsz, &stx->img_ysz, IMG_FMT_GREY8))) {
 		fprintf(stderr, "create_smktxt: failed to load particle spawnmap: %s\n", imgname);
 		free(stx);
 		return 0;
@@ -232,19 +232,19 @@ static int init_emitter(struct emitter *em, int num, unsigned char *map, int xsz
 
 static int load_vfield(struct vfield *vf, const char *fname)
 {
-	FILE *fp;
+	ass_file *fp;
 	int i, j, tmp;
 	cgm_vec2 *vflt, *vsrc;
 	struct ivec2 *vdst;
 
-	if(!(fp = fopen(fname, "rb"))) {
+	if(!(fp = ass_fopen(fname, "rb"))) {
 		fprintf(stderr, "failed to open vector field: %s\n", fname);
 		return -1;
 	}
-	if(fread(&vf->width, sizeof vf->width, 1, fp) < 1 ||
-			fread(&vf->height, sizeof vf->height, 1, fp) < 1) {
+	if(ass_fread(&vf->width, sizeof vf->width, 1, fp) < 1 ||
+			ass_fread(&vf->height, sizeof vf->height, 1, fp) < 1) {
 		fprintf(stderr, "load_vfield: unexpected end of file while reading header\n");
-		fclose(fp);
+		ass_fclose(fp);
 		return -1;
 	}
 #ifdef BUILD_BIGENDIAN
@@ -262,16 +262,16 @@ static int load_vfield(struct vfield *vf, const char *fname)
 
 	if(!(vflt = malloc(vf->width * vf->height * sizeof *vflt))) {
 		fprintf(stderr, "failed to allocate temp %dx%d vector field\n", vf->width, vf->height);
-		fclose(fp);
+		ass_fclose(fp);
 		return -1;
 	}
-	if(fread(vflt, sizeof *vflt, vf->width * vf->height, fp) < vf->width * vf->height) {
+	if(ass_fread(vflt, sizeof *vflt, vf->width * vf->height, fp) < vf->width * vf->height) {
 		fprintf(stderr, "load_vfield: unexpected end of file while reading %dx%d vector field\n",
 				vf->width, vf->height);
-		fclose(fp);
+		ass_fclose(fp);
 		return -1;
 	}
-	fclose(fp);
+	ass_fclose(fp);
 
 	if(!(vf->v = malloc(vf->width * vf->height * sizeof *vf->v))) {
 		fprintf(stderr, "failed to allocate %dx%d vector field\n", vf->width, vf->height);

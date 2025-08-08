@@ -5,6 +5,8 @@
 #include <math.h>
 #include "szint.h"
 
+#include "assfile/assfile.h"
+
 #if defined(__WATCOMC__) || defined(_WIN32) || defined(__DJGPP__)
 #include <malloc.h>
 #elif !defined(__FreeBSD__)

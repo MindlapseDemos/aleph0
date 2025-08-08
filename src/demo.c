@@ -97,6 +97,8 @@ int demo_init(void)
 		init_mmx_routines();
 	}
 
+	ass_add_archive("data", "demo.dat");
+
 	if(g3d_init() == -1) {
 		return -1;
 	}
@@ -399,13 +401,6 @@ void demo_keyboard(int key, int press)
 			showpat ^= 1;
 			break;
 
-		case '/':
-			if(!con_active) {
-				con_start();
-				con_active = con_input('/');
-				return;
-			}
-
 		case ' ':
 			if(running) {
 				if(dseq_started()) {
@@ -415,6 +410,14 @@ void demo_keyboard(int key, int press)
 				}
 			}
 			break;
+
+		case '/':
+			if(!con_active) {
+				con_start();
+				con_active = con_input('/');
+				return;
+			}
+			/* fallthrough to default */
 
 		default:
 			if(con_active) {

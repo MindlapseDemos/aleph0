@@ -50,7 +50,7 @@ static int init(void)
 {
 	static const float scalemat[16] = {-6, 0, 0, 0, 0, -6, 0, 0, 0, 0, -6, 0, 0, 0, 0, 1};
 	/*
-	if(!(tex_inner.pixels = img_load_pixels("data/crate.jpg", &tex_inner.width,
+	if(!(tex_inner.pixels = imgass_load_pixels("data/crate.jpg", &tex_inner.width,
 					&tex_inner.height, IMG_FMT_RGB24))) {
 		fprintf(stderr, "infcubes: failed to load crate texture\n");
 		return -1;

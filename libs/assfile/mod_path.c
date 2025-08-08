@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <ctype.h>
 #include <errno.h>
 
-#ifdef __MSVCRT__
+#if defined(__MSVCRT__) || defined(_MSC_VER)
 #include <malloc.h>
 #else
 #include <alloca.h>
@@ -41,11 +41,11 @@ struct ass_fileops *ass_alloc_path(const char *path)
 	char *p;
 	struct ass_fileops *fop;
 
-	if(!(fop = demo_malloc(sizeof *fop))) {
+	if(!(fop = malloc(sizeof *fop))) {
 		return 0;
 	}
-	if(!(p = demo_malloc(strlen(path) + 1))) {
-		demo_free(fop);
+	if(!(p = malloc(strlen(path) + 1))) {
+		free(fop);
 		return 0;
 	}
 	fop->udata = p;
@@ -65,7 +65,7 @@ struct ass_fileops *ass_alloc_path(const char *path)
 
 void ass_free_path(struct ass_fileops *fop)
 {
-	demo_free(fop->udata);
+	free(fop->udata);
 }
 
 static void *fop_open(const char *fname, void *udata)

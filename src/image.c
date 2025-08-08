@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <imago2.h>
+#include "imago2.h"
 #include "image.h"
 #include "treestor.h"
 #include "util.h"
@@ -32,21 +32,22 @@ static void calc_pow2(struct image *img)
 int load_image(struct image *img, const char *fname)
 {
 	int i, pixcount;
-	FILE *fp;
+	ass_file *fp;
 	char sig[8];
 	uint16_t width, height;
 	unsigned char *pptr;
 	struct img_pixmap pixmap;
+	struct img_io imgio = {0};
 
 	memset(img, 0, sizeof *img);
 
-	if(!(fp = fopen(fname, "rb"))) {
+	if(!(fp = ass_fopen(fname, "rb"))) {
 		fprintf(stderr, "load_image: failed to open file: %s: %s\n", fname, strerror(errno));
 		return -1;
 	}
-	if(fread(sig, 1, 8, fp) < 8) {
+	if(ass_fread(sig, 1, 8, fp) < 8) {
 		fprintf(stderr, "unexpected EOF while reading: %s\n", fname);
-		fclose(fp);
+		ass_fclose(fp);
 		return -1;
 	}
 
@@ -55,9 +56,9 @@ int load_image(struct image *img, const char *fname)
 	}
 
 	/* it's a 565 dump, read it and return */
-	if(!fread(&width, 2, 1, fp) || !fread(&height, 2, 1, fp)) {
+	if(!ass_fread(&width, 2, 1, fp) || !ass_fread(&height, 2, 1, fp)) {
 		fprintf(stderr, "unexpected EOF while reading: %s\n", fname);
-		fclose(fp);
+		ass_fclose(fp);
 		return -1;
 	}
 #ifdef BUILD_BIGENDIAN
@@ -67,14 +68,14 @@ int load_image(struct image *img, const char *fname)
 
 	if(!(img->pixels = malloc(width * height * 2))) {
 		fprintf(stderr, "failed to allocate %dx%d pixel buffer for %s\n", width, height, fname);
-		fclose(fp);
+		ass_fclose(fp);
 		return -1;
 	}
-	if(fread(img->pixels, 2, width * height, fp) < width * height) {
+	if(ass_fread(img->pixels, 2, width * height, fp) < width * height) {
 		fprintf(stderr, "unexpected EOF while reading: %s\n", fname);
 		free(img->pixels);
 		img->pixels = 0;
-		fclose(fp);
+		ass_fclose(fp);
 		return -1;
 	}
 
@@ -88,14 +89,14 @@ int load_image(struct image *img, const char *fname)
 	}
 #endif
 
-	fclose(fp);
+	ass_fclose(fp);
 	img->width = width;
 	img->height = height;
 	img->scanlen = width;
 	calc_pow2(img);
 	return 0;
 not565:
-	fclose(fp);
+	ass_fclose(fp);
 
 #ifndef IMG_NOANIM
 	if(memcmp(sig, "animtex", 7) == 0) {
@@ -168,7 +169,7 @@ not565:
 
 	/* just a regular image */
 	img_init(&pixmap);
-	if(img_load(&pixmap, fname) == -1) {
+	if(imgass_load(&pixmap, fname) == -1) {
 		fprintf(stderr, "failed to load image: %s\n", fname);
 		return -1;
 	}
@@ -776,4 +777,56 @@ void blend_rle(struct image *destimg, int x, int y, struct image *img)
 			}
 		}
 	}
+}
+
+void *imgass_load_pixels(const char *fname, int *xsz, int *ysz, unsigned int fmt)
+{
+	struct img_pixmap img;
+
+	img_init(&img);
+	if(imgass_load(&img, fname) == -1) {
+		return 0;
+	}
+	if(img.fmt != fmt) {
+		if(img_convert(&img, fmt) == -1) {
+			img_destroy(&img);
+			return 0;
+		}
+	}
+
+	*xsz = img.width;
+	*ysz = img.height;
+	return img.pixels;
+}
+
+static size_t imgio_read(void *buf, size_t bytes, void *uptr)
+{
+	return ass_fread(buf, 1, bytes, uptr);
+}
+
+static long imgio_seek(long offs, int whence, void *uptr)
+{
+	return ass_fseek(uptr, offs, whence);
+}
+
+int imgass_load(struct img_pixmap *img, const char *fname)
+{
+	ass_file *fp;
+	struct img_io imgio = {0};
+
+	if(!(fp = ass_fopen(fname, "rb"))) {
+		fprintf(stderr, "failed to load image: %s\n", fname);
+		return -1;
+	}
+	imgio.read = imgio_read;
+	imgio.seek = imgio_seek;
+	imgio.uptr = fp;
+
+	if(img_read(img, &imgio) == -1) {
+		fprintf(stderr, "failed to load image: %s\n", fname);
+		ass_fclose(fp);
+		return -1;
+	}
+	ass_fclose(fp);
+	return 0;
 }

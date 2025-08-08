@@ -82,10 +82,10 @@ static int init(void)
 {
 	int i, xsz, ysz;
 
-	if(!(bgimage[1] = img_load_pixels("data/blob_bg.png", &xsz, &ysz, IMG_FMT_RGB565))) {
+	if(!(bgimage[1] = imgass_load_pixels("data/blob_bg.png", &xsz, &ysz, IMG_FMT_RGB565))) {
 		return -1;
 	}
-	if(!(bgimage[0] = img_load_pixels("data/blob_bg0.png", &xsz, &ysz, IMG_FMT_RGB565))) {
+	if(!(bgimage[0] = imgass_load_pixels("data/blob_bg0.png", &xsz, &ysz, IMG_FMT_RGB565))) {
 		return -1;
 	}
 	for(i=0; i<NUM_SPR; i++) {
@@ -97,7 +97,7 @@ static int init(void)
 			return -1;
 		}
 	}
-	if(!(envmap = img_load_pixels("data/metaenv.jpg", &envmap_xsz, &envmap_ysz, IMG_FMT_RGB565))) {
+	if(!(envmap = imgass_load_pixels("data/metaenv.jpg", &envmap_xsz, &envmap_ysz, IMG_FMT_RGB565))) {
 		fprintf(stderr, "failed to load metaballs envmap\n");
 		return -1;
 	}

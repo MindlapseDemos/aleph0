@@ -140,7 +140,7 @@ static int init(void)
 	/* Allocate back buffer */
 	effectBuffer = calloc(EFFECT_BUFFER_W * EFFECT_BUFFER_H, sizeof(unsigned short));
 
-	if (!(artBuffer = img_load_pixels(ART_FILENAME, &artW, &artH, IMG_FMT_RGB565))) {
+	if (!(artBuffer = imgass_load_pixels(ART_FILENAME, &artW, &artH, IMG_FMT_RGB565))) {
 		fprintf(stderr, "failed to load image " ART_FILENAME "\n");
 		return -1;
 	}
@@ -527,7 +527,7 @@ static int loadAndProcessNormal(void) {
 
 	/* Load normalmap */
 	if (!(normalmap =
-		  img_load_pixels(NORMAL_FILENAME, &normalmapW, &normalmapH, IMG_FMT_RGBA32))) {
+		  imgass_load_pixels(NORMAL_FILENAME, &normalmapW, &normalmapH, IMG_FMT_RGBA32))) {
 		fprintf(stderr, "failed to load image " NORMAL_FILENAME "\n");
 		return 1;
 	}

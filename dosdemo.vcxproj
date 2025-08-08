@@ -58,7 +58,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>dsound.lib;$(OutDir)\imago.lib;$(OutDir)\anim.lib;mikmod.lib;$(OutDir)\goat3d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dsound.lib;$(OutDir)\imago.lib;$(OutDir)\anim.lib;mikmod.lib;$(OutDir)\goat3d.lib;$(OutDir)\assfile.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -79,7 +79,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>dsound.lib;$(OutDir)\imago.lib;$(OutDir)\anim.lib;mikmod.lib;$(OutDir)\goat3d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dsound.lib;$(OutDir)\imago.lib;$(OutDir)\anim.lib;mikmod.lib;$(OutDir)\goat3d.lib;$(OutDir)\assfile.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>

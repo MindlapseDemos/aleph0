@@ -5,6 +5,7 @@
 #include <assert.h>
 #include "treestor.h"
 #include "util.h"
+#include "assfile/assfile.h"
 
 struct ts_node *ts_text_load(struct ts_io *io);
 int ts_text_save(struct ts_node *tree, struct ts_io *io);
@@ -658,16 +659,16 @@ struct ts_node *ts_get_child(struct ts_node *node, const char *name)
 
 struct ts_node *ts_load(const char *fname)
 {
-	FILE *fp;
+	ass_file *fp;
 	struct ts_node *root;
 
-	if(!(fp = fopen(fname, "rb"))) {
+	if(!(fp = ass_fopen(fname, "rb"))) {
 		fprintf(stderr, "ts_load: failed to open file: %s: %s\n", fname, strerror(errno));
 		return 0;
 	}
 
 	root = ts_load_file(fp);
-	fclose(fp);
+	ass_fclose(fp);
 	return root;
 }
 
@@ -791,7 +792,7 @@ struct ts_value *ts_lookup_array(struct ts_node *node, const char *path, struct 
 
 static long io_read(void *buf, size_t bytes, void *uptr)
 {
-	size_t sz = fread(buf, 1, bytes, uptr);
+	size_t sz = ass_fread(buf, 1, bytes, uptr);
 	if(sz < bytes && errno) return -1;
 	return sz;
 }

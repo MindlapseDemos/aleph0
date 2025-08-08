@@ -14,9 +14,11 @@
 #include "opt_3d.h"
 #include "imago2.h"
 
+#include "assfile/assfile.h"
+
 #include "dos/keyb.h"
 
-// Comment out if you wanted to move by input instead of animated path for the demo
+/* Comment out if you wanted to move by input instead of animated path for the demo */
 #define MOVE_DEMO_PATH_ON
 
 #define FP_VIEWER 8
@@ -49,7 +51,7 @@
 #define VIS_VER_STEPS ((VIS_FAR - VIS_NEAR) / VIS_VER_SKIP)
 #define VIS_HOR_STEPS (FB_WIDTH / PIXEL_SIZE)
 
-//#define LOCK_PLAYER_TO_GROUND
+/*#define LOCK_PLAYER_TO_GROUND */
 
 #define FLY_HEIGHT 96
 #define V_PLAYER_HEIGHT 64
@@ -229,15 +231,15 @@ static int writeMapFile(const char* path, int count, unsigned char* src)
 
 static int readMapFile(const char *path, int count, void *dst)
 {
-	FILE *f = fopen(path, "rb");
+	ass_file *f = ass_fopen(path, "rb");
 	if(!f) {
 		fprintf(stderr, "voxscape: failed to open %s: %s\n", path, strerror(errno));
 		return -1;
 	}
 
-	fread(dst, 1, count, f);
+	ass_fread(dst, 1, count, f);
 
-	fclose(f);
+	ass_fclose(f);
 	return 0;
 }
 
@@ -280,7 +282,7 @@ static int loadAndConvertImgColormapPng()
 		unsigned char* cmapDst;
 
 		img_init(&mapPic);
-		if (img_load(&mapPic, "data/src/voxel/vxc1.png") == -1) {
+		if (imgass_load(&mapPic, "data/src/voxel/vxc1.png") == -1) {
 			fprintf(stderr, "failed to load voxel colormap image\n");
 			return -1;
 		}
@@ -342,7 +344,7 @@ static int loadAndConvertImgHeightmapPng()
 		int hMax = 0;
 
 		img_init(&mapPic);
-		if (img_load(&mapPic, "data/src/voxel/vxh1.png") == -1) {
+		if (imgass_load(&mapPic, "data/src/voxel/vxh1.png") == -1) {
 			fprintf(stderr, "failed to load voxel heightmap image\n");
 			return -1;
 		}
@@ -394,7 +396,7 @@ static int initHeightmapAndColormap()
 
 	copyHmapAndCmapToVmap();
 
-	// No need for these two anymore
+	/* No need for these two anymore */
 	free(hmap);
 	free(cmap);
 
@@ -507,7 +509,7 @@ static int initDistMap()
 		petrubTab[i] = (int)(f * PETRUB_RANGE);
 	}
 
-	//distmapHack();
+	/*distmapHack(); */
 
 	return 0;
 }
@@ -669,7 +671,7 @@ static uint16_t reflectSample(int px, int py, int dvx, int dvy, int ph, int dh, 
 
 			ph += safeSteps * dh;
 			h = ph >> FP_SCALE;
-			if (h > 96) break;	// hack value
+			if (h > 96) break;	/* hack value */
 			v = &vmap[((vy >> FP_SCAPE) * HMAP_WIDTH + (vx >> FP_SCAPE)) & (HMAP_SIZE - 1)];
 			if (h < v->height) {
 				return pal[v->color + (petrubation >> 2) * 256];
@@ -863,11 +865,11 @@ static void start(long trans_time)
 	setViewPos(780,V_PLAYER_HEIGHT,675);
 	setViewAngle(0,4*SIN_LENGTH/5,0);
 
-	//setViewPos(355870 >> FP_VIEWER, 86880 >> FP_VIEWER, 31745 >> FP_VIEWER);
-	//setViewAngle(0, 6275, 0);
+	/*setViewPos(355870 >> FP_VIEWER, 86880 >> FP_VIEWER, 31745 >> FP_VIEWER); */
+	/*setViewAngle(0, 6275, 0); */
 
-	//setViewPos(217680 >> FP_VIEWER, 8192 >> FP_VIEWER, 19635 >> FP_VIEWER);
-	//setViewAngle(0, 2352, 0);
+	/*setViewPos(217680 >> FP_VIEWER, 8192 >> FP_VIEWER, 19635 >> FP_VIEWER); */
+	/*setViewAngle(0, 2352, 0); */
 
 	prevTime = time_msec;
 }

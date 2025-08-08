@@ -74,12 +74,12 @@ static int molten_init(void)
 		fprintf(stderr, "failed to load data/moltroom.obj\n");
 		return -1;
 	}
-	if(!(room_texmap = img_load_pixels("data/moltroom.png", &roomtex_xsz, &roomtex_ysz, IMG_FMT_RGB565))) {
+	if(!(room_texmap = imgass_load_pixels("data/moltroom.png", &roomtex_xsz, &roomtex_ysz, IMG_FMT_RGB565))) {
 		fprintf(stderr, "failed to load data/moltroom.png\n");
 		return -1;
 	}
 
-	if(!(envmap = img_load_pixels("data/moltenv.jpg", &envmap_xsz, &envmap_ysz, IMG_FMT_RGB565))) {
+	if(!(envmap = imgass_load_pixels("data/moltenv.jpg", &envmap_xsz, &envmap_ysz, IMG_FMT_RGB565))) {
 		fprintf(stderr, "failed to load data/myenvmap.jpg\n");
 		return -1;
 	}

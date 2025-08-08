@@ -2,6 +2,7 @@
 #define IMAGE_H_
 
 #include "szint.h"
+#include "imago2.h"
 
 #define IMG_NOANIM
 
@@ -46,5 +47,10 @@ void blitfb_rle(uint16_t *fb, int x, int y, struct image *img);
 int conv_rle_alpha(struct image *img);
 void blendfb_rle(uint16_t *fb, int x, int y, struct image *img);
 void blend_rle(struct image *destimg, int x, int y, struct image *img);
+
+
+/* imago functions for assfile */
+void *imgass_load_pixels(const char *fname, int *xsz, int *ysz, unsigned int fmt);
+int imgass_load(struct img_pixmap *pixmap, const char *fname);
 
 #endif	/* IMAGE_H_ */

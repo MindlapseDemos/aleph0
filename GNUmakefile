@@ -25,7 +25,8 @@ endif
 
 CFLAGS = $(arch) $(warn) -MMD $(opt) $(def) -fno-pie -fno-strict-aliasing $(dbg) $(inc)
 LDFLAGS = $(arch) -static-libgcc -no-pie -Llibs/imago -Llibs/anim -Llibs/mikmod \
-		  -Llibs/goat3d -limago -lanim -lmikmod -lgoat3d $(sndlib_$(sys)) -lm
+		  -Llibs/goat3d -Llibs/assfile -limago -lanim -lassfile -lmikmod -lgoat3d \
+		  $(sndlib_$(sys)) -lm
 
 cpu ?= $(shell uname -m | sed 's/i.86/i386/;s/arm.*/arm/')
 
@@ -76,7 +77,7 @@ nodata: $(bin)
 .PHONY: all
 all: data $(bin)
 
-$(bin): $(obj) imago anim mikmod goat3d
+$(bin): $(obj) imago anim mikmod goat3d assfile
 	$(CC) -o $@ $(obj) $(LDFLAGS)
 
 -include $(dep)
@@ -96,7 +97,7 @@ $(bin): $(obj) imago anim mikmod goat3d
 src/data.o: src/data.asm $(bindata)
 
 .PHONY: libs
-libs: imago anim mikmod goat3d
+libs: imago anim mikmod goat3d assfile
 
 .PHONY: imago
 imago:
@@ -114,12 +115,17 @@ mikmod:
 goat3d:
 	$(MAKE) -C libs/goat3d
 
+.PHONY: assfile
+assfile:
+	$(MAKE) -C libs/assfile
+
 .PHONY: cleanlibs
 cleanlibs:
 	$(MAKE) -C libs/imago clean
 	$(MAKE) -C libs/anim clean
 	$(MAKE) -C libs/mikmod clean
 	$(MAKE) -C libs/goat3d clean
+	$(MAKE) -C libs/assfile clean
 
 .PHONY: clean
 clean:

@@ -7,7 +7,7 @@
 #include "screen.h"
 #include "noise.h"
 #include "gfxutil.h"
-#include "imago2.h"
+#include "image.h"
 
 #include "opt_rend.h"
 #include "util.h"
@@ -195,7 +195,7 @@ static int loadHeightMapTest()
 	int imgWidth, imgHeight;
 
 	img_init(&bumpPic);
-	if (img_load(&bumpPic, "data/bump/circ_col.png") == -1) {
+	if (imgass_load(&bumpPic, "data/bump/circ_col.png") == -1) {
 		fprintf(stderr, "failed to load bump image\n");
 		return -1;
 	}

@@ -82,13 +82,13 @@ static int add_fop(const char *prefix, int type, struct ass_fileops *fop)
 		return -1;
 	}
 
-	if(!(m = demo_malloc(sizeof *m))) {
+	if(!(m = malloc(sizeof *m))) {
 		perror("assfile: failed to allocate mount node");
 		return -1;
 	}
 	if(prefix) {
-		if(!(m->prefix = demo_malloc(strlen(prefix) + 1))) {
-			demo_free(m);
+		if(!(m->prefix = malloc(strlen(prefix) + 1))) {
+			free(m);
 			return -1;
 		}
 		strcpy(m->prefix, prefix);
@@ -123,8 +123,8 @@ void ass_clear(void)
 			break;
 		}
 
-		demo_free(m->prefix);
-		demo_free(m);
+		free(m->prefix);
+		free(m);
 	}
 }
 
@@ -145,7 +145,7 @@ ass_file *ass_fopen(const char *fname, const char *mode)
 				after_prefix++;
 			}
 			if((mfile = m->fop->open(after_prefix, m->fop->udata))) {
-				if(!(file = demo_malloc(sizeof *file))) {
+				if(!(file = malloc(sizeof *file))) {
 					perror("assfile: ass_fopen failed to allocate file structure");
 					m->fop->close(mfile, m->fop->udata);
 					return 0;
@@ -164,7 +164,7 @@ ass_file *ass_fopen(const char *fname, const char *mode)
 
 	/* nothing matched, or failed to open, try the filesystem */
 	if((fp = fopen(fname, mode))) {
-		if(!(file = demo_malloc(sizeof *file))) {
+		if(!(file = malloc(sizeof *file))) {
 			ass_errno = errno;
 			perror("assfile: ass_fopen failed to allocate file structure");
 			fclose(fp);
@@ -197,7 +197,7 @@ void ass_fclose(ass_file *fp)
 	} else {
 		fclose(fp->file);
 	}
-	demo_free(fp);
+	free(fp);
 }
 
 long ass_fseek(ass_file *fp, long offs, int whence)

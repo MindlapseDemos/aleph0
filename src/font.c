@@ -7,6 +7,7 @@
 #include "font.h"
 #include "gfxutil.h"
 #include "image.h"
+#include "assfile/assfile.h"
 
 static int mkglyph(struct image *dest, struct image *src, int x, int y, int w, int h, uint16_t color)
 {
@@ -42,19 +43,19 @@ static int mkglyph(struct image *dest, struct image *src, int x, int y, int w, i
 int load_font(struct font *fnt, const char *fname, uint16_t color)
 {
 	int hdrline = 0, val, gx, gy, gwidth, gheight;
-	FILE *fp;
+	ass_file *fp;
 	char buf[128];
 	char *line;
 	struct image img;
 	struct glyph g;
 
-	if(!(fp = fopen(fname, "rb"))) {
+	if(!(fp = ass_fopen(fname, "rb"))) {
 		fprintf(stderr, "failed to load font: %s\n", fname);
 		return -1;
 	}
 	if(load_image(&img, fname) == -1) {
 		fprintf(stderr, "failed to load font image: %s\n", fname);
-		fclose(fp);
+		ass_fclose(fp);
 		return -1;
 	}
 	fnt->glyphs = darr_alloc(0, sizeof *fnt->glyphs);
@@ -62,7 +63,7 @@ int load_font(struct font *fnt, const char *fname, uint16_t color)
 	fnt->gmin = INT_MAX;
 	fnt->gmax = 0;
 
-	while(hdrline < 3 && fgets(buf, sizeof buf, fp)) {
+	while(hdrline < 3 && ass_fgets(buf, sizeof buf, fp)) {
 		line = buf;
 		while(*line && isspace(*line)) line++;
 
@@ -91,7 +92,7 @@ int load_font(struct font *fnt, const char *fname, uint16_t color)
 	}
 
 	fnt->num_glyphs = darr_size(fnt->glyphs);
-	fclose(fp);
+	ass_fclose(fp);
 	destroy_image(&img);
 	return 0;
 

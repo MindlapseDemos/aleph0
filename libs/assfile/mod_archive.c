@@ -39,15 +39,15 @@ struct ass_fileops *ass_alloc_archive(const char *fname)
 	struct ass_fileops *fop;
 	struct tar *tar;
 
-	if(!(tar = demo_malloc(sizeof *tar))) {
+	if(!(tar = malloc(sizeof *tar))) {
 		return 0;
 	}
 	if(load_tar(tar, fname) == -1) {
-		demo_free(tar);
+		free(tar);
 		return 0;
 	}
 
-	if(!(fop = demo_malloc(sizeof *fop))) {
+	if(!(fop = malloc(sizeof *fop))) {
 		return 0;
 	}
 	fop->udata = tar;
@@ -61,7 +61,7 @@ struct ass_fileops *ass_alloc_archive(const char *fname)
 void ass_free_archive(struct ass_fileops *fop)
 {
 	close_tar(fop->udata);
-	demo_free(fop->udata);
+	free(fop->udata);
 	fop->udata = 0;
 }
 
@@ -73,7 +73,7 @@ static void *fop_open(const char *fname, void *udata)
 
 	for(i=0; i<tar->num_files; i++) {
 		if(strcmp(fname, tar->files[i].path) == 0) {
-			if(!(file = demo_malloc(sizeof *file))) {
+			if(!(file = malloc(sizeof *file))) {
 				ass_errno = ENOMEM;
 				return 0;
 			}
@@ -90,7 +90,7 @@ static void *fop_open(const char *fname, void *udata)
 
 static void fop_close(void *fp, void *udata)
 {
-	demo_free(fp);
+	free(fp);
 }
 
 static long fop_seek(void *fp, long offs, int whence, void *udata)

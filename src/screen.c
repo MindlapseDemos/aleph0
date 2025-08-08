@@ -238,6 +238,7 @@ int scr_change(struct screen *s)
 
 #ifndef NO_ASM
 
+/*
 #ifdef _MSC_VER
 #include <io.h>
 #define access	_access
@@ -245,6 +246,7 @@ int scr_change(struct screen *s)
 #else
 #include <unistd.h>
 #endif
+*/
 
 /* loading screen */
 extern uint16_t loading_pixels[];
@@ -257,11 +259,13 @@ void start_loadscr(void)
 	char *env;
 	void *pixels = loading_pixels;
 
+	/*
 	if(access("data/alt.bar", F_OK) == 0) {
 		altbar = 1;
 		alt_start_loadscr();
 		return;
 	}
+	*/
 
 	if((env = getenv("MLAPSE_LOADDELAY"))) {
 		load_delay = atoi(env);

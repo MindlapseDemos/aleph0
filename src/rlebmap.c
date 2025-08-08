@@ -2,7 +2,7 @@
 #include "rlebmap.h"
 #include "util.h"
 
-#include "imago2.h"
+#include "image.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -369,8 +369,7 @@ RleBitmap *rleFromFile(char *filename)
     int i;
     RleBitmap *result = 0;
 
-    if (!(data =
-		  img_load_pixels(filename, &w, &h, IMG_FMT_RGBA32))) {
+    if (!(data = imgass_load_pixels(filename, &w, &h, IMG_FMT_RGBA32))) {
 		fprintf(stderr, "failed to load image %s\n", filename);
 		return 0;
 	}

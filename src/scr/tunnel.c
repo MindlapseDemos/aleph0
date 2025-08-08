@@ -109,7 +109,7 @@ static int tun_init(void)
 	}
 
 	img_init(&pixmap);
-	if(img_load(&pixmap, "data/tunnel2.png") == -1) {
+	if(imgass_load(&pixmap, "data/tunnel2.png") == -1) {
 		fprintf(stderr, "failed to load tunnel image\n");
 		return -1;
 	}
@@ -150,12 +150,12 @@ static int tun_init(void)
 	img_init(textimg);
 	img_init(textimg + 1);
 
-	if(img_load(textimg, "data/ml_dsr8.png") == -1) {
+	if(imgass_load(textimg, "data/ml_dsr8.png") == -1) {
 		fprintf(stderr, "failed to load image: data/ml_dsr8.png\n");
 		return -1;
 	}
 	img_convert(textimg, IMG_FMT_GREY8);
-	if(img_load(textimg + 1, "data/presents.png") == -1) {
+	if(imgass_load(textimg + 1, "data/presents.png") == -1) {
 		fprintf(stderr, "failed to load image: data/presents.png\n");
 		return -1;
 	}
@@ -174,7 +174,7 @@ static int tun_init(void)
 	cur_smokebuf = smokebuf;
 	prev_smokebuf = smokebuf + SMOKEBUF_SIZE;
 
-	if(!(pal = img_load_pixels("data/smokepal.ppm", &n, &n, IMG_FMT_RGB24))) {
+	if(!(pal = imgass_load_pixels("data/smokepal.ppm", &n, &n, IMG_FMT_RGB24))) {
 		fprintf(stderr, "failed to load smoke colormap: smokepal.png\n");
 		return -1;
 	}

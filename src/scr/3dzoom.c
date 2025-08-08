@@ -51,13 +51,15 @@ struct screen *zoom3d_screen(void)
 	return &scr;
 }
 
+/* defined in space.c */
+int g3dass_load(struct goat3d *g, const char *fname);
 
 static int init(void)
 {
 	int i, num_cp;
 	struct goat3d *g;
 
-	if(!(g = goat3d_create()) || goat3d_load(g, "data/3dzoom/reactor.g3d") == -1) {
+	if(!(g = goat3d_create()) || g3dass_load(g, "data/3dzoom/reactor.g3d") == -1) {
 		goat3d_free(g);
 		return -1;
 	}

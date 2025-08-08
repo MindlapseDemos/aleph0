@@ -561,7 +561,7 @@ void clear_anim(struct anm_animation *anm)
 
 int load_anim(struct anm_animation *anm, const char *fname)
 {
-	FILE *fp;
+	ass_file *fp;
 	int nposkeys, nrotkeys;
 	float x, y, z, w;
 	unsigned int tm;
@@ -569,23 +569,23 @@ int load_anim(struct anm_animation *anm, const char *fname)
 	char *ptr;
 	struct anm_keyframe key;
 
-	if(!(fp = fopen(fname, "rb"))) {
+	if(!(fp = ass_fopen(fname, "rb"))) {
 		fprintf(stderr, "failed to open %s\n", fname);
 		return -1;
 	}
 
-	if(!fgets(buf, sizeof buf, fp) || memcmp(buf, "ANIMDUMP", 8) != 0) {
+	if(!ass_fgets(buf, sizeof buf, fp) || memcmp(buf, "ANIMDUMP", 8) != 0) {
 		fprintf(stderr, "%s is not an animation dump\n", fname);
-		fclose(fp);
+		ass_fclose(fp);
 		return -1;
 	}
-	if(!fgets(buf, sizeof buf, fp) || sscanf(buf, "keys t%d r%d", &nposkeys, &nrotkeys) != 2) {
+	if(!ass_fgets(buf, sizeof buf, fp) || sscanf(buf, "keys t%d r%d", &nposkeys, &nrotkeys) != 2) {
 		fprintf(stderr, "%s: invalid animation dump\n", fname);
-		fclose(fp);
+		ass_fclose(fp);
 		return -1;
 	}
 
-	while(fgets(buf, sizeof buf, fp)) {
+	while(ass_fgets(buf, sizeof buf, fp)) {
 		ptr = buf;
 		while(*ptr && isspace(*ptr)) ptr++;
 
@@ -635,12 +635,12 @@ int load_anim(struct anm_animation *anm, const char *fname)
 				nrotkeys, anm->tracks[ANM_TRACK_ROT_X].count);
 	}
 
-	fclose(fp);
+	ass_fclose(fp);
 	return 0;
 
 inval:
 	fprintf(stderr, "%s: invalid animation dump line: %s\n", fname, ptr);
-	fclose(fp);
+	ass_fclose(fp);
 	return -1;
 }
 

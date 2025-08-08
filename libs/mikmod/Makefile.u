@@ -15,7 +15,8 @@ alib = libmikmod.a
 
 def = -DHAVE_CONFIG_H -DMIKMOD_BUILD
 inc = -I. -Iinclude
-CFLAGS = $(CFLAGS_sys) $(CFLAGS_extra) $(OPT_sys) $(def) $(inc)
+opt = $(OPT_sys)
+CFLAGS = $(CFLAGS_sys) $(CFLAGS_extra) $(opt) $(def) $(inc)
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

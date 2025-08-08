@@ -15,7 +15,11 @@
 #define M_PI	3.1415926535
 #endif
 
+#if defined(__SUNPRO_C)
+#define INLINE inline
+#else
 #define INLINE __inline
+#endif
 
 #ifdef __GNUC__
 #define PACKED __attribute__((packed))

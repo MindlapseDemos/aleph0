@@ -42,6 +42,8 @@ int au_init(void)
 	MikMod_RegisterDriver(&drv_oss);
 #elif defined(__sgi)
 	MikMod_RegisterDriver(&drv_sgi);
+#elif defined(__sun)
+	MikMod_RegisterDriver(&drv_sun);
 #elif defined(_WIN32)
 	MikMod_RegisterDriver(&drv_ds);
 #elif defined(__APPLE__)

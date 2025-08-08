@@ -22,7 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #ifndef _MSC_VER
 
-#ifdef __sgi
+#if defined(__sgi) || defined(__sun)
 #include <inttypes.h>
 #else
 #if defined(__WATCOMC__) && __WATCOMC__ < 1200
@@ -36,7 +36,7 @@ typedef unsigned long uint32_t;
 typedef unsigned __int32 uint32_t;
 #endif
 
-#if defined(__mips)
+#if defined(__mips) || defined(__sparc)
 #define GOAT3D_BIGEND
 #endif
 

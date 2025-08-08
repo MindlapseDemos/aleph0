@@ -277,7 +277,7 @@ unsigned int img_gltexture_read(struct img_io *io)
 	return tex;
 }
 
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(unix) || defined(__APPLE__)
 #include <dlfcn.h>
 
 #ifndef RTLD_DEFAULT
@@ -291,7 +291,7 @@ unsigned int img_gltexture_read(struct img_io *io)
 
 static int load_glfunc(void)
 {
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(unix) || defined(__APPLE__)
 	gl_gen_textures = (gl_gen_textures_func)dlsym(RTLD_DEFAULT, "glGenTextures");
 	gl_bind_texture = (gl_bind_texture_func)dlsym(RTLD_DEFAULT, "glBindTexture");
 	gl_tex_parameteri = (gl_tex_parameteri_func)dlsym(RTLD_DEFAULT, "glTexParameteri");

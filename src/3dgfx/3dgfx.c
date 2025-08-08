@@ -12,10 +12,6 @@
 #include "demo.h"
 #include "util.h"
 
-#if defined(__SUNPRO_C)
-#define __inline inline
-#endif
-
 #undef CORRECT_NORMAL_MATRIX
 #ifdef CORRECT_NORMAL_MATRIX
 #include <cgmath/cgmath.h>
@@ -89,9 +85,9 @@ struct g3d_state {
 static void calc_grad(struct g3d_vertex *v);
 
 static void imm_flush(void);
-static __inline void xform4_vec3(const float *mat, float *vec);
-static __inline void xform3_vec3(const float *mat, float *vec);
-static __inline void xform4_vec4(const float *mat, float *vec);
+static INLINE void xform4_vec3(const float *mat, float *vec);
+static INLINE void xform3_vec3(const float *mat, float *vec);
+static INLINE void xform4_vec4(const float *mat, float *vec);
 
 static struct g3d_state *st;
 static const float idmat[] = {
@@ -1044,7 +1040,7 @@ void g3d_shade(struct g3d_vertex *v)
 	v->b = b > 255 ? 255 : b;
 }
 
-static __inline void xform4_vec3(const float *mat, float *vec)
+static INLINE void xform4_vec3(const float *mat, float *vec)
 {
 	float x = mat[0] * vec[0] + mat[4] * vec[1] + mat[8] * vec[2] + mat[12];
 	float y = mat[1] * vec[0] + mat[5] * vec[1] + mat[9] * vec[2] + mat[13];
@@ -1055,7 +1051,7 @@ static __inline void xform4_vec3(const float *mat, float *vec)
 	vec[0] = x;
 }
 
-static __inline void xform3_vec3(const float *mat, float *vec)
+static INLINE void xform3_vec3(const float *mat, float *vec)
 {
 	float x = mat[0] * vec[0] + mat[4] * vec[1] + mat[8] * vec[2];
 	float y = mat[1] * vec[0] + mat[5] * vec[1] + mat[9] * vec[2];
@@ -1064,7 +1060,7 @@ static __inline void xform3_vec3(const float *mat, float *vec)
 	vec[0] = x;
 }
 
-static __inline void xform4_vec4(const float *mat, float *vec)
+static INLINE void xform4_vec4(const float *mat, float *vec)
 {
 	float x = mat[0] * vec[0] + mat[4] * vec[1] + mat[8] * vec[2] + mat[12] * vec[3];
 	float y = mat[1] * vec[0] + mat[5] * vec[1] + mat[9] * vec[2] + mat[13] * vec[3];

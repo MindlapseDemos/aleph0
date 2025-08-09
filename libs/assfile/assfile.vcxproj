@@ -127,14 +127,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="assfile.c" />
-    <ClCompile Include="mod_archive.c" />
+    <ClCompile Include="mod_tar.c" />
     <ClCompile Include="mod_path.c" />
     <ClCompile Include="mod_url.c" />
     <ClCompile Include="tar.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="assfile.h" />
-    <ClInclude Include="assfile_impl.h" />
+    <ClInclude Include="ass_impl.h" />
     <ClInclude Include="tar.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

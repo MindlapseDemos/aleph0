@@ -19,11 +19,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include "assfile_impl.h"
+#include "ass_impl.h"
 
 int ass_errno;
 
-/* declared in assfile_impl.h */
+/* declared in ass_impl.h */
 int ass_mod_url_max_threads;
 char ass_mod_url_cachedir[512];
 int ass_verbose;

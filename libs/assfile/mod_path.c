@@ -27,7 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <alloca.h>
 #endif
 
-#include "assfile_impl.h"
+#include "ass_impl.h"
 
 
 static void *fop_open(const char *fname, void *udata);

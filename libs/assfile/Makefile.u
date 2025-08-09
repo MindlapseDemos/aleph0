@@ -1,0 +1,18 @@
+include ../../ucfg.mk
+
+obj = assfile.o mod_tar.o mod_path.o mod_url.o
+alib = libassfile.a
+
+CFLAGS = $(CFLAGS_sys) $(CFLAGS_extra) $(OPT_sys)
+
+$(alib): $(obj)
+	$(AR) rcs $@ $(obj)
+
+.c.o:
+	$(CC) -o $@ $(CFLAGS) -c $<
+
+.PHONY: clean
+clean:
+	rm -f $(obj) $(alib)
+
+# vi:ft=make:

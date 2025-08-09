@@ -25,16 +25,16 @@ opt = $(OPT_sys)
 CFLAGS = $(inc) $(CFLAGS_sys) $(CFLAGS_extra) $(opt) $(dbg) $(def)
 LDFLAGS = -Llibs/imago -Llibs/anim -Llibs/mikmod -Llibs/goat3d -L/usr/local/lib \
 		  $(LDFLAGS_sys) $(LDFLAGS_extra)
-LIBS = -limago -lanim -lmikmod -lgoat3d $(LIBS_sys) -lm
+LIBS = -limago -lanim -lmikmod -lgoat3d -lassfile $(LIBS_sys) -lm
 
-$(bin): $(obj) imago anim mikmod goat3d
+$(bin): $(obj) imago anim mikmod goat3d assfile
 	$(CC) -o $@ $(obj) $(LDFLAGS) $(LIBS)
 
 .c.o:
 	$(CC) -o $@ $(CFLAGS) -c $<
 
 .PHONY: libs
-libs: imago anim mikmod goat3d
+libs: imago anim mikmod goat3d assfile
 
 .PHONY: imago
 imago:
@@ -52,12 +52,17 @@ mikmod:
 goat3d:
 	cd libs/goat3d; $(MAKE) -f Makefile.u
 
+.PHONY: assfile
+assfile:
+	cd libs/assfile; $(MAKE) -f Makefile.u
+
 .PHONY: cleanlibs
 cleanlibs:
 	cd libs/imago; $(MAKE) -f Makefile.u clean
 	cd libs/anim; $(MAKE) -f Makefile.u clean
 	cd libs/mikmod; $(MAKE) -f Makefile.u clean
 	cd libs/goat3d; $(MAKE) -f Makefile.u clean
+	cd libs/assfile; $(MAKE) -f Makefile.u clean
 
 .PHONY: clean
 clean:

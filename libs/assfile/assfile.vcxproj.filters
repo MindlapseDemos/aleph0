@@ -10,7 +10,7 @@
     <ClCompile Include="assfile.c">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="mod_archive.c">
+    <ClCompile Include="mod_tar.c">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="mod_path.c">
@@ -27,7 +27,7 @@
     <ClInclude Include="assfile.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="assfile_impl.h">
+    <ClInclude Include="ass_impl.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="tar.h">

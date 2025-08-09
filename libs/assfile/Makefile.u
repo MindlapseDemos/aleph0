@@ -1,6 +1,6 @@
 include ../../ucfg.mk
 
-obj = assfile.o mod_tar.o mod_path.o mod_url.o
+obj = assfile.o mod_tar.o mod_path.o mod_url.o tar.o
 alib = libassfile.a
 
 CFLAGS = $(CFLAGS_sys) $(CFLAGS_extra) $(OPT_sys)

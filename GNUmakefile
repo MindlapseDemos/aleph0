@@ -58,9 +58,9 @@ else
 		arch =
 		asmsrc =
 		def += -DNO_ASM
-		LDFLAGS = -Llibs/imago -Llibs/anim -Llibs/mikmod -Llibs/goat3d -limago \
-				  -lanim -lmikmod -lgoat3d $(sndlib_$(sys)) -lm \
-				  -framework OpenGL -framework GLUT
+		LDFLAGS = -Llibs/imago -Llibs/anim -Llibs/mikmod -Llibs/goat3d -Llibs/assfile \
+				  -limago -lanim -lmikmod -lgoat3d -lassfile $(sndlib_$(sys)) \
+				  -lm -framework OpenGL -framework GLUT
 	else
 		LDFLAGS += -lGL -lX11 -lpthread
 	endif

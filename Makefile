@@ -22,7 +22,8 @@ csprobj = cspr/dbgfont.obj cspr/confont.obj
 
 incpath = -Isrc -Isrc/dos -Isrc/3dgfx -Isrc/rt -Ilibs -Ilibs/imago/src &
 	-Ilibs/anim/src -Ilibs/midas -Ilibs/goat3d/include
-libpath = libpath libs/imago libpath libs/anim libpath libs/midas libpath libs/goat3d
+libpath = libpath libs/imago libpath libs/anim libpath libs/midas &
+	libpath libs/goat3d libpath libs/assfile
 !else
 
 dosobj = src\dos\audos.obj src\dos\djdpmi.obj src\dos\gfx.obj src\dos\keyb.obj &
@@ -48,7 +49,8 @@ csprobj = cspr\dbgfont.obj cspr\confont.obj
 
 incpath = -Isrc -Isrc\dos -Isrc\3dgfx -Isrc\rt -Ilibs -Ilibs\imago\src &
 	-Ilibs\anim\src -Ilibs\midas -Ilibs\goat3d\include
-libpath = libpath libs\imago libpath libs\anim libpath libs\midas libpath libs\goat3d
+libpath = libpath libs\imago libpath libs\anim libpath libs\midas &
+	libpath libs\goat3d libpath libs\assfile
 !endif
 
 obj = $(dosobj) $(3dobj) $(scrobj) $(srcobj) $(csprobj)
@@ -57,7 +59,7 @@ bin = demo.exe
 !include watcfg.mk
 
 def = -dM_PI=3.141592653589793 -dUSE_HLT $(cfg_def)
-libs = imago.lib anim.lib goat3d.lib midas.lib
+libs = imago.lib anim.lib goat3d.lib assfile.lib midas.lib
 
 AS = nasm
 CC = wcc386
@@ -111,12 +113,19 @@ goat3d.lib:
 	wmake
 	cd ../..
 
+assfile.lib:
+	cd libs/assfile
+	wmake
+	cd ../..
+
 cleanlibs: .symbolic
 	cd libs/imago
 	wmake clean
 	cd ../anim
 	wmake clean
 	cd ../goat3d
+	wmake clean
+	cd ../assfile
 	wmake clean
 !else
 clean: .symbolic
@@ -144,11 +153,18 @@ goat3d.lib:
 	wmake
 	cd ..\..
 
+assfile.lib:
+	cd libs\assfile
+	wmake
+	cd ..\..
+
 cleanlibs: .symbolic
 	cd libs\imago
 	wmake clean
 	cd ..\anim
 	wmake clean
 	cd ..\goat3d
+	wmake clean
+	cd ..\assfile
 	wmake clean
 !endif

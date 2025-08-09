@@ -34,14 +34,14 @@ CC = $(TOOLPREFIX)gcc
 AR = $(TOOLPREFIX)ar
 CFLAGS = -march=pentium $(warn) -MMD $(dbg) $(opt) $(prof) $(inc) $(def)
 LDFLAGS = libs/imago/imago.dja libs/anim/anim.dja libs/goat3d/goat3d.dja \
-		  libs/midas/libmidas.a
+		  libs/assfile/assfile.dja libs/midas/libmidas.a
 
 ifneq ($(hostsys), dos)
 .PHONY: all
 all: data $(bin)
 endif
 
-$(bin): $(obj) imago anim goat3d
+$(bin): $(obj) imago anim goat3d assfile
 	$(CC) -o $@ -Wl,-Map=ld.map $(prof) $(obj) $(LDFLAGS)
 
 %.odj: %.asm
@@ -69,11 +69,16 @@ anim:
 goat3d:
 	$(MAKE) -C libs/goat3d -f Makefile.dj
 
+.PHONY: assfile
+assfile:
+	$(MAKE) -C libs/assfile -f Makefile.dj
+
 .PHONY: cleanlibs
 cleanlibs:
 	$(MAKE) -C libs/imago clean -f Makefile.dj
 	$(MAKE) -C libs/anim clean -f Makefile.dj
 	$(MAKE) -C libs/goat3d clean -f Makefile.dj
+	$(MAKE) -C libs/assfile clean -f Makefile.dj
 
 .PHONY: clean
 .PHONY: cleandep

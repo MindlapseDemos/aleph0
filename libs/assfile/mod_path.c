@@ -21,9 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <ctype.h>
 #include <errno.h>
 
-#if defined(__MSVCRT__) || defined(_MSC_VER)
+#if defined(__WATCOMC__) || defined(_WIN32) || defined(__DJGPP__)
 #include <malloc.h>
-#else
+#elif !defined(__FreeBSD__)
 #include <alloca.h>
 #endif
 

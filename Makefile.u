@@ -23,8 +23,8 @@ opt = $(OPT_sys)
 #dbg = -g
 
 CFLAGS = $(inc) $(CFLAGS_sys) $(CFLAGS_extra) $(opt) $(dbg) $(def)
-LDFLAGS = -Llibs/imago -Llibs/anim -Llibs/mikmod -Llibs/goat3d -L/usr/local/lib \
-		  $(LDFLAGS_sys) $(LDFLAGS_extra)
+LDFLAGS = -Llibs/imago -Llibs/anim -Llibs/mikmod -Llibs/goat3d -Llibs/assfile \
+		  -L/usr/local/lib $(LDFLAGS_sys) $(LDFLAGS_extra)
 LIBS = -limago -lanim -lmikmod -lgoat3d -lassfile $(LIBS_sys) -lm
 
 $(bin): $(obj) imago anim mikmod goat3d assfile

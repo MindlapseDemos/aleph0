@@ -46,6 +46,7 @@ struct node {
 	struct node *next;
 };
 
+static size_t my_strnlen(const char *s, size_t maxlen);
 
 int load_tar(struct tar *tar, const char *fname)
 {
@@ -81,8 +82,8 @@ int load_tar(struct tar *tar, const char *fname)
 		fseek(tar->fp, blksize - size, SEEK_CUR);
 
 		if(memcmp(hdr->magic, "ustar", 5) == 0) {
-			int nlen = strnlen(hdr->name, MAX_NAME_LEN);
-			int plen = strnlen(hdr->prefix, MAX_PREFIX_LEN);
+			int nlen = my_strnlen(hdr->name, MAX_NAME_LEN);
+			int plen = my_strnlen(hdr->prefix, MAX_PREFIX_LEN);
 			if(!(path = malloc(nlen + plen + 1))) {
 				perror("failed to allocate file path string");
 				goto end;
@@ -91,7 +92,7 @@ int load_tar(struct tar *tar, const char *fname)
 			memcpy(path + plen, hdr->name, nlen);
 			path[nlen + plen] = 0;
 		} else {
-			int nlen = strnlen(hdr->name, MAX_NAME_LEN);
+			int nlen = my_strnlen(hdr->name, MAX_NAME_LEN);
 			if(!(path = malloc(nlen + 1))) {
 				perror("failed to allocate file path string");
 				goto end;
@@ -168,4 +169,11 @@ void close_tar(struct tar *tar)
 		tar->files = 0;
 		tar->num_files = 0;
 	}
+}
+
+static size_t my_strnlen(const char *s, size_t maxlen)
+{
+	size_t len = 0;
+	while(maxlen-- > 0 && *s++) len++;
+	return len;
 }

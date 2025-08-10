@@ -1,5 +1,7 @@
-Unnamed Mindlapse DOS demo for Pentium-era PCs
-----------------------------------------------
+Aleph Null / Mindlapse & Desire
+-------------------------------
+Aleph Null is a DOS demo for Pentium PCs. It won 2nd place in the Assembly 2025
+oldskool demo competition.
 
 ![dos (watcom) build status](https://github.com/MindlapseDemos/wip-dosdemo/actions/workflows/build_dos_watcom.yml/badge.svg)
 ![dos (djgpp) build status](https://github.com/MindlapseDemos/wip-dosdemo/actions/workflows/build_dos_djgpp.yml/badge.svg)

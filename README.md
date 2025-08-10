@@ -25,6 +25,18 @@ Source structure
  - libs/imago/   image loading library (includes libpng, zlib, libjpeg)
  - libs/anim/    keyframe animation library
 
+License
+-------
+Copyright (C) 2025 John Tsiombikas (Nuclear) <nuclear@mutantstargoat.com>,
+                   Michael Kargas (Optimus) <optimus128@yahoo.gr>,
+                  Michael Georgoulopoulos (Samurai) <mgeorgoulopoulos@gmail.com>
+
+This program is free software. Feel free to use, modify, and/or redistribute,
+under the terms of the GNU General Public License v3, or at your option any
+later version published by the Free Software Foundation.
+See COPYING for details.
+
+
 Coding style conventions
 ------------------------
 Very few style issues are mandated:

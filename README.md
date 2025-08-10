@@ -1,4 +1,4 @@
-Aleph Null / Mindlapse & Desire
+Aleph Null by Mindlapse & Desire
 -------------------------------
 Aleph Null is a DOS demo for Pentium PCs. It won 2nd place in the Assembly 2025
 oldskool demo competition.
@@ -28,8 +28,8 @@ Source structure
  - libs/assfile  asset loading library for reading directly from within archives
  - libs/mikmod   sound system/module player used for all platforms except DOS
 
-All included libraries except midas, mikmod, and the imago dependencies
-(libpng, zlib, libjpeg), are our own. Canonical project links for the libraries:
+All included libraries except mikmod, and the imago dependencies (libpng, zlib,
+libjpeg), are our own. Canonical project links for the libraries:
 
  - cgmath: https://github.com/jtsiomb/gph-cmath
  - imago: https://github.com/jtsiomb/libimago
@@ -37,7 +37,7 @@ All included libraries except midas, mikmod, and the imago dependencies
  - goat3d: https://github.com/jtsiomb/goat3d
  - assfile: https://github.com/jtsiomb/assfile
 
-Source code of some of our smaller libraries are included directly under src:
+Source code of some of our smaller libraries is included directly under src:
 
  - miniglut: https://github.com/jtsiomb/miniglut
  - rbtree: https://github.com/jtsiomb/rbtree
@@ -53,8 +53,8 @@ Included 3rd party libraries:
 
 License
 -------
-Copyright (C) 2025 John Tsiombikas (Nuclear) <nuclear@mutantstargoat.com>,
-                   Michael Kargas (Optimus) <optimus128@yahoo.gr>,
+Copyright (C) 2025 John Tsiombikas (Nuclear) <nuclear@mutantstargoat.com>,  
+                   Michael Kargas (Optimus) <optimus128@yahoo.gr>,  
                   Michael Georgoulopoulos (Samurai) <mgeorgoulopoulos@gmail.com>
 
 This program is free software. Feel free to use, modify, and/or redistribute,

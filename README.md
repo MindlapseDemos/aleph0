@@ -24,6 +24,32 @@ Source structure
  - libs/cgmath/  math library, header-file only
  - libs/imago/   image loading library (includes libpng, zlib, libjpeg)
  - libs/anim/    keyframe animation library
+ - libs/goat3d   custom 3D scene file format library
+ - libs/assfile  asset loading library for reading directly from within archives
+ - libs/mikmod   sound system/module player used for all platforms except DOS
+
+All included libraries except midas, mikmod, and the imago dependencies
+(libpng, zlib, libjpeg), are our own. Canonical project links for the libraries:
+
+ - cgmath: https://github.com/jtsiomb/gph-cmath
+ - imago: https://github.com/jtsiomb/libimago
+ - anim: https://github.com/jtsiomb/libanim
+ - goat3d: https://github.com/jtsiomb/goat3d
+ - assfile: https://github.com/jtsiomb/assfile
+
+Source code of some of our smaller libraries are included directly under src:
+
+ - miniglut: https://github.com/jtsiomb/miniglut
+ - rbtree: https://github.com/jtsiomb/rbtree
+ - treestore: https://github.com/jtsiomb/libtreestore
+
+Included 3rd party libraries:
+
+ - libpng: http://www.libpng.org/pub/png/libpng.html
+ - zlib: https://www.zlib.net
+ - libjpeg: https://ijg.org
+ - mikmod: https://mikmod.sourceforge.net
+
 
 License
 -------

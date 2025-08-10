@@ -8,6 +8,7 @@
 #include "midasdll.h"
 #include "util.h"
 #include "cfgopt.h"
+#include "assfile/assfile.h"
 
 #ifdef __DJGPP__
 void allegro_irq_init(void);
@@ -65,22 +66,66 @@ void au_shutdown(void)
 #endif
 }
 
+#define TMPMUSFILE	"music.tmp"
+static int unpack_music(const char *fname)
+{
+	ass_file *fp;
+	FILE *tmpfile;
+	size_t sz;
+	char buf[1024];
+
+	if(!(fp = ass_fopen(fname, "rb"))) {
+		fprintf(stderr, "au_load_module: failed open: %s\n", fname);
+		return -1;
+	}
+	if(!(tmpfile = fopen(TMPMUSFILE, "wb"))) {
+		fprintf(stderr, "au_load_module: failed to create temporary music file\n");
+		ass_fclose(fp);
+		return -1;
+	}
+	while((sz = ass_fread(buf, 1, sizeof buf, fp)) > 0) {
+		if(fwrite(buf, 1, sz, tmpfile) < sz) {
+			fprintf(stderr, "au_load_module: failed to unpack temporary music file\n");
+			ass_fclose(fp);
+			fclose(tmpfile);
+			return -1;
+		}
+	}
+	fclose(tmpfile);
+	ass_fclose(fp);
+	return 0;
+}
+
 struct au_module *au_load_module(const char *fname)
 {
 	static MIDASmoduleInfo info;
 	struct au_module *mod;
 	char *name, *end;
+	FILE *fp;
+	int unpacked = 0;
+
+	if(!(fp = fopen(fname, "rb"))) {
+		if(unpack_music(fname) == -1) {
+			return 0;
+		}
+		unpacked = 1;
+	} else {
+		fclose(fp);
+	}
 
 	if(!(mod = malloc(sizeof *mod))) {
 		fprintf(stderr, "au_load_module: failed to allocate module\n");
+		if(unpacked) remove(TMPMUSFILE);
 		return 0;
 	}
 
-	if(!(mod->impl = MIDASloadModule((char*)fname))) {
+	if(!(mod->impl = MIDASloadModule(unpacked ? "music.tmp" : (char*)fname))) {
 		fprintf(stderr, "au_load_module: failed to load module: %s\n", fname);
 		free(mod);
+		if(unpacked) remove(TMPMUSFILE);
 		return 0;
 	}
+	if(unpacked) remove(TMPMUSFILE);
 
 	name = 0;
 	if(MIDASgetModuleInfo(mod->impl, &info)) {

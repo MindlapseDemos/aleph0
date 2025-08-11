@@ -192,12 +192,14 @@ int au_play_module(struct au_module *mod)
 
 void au_update(void)
 {
+#ifndef NDEBUG
 	if(!curmod) return;
 
 	if(!Player_Active()) {
 		Player_Stop();
 		curmod = 0;
 	}
+#endif
 }
 
 #ifdef _WIN32

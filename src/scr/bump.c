@@ -502,7 +502,7 @@ static void renderLight(unsigned short *lightBitmap, Edge *lightEdges, unsigned 
 				dst32 = (uint32_t*)dstIn;
 				count = (xp1 - xp0) >> 1;
 				while (count-- != 0) {
-#ifdef __mips
+#if defined(__mips) || defined(__sparc) || defined(__sparc__)
 					uint32_t val;
 					read_unaligned32(&val, src32++);
 					*dst32++ |= val;

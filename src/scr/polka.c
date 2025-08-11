@@ -541,7 +541,7 @@ static void blurBuffer(unsigned char *buffer)
 			int xc = (x - FB_WIDTH / 8) >> 2;
 			unsigned int* b0 = (unsigned int*)((unsigned char*)(b - 2*yc * (POLKA_BUFFER_WIDTH / 4)) - 2*xc);
 			unsigned int* b1 = (unsigned int*)((unsigned char*)(b + yc * (POLKA_BUFFER_WIDTH / 4)) + xc);
-#ifdef __mips
+#if defined(__mips) || defined(__sparc) || defined(__sparc__)
 			unsigned int b1val, b0val;
 			read_unaligned32(&b0val, b0);
 			read_unaligned32(&b1val, b1);

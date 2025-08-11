@@ -719,7 +719,7 @@ void drawBlobPointsPolkaSize2(Vertex3D* v, int count, unsigned char* blobBuffer)
 
 		if (!(posX <= POLKA_BUFFER_PAD || posX >= POLKA_BUFFER_PAD + FB_WIDTH || posY <= POLKA_BUFFER_PAD || posY >= POLKA_BUFFER_PAD + FB_HEIGHT)) {
 			unsigned int* dst = (unsigned int*)(blobBuffer + posY * POLKA_BUFFER_WIDTH + posX);
-#ifdef __mips
+#if defined(__mips) || defined(__sparc) || defined(__sparc__)
 			unsigned char *dptr = (unsigned char*)dst;
 			dptr[0] += 3;
 			dptr[1] += 8;
@@ -763,7 +763,7 @@ void drawBlob(int posX, int posY, int size, unsigned char *blobBuffer)
 		unsigned int* src = (unsigned int*)bd->data;
 
 		for (y = 0; y < sizeY; ++y) {
-#ifdef __mips
+#if defined(__mips) || defined(__sparc) || defined(__sparc__)
 			unsigned char *dptr = (unsigned char*)dst;
 			for (x = 0; x < sizeX; ++x) {
 				unsigned int sval = src[x];

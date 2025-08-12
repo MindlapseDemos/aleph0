@@ -8,6 +8,7 @@
 #include "screen.h"
 #include "gfxutil.h"
 #include "noise.h"
+#include "util.h"
 
 #include "opt_3d.h"
 #include "opt_rend.h"
@@ -282,8 +283,14 @@ static void updateWater32(unsigned char* buffer1, unsigned char* buffer2)
 	unsigned int* src2 = (unsigned int*)buffer2;
 
 	do {
+#if defined(__mips) || defined(__sparc) || defined(__sparc__)
+		unsigned int c0, c1;
+		read_unaligned32(&c0, ((unsigned char*)src1 - 1));
+		read_unaligned32(&c1, ((unsigned char*)src1 + 1));
+#else
 		const unsigned int c0 = *(unsigned int*)((unsigned char*)src1 - 1);
 		const unsigned int c1 = *(unsigned int*)((unsigned char*)src1 + 1);
+#endif
 		const unsigned int c2 = *(src1 - (WATER_TEX_WIDTH / 4));
 		const unsigned int c3 = *(src1 + (WATER_TEX_WIDTH / 4));
 

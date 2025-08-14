@@ -168,6 +168,22 @@ visual studio know to use nasm to assemble it:
     * Set "Command Line" to: `nasm -o .%(Filename).obj -f win32 %(FullPath)`.
     * Set "Outputs" to: `.%(Filename).obj`.
 
+Building the Android version
+----------------------------
+Make sure you've got the android SDK and NDK installed, and run
+`make -f Makefile.and`. You may need to define a few environment variables for
+this to work, specifically:
+  - `SDK` needs to point to the android SDK directory that contains the
+    "platforms" subdirectory (default: `/usr/lib/android-sdk`).
+  - `NDK` needs to point to the NDK directory that contains the `toolchains`,
+    `platforms`, and `sysroot` subdirectories (default: `/usr/lib/android-ndk`).
+  - `AVER` needs to specify the android SDK version (default: 23).
+
+After building the apk, if you have the device connected to the build host, you
+can run `make -f Makefile.and install` to install the apk to the device, `make
+-f Makefile.and run` to start it, `make -f Makefile.and stop` to kill it, and
+`make -f Makefile.and logcat` to monitor the demo log output.
+
 Datafiles
 ---------
 The demo datafiles are in their own subversion repo. To checkout the data files

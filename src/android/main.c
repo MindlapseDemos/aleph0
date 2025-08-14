@@ -121,6 +121,9 @@ void android_main(struct android_app *app_ptr)
 		sys_time = (long)get_time_msec();
 		if(!init_done) {
 			if(win_valid && sys_time - init_time >= 700) {
+				if(init_gl() == -1) {
+					demo_abort();
+				}
 				reshape(width, height);
 				if(demo_init() == -1) {
 					demo_abort();
@@ -295,9 +298,9 @@ static void handle_command(struct android_app *app, int32_t cmd)
 
 	case APP_CMD_INIT_WINDOW:
 		ANativeActivity_setWindowFlags(app->activity, AWINDOW_FLAG_KEEP_SCREEN_ON, 0);
-		if(init_gl() == -1) {
+		/*if(init_gl() == -1) {
 			exit(1);
-		}
+		}*/
 		init_time = (long)get_time_msec();
 		win_valid = 1;
 		break;
@@ -460,6 +463,8 @@ static int init_gl(void)
 	eglQuerySurface(dpy, surf, EGL_WIDTH, &width);
 	eglQuerySurface(dpy, surf, EGL_HEIGHT, &height);
 	aspect = (float)width / (float)height;
+
+	printf("egl framebuffer: %dx%d\n", width, height);
 
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D, tex);

@@ -61,8 +61,7 @@ $(name).aligned.apk: $(name).unsigned.apk
 	zipalign -f 4 $< $@
 
 $(name).unsigned.apk: $(so64) $(so32) AndroidManifest.xml $(icons)
-	rm -f apkbuild/lib/arm64-v8a/* apkbuild/lib/armeabi-v7a/* apkbuild/lib/armeabi/*
-	rm -rf apkbuild/assets/data
+	rm -rf apkbuild
 	mkdir -p apkbuild/lib/arm64-v8a apkbuild/lib/armeabi-v7a apkbuild/lib/armeabi
 	cp $(so64) apkbuild/lib/arm64-v8a/$(lib_so)
 	cp $(so32) apkbuild/lib/armeabi-v7a/$(lib_so)

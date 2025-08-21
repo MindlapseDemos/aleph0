@@ -2359,7 +2359,7 @@ static void bezier_patch(float *res, float *cp, float u, float v)
 	}
 }
 
-static float rsqrt(float x)
+static float fast_rsqrt(float x)
 {
 	float xhalf = x * 0.5f;
 	int i = *(int*)&x;
@@ -2379,7 +2379,7 @@ static float rsqrt(float x)
 
 #define NORMALIZE(v) \
 	do { \
-		float s = rsqrt((v)[0] * (v)[0] + (v)[1] * (v)[1] + (v)[2] * (v)[2]); \
+		float s = fast_rsqrt((v)[0] * (v)[0] + (v)[1] * (v)[1] + (v)[2] * (v)[2]); \
 		(v)[0] *= s; \
 		(v)[1] *= s; \
 		(v)[2] *= s; \

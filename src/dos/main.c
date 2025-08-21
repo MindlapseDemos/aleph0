@@ -163,7 +163,7 @@ static int handle_sball_event(sball_event *ev)
 			float ry = (float)RY(ev);
 			float rz = (float)RZ(ev);
 
-			float s = (float)rsqrt(rx * rx + ry * ry + rz * rz);
+			float s = (float)fast_rsqrt(rx * rx + ry * ry + rz * rz);
 			cgm_qrotate(&sball_rot, 0.001 / s, -rx * s, -ry * s, - rz * s);
 		}
 

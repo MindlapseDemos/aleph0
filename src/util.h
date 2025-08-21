@@ -82,7 +82,7 @@ static INLINE void read_unaligned32(void *dest, void *src)
 }
 #endif
 
-static INLINE float rsqrt(float x)
+static INLINE float fast_rsqrt(float x)
 {
 	float xhalf = x * 0.5f;
 	int32_t i = *(int32_t*)&x;
@@ -95,7 +95,7 @@ static INLINE float rsqrt(float x)
 #define fast_vnormalize(vptr)	fast_normalize((float*)(vptr))
 static INLINE void fast_normalize(float *v)
 {
-	float s = rsqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+	float s = fast_rsqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 	v[0] *= s;
 	v[1] *= s;
 	v[2] *= s;

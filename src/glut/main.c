@@ -561,7 +561,7 @@ static void sball_rotate(int rx, int ry, int rz)
 	cgm_vcons(&sb_rmot, -rx, -ry, rz);
 #else
 	if(rx | ry | rz) {
-		float s = (float)rsqrt(rx * rx + ry * ry + rz * rz);
+		float s = (float)fast_rsqrt(rx * rx + ry * ry + rz * rz);
 		cgm_qrotate(&sball_rot, -0.001f / s, rx * s, ry * s, -rz * s);
 	}
 #endif

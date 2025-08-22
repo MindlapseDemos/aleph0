@@ -243,7 +243,7 @@ static void calcJuliaQuarter(float scale, int palAnimOffset)
 			if (c0 == c1) {
 				dst[x-1] = c0;
 			} else {
-				/* const int startingLayer = c0 >> 4;	// (10-20% increase if fed instead of JULIA_LAYERS-1 but very visible squary artifacts) */
+				/* const int startingLayer = c0 >> 4;*/	/* (10-20% increase if fed instead of JULIA_LAYERS-1 but very visible squary artifacts) */
 				dst[x-1] = calcJuliaPixel((xk - di1) >> DI_BITS, yki, JULIA_LAYERS-1);
 			}
 			xk+=di2;
@@ -485,8 +485,8 @@ static void draw(void)
 	const float ts = (float)((t & (JULIA_ANIM_REPEAT-1)) / (float)(JULIA_ANIM_REPEAT-1));
 	const float scale = 1.0f + pow(ts, 1.15);	/* magic number for smooth transmition between repeat scale, don.t know why this value works exactly :P */
 
-	//tt = t / 1024.0f;
-	//CLAMP(tt, 0, 1);
+	/*tt = t / 1024.0f; */
+	/*CLAMP(tt, 0, 1); */
 	tt = sin(t / 512.0f) * 0.125 + 0.875;
 
 	for (i=0; i<JULIA_LAYERS; ++i) {

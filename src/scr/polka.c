@@ -109,10 +109,10 @@ static void transformAndProjectAxesBoxDotsEffect(int objIndex)
 	Vertex3D* axisZ = axisVerticesZ;
 	int countZ = VERTICES_DEPTH;
 
-//  Commented out. We preadd the transforms in the gridaxes now.
-//	const int objPosX = gridPos[objIndex].x;
-//	const int objPosY = gridPos[objIndex].y;
-//	const int objPosZ = gridPos[objIndex].z;
+/*  Commented out. We preadd the transforms in the gridaxes now. */
+/*	const int objPosX = gridPos[objIndex].x; */
+/*	const int objPosY = gridPos[objIndex].y; */
+/*	const int objPosZ = gridPos[objIndex].z; */
 
 	do {
 		Vertex3D* axisY = axisVerticesY;
@@ -124,11 +124,11 @@ static void transformAndProjectAxesBoxDotsEffect(int objIndex)
 			do {
 				const unsigned char c = *src++;
 				if (c != 0) {
-					const int sz = FIXED_TO_INT(axisX->z + axisY->z + axisZ->z, FP_CORE);// +objPosZ;
+					const int sz = FIXED_TO_INT(axisX->z + axisY->z + axisZ->z, FP_CORE);/* +objPosZ; */
 					if (sz > 0 && sz < REC_DIV_Z_MAX) {
 						const int recZ = recDivZ[(int)sz];
-						const int sx = POLKA_BUFFER_WIDTH / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);// +objPosX;
-						const int sy = POLKA_BUFFER_HEIGHT / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);// +objPosY;
+						const int sx = POLKA_BUFFER_WIDTH / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->x + axisY->x + axisZ->x, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);/* +objPosX; */
+						const int sy = POLKA_BUFFER_HEIGHT / 2 + AFTER_RECZ_MUL(((AFTER_MUL_ADDS(axisX->y + axisY->y + axisZ->y, FP_CORE)) * PROJ_MUL) * recZ, FP_CORE);/* +objPosY; */
 
 						dst->xs = sx;
 						dst->ys = sy;
@@ -147,7 +147,7 @@ static void transformAndProjectAxesBoxDotsEffect(int objIndex)
 
 static void generateAxisVertices(Vertex3D* rotatedAxis, Vertex3D* dstAxis, int objIndex, int count)
 {
-	// It seems weird I divide by 3. I preadd the object translation inside the grid axes, later three components are added that's why it would be like 3*trans later
+	/* It seems weird I divide by 3. I preadd the object translation inside the grid axes, later three components are added that's why it would be like 3*trans later */
 	const float objPosX = (float)gridPos[objIndex].x / 3;
 	const float objPosY = (float)gridPos[objIndex].y / 3;
 	const float objPosZ = (float)gridPos[objIndex].z / 3;
@@ -348,7 +348,7 @@ static void drawBackgroundDistLines(int t)
 
 	moveBgPoints(t);
 
-	// Just to be sure we don't get junk values early on
+	/* Just to be sure we don't get junk values early on */
 	if (didPolkaLinesMovedYetOnce==0) return;
 
 	for (i = 0; i < activeDistPoints - 1; ++i) {

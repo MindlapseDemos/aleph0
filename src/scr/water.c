@@ -283,22 +283,22 @@ static void updateWater32(unsigned char* buffer1, unsigned char* buffer2)
 	unsigned int* src2 = (unsigned int*)buffer2;
 
 	do {
+		unsigned int c0, c1, c2, c3, a, b, c, cc;
 #if defined(__mips) || defined(__sparc) || defined(__sparc__)
-		unsigned int c0, c1;
 		read_unaligned32(&c0, ((unsigned char*)src1 - 1));
 		read_unaligned32(&c1, ((unsigned char*)src1 + 1));
 #else
-		const unsigned int c0 = *(unsigned int*)((unsigned char*)src1 - 1);
-		const unsigned int c1 = *(unsigned int*)((unsigned char*)src1 + 1);
+		c0 = *(unsigned int*)((unsigned char*)src1 - 1);
+		c1 = *(unsigned int*)((unsigned char*)src1 + 1);
 #endif
-		const unsigned int c2 = *(src1 - (WATER_TEX_WIDTH / 4));
-		const unsigned int c3 = *(src1 + (WATER_TEX_WIDTH / 4));
+		c2 = *(src1 - (WATER_TEX_WIDTH / 4));
+		c3 = *(src1 + (WATER_TEX_WIDTH / 4));
 
 		/* Subtract and then absolute value of 4 bytes packed in 8bits(From Hacker's Delight) */
-		const unsigned int c = (((c0 + c1 + c2 + c3) >> 1) & 0x7f7f7f7f) - *src2;
-		const unsigned int a = c & 0x80808080;
-		const unsigned int b = a >> 7;
-		const unsigned int cc = (c ^ ((a - b) | a)) + b;
+		c = (((c0 + c1 + c2 + c3) >> 1) & 0x7f7f7f7f) - *src2;
+		a = c & 0x80808080;
+		b = a >> 7;
+		cc = (c ^ ((a - b) | a)) + b;
 
 		*src2++ = cc;
 		src1++;
@@ -335,7 +335,7 @@ static void makeRipples(unsigned char* buff, int t)
 		++v;
 	}
 
-	// Hacky hack
+	/* Hacky hack */
 	for (i = 0; i < currentNumRainDrops >> 6; ++i) {
 		renderBlob(16 + (rand() % (WATER_TEX_WIDTH - 32)), 16 + (rand() % (WATER_TEX_HEIGHT - 32)), buff);
 	}

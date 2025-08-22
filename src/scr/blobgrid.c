@@ -93,7 +93,7 @@ static void initFaintBackground()
 	for (y = 0; y < FAINT_BG_HEIGHT; ++y) {
 		for (x = 0; x < FAINT_BG_WIDTH; ++x) {
 			float f = pfbm2((float)x * scale, (float)y * scale, perX, perY, 8) + 0.25f;
-			//float f = pturbulence2((float)x * scale, (float)y * scale, perX, perY, 4);
+			/*float f = pturbulence2((float)x * scale, (float)y * scale, perX, perY, 4); */
 			CLAMP(f, 0.0f, 0.99f);
 			faintBgTex[i++] = (int)(f * 9.0f);
 		}

@@ -366,7 +366,7 @@ static void right_side(float tint)
 	g3d_set_texture(ctex.width, ctex.height, ctex.pixels);
 
 	y = dseq_param(ev_text) * 21.0f;
-	//y = (time_msec & 0x7fff) / 1024.0f - 2.0f;
+	/*y = (time_msec & 0x7fff) / 1024.0f - 2.0f; */
 	g3d_begin(G3D_QUADS);
 	for(i=0; i<CRD_LINES; i++) {
 		if(crd_text[i][0] == 0) {
@@ -381,7 +381,7 @@ static void right_side(float tint)
 			continue;
 		}
 		u = 0;
-		x = fade * 0.5f + 1;//-1;
+		x = fade * 0.5f + 1;/*-1; */
 		v0 = crd_texv[i];
 		v1 = crd_texv[i + 1];
 		g3d_color3f(fade * tint, fade * tint, fade * tint);

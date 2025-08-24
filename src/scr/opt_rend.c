@@ -767,10 +767,10 @@ void drawBlob(int posX, int posY, int size, unsigned char *blobBuffer)
 			unsigned char *dptr = (unsigned char*)dst;
 			for (x = 0; x < sizeX; ++x) {
 				unsigned int sval = src[x];
-				dptr[0] = sval >> 24;
-				dptr[1] = sval >> 16;
-				dptr[2] = sval >> 8;
-				dptr[3] = sval;
+				dptr[0] += sval >> 24;
+				dptr[1] += sval >> 16;
+				dptr[2] += sval >> 8;
+				dptr[3] += sval;
 				dptr += 4;
 			}
 #else

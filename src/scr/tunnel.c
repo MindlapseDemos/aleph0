@@ -428,8 +428,13 @@ static void draw_tunnel_range(unsigned short *pix, int xoffs, int yoffs, int sta
 			unsigned int col;
 			int idx = j << 1;
 
+#ifdef BUILD_BIGENDIAN
+			col = (unsigned int)tunnel_color(toffs, 0, tmap[idx], fog[idx]) << 16;
+			col |= tunnel_color(toffs, 0, tmap[idx + 1], fog[idx + 1]);
+#else
 			col = tunnel_color(toffs, 0, tmap[idx], fog[idx]);
 			col |= (unsigned int)tunnel_color(toffs, 0, tmap[idx + 1], fog[idx + 1]) << 16;
+#endif
 			*pixels++ = col;
 		}
 		tmap += vxsz;
@@ -459,16 +464,24 @@ static int gen_tables(void)
 	for(i=0; i<vysz; i++) {
 		float y = 2.0 * (float)i / (float)vysz - 1.0;
 		for(j=0; j<vxsz; j++) {
-			float x = aspect * (2.0 * (float)j / (float)vxsz - 1.0);
-			float tu = atan2(y, x) / M_PI * 0.5 + 0.5;
-			float d = sqrt(x * x + y * y);
-			float tv = d == 0.0 ? 0.0 : 0.5 / d;
+			float x, tu, tv, d;
+			int tx, ty, f;
 
-			int tx = (int)(tu * 65535.0 * TEX_USCALE) & 0xffff;
-			int ty = (int)(tv * 65535.0 * TEX_VSCALE) & 0xffff;
 
-			/*int f = (int)(20.0 / d) - 35 + (rand() & 0xf);*/
-			int f = (int)(30.0 / d) - 35 + (rand() & 0xf);
+			if(i == vysz / 2 && j == vxsz / 2) {
+				tx = ty = 0;
+				f = 255;
+			} else {
+				x = aspect * (2.0 * (float)j / (float)vxsz - 1.0);
+				tu = atan2(y, x) / M_PI * 0.5 + 0.5;
+				d = sqrt(x * x + y * y);
+				tv = d == 0.0 ? 0.0 : 0.5 / d;
+
+				tx = (int)(tu * 65535.0 * TEX_USCALE) & 0xffff;
+				ty = (int)(tv * 65535.0 * TEX_VSCALE) & 0xffff;
+
+				f = (int)(30.0 / d) - 35 + (rand() & 0xf);
+			}
 
 			*tmap++ = (tx << 16) | ty;
 			*fog++ = f > 255 ? 255 : (f < 0 ? 0 : f);

@@ -6,7 +6,7 @@ obj = src/aabox.o src/chunk.o src/dynarr.o src/extmesh.o src/g3danm.o \
 
 alib = libgoat3d.a
 
-CFLAGS = $(CFLAGS_sys) $(CFLAGS_extra) -O3 -Iinclude -I.. -I../../src
+CFLAGS = $(CFLAGS_sys) $(CFLAGS_extra) $(OPT_sys) -Iinclude -I.. -I../../src
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

@@ -3,7 +3,7 @@ include ../../ucfg.mk
 obj = src/anim.o src/track.o
 alib = libanim.a
 
-CFLAGS = $(CFLAGS_sys) $(CFLAGS_extra) -O3 -I.. -I../../src
+CFLAGS = $(CFLAGS_sys) $(CFLAGS_extra) $(OPT_sys) -I.. -I../../src
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

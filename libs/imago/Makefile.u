@@ -25,7 +25,7 @@ obj = src/byteord.o src/conv.o src/filejpeg.o src/filelbm.o src/filepng.o \
 alib = libimago.a
 
 def = -DPNG_NO_SNPRINTF
-CFLAGS = $(CFLAGS_sys) $(CFLAGS_extra) -O3 -Izlib -Ilibpng -Ijpeglib $(def)
+CFLAGS = $(CFLAGS_sys) $(CFLAGS_extra) $(OPT_sys) -Izlib -Ilibpng -Ijpeglib $(def)
 
 $(alib): $(obj)
 	$(AR) rcs $@ $(obj)

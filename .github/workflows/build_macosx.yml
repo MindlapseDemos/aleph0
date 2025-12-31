@@ -1,6 +1,8 @@
 name: MacOS X build
 
 on:
+  push:
+  pull_request:
   workflow_dispatch:
 
 jobs:

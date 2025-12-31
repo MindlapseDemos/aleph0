@@ -1,8 +1,8 @@
 name: Build and package
 
 on:
-  push:
-  pull_request:
+  #push:
+  #pull_request:
   workflow_dispatch:
 
 jobs:
@@ -146,7 +146,7 @@ jobs:
 
 # ---------------------- MacOS X intel ------------------------
   build-macosx:
-    runs-on: macos-13
+    runs-on: macos-15
 
     steps:
     - uses: actions/checkout@v4

@@ -28,6 +28,7 @@ LDFLAGS = $(arch) -static-libgcc -no-pie -Llibs/imago -Llibs/anim -Llibs/mikmod 
 		  -Llibs/goat3d -Llibs/assfile -limago -lanim -lassfile -lmikmod -lgoat3d \
 		  $(sndlib_$(sys)) -lm
 
+sys ?= $(shell uname -s | sed 's/MINGW.*/mingw/; s/IRIX.*/IRIX/')
 cpu ?= $(shell uname -m | sed 's/i.86/i386/;s/arm.*/arm/')
 
 ifeq ($(cpu), x86_64)
@@ -43,10 +44,11 @@ endif
 ifeq ($(cpu), arm)
 	obj = $(src:.c=.arm.o)
 	def += -DNO_ASM
-	bin = demopi
+	ifeq ($(sys), Linux)
+		bin = demopi
+	endif
 endif
 
-sys ?= $(shell uname -s | sed 's/MINGW.*/mingw/; s/IRIX.*/IRIX/')
 ifeq ($(sys), mingw)
 	obj = $(src:.c=.w32.o) $(asmsrc:.asm=.w32.o)
 

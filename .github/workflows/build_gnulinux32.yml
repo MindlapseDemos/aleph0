@@ -1,8 +1,8 @@
 name: GNU/Linux build
 
 on:
-  #push:
-  #pull_request:
+  push:
+  pull_request:
   workflow_dispatch:
 
 jobs:

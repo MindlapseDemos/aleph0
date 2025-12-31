@@ -24,6 +24,8 @@ elif [ "$sys" = Linux ]; then
 
 elif [ "$sys" = FreeBSD ]; then
 	echo "Generating FreeBSD makefile config: $cfgfile"
+	echo 'CFLAGS_sys = -I/usr/local/include' >$cfgfile
+	echo 'LDFLAGS_sys = -L/usr/local/lib' >>$cfgfile
 	echo 'LIBS_sys = -lX11 -lGL -lpthread' >>$cfgfile
 	echo 'OPT_sys = -O3' >>$cfgfile
 fi

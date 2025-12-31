@@ -55,6 +55,7 @@ char *strdup_nf_impl(const char *s, const char *file, int line)
 }
 
 #if defined(__APPLE__) && !defined(TARGET_IPHONE)
+/*
 #include <xmmintrin.h>
 
 void enable_fpexcept(void)
@@ -70,6 +71,7 @@ void disable_fpexcept(void)
 	bits = _MM_MASK_INVALID | _MM_MASK_DIV_ZERO | _MM_MASK_OVERFLOW | _MM_MASK_UNDERFLOW;
 	_MM_SET_EXCEPTION_MASK(_MM_GET_EXCEPTION_MASK() | bits);
 }
+*/
 
 #elif defined(__GLIBC__) && !defined(__MINGW32__)
 #define __USE_GNU

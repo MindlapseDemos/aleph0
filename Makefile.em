@@ -12,13 +12,13 @@ dbg = -g3
 
 CC = emcc
 CFLAGS = $(warn) $(opt) $(def) -fno-pie -fno-strict-aliasing $(dbg) $(inc) -sUSE_SDL
-LDFLAGS = libs/imago/imago.ema libs/anim/anim.ema libs/goat3d/goat3d.ema \
+LDFLAGS = libs/imago/imago.ema libs/anim/anim.ema libs/goat3d/goat3d.ema libs/assfile/assfile.ema \
 		  libs/mikmod/mikmod.ema -lSDL --preload-file data --preload-file demo.seq \
 		  --exclude-file data/.svn \
 		  -sINITIAL_MEMORY=67108864 -sUSE_SDL --shell-file demopage_shell.html
 #		  -gsource-maps --profile-funcs -sSAFE_HEAP=1
 
-$(bin): $(obj) imago anim goat3d mikmod demopage_shell.html
+$(bin): $(obj) imago anim goat3d assfile mikmod demopage_shell.html
 	$(CC) -o $@ $(obj) $(LDFLAGS)
 
 demopage_shell.html: tools/demotmpl.htm
@@ -28,7 +28,7 @@ demopage_shell.html: tools/demotmpl.htm
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 .PHONY: libs
-libs: imago anim mikmod goat3d
+libs: imago anim mikmod goat3d assfile
 
 .PHONY: imago
 imago:
@@ -45,6 +45,10 @@ mikmod:
 .PHONY: goat3d
 goat3d:
 	$(MAKE) -C libs/goat3d -f Makefile.em
+
+.PHONY: assfile
+assfile:
+	$(MAKE) -C libs/assfile -f Makefile.em
 
 .PHONY: cleanlibs
 cleanlibs:

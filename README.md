@@ -3,6 +3,13 @@ Aleph Null by Mindlapse & Desire
 Aleph Null is a DOS demo for Pentium PCs. It won 2nd place in the Assembly 2025
 oldskool demo competition.
 
+Quick Links
+-----------
+ - Demozoo: https://demozoo.org/productions/375933/
+ - Pouet.net: https://www.pouet.net/prod.php?which=104603
+ - Video capture: https://www.youtube.com/watch?v=GJAeU-RdbUE
+ - Mindlapse website: http://mindlapse.demoscene.gr
+
 ![dos (watcom) build status](https://github.com/MindlapseDemos/wip-dosdemo/actions/workflows/build_dos_watcom.yml/badge.svg)
 ![dos (djgpp) build status](https://github.com/MindlapseDemos/wip-dosdemo/actions/workflows/build_dos_djgpp.yml/badge.svg)
 ![GNU/Linux build status](https://github.com/MindlapseDemos/wip-dosdemo/actions/workflows/build_gnulinux32.yml/badge.svg)
